@@ -48,9 +48,7 @@ func (cmd *pluginCmd) Run(f factory.Factory, args []string) error {
 		}
 	}
 
-	f.GetLog().StartWait("Updating plugin " + args[0])
-	defer f.GetLog().StopWait()
-
+	f.GetLog().Info("Updating plugin " + args[0] + "...")
 	updatedPlugin, err := pluginManager.Update(args[0], cmd.Version)
 	if err != nil {
 		if newestVersion, ok := err.(*plugin.NewestVersionError); ok {
@@ -61,7 +59,6 @@ func (cmd *pluginCmd) Run(f factory.Factory, args []string) error {
 		return err
 	}
 
-	f.GetLog().StopWait()
 	f.GetLog().Donef("Successfully updated plugin %s", args[0])
 
 	// Execute plugin hook

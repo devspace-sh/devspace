@@ -1,0 +1,17 @@
+version: v2beta1
+name: exec
+
+deployments:
+  test:
+    helm:
+      values:
+        containers:
+          - image: alpine
+            command: ["sleep", "99999999"]
+
+pipelines:
+  dev:
+    run: |-
+      run_default_pipeline deploy
+      
+      echo "Hello World!" | exec_container --image-selector alpine -- cat - > test.txt 

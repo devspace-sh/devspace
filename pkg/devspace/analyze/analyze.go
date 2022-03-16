@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -65,15 +66,14 @@ func (a *analyzer) Analyze(namespace string, options Options) error {
 	}
 
 	reportString := ReportToString(report)
-	a.log.WriteString(reportString)
+	a.log.WriteString(logrus.InfoLevel, reportString)
 
 	return nil
 }
 
 // CreateReport creates a new report about a certain namespace
 func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportItem, error) {
-	a.log.StartWait("Checking status")
-	defer a.log.StopWait()
+	a.log.Info("Checking status...")
 
 	report := []*ReportItem{}
 	timeout := WaitTimeout

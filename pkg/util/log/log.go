@@ -1,17 +1,16 @@
 package log
 
 import (
-	"strings"
-
-	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
+	"os"
+	"strings"
 )
 
-var defaultLog Logger = &stdoutLogger{
-	survey: survey.NewSurvey(),
-	level:  logrus.InfoLevel,
-}
+var baseLog = NewStdoutLogger(os.Stdin, stdout, stderr, logrus.InfoLevel)
+var defaultLog = baseLog
+
+//var defaultLog Logger = NewStreamLoggerWithFormat(os.Stdin, logrus.InfoLevel, JsonFormat)
 
 // Discard is a logger implementation that just discards every log statement
 var Discard = &DiscardLogger{}
@@ -31,11 +30,7 @@ func PrintLogo() {
 
 // StartFileLogging logs the output of the global logger to the file default.log
 func StartFileLogging() {
-	defaultLogStdout, ok := defaultLog.(*stdoutLogger)
-	if ok {
-		defaultLogStdout.fileLogger = GetFileLogger("default")
-	}
-
+	defaultLog.AddSink(GetFileLogger("default"))
 	OverrideRuntimeErrorHandler(false)
 }
 
@@ -44,14 +39,14 @@ func GetInstance() Logger {
 	return defaultLog
 }
 
-// SetInstance sets the default logger instance
-func SetInstance(logger Logger) {
-	defaultLog = logger
+// GetBaseInstance returns the base stdout logger
+func GetBaseInstance() Logger {
+	return baseLog
 }
 
 // WriteColored writes a message in color
 func writeColored(message string, color string) {
-	_, _ = defaultLog.Write([]byte(ansi.Color(message, color)))
+	defaultLog.WriteString(logrus.InfoLevel, ansi.Color(message, color))
 }
 
 //SetFakePrintTable is a testing tool that allows overwriting the function PrintTable
@@ -87,7 +82,7 @@ func PrintTable(s Logger, header []string, values [][]string) {
 		}
 	}
 
-	_, _ = s.Write([]byte("\n"))
+	s.WriteString(logrus.InfoLevel, "\n")
 
 	// Print Header
 	for key, value := range header {
@@ -96,30 +91,30 @@ func PrintTable(s Logger, header []string, values [][]string) {
 		padding := columnLengths[key] - len(value)
 
 		if padding > 0 {
-			_, _ = s.Write([]byte(strings.Repeat(" ", padding)))
+			s.WriteString(logrus.InfoLevel, strings.Repeat(" ", padding))
 		}
 	}
 
-	_, _ = s.Write([]byte("\n"))
+	s.WriteString(logrus.InfoLevel, "\n")
 
 	if len(values) == 0 {
-		_, _ = s.Write([]byte(" No entries found\n"))
+		s.WriteString(logrus.InfoLevel, " No entries found\n")
 	}
 
 	// Print Values
 	for _, v := range values {
 		for key, value := range v {
-			_, _ = s.Write([]byte(" " + value + "  "))
+			s.WriteString(logrus.InfoLevel, " "+value+"  ")
 
 			padding := columnLengths[key] - len(value)
 
 			if padding > 0 {
-				_, _ = s.Write([]byte(strings.Repeat(" ", padding)))
+				s.WriteString(logrus.InfoLevel, strings.Repeat(" ", padding))
 			}
 		}
 
-		_, _ = s.Write([]byte("\n"))
+		s.WriteString(logrus.InfoLevel, "\n")
 	}
 
-	_, _ = s.Write([]byte("\n"))
+	s.WriteString(logrus.InfoLevel, "\n")
 }

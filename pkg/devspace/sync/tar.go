@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -154,25 +153,6 @@ func (u *Unarchiver) untarNext(destPath string, tarReader *tar.Reader) (bool, er
 	// Set mod time correctly
 	_ = os.Chtimes(outFileName, time.Now(), header.ModTime)
 
-	// Execute command if defined
-	if u.syncConfig.Options.FileChangeCmd != "" {
-		cmdArgs := make([]string, 0, len(u.syncConfig.Options.FileChangeArgs))
-		for _, arg := range u.syncConfig.Options.FileChangeArgs {
-			if arg == "{}" {
-				cmdArgs = append(cmdArgs, outFileName)
-			} else {
-				cmdArgs = append(cmdArgs, arg)
-			}
-		}
-
-		cmd := exec.Command(u.syncConfig.Options.FileChangeCmd, cmdArgs...)
-		cmd.Dir = u.syncConfig.LocalPath
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			return false, errors.Errorf("Error executing command '%s %s': %s => %v", u.syncConfig.Options.FileChangeCmd, strings.Join(cmdArgs, " "), string(out), err)
-		}
-	}
-
 	// Update fileMap so that upstream does not upload the file
 	u.syncConfig.fileIndex.fileMap[relativePath] = &FileInformation{
 		Name:        relativePath,
@@ -202,24 +182,6 @@ func (u *Unarchiver) createAllFolders(name string, perm os.FileMode) error {
 			}
 
 			return errors.Errorf("Error creating %s: %v", dirToCreate, err)
-		}
-
-		if u.syncConfig.Options.DirCreateCmd != "" {
-			cmdArgs := make([]string, 0, len(u.syncConfig.Options.DirCreateArgs))
-			for _, arg := range u.syncConfig.Options.DirCreateArgs {
-				if arg == "{}" {
-					cmdArgs = append(cmdArgs, dirToCreate)
-				} else {
-					cmdArgs = append(cmdArgs, arg)
-				}
-			}
-
-			cmd := exec.Command(u.syncConfig.Options.DirCreateCmd, cmdArgs...)
-			cmd.Dir = u.syncConfig.LocalPath
-			out, err := cmd.CombinedOutput()
-			if err != nil {
-				return errors.Errorf("Error executing command '%s %s': %s => %v", u.syncConfig.Options.DirCreateCmd, strings.Join(cmdArgs, " "), string(out), err)
-			}
 		}
 	}
 

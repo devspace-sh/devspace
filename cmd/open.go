@@ -4,22 +4,26 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/services/portforwarding"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/sirupsen/logrus"
+	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/devspace/services"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 
@@ -35,9 +39,7 @@ import (
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -93,7 +95,10 @@ devspace open
 func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
@@ -105,38 +110,36 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 		ingressControllerWarning string
 	)
 
+	// Get kubernetes client
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
+	if err != nil {
+		return err
+	}
+
 	// Load generated config if possible
-	var generatedConfig *generated.Config
+	var localCache localcache.Cache
 	if configExists {
 		log.StartFileLogging()
 
-		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions(cmd.log))
+		localCache, err = configLoader.LoadLocalCache()
 		if err != nil {
 			return err
 		}
 	}
 
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	// Get kubernetes client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
-	if err != nil {
-		return err
-	}
-
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, cmd.log)
 	if err != nil {
 		return err
 	}
 
+	// create devspace context
+	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+		WithKubeClient(client)
+
 	// Execute plugin hook
-	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "open")
+	err = hook.ExecuteHooks(ctx, nil, "open")
 	if err != nil {
 		return err
 	}
@@ -155,11 +158,11 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	if err != nil {
 		return err
 	}
-	cmd.log.WriteString("\n")
+	cmd.log.WriteString(logrus.InfoLevel, "\n")
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
-		err := cmd.openLocal(f, client, domain)
+		err := cmd.openLocal(ctx, domain)
 		if err != nil {
 			cmd.log.Error(err)
 		}
@@ -190,19 +193,23 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 		domainHash := hash.String(domain)
 
 		ingressName := "devspace-ingress-" + domainHash[:10]
-		_, err = client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).Create(context.TODO(), &v1beta1.Ingress{
+		_, err = client.KubeClient().NetworkingV1().Ingresses(namespace).Create(context.TODO(), &networkingv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{Name: ingressName},
-			Spec: v1beta1.IngressSpec{
-				Rules: []v1beta1.IngressRule{
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
 					{
 						Host: domain,
-						IngressRuleValue: v1beta1.IngressRuleValue{
-							HTTP: &v1beta1.HTTPIngressRuleValue{
-								Paths: []v1beta1.HTTPIngressPath{
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
 									{
-										Backend: v1beta1.IngressBackend{
-											ServiceName: serviceName,
-											ServicePort: intstr.FromInt(servicePort),
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: serviceName,
+												Port: networkingv1.ServiceBackendPort{
+													Number: int32(servicePort),
+												},
+											},
 										},
 									},
 								},
@@ -213,7 +220,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 			},
 		}, metav1.CreateOptions{})
 		if err != nil {
-			cmd.log.WriteString("\n")
+			cmd.log.WriteString(logrus.InfoLevel, "\n")
 			return errors.Errorf("Unable to create ingress for domain %s: %v", domain, err)
 		}
 
@@ -243,8 +250,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 
 func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, log log.Logger, maxWait time.Duration) error {
 	// Loop and check if http code is != 502
-	log.StartWait("Waiting for ingress")
-	defer log.StopWait()
+	log.Info("Waiting for ingress...")
 
 	// Make sure the ingress has some time to take effect
 	time.Sleep(time.Second * 5)
@@ -254,7 +260,6 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 		// Check if domain is ready => ignore error as we will retry request
 		resp, _ := http.Get(url)
 		if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
-			log.StopWait()
 			time.Sleep(time.Second * 1)
 			_ = open.Start(url)
 			log.Donef("Successfully opened %s", url)
@@ -269,7 +274,7 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 			}
 			if len(report) > 0 {
 				reportString := analyze.ReportToString(report)
-				log.WriteString(reportString)
+				log.WriteString(logrus.InfoLevel, reportString)
 			}
 		}
 
@@ -278,8 +283,8 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 	return nil
 }
 
-func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain string) error {
-	_, servicePort, serviceLabels, err := cmd.getService(client, client.Namespace(), domain, true)
+func (cmd *OpenCmd) openLocal(ctx *devspacecontext.Context, domain string) error {
+	_, servicePort, serviceLabels, err := cmd.getService(ctx.KubeClient, ctx.KubeClient.Namespace(), domain, true)
 	if err != nil {
 		return errors.Errorf("Unable to get service: %v", err)
 	}
@@ -303,8 +308,7 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain s
 	domain = "http://localhost:" + strconv.Itoa(localPort)
 	portMappings := []*latest.PortMapping{
 		{
-			LocalPort:  &localPort,
-			RemotePort: &servicePort,
+			Port: fmt.Sprintf("%d:%d", localPort, servicePort),
 		},
 	}
 
@@ -313,35 +317,41 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain s
 		labelSelector[key] = value
 	}
 
-	portforwardingConfig := []*latest.PortForwardingConfig{
-		{
-			PortMappings:  portMappings,
-			LabelSelector: labelSelector,
+	devPod := &latest.DevPod{
+		Name:          "open",
+		LabelSelector: labelSelector,
+		Ports:         portMappings,
+	}
+	fakeConfig := &latest.Config{
+		Dev: map[string]*latest.DevPod{
+			"open": devPod,
 		},
 	}
 
+	devSpaceConfig := config.Ensure(config.NewConfig(nil, nil, fakeConfig, nil, nil, nil, constants.DefaultConfigPath))
+	ctx = ctx.WithConfig(devSpaceConfig)
+	options := targetselector.NewEmptyOptions().
+		WithLabelSelector(labels.Set(labelSelector).String()).
+		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second))
+
 	// start port-forwarding for localhost access
-	servicesClient := f.NewServicesClient(config.Ensure(config.NewConfig(nil, &latest.Config{
-		Dev: latest.DevConfig{
-			Ports: portforwardingConfig,
-		},
-	}, nil, nil, constants.DefaultConfigPath)), nil, client, cmd.log)
-	err = servicesClient.StartPortForwarding(nil, services.DefaultPrefixFn)
-	if err != nil {
-		return errors.Wrap(err, "start port forwarding")
+	ctx, t := ctx.WithNewTomb()
+	<-t.NotifyGo(func() error {
+		return portforwarding.StartPortForwarding(ctx, devPod, targetselector.NewTargetSelector(options), t)
+	})
+	if !t.Alive() {
+		return t.Err()
 	}
 
 	// Loop and check if http code is != 502
-	cmd.log.StartWait("Waiting for application")
-	defer cmd.log.StopWait()
+	cmd.log.Info("Waiting for application...")
 
 	// Make sure the ingress has some time to take effect
 	time.Sleep(time.Second * 2)
 
-	cmd.log.StopWait()
 	_ = open.Start(domain)
 	cmd.log.Donef("Successfully opened %s", domain)
-	cmd.log.WriteString("\n")
+	cmd.log.WriteString(logrus.InfoLevel, "\n")
 	cmd.log.Info("Press ENTER to terminate port-forwarding process")
 
 	// Wait until user aborts the program or presses ENTER
@@ -429,11 +439,10 @@ func (cmd *OpenCmd) getService(client kubectl.Client, namespace, host string, ge
 }
 
 func (cmd *OpenCmd) findDomain(client kubectl.Client, namespace, host string) (string, bool, error) {
-	cmd.log.StartWait("Retrieve ingresses")
-	defer cmd.log.StopWait()
+	cmd.log.Info("Retrieve ingresses...")
 
 	// List all ingresses and only create one if there is none already
-	ingressList, err := client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).List(context.TODO(), metav1.ListOptions{})
+	ingressList, err := client.KubeClient().NetworkingV1().Ingresses(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return "", false, errors.Errorf("Error listing ingresses: %v", err)
 	}

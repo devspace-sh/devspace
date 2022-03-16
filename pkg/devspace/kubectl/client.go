@@ -2,20 +2,17 @@ package kubectl
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"io"
 	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"sort"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
@@ -51,52 +48,30 @@ type Client interface {
 	// KubeConfigLoader returns the kube config loader interface
 	KubeConfigLoader() kubeconfig.Loader
 
-	// PrintWarning this function will print a warning if the generated config contains a different last kube context / namespace
-	// than the one that is used currently
-	CheckKubeContext(generatedConfig *generated.Config, noWarning bool, log log.Logger) (Client, error)
+	// CopyFromReader copies and extracts files into the container from the reader interface
+	CopyFromReader(ctx context.Context, pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error
 
-	// Copies and extracts files into the container from the reader interface
-	CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error
-
-	// Copies and extracts files into the container from the local path excluding the ones specified
+	// Copy copies and extracts files into the container from the local path excluding the ones specified
 	// in the exclude array.
-	Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error
+	Copy(ctx context.Context, pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error
 
-	// Starts a new exec request with given options and custom transport
-	ExecStreamWithTransport(options *ExecStreamWithTransportOptions) error
-
-	// Starts a new exec request with given options
-	ExecStream(options *ExecStreamOptions) error
+	// ExecStream starts a new exec request with given options
+	ExecStream(ctx context.Context, options *ExecStreamOptions) error
 
 	// ExecBuffered starts a new exec request, waits for it to finish and returns the stdout and stderr to the caller
-	ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error)
+	ExecBuffered(ctx context.Context, pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error)
 
-	// Executes a generic kubernetes api request and returns the response as a string
-	GenericRequest(options *GenericRequestOptions) (string, error)
+	// GenericRequest executes a generic kubernetes api request and returns the response as a string
+	GenericRequest(ctx context.Context, options *GenericRequestOptions) (string, error)
 
-	// Starts a new logs request to the given pod and container
-	ReadLogs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error)
+	// ReadLogs starts a new logs request to the given pod and container
+	ReadLogs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error)
 
-	// Starts a new logs request to the given pod and container and returns a ReadCloser interface
+	// Logs starts a new logs request to the given pod and container and returns a ReadCloser interface
 	// to allow continuous reading. Can also follow a log if specified.
 	Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error)
 
-	// Creates a new round tripper and upgrade wrapper for the current kube config
-	GetUpgraderWrapper() (http.RoundTripper, UpgraderWrapper, error)
-
-	// Ensures the config names exist and if not creates them
-	EnsureDeployNamespaces(config *latest.Config, log log.Logger) error
-
-	// Ensures a google cloud cluster role binding is created in GKE like clusters
-	EnsureGoogleCloudClusterRoleBinding(log log.Logger) error
-
-	// Creates a new port forwarder object for the current kube context to the given pod
-	NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error)
-
-	// Returns true if a local kubernetes installation such as minikube is detected
-	IsLocalKubernetes() bool
-
-	// Returns true if in cluster kubernetes configuration is detected
+	// IsInCluster returns true if in cluster kubernetes configuration is detected
 	IsInCluster() bool
 }
 
@@ -208,17 +183,17 @@ func (client *client) IsInCluster() bool {
 	return client.isInCluster
 }
 
-// PrintWarning prints a warning if the last kube context is different than this one
-func (client *client) CheckKubeContext(generatedConfig *generated.Config, noWarning bool, log log.Logger) (Client, error) {
-	currentConfigContext := &generated.LastContextConfig{
+// CheckKubeContext prints a warning if the last kube context is different than this one
+func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, autoSwitch bool, log log.Logger) (Client, error) {
+	currentConfigContext := &localcache.LastContextConfig{
 		Namespace: client.Namespace(),
 		Context:   client.CurrentContext(),
 	}
-	
+
 	resetClient := false
-	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel && !noWarning {
-		lastConfigContext := generatedConfig.GetActive().LastContext
-		
+	if localCache != nil && !noWarning {
+		lastConfigContext := localCache.GetLastContext()
+
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
 		if lastConfigContext != nil {
 			// if the current kubeContext!=last kubeContext
@@ -227,80 +202,90 @@ func (client *client) CheckKubeContext(generatedConfig *generated.Config, noWarn
 			// then ask which namespace to use
 			if lastConfigContext.Context != "" &&
 				lastConfigContext.Context != currentConfigContext.Context {
-				log.WriteString("\n")
-				log.Warnf(ansi.Color("Are you using the correct kube context?", "white+b"))
-				log.Warnf("Current kube context: '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
-				log.Warnf("Last    kube context: '%s'", ansi.Color(lastConfigContext.Context, "white+b"))
-
-				// if terminal is not interactive then return the same client
-				if !isTerminalIn {
-					return client, nil
-				}
-
-				kc, err := log.Question(&survey.QuestionOptions{
-					Question:     "Which context do you want to use?",
-					DefaultValue: currentConfigContext.Context,
-					Options: []string{
-						currentConfigContext.Context,
-						lastConfigContext.Context,
-					},
-				})
-				if err != nil {
-					return client, err
-				}
-				if kc != currentConfigContext.Context {
-					currentConfigContext.Context = kc
+				if autoSwitch {
+					currentConfigContext.Context = lastConfigContext.Context
 					currentConfigContext.Namespace = lastConfigContext.Namespace
 					resetClient = true
+				} else if log.GetLevel() >= logrus.InfoLevel {
+					log.WriteString(logrus.WarnLevel, "\n")
+					log.Warnf(ansi.Color("Are you using the correct kube context?", "white+b"))
+					log.Warnf("Current kube context: '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
+					log.Warnf("Last    kube context: '%s'", ansi.Color(lastConfigContext.Context, "white+b"))
+
+					// if terminal is not interactive then return the same client
+					if !isTerminalIn {
+						return client, nil
+					}
+
+					kc, err := log.Question(&survey.QuestionOptions{
+						Question:     "Which context do you want to use?",
+						DefaultValue: currentConfigContext.Context,
+						Options: []string{
+							currentConfigContext.Context,
+							lastConfigContext.Context,
+						},
+					})
+					if err != nil {
+						return client, err
+					}
+					if kc != currentConfigContext.Context {
+						currentConfigContext.Context = kc
+						currentConfigContext.Namespace = lastConfigContext.Namespace
+						resetClient = true
+					}
 				}
 			} else if lastConfigContext.Namespace != "" &&
 				lastConfigContext.Namespace != currentConfigContext.Namespace {
-				log.WriteString("\n")
-				log.Warnf(ansi.Color("Are you using the correct namespace?", "white+b"))
-				log.Warnf("Current namespace: '%s'", ansi.Color(currentConfigContext.Namespace, "white+b"))
-				log.Warnf("Last    namespace: '%s'", ansi.Color(lastConfigContext.Namespace, "white+b"))
-
-				// if terminal is not interactive then return the same client
-				if !isTerminalIn {
-					return client, nil
-				}
-
-				ns, err := log.Question(&survey.QuestionOptions{
-					Question:     "Which namespace do you want to use?",
-					DefaultValue: currentConfigContext.Namespace,
-					Options: []string{
-						currentConfigContext.Namespace,
-						lastConfigContext.Namespace,
-					},
-				})
-				if err != nil {
-					return client, err
-				}
-				if ns != currentConfigContext.Namespace {
-					currentConfigContext.Namespace = ns
+				if autoSwitch {
+					currentConfigContext.Namespace = lastConfigContext.Namespace
 					resetClient = true
+				} else if log.GetLevel() >= logrus.InfoLevel {
+					log.WriteString(logrus.WarnLevel, "\n")
+					log.Warnf(ansi.Color("Are you using the correct namespace?", "white+b"))
+					log.Warnf("Current namespace: '%s'", ansi.Color(currentConfigContext.Namespace, "white+b"))
+					log.Warnf("Last    namespace: '%s'", ansi.Color(lastConfigContext.Namespace, "white+b"))
+
+					// if terminal is not interactive then return the same client
+					if !isTerminalIn {
+						return client, nil
+					}
+
+					ns, err := log.Question(&survey.QuestionOptions{
+						Question:     "Which namespace do you want to use?",
+						DefaultValue: currentConfigContext.Namespace,
+						Options: []string{
+							currentConfigContext.Namespace,
+							lastConfigContext.Namespace,
+						},
+					})
+					if err != nil {
+						return client, err
+					}
+					if ns != currentConfigContext.Namespace {
+						currentConfigContext.Namespace = ns
+						resetClient = true
+					}
 				}
 			}
 		}
 
 		// Warn if using default namespace unless previous deployment was also to default namespace
-		if currentConfigContext.Namespace == metav1.NamespaceDefault &&
+		if log.GetLevel() >= logrus.InfoLevel && currentConfigContext.Namespace == metav1.NamespaceDefault &&
 			(lastConfigContext == nil ||
 				lastConfigContext.Namespace != metav1.NamespaceDefault) {
 			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted\n")
-			log.StartWait("Will continue in 5 seconds...")
+			log.Info("Will continue in 5 seconds...")
 			time.Sleep(5 * time.Second)
-			log.StopWait()
 		}
 	}
 
 	// Info messages
 	log.Infof("Using namespace '%s'", ansi.Color(currentConfigContext.Namespace, "white+b"))
 	log.Infof("Using kube context '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
-
 	if resetClient {
-		return NewClientFromContext(currentConfigContext.Context, currentConfigContext.Namespace, true, client.kubeLoader)
+		return NewClientFromContext(currentConfigContext.Context, currentConfigContext.Namespace, true, client.KubeConfigLoader())
 	}
+
 	return client, nil
 }
 

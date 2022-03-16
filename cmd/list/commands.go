@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -41,7 +42,10 @@ devspace.yaml
 func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
 	// Set config root
-	configLoader := f.NewConfigLoader("")
+	configLoader, err := f.NewConfigLoader("")
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
@@ -51,23 +55,11 @@ func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 	}
 
 	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), nil, logger)
+	commandsInterface, err := configLoader.LoadWithParser(context.Background(), nil, nil, loader.NewCommandsParser(), nil, logger)
 	if err != nil {
 		return err
 	}
 	commands := commandsInterface.Config().Commands
-
-	// Load generated config
-	generatedConfig, err := configLoader.LoadGenerated(nil)
-	if err != nil {
-		return err
-	}
-
-	// Save variables
-	err = configLoader.SaveGenerated(generatedConfig)
-	if err != nil {
-		return err
-	}
 
 	// Specify the table column names
 	headerColumnNames := []string{
@@ -78,6 +70,10 @@ func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 
 	rows := [][]string{}
 	for _, command := range commands {
+		if command.Internal {
+			continue
+		}
+
 		rows = append(rows, []string{
 			command.Name,
 			command.Command,

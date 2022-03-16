@@ -1,8 +1,9 @@
 package git
 
 import (
+	"context"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -14,8 +15,8 @@ type GitCLIRepository struct {
 }
 
 // NewGitCLIRepository creates a new git repository struct with the given parameters
-func NewGitCLIRepository(localPath string) (*GitCLIRepository, error) {
-	if !isGitCommandAvailable() {
+func NewGitCLIRepository(ctx context.Context, localPath string) (*GitCLIRepository, error) {
+	if !isGitCommandAvailable(ctx) {
 		return nil, errors.New("git not found in path. Please make sure you have git installed to clone git dependencies")
 	}
 
@@ -24,8 +25,8 @@ func NewGitCLIRepository(localPath string) (*GitCLIRepository, error) {
 	}, nil
 }
 
-func isGitCommandAvailable() bool {
-	_, err := exec.Command("git", "version").Output()
+func isGitCommandAvailable(ctx context.Context) bool {
+	_, err := command.Output(ctx, "", "git", "version")
 	return err == nil
 }
 
@@ -38,8 +39,8 @@ type CloneOptions struct {
 	DisableShallow bool
 }
 
-// Update pulls the repository or clones it into the local path
-func (gr *GitCLIRepository) Clone(options CloneOptions) error {
+// Clone pulls the repository or clones it into the local path
+func (gr *GitCLIRepository) Clone(ctx context.Context, options CloneOptions) error {
 	// Check if repo already exists
 	_, err := os.Stat(gr.LocalPath + "/.git")
 	if err != nil {
@@ -62,14 +63,14 @@ func (gr *GitCLIRepository) Clone(options CloneOptions) error {
 		}
 
 		args = append(args, options.Args...)
-		out, err := exec.Command("git", args...).CombinedOutput()
+		out, err := command.CombinedOutput(ctx, gr.LocalPath, "git", args...)
 		if err != nil {
 			return errors.Errorf("Error running 'git %s': %v -> %s", strings.Join(args, " "), err, string(out))
 		}
 
 		// checkout the commit if necessary
 		if options.Commit != "" {
-			out, err := exec.Command("git", "-C", gr.LocalPath, "checkout", options.Commit).CombinedOutput()
+			out, err := command.CombinedOutput(ctx, gr.LocalPath, "git", "-C", gr.LocalPath, "checkout", options.Commit)
 			if err != nil {
 				return errors.Errorf("Error running 'git checkout %s': %v -> %s", options.Commit, err, string(out))
 			}
@@ -78,9 +79,9 @@ func (gr *GitCLIRepository) Clone(options CloneOptions) error {
 		return nil
 	}
 
-	// make sure the repo is up to date
+	// make sure the repo is up-to-date
 	if options.Commit == "" {
-		out, err := exec.Command("git", "-C", gr.LocalPath, "pull").CombinedOutput()
+		out, err := command.CombinedOutput(ctx, gr.LocalPath, "git", "-C", gr.LocalPath, "pull")
 		if err != nil {
 			return errors.Errorf("Error running 'git pull %s': %v -> %s", options.URL, err, string(out))
 		}

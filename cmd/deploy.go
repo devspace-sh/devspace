@@ -2,30 +2,35 @@ package cmd
 
 import (
 	"context"
-	"strconv"
-	"strings"
-
-	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"fmt"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
-
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	"github.com/loft-sh/devspace/pkg/devspace/dev"
+	"github.com/loft-sh/devspace/pkg/devspace/devpod"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
-
-	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/analyze"
-	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"k8s.io/client-go/kubernetes/fake"
+	"os"
+	"strings"
 )
 
 // DeployCmd holds the required data for the down cmd
@@ -39,19 +44,18 @@ type DeployCmd struct {
 
 	ForceDeploy         bool
 	SkipDeploy          bool
-	Deployments         string
-	ForceDependencies   bool
 	VerboseDependencies bool
+	Pipeline            string
 
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
+	Render                  bool
 	Dependency              []string
 	SkipDependency          []string
 
-	Wait    bool
-	Timeout int
-
 	log logpkg.Logger
+
+	Ctx context.Context
 }
 
 // NewDeployCmd creates a new deploy command
@@ -84,7 +88,6 @@ devspace deploy --kube-context=deploy-context
 	}
 
 	deployCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Deploys the dependencies verbosely")
-	deployCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
 	deployCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 	deployCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
@@ -96,252 +99,233 @@ devspace deploy --kube-context=deploy-context
 
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 	deployCmd.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", false, "Skips deploying and only builds images")
-	deployCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specific deployment (You can specify multiple deployments comma-separated")
+	deployCmd.Flags().BoolVar(&cmd.Render, "render", false, "If true will render manifests and print them instead of actually deploying them")
+	deployCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "", "The pipeline to execute")
 
 	deployCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips deploying the following dependencies")
 	deployCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specific named dependencies")
-
-	deployCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait for pods to be running or fails after given timeout")
-	deployCmd.Flags().IntVar(&cmd.Timeout, "timeout", 120, "Timeout until deploy should stop waiting")
 
 	return deployCmd
 }
 
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(f factory.Factory) error {
-	// set config root
-	cmd.log = f.GetLog()
-	configOptions := cmd.ToConfigOptions(cmd.log)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
-	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
-	if err != nil {
-		return err
-	} else if !configExists {
-		return errors.New(message.ConfigNotFound)
+	if cmd.Ctx == nil {
+		var cancelFn context.CancelFunc
+		cmd.Ctx, cancelFn = context.WithCancel(context.Background())
+		defer cancelFn()
 	}
 
-	// start file logging
-	logpkg.StartFileLogging()
+	// set command in context
+	cmd.Ctx = values.WithCommand(cmd.Ctx, "deploy")
 
-	// validate flags
-	err = cmd.validateFlags()
+	configOptions := cmd.ToConfigOptions()
+	ctx, err := prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, false)
 	if err != nil {
 		return err
 	}
 
-	// load generated config
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
-	if err != nil {
-		return errors.Errorf("error loading generated.yaml: %v", err)
-	}
-	configOptions.GeneratedConfig = generatedConfig
-
-	// use last context if specified
-	err = cmd.UseLastContext(generatedConfig, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	// create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
-	if err != nil {
-		return errors.Errorf("unable to create new kubectl client: %v", err)
-	}
-
-	// If the current kube context or namespace is different than old,
-	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	configOptions.KubeClient = client
-
-	// clear the dependencies & deployments cache if necessary
-	clearCache(generatedConfig, client)
-
-	// deprecated: Fill DEVSPACE_DOMAIN vars
-	err = fillDevSpaceDomainVars(client, generatedConfig)
-	if err != nil {
-		return err
-	}
-
-	// load config
-	configInterface, err := configLoader.Load(configOptions, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	return runWithHooks("deployCommand", client, configInterface, cmd.log, func() error {
-		return cmd.runCommand(f, client, configInterface, configLoader, configOptions)
+	return runWithHooks(ctx, "deployCommand", func() error {
+		return cmd.runCommand(ctx, f, configOptions)
 	})
 }
 
-func (cmd *DeployCmd) runCommand(f factory.Factory, client kubectl.Client, configInterface config.Config, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions) error {
-	// create namespace if necessary
-	err := client.EnsureDeployNamespaces(configInterface.Config(), cmd.log)
-	if err != nil {
-		return errors.Errorf("unable to create namespace: %v", err)
+func (cmd *DeployCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
+	if cmd.Pipeline == "" {
+		cmd.Pipeline = "deploy"
 	}
 
-	// create docker client
-	dockerClient, err := f.NewDockerClient(cmd.log)
-	if err != nil {
-		dockerClient = nil
-	}
-
-	// deploy dependencies
-	dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).DeployAll(dependency.DeployOptions{
-		Dependencies:            cmd.Dependency,
-		SkipDependencies:        cmd.SkipDependency,
-		ForceDeployDependencies: cmd.ForceDependencies,
-		SkipBuild:               cmd.SkipBuild,
-		SkipDeploy:              cmd.SkipDeploy,
-		ForceDeploy:             cmd.ForceDeploy,
-		Verbose:                 cmd.VerboseDependencies,
-
-		BuildOptions: build.Options{
-			SkipPush:                  cmd.SkipPush,
-			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
-			ForceRebuild:              cmd.ForceBuild,
-			Sequential:                cmd.BuildSequential,
-			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
-		},
-	})
-	if err != nil {
-		return errors.Wrap(err, "deploy dependencies")
-	}
-
-	// execute plugin hook
-	err = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "deploy")
-	if err != nil {
-		return err
-	}
-
-	// create pull secrets if necessary
-	err = f.NewPullSecretClient(configInterface, dependencies, client, dockerClient, cmd.log).CreatePullSecrets()
-	if err != nil {
-		cmd.log.Warn(err)
-	}
-
-	// only deploy if we don't want to deploy a dependency specificly
-	if len(cmd.Dependency) == 0 {
-		// build images
-		builtImages := make(map[string]string)
-		if !cmd.SkipBuild {
-			builtImages, err = f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
+	return runPipeline(ctx, f, true, &PipelineOptions{
+		Options: types.Options{
+			BuildOptions: build.Options{
+				SkipBuild:                 cmd.SkipBuild,
 				SkipPush:                  cmd.SkipPush,
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 				ForceRebuild:              cmd.ForceBuild,
 				Sequential:                cmd.BuildSequential,
 				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
-			}, cmd.log)
-			if err != nil {
-				if strings.Contains(err.Error(), "no space left on device") {
-					err = errors.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
-				}
-
-				return err
-			}
-
-			// save cache if an image was built
-			if len(builtImages) > 0 {
-				err := configLoader.SaveGenerated(configInterface.Generated())
-				if err != nil {
-					return errors.Errorf("error saving generated config: %v", err)
-				}
-			}
-		}
-
-		// what deployments should be deployed
-		deployments := []string{}
-		if !cmd.SkipDeploy {
-			if cmd.Deployments != "" {
-				deployments = strings.Split(cmd.Deployments, ",")
-				for index := range deployments {
-					deployments[index] = strings.TrimSpace(deployments[index])
-				}
-			}
-
-			// deploy all defined deployments
-			err = f.NewDeployController(configInterface, dependencies, client).Deploy(&deploy.Options{
+			},
+			DeployOptions: deploy.Options{
 				ForceDeploy: cmd.ForceDeploy,
-				BuiltImages: builtImages,
-				Deployments: deployments,
-			}, cmd.log)
-			if err != nil {
-				return err
+				Render:      cmd.Render,
+				SkipDeploy:  cmd.SkipDeploy,
+			},
+			DependencyOptions: types.DependencyOptions{
+				Exclude: cmd.SkipDependency,
+				Only:    cmd.Dependency,
+			},
+		},
+		ConfigOptions: configOptions,
+		Pipeline:      cmd.Pipeline,
+	})
+}
+
+func prepare(ctx context.Context, f factory.Factory, configOptions *loader.ConfigOptions, globalFlags *flags.GlobalFlags, allowFailingKubeClient bool) (*devspacecontext.Context, error) {
+	// start file logging
+	logpkg.StartFileLogging()
+
+	// create a temporary folder for us to use
+	tempFolder, err := ioutil.TempDir("", "devspace-")
+	if err != nil {
+		return nil, errors.Wrap(err, "create temporary folder")
+	}
+
+	// add temp folder to context
+	ctx = values.WithTempFolder(ctx, tempFolder)
+
+	// get the main logger after file logging is started
+	log := f.GetLog()
+
+	// set config root
+	configLoader, err := f.NewConfigLoader(globalFlags.ConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	configExists, err := configLoader.SetDevSpaceRoot(log)
+	if err != nil {
+		return nil, err
+	} else if !configExists {
+		return nil, errors.New(message.ConfigNotFound)
+	}
+
+	// create kubectl client
+	client, err := f.NewKubeClientFromContext(globalFlags.KubeContext, globalFlags.Namespace)
+	if err != nil {
+		if allowFailingKubeClient {
+			log.Warnf("Unable to create new kubectl client: %v", err)
+			log.Warn("Using fake client to render resources")
+			log.WriteString(logrus.WarnLevel, "\n")
+
+			kube := fake.NewSimpleClientset()
+			client = &fakekube.Client{
+				Client: kube,
 			}
+		} else {
+			return nil, errors.Errorf("error creating Kubernetes client: %v. Please make sure you have a valid Kubernetes context that points to a working Kubernetes cluster. If in doubt, please check if the following command works locally: `kubectl get namespaces`", err)
 		}
 	}
 
+	// load generated config
+	localCache, err := configLoader.LoadLocalCache()
+	if err != nil {
+		return nil, errors.Errorf("error loading local cache: %v", err)
+	}
+
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = kubectl.CheckKubeContext(client, localCache, globalFlags.NoWarn, globalFlags.SwitchContext, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// load config
+	configInterface, err := configLoader.LoadWithCache(ctx, localCache, client, configOptions, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// create devspace context
+	return devspacecontext.NewContext(ctx, log).
+		WithConfig(configInterface).
+		WithKubeClient(client), nil
+}
+
+type PipelineOptions struct {
+	types.Options
+
+	ConfigOptions *loader.ConfigOptions
+	Pipeline      string
+	ShowUI        bool
+	UIPort        int
+}
+
+func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bool, options *PipelineOptions) error {
+	// create namespace if necessary
+	if !options.DeployOptions.Render {
+		err := kubectl.EnsureNamespace(ctx.Context, ctx.KubeClient, ctx.KubeClient.Namespace(), ctx.Log)
+		if err != nil {
+			return errors.Errorf("unable to create namespace: %v", err)
+		}
+	}
+
+	// print config
+	if ctx.Log.GetLevel() == logrus.DebugLevel {
+		out, _ := yaml.Marshal(ctx.Config.Config())
+		ctx.Log.Debugf("Use config:\n%s\n", string(out))
+	}
+
+	// resolve dependencies
+	dependencies, err := f.NewDependencyManager(ctx, options.ConfigOptions).ResolveAll(ctx, dependency.ResolveOptions{})
+	if err != nil {
+		return errors.Wrap(err, "deploy dependencies")
+	}
+	ctx = ctx.WithDependencies(dependencies)
+
 	// update last used kube context & save generated yaml
-	err = updateLastKubeContext(configLoader, client, configInterface.Generated())
+	err = updateLastKubeContext(ctx)
 	if err != nil {
 		return errors.Wrap(err, "update last kube context")
 	}
 
-	// wait if necessary
-	if cmd.Wait {
-		report, err := f.NewAnalyzer(client, f.GetLog()).CreateReport(client.Namespace(), analyze.Options{Wait: true, Patient: true, Timeout: cmd.Timeout, IgnorePodRestarts: true})
+	var configPipeline *latest.Pipeline
+	if ctx.Config.Config().Pipelines != nil && ctx.Config.Config().Pipelines[options.Pipeline] != nil {
+		configPipeline = ctx.Config.Config().Pipelines[options.Pipeline]
+	} else {
+		configPipeline, err = types.GetDefaultPipeline(options.Pipeline)
 		if err != nil {
-			return errors.Wrap(err, "analyze")
-		}
-
-		if len(report) > 0 {
-			return errors.Errorf(analyze.ReportToString(report))
+			return err
 		}
 	}
 
-	cmd.log.Donef("Successfully deployed!")
-	cmd.log.Infof("\r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace analyze", "white+b"))
-	return nil
-}
-
-func (cmd *DeployCmd) validateFlags() error {
-	if cmd.SkipBuild && cmd.ForceBuild {
-		return errors.New("flags --skip-build & --force-build cannot be used together")
+	// marshal pipeline
+	configPipelineBytes, err := yaml.Marshal(configPipeline)
+	if err == nil {
+		ctx.Log.Debugf("Run pipeline:\n%s\n", string(configPipelineBytes))
 	}
 
-	return nil
-}
+	// create a new base dev pod manager
+	devPodManager := devpod.NewManager(ctx.Context)
+	defer devPodManager.Close()
 
-func fillDevSpaceDomainVars(client kubectl.Client, generatedConfig *generated.Config) error {
-	namespace, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), client.Namespace(), metav1.GetOptions{})
+	// create dependency registry
+	dependencyRegistry := registry.NewDependencyRegistry(options.DeployOptions.Render)
+
+	// get deploy pipeline
+	pipe := pipeline.NewPipeline(ctx.Config.Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
+
+	// start ui & open
+	serv, err := dev.UI(ctx, options.UIPort, options.ShowUI, pipe)
 	if err != nil {
-		return nil
+		return err
 	}
+	dependencyRegistry.SetServer("http://" + serv.Server.Addr)
 
-	// Check if domain there is a domain for the space
-	if namespace.Annotations == nil || namespace.Annotations[allowedIngressHostsAnnotation] == "" {
-		return nil
+	// exclude ourselves
+	couldExclude, err := dependencyRegistry.MarkDependencyExcluded(ctx, ctx.Config.Config().Name, forceLeader)
+	if err != nil {
+		return err
+	} else if !couldExclude {
+		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace instance active in the current namespace right now that uses the same project name (%s)", strings.Join(os.Args, " "), ctx.Config.Config().Name)
 	}
+	ctx.Log.Debugf("Marked project excluded: %v", ctx.Config.Config().Name)
 
-	// Remove old vars
-	for varName := range generatedConfig.Vars {
-		if strings.HasPrefix(varName, "DEVSPACE_SPACE_DOMAIN") {
-			delete(generatedConfig.Vars, varName)
-		}
+	// get a stdout writer
+	stdoutWriter := ctx.Log.Writer(ctx.Log.GetLevel(), true)
+	defer stdoutWriter.Close()
+
+	// get a stderr writer
+	stderrWriter := ctx.Log.Writer(logrus.WarnLevel, true)
+	defer stderrWriter.Close()
+
+	// start pipeline
+	err = pipe.Run(ctx.WithLogger(logpkg.NewStreamLoggerWithFormat(stdoutWriter, stderrWriter, ctx.Log.GetLevel(), logpkg.TimeFormat)))
+	if err != nil {
+		return err
 	}
+	ctx.Log.Debugf("Wait for dev to finish")
 
-	// Select domain
-	domains := strings.Split(namespace.Annotations[allowedIngressHostsAnnotation], ",")
-	for idx, domain := range domains {
-		domain = strings.Replace(domain, "*.", "", -1)
-		domain = strings.Replace(domain, "*", "", -1)
-		domain = strings.TrimSpace(domain)
-
-		generatedConfig.Vars["DEVSPACE_SPACE_DOMAIN"+strconv.Itoa(idx+1)] = domain
-	}
+	// wait for dev
+	pipe.WaitDev()
 
 	return nil
-}
-
-func clearCache(generatedConfig *generated.Config, client kubectl.Client) {
-	if generatedConfig.GetActive().LastContext != nil {
-		if (generatedConfig.GetActive().LastContext.Context != "" && generatedConfig.GetActive().LastContext.Context != client.CurrentContext()) || (generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace()) {
-			generatedConfig.GetActive().Deployments = map[string]*generated.DeploymentCache{}
-			generatedConfig.GetActive().Dependencies = map[string]string{}
-		}
-	}
 }

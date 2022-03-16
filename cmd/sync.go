@@ -1,7 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
 	"os"
 
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -13,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -35,13 +40,10 @@ type SyncCmd struct {
 	Wait          bool
 	Polling       bool
 
-	Exclude       []string
-	ContainerPath string
-	LocalPath     string
+	Exclude []string
+	Path    string
 
 	InitialSync string
-
-	Verbose bool
 
 	NoWatch               bool
 	DownloadOnInitialSync bool
@@ -49,7 +51,7 @@ type SyncCmd struct {
 	UploadOnly            bool
 
 	// used for testing to allow interruption
-	Interrupt chan error
+	Ctx context.Context
 }
 
 // NewSyncCmd creates a new init command
@@ -75,7 +77,6 @@ devspace sync --container-path=/my-path
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			// Print upgrade message if new version available
 			upgrade.PrintUpgradeMessage()
-
 			plugin.SetPluginCommand(cobraCmd, args)
 			return cmd.Run(f)
 		},
@@ -88,14 +89,12 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
-	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", "", "Local path to use (Default is current directory")
-	syncCmd.Flags().StringVar(&cmd.ContainerPath, "container-path", "", "Container path to use (Default is working directory)")
+	syncCmd.Flags().StringVar(&cmd.Path, "path", "", "Path to use (Default is current directory). Example: ./local-path:/remote-path or local-path:.")
 
 	syncCmd.Flags().BoolVar(&cmd.DownloadOnInitialSync, "download-on-initial-sync", true, "DEPRECATED: Downloads all locally non existing remote files in the beginning")
 	syncCmd.Flags().StringVar(&cmd.InitialSync, "initial-sync", "", "The initial sync strategy to use (mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll)")
 
 	syncCmd.Flags().BoolVar(&cmd.NoWatch, "no-watch", false, "Synchronizes local and remote and then stops")
-	syncCmd.Flags().BoolVar(&cmd.Verbose, "verbose", false, "Shows every file that is synced")
 
 	syncCmd.Flags().BoolVar(&cmd.UploadOnly, "upload-only", false, "If set DevSpace will only upload files")
 	syncCmd.Flags().BoolVar(&cmd.DownloadOnly, "download-only", false, "If set DevSpace will only download files")
@@ -106,11 +105,24 @@ devspace sync --container-path=/my-path
 	return syncCmd
 }
 
+type nameConfig struct {
+	name          string
+	devPod        *latest.DevPod
+	containerName string
+	syncConfig    *latest.SyncConfig
+}
+
 // Run executes the command logic
 func (cmd *SyncCmd) Run(f factory.Factory) error {
+	if cmd.Ctx == nil {
+		var cancelFn context.CancelFunc
+		cmd.Ctx, cancelFn = context.WithCancel(context.Background())
+		defer cancelFn()
+	}
+
 	// Switch working directory
-	if cmd.GlobalFlags.ConfigPath != "" {
-		_, err := os.Stat(cmd.GlobalFlags.ConfigPath)
+	if cmd.ConfigPath != "" {
+		_, err := os.Stat(cmd.ConfigPath)
 		if err != nil {
 			return errors.Errorf("--config is specified, but config %s cannot be loaded: %v", cmd.GlobalFlags.ConfigPath, err)
 		}
@@ -118,10 +130,13 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 	// Load generated config if possible
 	var err error
-	var generatedConfig *generated.Config
+	var localCache localcache.Cache
 	logger := f.GetLog()
-	configOptions := cmd.ToConfigOptions(logger)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	if configLoader.Exists() {
 		if cmd.GlobalFlags.ConfigPath != "" {
 			configExists, err := configLoader.SetDevSpaceRoot(logger)
@@ -131,57 +146,49 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 				return errors.New(message.ConfigNotFound)
 			}
 
-			generatedConfig, err = configLoader.LoadGenerated(configOptions)
+			localCache, err = configLoader.LoadLocalCache()
 			if err != nil {
 				return err
 			}
-
-			configOptions.GeneratedConfig = generatedConfig
 		} else {
 			logger.Warnf("If you want to use the sync paths from `devspace.yaml`, use the `--config=devspace.yaml` flag for this command.")
 		}
 	}
 
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, logger)
-	if err != nil {
-		return err
-	}
-
 	// Get config with adjusted cluster config
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, logger)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, logger)
 	if err != nil {
 		return err
 	}
 
-	configOptions.KubeClient = client
-
 	var configInterface config.Config
-	var config *latest.Config
 	if configLoader.Exists() && cmd.GlobalFlags.ConfigPath != "" {
-		configInterface, err = configLoader.Load(configOptions, logger)
+		configInterface, err = configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, logger)
 		if err != nil {
 			return err
 		}
-
-		config = configInterface.Config()
 	}
 
+	// create the devspace context
+	ctx := devspacecontext.NewContext(cmd.Ctx, logger).
+		WithConfig(configInterface).
+		WithKubeClient(client)
+
 	// Execute plugin hook
-	err = hook.ExecuteHooks(nil, nil, nil, nil, nil, "sync")
+	err = hook.ExecuteHooks(ctx, nil, "sync")
 	if err != nil {
 		return err
 	}
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(client, configLoader, configOptions, "", cmd.ImageSelector, logger)
+	imageSelector, err := getImageSelector(ctx, configLoader, configOptions, cmd.ImageSelector)
 	if err != nil {
 		return err
 	}
@@ -196,36 +203,35 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	}
 
 	// Create the sync config to apply
-	syncConfig := &latest.SyncConfig{}
-	if cmd.GlobalFlags.ConfigPath != "" && config != nil {
-		if len(config.Dev.Sync) == 0 {
+	syncConfig := nameConfig{
+		devPod:     &latest.DevPod{},
+		syncConfig: &latest.SyncConfig{},
+	}
+	if cmd.GlobalFlags.ConfigPath != "" && configInterface != nil {
+		devSection := configInterface.Config().Dev
+		syncConfigs := []nameConfig{}
+		for _, v := range devSection {
+			loader.EachDevContainer(v, func(devContainer *latest.DevContainer) bool {
+				for _, s := range devContainer.Sync {
+					n, err := fromSyncConfig(v, devContainer.Container, s)
+					if err != nil {
+						return true
+					}
+					syncConfigs = append(syncConfigs, n)
+				}
+				return true
+			})
+		}
+		if len(syncConfigs) == 0 {
 			return fmt.Errorf("no sync config found in %s", cmd.GlobalFlags.ConfigPath)
 		}
 
 		// Check which sync config should be used
-		syncConfig = config.Dev.Sync[0]
-		if len(config.Dev.Sync) > 1 {
+		if len(syncConfigs) > 1 {
 			// Select syncConfig to use
 			syncConfigNames := []string{}
-			for idx, sc := range config.Dev.Sync {
-				localPath := sc.LocalSubPath
-				if localPath == "" {
-					localPath = "."
-				}
-
-				remotePath := sc.ContainerPath
-				if remotePath == "" {
-					remotePath = "."
-				}
-
-				selector := ""
-				if sc.ImageSelector != "" {
-					selector = "img-selector: " + sc.ImageSelector
-				} else if len(sc.LabelSelector) > 0 {
-					selector = "selector: " + labels.Set(sc.LabelSelector).String()
-				}
-
-				syncConfigNames = append(syncConfigNames, fmt.Sprintf("%d: Sync %s: %s <-> %s ", idx, selector, localPath, remotePath))
+			for _, sc := range syncConfigs {
+				syncConfigNames = append(syncConfigNames, sc.name)
 			}
 
 			answer, err := logger.Question(&survey.QuestionOptions{
@@ -239,52 +245,87 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 			for idx, n := range syncConfigNames {
 				if answer == n {
-					syncConfig = config.Dev.Sync[idx]
+					syncConfig = syncConfigs[idx]
 					break
 				}
 			}
+		} else {
+			syncConfig = syncConfigs[0]
 		}
 	}
 
 	// apply the flags to the empty sync config or loaded sync config from the devspace.yaml
-	err = cmd.applyFlagsToSyncConfig(syncConfig)
+	var configImageSelector []string
+	if syncConfig.devPod.ImageSelector != "" {
+		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, syncConfig.devPod.ImageSelector, ctx.Config, ctx.Dependencies)
+		if err != nil {
+			return err
+		}
+
+		configImageSelector = []string{imageSelector.Image}
+	}
+	options = options.ApplyConfigParameter(syncConfig.containerName, syncConfig.devPod.LabelSelector, configImageSelector, syncConfig.devPod.Namespace, "")
+	options, err = cmd.applyFlagsToSyncConfig(syncConfig.syncConfig, options)
 	if err != nil {
 		return errors.Wrap(err, "apply flags to sync config")
 	}
 
 	// Start sync
-	options = options.ApplyConfigParameter(syncConfig.ContainerName, syncConfig.LabelSelector, nil, syncConfig.Namespace, "")
-	return f.NewServicesClient(configInterface, nil, client, logger).StartSyncFromCmd(options, syncConfig, cmd.Interrupt, cmd.NoWatch, cmd.Verbose)
+	options = options.WithSkipInitContainers(true)
+	return sync.StartSyncFromCmd(ctx, targetselector.NewTargetSelector(options), syncConfig.devPod.Name, syncConfig.syncConfig, cmd.NoWatch)
 }
 
-func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig) error {
-	if cmd.LocalPath != "" {
-		syncConfig.LocalSubPath = cmd.LocalPath
+func fromSyncConfig(devPod *latest.DevPod, containerName string, sc *latest.SyncConfig) (nameConfig, error) {
+	localPath, remotePath, err := sync.ParseSyncPath(sc.Path)
+	if err != nil {
+		return nameConfig{}, err
 	}
-	if cmd.ContainerPath != "" {
-		syncConfig.ContainerPath = cmd.ContainerPath
+
+	selector := ""
+	if devPod.ImageSelector != "" {
+		selector = "img-selector: " + devPod.ImageSelector
+	} else if len(devPod.LabelSelector) > 0 {
+		selector = "selector: " + labels.Set(devPod.LabelSelector).String()
+	}
+	if containerName != "" {
+		selector += "/" + containerName
+	}
+
+	return nameConfig{
+		name:          fmt.Sprintf("%s: Sync %s: %s <-> %s ", devPod.Name, selector, localPath, remotePath),
+		devPod:        devPod,
+		containerName: containerName,
+		syncConfig:    sc,
+	}, nil
+}
+
+func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig, options targetselector.Options) (targetselector.Options, error) {
+	if cmd.Path != "" {
+		syncConfig.Path = cmd.Path
 	}
 	if len(cmd.Exclude) > 0 {
 		syncConfig.ExcludePaths = cmd.Exclude
 	}
 	if cmd.UploadOnly {
-		syncConfig.DisableDownload = &cmd.UploadOnly
+		syncConfig.DisableDownload = cmd.UploadOnly
 	}
 	if cmd.DownloadOnly {
-		syncConfig.DisableUpload = &cmd.DownloadOnly
+		syncConfig.DisableUpload = cmd.DownloadOnly
 	}
 
 	// if selection is specified through flags, we don't want to use the loaded
 	// sync config selection from the devspace.yaml.
 	if cmd.Container != "" {
-		syncConfig.ContainerName = ""
+		options = options.WithContainer(cmd.Container)
 	}
-	if cmd.LabelSelector != "" || cmd.Pod != "" || cmd.ImageSelector != "" {
-		syncConfig.LabelSelector = nil
-		syncConfig.ImageSelector = ""
+	if cmd.LabelSelector != "" {
+		options = options.WithLabelSelector(cmd.LabelSelector)
+	}
+	if cmd.Pod != "" {
+		options = options.WithPod(cmd.Pod)
 	}
 	if cmd.Namespace != "" {
-		syncConfig.Namespace = ""
+		options = options.WithNamespace(cmd.Namespace)
 	}
 
 	if cmd.DownloadOnInitialSync {
@@ -295,7 +336,7 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig) error 
 
 	if cmd.InitialSync != "" {
 		if !loader.ValidInitialSyncStrategy(latest.InitialSyncStrategy(cmd.InitialSync)) {
-			return errors.Errorf("--initial-sync is not valid '%s'", cmd.InitialSync)
+			return options, errors.Errorf("--initial-sync is not valid '%s'", cmd.InitialSync)
 		}
 
 		syncConfig.InitialSync = latest.InitialSyncStrategy(cmd.InitialSync)
@@ -305,5 +346,5 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig) error 
 		syncConfig.Polling = cmd.Polling
 	}
 
-	return nil
+	return options, nil
 }

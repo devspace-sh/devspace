@@ -3,13 +3,12 @@ package hook
 import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"sync"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -28,8 +27,8 @@ type waitHook struct {
 	printWarning sync.Once
 }
 
-func (r *waitHook) Execute(hook *latest.HookConfig, client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]string, log logpkg.Logger) error {
-	if client == nil {
+func (r *waitHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig, extraEnv map[string]string) error {
+	if ctx.KubeClient == nil {
 		return errors.Errorf("Cannot execute hook '%s': kube client is not initialized", ansi.Color(hookName(hook), "white+b"))
 	}
 
@@ -38,12 +37,12 @@ func (r *waitHook) Execute(hook *latest.HookConfig, client kubectl.Client, confi
 		err            error
 	)
 	if hook.Container.ImageSelector != "" {
-		if config == nil || config.Generated() == nil {
+		if ctx.Config == nil || ctx.Config.LocalCache() == nil {
 			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(hookName(hook), "white+b"))
 		}
 
 		if hook.Container.ImageSelector != "" {
-			imageSelector, err := runtime.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(hook.Container.ImageSelector, config, dependencies)
+			imageSelector, err := runtime.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, hook.Container.ImageSelector, ctx.Config, ctx.Dependencies)
 			if err != nil {
 				return err
 			}
@@ -52,12 +51,12 @@ func (r *waitHook) Execute(hook *latest.HookConfig, client kubectl.Client, confi
 		}
 	}
 
-	err = r.execute(hook, client, imageSelectors, log)
+	err = r.execute(hook, ctx.KubeClient, imageSelectors, ctx.Log)
 	if err != nil {
 		return err
 	}
 
-	log.Donef("Hook '%s' successfully executed", ansi.Color(hookName(hook), "white+b"))
+	ctx.Log.Donef("Hook '%s' successfully executed", ansi.Color(hookName(hook), "white+b"))
 	return nil
 }
 

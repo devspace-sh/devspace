@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/services/attach"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/pkg/errors"
@@ -18,7 +20,6 @@ type AttachCmd struct {
 
 	LabelSelector string
 	ImageSelector string
-	Image         string
 	Container     string
 	Pod           string
 	Pick          bool
@@ -51,7 +52,6 @@ devspace attach -n my-namespace
 	attachCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	attachCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	attachCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, ${runtime.images.app}, nginx:${runtime.images.app.tag})")
-	attachCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	attachCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 
 	attachCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
@@ -63,43 +63,37 @@ devspace attach -n my-namespace
 func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configOptions := cmd.ToConfigOptions(log)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
-	configExists, err := configLoader.SetDevSpaceRoot(log)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
 	if err != nil {
 		return err
 	}
-
-	// Load config if possible
-	var generatedConfig *generated.Config
-	if configExists {
-		generatedConfig, err = configLoader.LoadGenerated(configOptions)
-		if err != nil {
-			return err
-		}
-		configOptions.GeneratedConfig = generatedConfig
-	}
-
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log)
+	_, err = configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
 
 	// Get kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}
 
+	// create the context
+	ctx := &devspacecontext.Context{
+		Context:    context.Background(),
+		KubeClient: client,
+		Log:        log,
+	}
+
 	// Execute plugin hook
-	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "attach")
+	err = hook.ExecuteHooks(ctx, nil, "attach")
 	if err != nil {
 		return err
 	}
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, cmd.ImageSelector, log)
+	imageSelector, err := getImageSelector(ctx, configLoader, configOptions, cmd.ImageSelector)
 	if err != nil {
 		return err
 	}
@@ -107,8 +101,9 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	// Build params
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, imageSelector, cmd.Namespace, cmd.Pod).
 		WithPick(cmd.Pick).
-		WithWait(false)
+		WithWait(false).
+		WithQuestion("Which pod do you want to attach to?")
 
 	// Start attach
-	return f.NewServicesClient(nil, nil, client, log).StartAttach(options, make(chan error))
+	return attach.StartAttachFromCMD(ctx, targetselector.NewTargetSelector(options))
 }

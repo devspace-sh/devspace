@@ -6,13 +6,13 @@ import (
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	fakehelm "github.com/loft-sh/devspace/pkg/devspace/helm/testing"
 	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -91,7 +91,7 @@ func TestRender(t *testing.T) {
 type deployTestCase struct {
 	name string
 
-	cache       *generated.CacheConfig
+	cache       *localcache.CacheConfig
 	deployments []*latest.DeploymentConfig
 	options     *Options
 
@@ -133,8 +133,8 @@ func TestDeploy(t *testing.T) {
 					},
 				},
 			},
-			cache: &generated.CacheConfig{
-				Deployments: map[string]*generated.DeploymentCache{},
+			cache: &localcache.CacheConfig{
+				Deployments: map[string]*localcache.DeploymentCache{},
 			},
 		},
 		{
@@ -148,8 +148,8 @@ func TestDeploy(t *testing.T) {
 					Concurrent: true,
 				},
 			},
-			cache: &generated.CacheConfig{
-				Deployments: map[string]*generated.DeploymentCache{},
+			cache: &localcache.CacheConfig{
+				Deployments: map[string]*localcache.DeploymentCache{},
 			},
 		},
 	}
@@ -163,7 +163,7 @@ func TestDeploy(t *testing.T) {
 			Deployments: testCase.deployments,
 		}
 
-		cache := generated.New()
+		cache := localcache.New()
 		cache.Profiles[""] = testCase.cache
 		controller := &controller{
 			config: config2.NewConfig(nil, config, cache, nil, constants.DefaultConfigPath),
@@ -186,7 +186,7 @@ func TestDeploy(t *testing.T) {
 type purgeTestCase struct {
 	name string
 
-	cache             *generated.CacheConfig
+	cache             *localcache.CacheConfig
 	configDeployments []*latest.DeploymentConfig
 	deployments       []string
 
@@ -224,8 +224,8 @@ func TestPurge(t *testing.T) {
 					},
 				},
 			},
-			cache: &generated.CacheConfig{
-				Deployments: map[string]*generated.DeploymentCache{
+			cache: &localcache.CacheConfig{
+				Deployments: map[string]*localcache.DeploymentCache{
 					"kubectlPurge": {},
 				},
 			},
@@ -241,7 +241,7 @@ func TestPurge(t *testing.T) {
 			Deployments: testCase.configDeployments,
 		}
 
-		cache := generated.New()
+		cache := localcache.New()
 		cache.Profiles[""] = testCase.cache
 		controller := &controller{
 			config: config2.NewConfig(nil, config, cache, nil, constants.DefaultConfigPath),

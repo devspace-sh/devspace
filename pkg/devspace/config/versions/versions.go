@@ -1,7 +1,10 @@
 package versions
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta11"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,14 +14,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta10"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha1"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha2"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha3"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha4"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta1"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta2"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta3"
@@ -32,7 +30,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 type loader struct {
@@ -40,10 +38,6 @@ type loader struct {
 }
 
 var versionLoader = map[string]*loader{
-	v1alpha1.Version: {New: v1alpha1.New},
-	v1alpha2.Version: {New: v1alpha2.New},
-	v1alpha3.Version: {New: v1alpha3.New},
-	v1alpha4.Version: {New: v1alpha4.New},
 	v1beta1.Version:  {New: v1beta1.New},
 	v1beta2.Version:  {New: v1beta2.New},
 	v1beta3.Version:  {New: v1beta3.New},
@@ -54,12 +48,13 @@ var versionLoader = map[string]*loader{
 	v1beta8.Version:  {New: v1beta8.New},
 	v1beta9.Version:  {New: v1beta9.New},
 	v1beta10.Version: {New: v1beta10.New},
+	v1beta11.Version: {New: v1beta11.New},
 	latest.Version:   {New: latest.New},
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, log log.Logger) ([]map[interface{}]interface{}, error) {
-	parsedProfiles := []map[interface{}]interface{}{}
+func ParseProfile(ctx context.Context, basePath string, data map[string]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, log log.Logger) ([]map[string]interface{}, error) {
+	parsedProfiles := []map[string]interface{}{}
 
 	// auto activated root level profiles
 	activatedProfiles := []string{}
@@ -77,7 +72,7 @@ func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []
 
 	// check if there are profile parents
 	for i := len(profiles) - 1; i >= 0; i-- {
-		err := getProfiles(basePath, data, profiles[i], &parsedProfiles, 1, update, log)
+		err := getProfiles(ctx, basePath, data, profiles[i], &parsedProfiles, 1, update, log)
 		if err != nil {
 			return nil, err
 		}
@@ -86,13 +81,53 @@ func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []
 	return parsedProfiles, nil
 }
 
-// ParseCommands parses only the commands from the config
-func ParseCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	return getCommands(data)
+// GetImports parses only the commands from the config
+func GetImports(data map[string]interface{}) (map[string]interface{}, error) {
+	retMap := map[string]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return nil, err
+	}
+
+	imports, ok := retMap["imports"]
+	if !ok {
+		return map[string]interface{}{
+			"version": retMap["version"],
+			"name":    retMap["name"],
+		}, nil
+	}
+
+	return map[string]interface{}{
+		"version": retMap["version"],
+		"name":    retMap["name"],
+		"imports": imports,
+	}, nil
+}
+
+func GetCommands(data map[string]interface{}) (map[string]interface{}, error) {
+	retMap := map[string]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return nil, err
+	}
+
+	commands, ok := retMap["commands"]
+	if !ok {
+		return map[string]interface{}{
+			"version": retMap["version"],
+			"name":    retMap["name"],
+		}, nil
+	}
+
+	return map[string]interface{}{
+		"version":  retMap["version"],
+		"name":     retMap["name"],
+		"commands": commands,
+	}, nil
 }
 
 // ParseVariables parses only the variables from the config
-func ParseVariables(data map[interface{}]interface{}, log log.Logger) ([]*latest.Variable, error) {
+func ParseVariables(data map[string]interface{}, log log.Logger) (map[string]*latest.Variable, error) {
 	strippedData, err := getVariables(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading variables")
@@ -107,7 +142,7 @@ func ParseVariables(data map[interface{}]interface{}, log log.Logger) ([]*latest
 }
 
 // Parse parses the data into the latest config
-func Parse(data map[interface{}]interface{}, log log.Logger) (*latest.Config, error) {
+func Parse(data map[string]interface{}, log log.Logger) (*latest.Config, error) {
 	version, ok := data["version"].(string)
 	if !ok {
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
@@ -126,9 +161,11 @@ func Parse(data map[interface{}]interface{}, log log.Logger) (*latest.Config, er
 	if err != nil {
 		return nil, err
 	}
-	err = yaml.UnmarshalStrict(out, latestConfig)
+	decoder := yaml.NewDecoder(bytes.NewReader(out))
+	decoder.KnownFields(true)
+	err = decoder.Decode(latestConfig)
 	if err != nil {
-		return nil, errors.Errorf("Error loading config: %v", err)
+		return nil, errors.Errorf("error loading config: %v", err)
 	}
 
 	// Upgrade config to latest
@@ -151,14 +188,35 @@ func Parse(data map[interface{}]interface{}, log log.Logger) (*latest.Config, er
 	latestConfigConverted.Version = latest.Version
 
 	// Filter out empty images, deployments etc.
-	filterOutEmpty(latestConfigConverted)
+	adjustConfig(latestConfigConverted)
 
 	return latestConfigConverted, nil
 }
 
-func filterOutEmpty(config *latest.Config) {
+func adjustConfig(config *latest.Config) {
+	for name, v := range config.Vars {
+		v.Name = name
+	}
+	for name, command := range config.Commands {
+		command.Name = name
+	}
+	for name, pullSecret := range config.PullSecrets {
+		pullSecret.Name = name
+	}
+	for name, devPod := range config.Dev {
+		devPod.Name = name
+		for c, v := range devPod.Containers {
+			v.Container = c
+		}
+	}
+	for name, pipeline := range config.Pipelines {
+		pipeline.Name = name
+	}
+	for name, dep := range config.Dependencies {
+		dep.Name = name
+	}
 	if config.Images != nil {
-		newObjs := map[string]*latest.ImageConfig{}
+		newObjs := map[string]*latest.Image{}
 		for k, v := range config.Images {
 			if v != nil {
 				newObjs[k] = v
@@ -167,22 +225,14 @@ func filterOutEmpty(config *latest.Config) {
 		config.Images = newObjs
 	}
 	if config.Deployments != nil {
-		newObjs := []*latest.DeploymentConfig{}
-		for _, v := range config.Deployments {
+		newObjs := map[string]*latest.DeploymentConfig{}
+		for k, v := range config.Deployments {
 			if v != nil {
-				newObjs = append(newObjs, v)
+				v.Name = k
+				newObjs[k] = v
 			}
 		}
 		config.Deployments = newObjs
-	}
-	if config.Dependencies != nil {
-		newObjs := []*latest.DependencyConfig{}
-		for _, v := range config.Dependencies {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Dependencies = newObjs
 	}
 	if config.Hooks != nil {
 		newObjs := []*latest.HookConfig{}
@@ -193,65 +243,11 @@ func filterOutEmpty(config *latest.Config) {
 		}
 		config.Hooks = newObjs
 	}
-	if config.PullSecrets != nil {
-		newObjs := []*latest.PullSecretConfig{}
-		for _, v := range config.PullSecrets {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.PullSecrets = newObjs
-	}
-	if config.Commands != nil {
-		newObjs := []*latest.CommandConfig{}
-		for _, v := range config.Commands {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Commands = newObjs
-	}
-	if config.Dev.Ports != nil {
-		newObjs := []*latest.PortForwardingConfig{}
-		for _, v := range config.Dev.Ports {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Dev.Ports = newObjs
-	}
-	if config.Dev.ReplacePods != nil {
-		newObjs := []*latest.ReplacePod{}
-		for _, v := range config.Dev.ReplacePods {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Dev.ReplacePods = newObjs
-	}
-	if config.Dev.Sync != nil {
-		newObjs := []*latest.SyncConfig{}
-		for _, v := range config.Dev.Sync {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Dev.Sync = newObjs
-	}
-	if config.Dev.Open != nil {
-		newObjs := []*latest.OpenConfig{}
-		for _, v := range config.Dev.Open {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Dev.Open = newObjs
-	}
 }
 
 // getVariables returns only the variables from the config
-func getVariables(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	retMap := map[interface{}]interface{}{}
+func getVariables(data map[string]interface{}) (map[string]interface{}, error) {
+	retMap := map[string]interface{}{}
 	err := util.Convert(data, &retMap)
 	if err != nil {
 		return nil, err
@@ -259,46 +255,27 @@ func getVariables(data map[interface{}]interface{}) (map[interface{}]interface{}
 
 	vars, ok := retMap["vars"]
 	if !ok {
-		return map[interface{}]interface{}{
+		return map[string]interface{}{
 			"version": retMap["version"],
+			"name":    retMap["name"],
 		}, nil
 	}
 
-	return map[interface{}]interface{}{
+	return map[string]interface{}{
 		"version": retMap["version"],
+		"name":    retMap["name"],
 		"vars":    vars,
 	}, nil
 }
 
-// getCommands returns only the commands from the config
-func getCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	retMap := map[interface{}]interface{}{}
-	err := util.Convert(data, &retMap)
-	if err != nil {
-		return nil, err
-	}
-
-	commands, ok := retMap["commands"]
-	if !ok {
-		return map[interface{}]interface{}{
-			"version": retMap["version"],
-		}, nil
-	}
-
-	return map[interface{}]interface{}{
-		"version":  retMap["version"],
-		"commands": commands,
-	}, nil
-}
-
 // getProfiles loads a certain profile
-func getProfiles(basePath string, data map[interface{}]interface{}, profile string, profileChain *[]map[interface{}]interface{}, depth int, update bool, log log.Logger) error {
+func getProfiles(ctx context.Context, basePath string, data map[string]interface{}, profile string, profileChain *[]map[string]interface{}, depth int, update bool, log log.Logger) error {
 	if depth > 50 {
 		return fmt.Errorf("cannot load config with profile %s: max config loading depth reached. Seems like you have a profile cycle somewhere", profile)
 	}
 
 	// Convert config
-	retMap := map[interface{}]interface{}{}
+	retMap := map[string]interface{}{}
 	err := util.Convert(data, &retMap)
 	if err != nil {
 		return err
@@ -322,12 +299,14 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 		if err != nil {
 			return err
 		}
-		err = yaml.UnmarshalStrict(o, profileConfig)
+		decoder := yaml.NewDecoder(bytes.NewReader(o))
+		decoder.KnownFields(true)
+		err = decoder.Decode(profileConfig)
 		if err != nil {
 			return fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
 		}
 
-		configMap, ok := profileMap.(map[interface{}]interface{})
+		configMap, ok := profileMap.(map[string]interface{})
 		if ok && profileConfig.Name == profile {
 			// Add to profile chain
 			*profileChain = append(*profileChain, configMap)
@@ -339,7 +318,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 
 			// single parent
 			if profileConfig.Parent != "" {
-				return getProfiles(basePath, data, profileConfig.Parent, profileChain, depth+1, update, log)
+				return getProfiles(ctx, basePath, data, profileConfig.Parent, profileChain, depth+1, update, log)
 			}
 
 			// multiple parents
@@ -350,15 +329,9 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 					}
 
 					if profileConfig.Parents[i].Source != nil {
-						ID := dependencyutil.GetParentProfileID(basePath, profileConfig.Parents[i].Source, profileConfig.Parents[i].Profile, nil)
-						localPath, err := dependencyutil.DownloadDependency(ID, basePath, profileConfig.Parents[i].Source, update, log)
+						configPath, err := dependencyutil.DownloadDependency(ctx, basePath, profileConfig.Parents[i].Source, log)
 						if err != nil {
 							return err
-						}
-
-						configPath := filepath.Join(localPath, constants.DefaultConfigPath)
-						if profileConfig.Parents[i].Source.ConfigName != "" {
-							configPath = filepath.Join(localPath, profileConfig.Parents[i].Source.ConfigName)
 						}
 
 						fileContent, err := ioutil.ReadFile(configPath)
@@ -366,18 +339,18 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 							return errors.Wrap(err, "read parent config")
 						}
 
-						rawMap := map[interface{}]interface{}{}
+						rawMap := map[string]interface{}{}
 						err = yaml.Unmarshal(fileContent, &rawMap)
 						if err != nil {
 							return err
 						}
 
-						err = getProfiles(localPath, rawMap, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
+						err = getProfiles(ctx, filepath.Dir(configPath), rawMap, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
 						if err != nil {
 							return errors.Wrapf(err, "load parent profile %s", profileConfig.Parents[i].Profile)
 						}
 					} else {
-						err := getProfiles(basePath, data, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
+						err := getProfiles(ctx, basePath, data, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
 						if err != nil {
 							return err
 						}
@@ -393,7 +366,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 	return errors.Errorf("Couldn't find profile '%s'", profile)
 }
 
-func getActivatedProfiles(data map[interface{}]interface{}, resolver variable.Resolver) ([]string, error) {
+func getActivatedProfiles(data map[string]interface{}, resolver variable.Resolver) ([]string, error) {
 	activatedProfiles := []string{}
 
 	// Check if there are profiles
@@ -416,7 +389,9 @@ func getActivatedProfiles(data map[interface{}]interface{}, resolver variable.Re
 			return activatedProfiles, err
 		}
 
-		err = yaml.UnmarshalStrict(o, profileConfig)
+		decoder := yaml.NewDecoder(bytes.NewReader(o))
+		decoder.KnownFields(true)
+		err = decoder.Decode(profileConfig)
 		if err != nil {
 			return activatedProfiles, fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
 		}
@@ -490,7 +465,7 @@ func sanitizeMatchExpression(expression string) string {
 }
 
 func resolveVariableValue(name string, resolver variable.Resolver) (string, error) {
-	val, err := resolver.FillVariables("${" + name + "}")
+	val, err := resolver.FillVariables(context.TODO(), "${"+name+"}")
 	if err != nil {
 		return "", err
 	}

@@ -36,6 +36,73 @@ var _ = DevSpaceDescribe("deploy", func() {
 		// TODO
 	})
 
+	ginkgo.It("should deploy concurrent deployments", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_concurrent_new")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+		}
+
+		// run the command
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// check if deployments are there
+		deploy, err := kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "test1", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Name, "test")
+		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Image, "alpine")
+		deploy, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "test2", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Name, "test")
+		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Image, "alpine")
+		deploy, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "test3", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Name, "test")
+		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Image, "alpine")
+		deploy, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "test4", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Name, "test")
+		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Image, "alpine")
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "base", metav1.GetOptions{})
+		framework.ExpectError(err)
+
+		// create a new purge command
+		purgeCmd := &cmd.PurgeCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+		}
+
+		// run the command
+		err = purgeCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// check if deployments are still there
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "test1", metav1.GetOptions{})
+		framework.ExpectError(err)
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "test2", metav1.GetOptions{})
+		framework.ExpectError(err)
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "test3", metav1.GetOptions{})
+		framework.ExpectError(err)
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "test4", metav1.GetOptions{})
+		framework.ExpectError(err)
+	})
+
 	ginkgo.It("should deploy helm application", func() {
 		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm")
 		framework.ExpectNoError(err)

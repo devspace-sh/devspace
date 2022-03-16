@@ -1,11 +1,7 @@
 version: v1beta11
 
-vars:
-  - name: NAME
-    value: dep3
-
 deployments:
-  - name: ${NAME}
+  - name: dep3
     helm:
       componentChart: true
       values:

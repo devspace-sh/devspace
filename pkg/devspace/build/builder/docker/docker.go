@@ -4,21 +4,20 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
-
 	"github.com/docker/cli/cli/streams"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
@@ -55,9 +54,9 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config config.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
+func NewBuilder(ctx *devspacecontext.Context, client dockerclient.Client, imageConfigName string, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	return &Builder{
-		helper:                    helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
+		helper:                    helper.NewBuildHelper(ctx, EngineName, imageConfigName, imageConf, imageTags),
 		client:                    client,
 		skipPush:                  skipPush,
 		skipPushOnLocalKubernetes: skipPushOnLocalKubernetes,
@@ -65,20 +64,21 @@ func NewBuilder(config config.Config, client dockerclient.Client, kubeClient kub
 }
 
 // Build implements the interface
-func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
-	return b.helper.Build(b, devspacePID, log)
+func (b *Builder) Build(ctx *devspacecontext.Context) error {
+	return b.helper.Build(ctx, b)
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log logpkg.Logger) (bool, error) {
-	rebuild, err := b.helper.ShouldRebuild(cache, forceRebuild, log)
+func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool) (bool, error) {
+	rebuild, err := b.helper.ShouldRebuild(ctx, forceRebuild)
 
 	// Check if image is present in local repository
 	if !rebuild && err == nil {
-		if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
-			found, err := b.helper.IsImageAvailableLocally(cache, b.client)
+		if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient.CurrentContext()) {
+			found, err := b.helper.IsImageAvailableLocally(ctx, b.client)
 			if !found && err == nil {
-				log.Infof("Rebuild image %s because it was not found in local docker daemon", cache.Images[b.helper.ImageConfigName].ImageName)
+				imageCache, _ := ctx.Config.LocalCache().GetImageCache(b.helper.ImageConfigName)
+				ctx.Log.Infof("Rebuild image %s because it was not found in local docker daemon", imageCache.ImageName)
 				return true, nil
 			}
 		}
@@ -90,7 +90,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool,
 // BuildImage builds a dockerimage with the docker cli
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, devspacePID string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfilePath string, entrypoint []string, cmd []string) error {
 	var (
 		displayRegistryURL = "hub.docker.com"
 	)
@@ -105,54 +105,52 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
+	if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient.CurrentContext()) {
 		b.skipPush = true
 	}
 
 	// Authenticate
-	if !b.skipPush && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || !b.helper.ImageConf.Build.Docker.SkipPush) {
-		log.StartWait("Authenticating (" + displayRegistryURL + ")")
+	if !b.skipPush && !b.helper.ImageConf.SkipPush {
+		ctx.Log.Info("Authenticating (" + displayRegistryURL + ")...")
 		_, err = b.Authenticate()
-		log.StopWait()
 		if err != nil {
 			return errors.Errorf("Error during image registry authentication: %v", err)
 		}
 
-		log.Done("Authentication successful (" + displayRegistryURL + ")")
+		ctx.Log.Done("Authentication successful (" + displayRegistryURL + ")")
 	}
 
 	// Buildoptions
 	options := &types.ImageBuildOptions{}
-	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.Options != nil {
-		if b.helper.ImageConf.Build.Docker.Options.BuildArgs != nil {
-			options.BuildArgs = b.helper.ImageConf.Build.Docker.Options.BuildArgs
-		}
-		if b.helper.ImageConf.Build.Docker.Options.Target != "" {
-			options.Target = b.helper.ImageConf.Build.Docker.Options.Target
-		}
-		if b.helper.ImageConf.Build.Docker.Options.Network != "" {
-			options.NetworkMode = b.helper.ImageConf.Build.Docker.Options.Network
-		}
+	if b.helper.ImageConf.BuildArgs != nil {
+		options.BuildArgs = b.helper.ImageConf.BuildArgs
+	}
+	if b.helper.ImageConf.Target != "" {
+		options.Target = b.helper.ImageConf.Target
+	}
+	if b.helper.ImageConf.Network != "" {
+		options.NetworkMode = b.helper.ImageConf.Network
 	}
 
 	// create context stream
-	body, writer, outStream, buildOptions, err := CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, log)
+	body, writer, outStream, buildOptions, err := CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, ctx.Log)
+	defer writer.Close()
 	if err != nil {
 		return err
 	}
 
 	// Should we build with cli?
 	useBuildKit := false
-	useDockerCli := b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.UseCLI
+	useDockerCli := b.helper.ImageConf.Docker != nil && b.helper.ImageConf.Docker.UseCLI
 	cliArgs := []string{}
-	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil {
-		cliArgs = b.helper.ImageConf.Build.Docker.Args
-		if b.helper.ImageConf.Build.Docker.UseBuildKit {
+	if b.helper.ImageConf.Docker != nil {
+		cliArgs = b.helper.ImageConf.Docker.Args
+		if b.helper.ImageConf.Docker.UseBuildKit {
 			useBuildKit = true
 		}
 	}
 	if useDockerCli || useBuildKit || len(cliArgs) > 0 {
-		err = b.client.ImageBuildCLI(useBuildKit, body, writer, cliArgs, *buildOptions, log)
+		err = b.client.ImageBuildCLI(ctx.Context, ctx.WorkingDir, useBuildKit, body, writer, cliArgs, *buildOptions, ctx.Log)
 		if err != nil {
 			return err
 		}
@@ -160,7 +158,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		// make sure to use the correct proxy configuration
 		buildOptions.BuildArgs = b.client.ParseProxyConfig(buildOptions.BuildArgs)
 
-		response, err := b.client.ImageBuild(context.Background(), body, *buildOptions)
+		response, err := b.client.ImageBuild(ctx.Context, body, *buildOptions)
 		if err != nil {
 			return err
 		}
@@ -173,17 +171,17 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Check if we skip push
-	if !b.skipPush && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || !b.helper.ImageConf.Build.Docker.SkipPush) {
+	if !b.skipPush && !b.helper.ImageConf.SkipPush {
 		for _, tag := range buildOptions.Tags {
 			err = b.pushImage(writer, tag)
 			if err != nil {
 				return errors.Errorf("error during image push: %v", err)
 			}
 
-			log.Info("Image pushed to registry (" + displayRegistryURL + ")")
+			ctx.Log.Info("Image pushed to registry (" + displayRegistryURL + ")")
 		}
 	} else {
-		log.Infof("Skip image push for %s", b.helper.ImageName)
+		ctx.Log.Infof("Skip image push for %s", b.helper.ImageName)
 	}
 
 	return nil
@@ -234,18 +232,18 @@ func (b *Builder) pushImage(writer io.Writer, imageName string) error {
 
 // CreateContextStream creates a new context stream that includes the correct docker context, (modified) dockerfile and inject helper
 // if needed.
-func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfilePath string, entrypoint, cmd []string, options *types.ImageBuildOptions, log logpkg.Logger) (io.Reader, io.Writer, *streams.Out, *types.ImageBuildOptions, error) {
+func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfilePath string, entrypoint, cmd []string, options *types.ImageBuildOptions, log logpkg.Logger) (io.Reader, io.WriteCloser, *streams.Out, *types.ImageBuildOptions, error) {
 	// Determine output writer
-	var writer io.Writer
+	var writer io.WriteCloser
 	if log == logpkg.GetInstance() {
-		writer = stdout
+		writer = logpkg.WithNopCloser(stdout)
 	} else {
-		writer = log
+		writer = log.Writer(logrus.InfoLevel, false)
 	}
 
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, writer, nil, nil, err
 	}
 
 	// Dockerfile is out of context
@@ -254,7 +252,7 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 		// Dockerfile is outside of build-context; read the Dockerfile and pass it as dockerfileCtx
 		dockerfileCtx, err = os.Open(dockerfilePath)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
+			return nil, writer, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
 		}
 		defer dockerfileCtx.Close()
 	}
@@ -264,11 +262,11 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 	relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
 	excludes, err := helper.ReadDockerignore(contextDir, relDockerfile)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, writer, nil, nil, err
 	}
 
 	if err := build.ValidateContextDirectory(contextDir, excludes); err != nil {
-		return nil, nil, nil, nil, errors.Errorf("Error checking context: '%s'", err)
+		return nil, writer, nil, nil, errors.Errorf("Error checking context: '%s'", err)
 	}
 
 	buildCtx, err := archive.TarWithOptions(contextDir, &archive.TarOptions{
@@ -276,14 +274,14 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
 	})
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, writer, nil, nil, err
 	}
 
 	// Check if we should overwrite entrypoint
 	if len(entrypoint) > 0 || len(cmd) > 0 || buildHelper.ImageConf.InjectRestartHelper || len(buildHelper.ImageConf.AppendDockerfileInstructions) > 0 {
 		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, buildHelper.ImageConf.AppendDockerfileInstructions, options.Target, buildHelper.ImageConf.InjectRestartHelper, log)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, writer, nil, nil, err
 		}
 
 		// Check if dockerfile is out of context, then we use the docker way to replace the dockerfile
@@ -291,7 +289,7 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 			// We will add it to the build context
 			dockerfileCtx, err = os.Open(dockerfilePath)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
+				return nil, writer, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
 			}
 
 			defer dockerfileCtx.Close()
@@ -299,12 +297,12 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 			// We will add it to the build context
 			overwriteDockerfileCtx, err := os.Open(dockerfilePath)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
+				return nil, writer, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
 			}
 
 			buildCtx, err = helper.OverwriteDockerfileInBuildContext(overwriteDockerfileCtx, buildCtx, relDockerfile)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Errorf("Error overwriting %s: %v", relDockerfile, err)
+				return nil, writer, nil, nil, errors.Errorf("Error overwriting %s: %v", relDockerfile, err)
 			}
 		}
 
@@ -314,12 +312,12 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 		if buildHelper.ImageConf.InjectRestartHelper {
 			helperScript, err := restart.LoadRestartHelper(buildHelper.ImageConf.RestartHelperPath)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Wrap(err, "load restart helper")
+				return nil, writer, nil, nil, errors.Wrap(err, "load restart helper")
 			}
 
 			buildCtx, err = helper.InjectBuildScriptInContext(helperScript, buildCtx)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Wrap(err, "inject build script into context")
+				return nil, writer, nil, nil, errors.Wrap(err, "inject build script into context")
 			}
 		}
 	}
@@ -328,7 +326,7 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 	if dockerfileCtx != nil && buildCtx != nil {
 		buildCtx, relDockerfile, err = build.AddDockerfileToBuildContext(dockerfileCtx, buildCtx)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, writer, nil, nil, err
 		}
 	}
 

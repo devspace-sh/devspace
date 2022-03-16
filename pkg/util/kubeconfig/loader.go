@@ -12,12 +12,7 @@ type Loader interface {
 	LoadRawConfig() (*api.Config, error)
 
 	GetCurrentContext() (string, error)
-
 	SaveConfig(config *api.Config) error
-
-	IsCloudSpace(context string) (bool, error)
-	GetSpaceID(context string) (int, string, error)
-
 	DeleteKubeContext(kubeConfig *api.Config, kubeContext string) error
 }
 

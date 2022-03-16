@@ -1,13 +1,15 @@
 package list
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/cmd/flags"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	deployHelm "github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	deployKubectl "github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl"
-	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
+	"github.com/loft-sh/devspace/pkg/devspace/helm"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -43,8 +45,11 @@ Shows the status of all deployments
 func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	configOptions := cmd.ToConfigOptions(logger)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
@@ -61,71 +66,62 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 		"STATUS",
 	}
 
-	// Load generated
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
-	if err != nil {
-		return err
-	}
-	configOptions.GeneratedConfig = generatedConfig
-
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, logger)
-	if err != nil {
-		return err
-	}
-
 	// Create new kube client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
+	if err != nil {
+		return err
+	}
+
+	// Load generated
+	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
 		return err
 	}
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, logger)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, logger)
 	if err != nil {
 		return err
 	}
-
-	configOptions.KubeClient = client
 
 	// Get config with adjusted cluster config
-	configInterface, err := configLoader.Load(configOptions, logger)
+	configInterface, err := configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, logger)
 	if err != nil {
 		return err
 	}
+
+	// Create conext
+	ctx := devspacecontext.NewContext(context.Background(), logger).
+		WithConfig(configInterface).
+		WithKubeClient(client)
 
 	// Resolve dependencies
-	dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, logger).ResolveAll(dependency.ResolveOptions{
-		Silent: true,
-	})
-
+	dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 	if err != nil {
 		return err
 	}
+	ctx = ctx.WithDependencies(dependencies)
 
-	config := configInterface.Config()
-	if config.Deployments != nil {
-		helmV2Clients := map[string]helmtypes.Client{}
-
-		for _, deployConfig := range config.Deployments {
+	if ctx.Config.Config().Deployments != nil {
+		for _, deployConfig := range ctx.Config.Config().Deployments {
 			var deployClient deployer.Interface
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err = deployKubectl.New(configInterface, dependencies, client, deployConfig, logger)
+				deployClient, err = deployKubectl.New(ctx, deployConfig)
 				if err != nil {
 					logger.Warnf("Unable to create kubectl deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			} else if deployConfig.Helm != nil {
-				helmClient, err := deploy.GetCachedHelmClient(config, deployConfig, client, helmV2Clients, false, logger)
+				helmClient, err := helm.NewClient(logger)
 				if err != nil {
 					logger.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 
-				deployClient, err = deployHelm.New(configInterface, dependencies, helmClient, client, deployConfig, logger)
+				deployClient, err = deployHelm.New(ctx, helmClient, deployConfig)
 				if err != nil {
 					logger.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue
@@ -135,7 +131,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 				continue
 			}
 
-			status, err := deployClient.Status()
+			status, err := deployClient.Status(ctx)
 			if err != nil {
 				logger.Warnf("Error retrieving status for deployment %s: %v", deployConfig.Name, err)
 				continue

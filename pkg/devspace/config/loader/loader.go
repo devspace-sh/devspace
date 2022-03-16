@@ -1,13 +1,20 @@
 package loader
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/command"
 
 	"github.com/loft-sh/devspace/pkg/util/constraint"
 
@@ -18,14 +25,12 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/vars"
 )
@@ -37,25 +42,26 @@ var DefaultCommandVersionRegEx = "(v\\d+\\.\\d+\\.\\d+)"
 type ConfigLoader interface {
 	// Load loads the devspace.yaml, parses it, applies profiles, fills in variables and
 	// finally returns it.
-	Load(options *ConfigOptions, log log.Logger) (config.Config, error)
+	Load(ctx context.Context, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error)
 
-	// LoadRaw loads the config without parsing it.
-	LoadRaw() (map[interface{}]interface{}, error)
+	// LoadWithCache loads the devspace.yaml, parses it, applies profiles, fills in variables and
+	// finally returns it.
+	LoadWithCache(ctx context.Context, localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error)
 
 	// LoadWithParser loads the config with the given parser
-	LoadWithParser(parser Parser, options *ConfigOptions, log log.Logger) (config.Config, error)
+	LoadWithParser(ctx context.Context, localCache localcache.Cache, client kubectl.Client, parser Parser, options *ConfigOptions, log log.Logger) (config.Config, error)
 
-	// LoadGenerated loads the generated config
-	LoadGenerated(options *ConfigOptions) (*generated.Config, error)
+	// LoadRaw loads the config without parsing it.
+	LoadRaw() (map[string]interface{}, error)
 
-	// Save saves a devspace.yaml to file
-	Save(config *latest.Config) error
-
-	// SaveGenerated saves a generated config yaml to file
-	SaveGenerated(generated *generated.Config) error
+	// LoadLocalCache loads the local cache from this config loader
+	LoadLocalCache() (localcache.Cache, error)
 
 	// Exists returns if a devspace.yaml could be found
 	Exists() bool
+
+	// ConfigPath returns the absolute devspace.yaml path for this config loader
+	ConfigPath() string
 
 	// SetDevSpaceRoot searches for a devspace.yaml in the current directory and parent directories
 	// and will return if a devspace.yaml was found as well as switch to the current
@@ -64,60 +70,54 @@ type ConfigLoader interface {
 }
 
 type configLoader struct {
-	kubeConfigLoader kubeconfig.Loader
-
-	configPath string
+	absConfigPath string
 }
 
 // NewConfigLoader creates a new config loader with the given options
-func NewConfigLoader(configPath string) ConfigLoader {
-	return &configLoader{
-		configPath:       configPath,
-		kubeConfigLoader: kubeconfig.NewLoader(),
-	}
-}
-
-// LoadGenerated loads the generated config from file
-func (l *configLoader) LoadGenerated(options *ConfigOptions) (*generated.Config, error) {
-	var err error
-	if options == nil {
-		options = &ConfigOptions{}
-	}
-
-	generatedConfig := options.GeneratedConfig
-	if generatedConfig == nil {
-		if options.GeneratedLoader == nil {
-			generatedConfig, err = generated.NewConfigLoaderFromDevSpacePath(GetLastProfile(options.Profiles), l.configPath).Load()
-		} else {
-			generatedConfig, err = options.GeneratedLoader.Load()
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return generatedConfig, nil
-}
-
-// Load restores variables from the cluster (if wanted), loads the config and then saves them to the cluster again
-func (l *configLoader) Load(options *ConfigOptions, log log.Logger) (config.Config, error) {
-	return l.LoadWithParser(NewDefaultParser(), options, log)
-}
-
-// LoadWithParser loads the config with the given parser
-func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log log.Logger) (_ config.Config, err error) {
-	if options == nil {
-		options = &ConfigOptions{}
-	}
-
-	absPath, err := filepath.Abs(ConfigPath(l.configPath))
+func NewConfigLoader(configPath string) (ConfigLoader, error) {
+	absPath, err := filepath.Abs(ConfigPath(configPath))
 	if err != nil {
 		return nil, err
 	}
 
+	return &configLoader{
+		absConfigPath: absPath,
+	}, nil
+}
+
+func (l *configLoader) ConfigPath() string {
+	return l.absConfigPath
+}
+
+func (l *configLoader) LoadLocalCache() (localcache.Cache, error) {
+	return localcache.NewCacheLoader().Load(l.absConfigPath)
+}
+
+// Load restores variables from the cluster (if wanted), loads the config and then saves them to the cluster again
+func (l *configLoader) Load(ctx context.Context, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error) {
+	return l.LoadWithCache(ctx, nil, client, options, log)
+}
+
+// LoadWithCache loads the config with the given local cache
+func (l *configLoader) LoadWithCache(ctx context.Context, localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error) {
+	return l.LoadWithParser(ctx, localCache, client, NewDefaultParser(), options, log)
+}
+
+// LoadWithParser loads the config with the given parser
+func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache.Cache, client kubectl.Client, parser Parser, options *ConfigOptions, log log.Logger) (_ config.Config, err error) {
+	if localCache == nil {
+		localCache, err = l.LoadLocalCache()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if options == nil {
+		options = &ConfigOptions{}
+	}
+
 	defer func() {
 		if err != nil {
-			pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{"ERROR": err, "LOAD_PATH": absPath}, "config.errorLoad", "error:loadConfig")
+			pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{"ERROR": err, "LOAD_PATH": l.absConfigPath}, "config.errorLoad", "error:loadConfig")
 			if pluginErr != nil {
 				log.Warnf("Error executing plugin hook: %v", pluginErr)
 				return
@@ -126,17 +126,42 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 	}()
 
 	// call plugin hook
-	pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{"LOAD_PATH": absPath}, "config.beforeLoad", "before:loadConfig")
+	pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{"LOAD_PATH": l.absConfigPath}, "config.beforeLoad", "before:loadConfig")
 	if pluginErr != nil {
 		return nil, pluginErr
 	}
 
+	// load the raw data
 	data, err := l.LoadRaw()
 	if err != nil {
 		return nil, err
 	}
 
-	parsedConfig, generatedConfig, resolver, err := l.parseConfig(absPath, data, parser, options, log)
+	// make sure name is in config
+	name := options.OverrideName
+	if name == "" {
+		var ok bool
+		name, ok = data["name"].(string)
+		if !ok {
+			return nil, fmt.Errorf("name is missing in " + filepath.Base(l.absConfigPath))
+		}
+	} else {
+		data["name"] = options.OverrideName
+	}
+
+	// set name to context
+	ctx = values.WithName(ctx, name)
+
+	// create remote cache
+	var remoteCache remotecache.Cache
+	if client != nil {
+		remoteCache, err = remotecache.NewCacheLoader(name).Load(ctx, client)
+		if err != nil {
+			return nil, fmt.Errorf("error trying to load remote cache from current context and namespace: %v", err)
+		}
+	}
+
+	parsedConfig, rawBeforeConversion, resolver, err := l.parseConfig(ctx, data, localCache, remoteCache, client, parser, options, log)
 	if err != nil {
 		return nil, err
 	}
@@ -146,9 +171,9 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 		return nil, errors.Wrap(err, "require versions")
 	}
 
-	c := config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables(), absPath)
+	c := config.NewConfig(data, rawBeforeConversion, parsedConfig, localCache, remoteCache, resolver.ResolvedVariables(), l.absConfigPath)
 	pluginErr = plugin.ExecutePluginHookWithContext(map[string]interface{}{
-		"LOAD_PATH":     absPath,
+		"LOAD_PATH":     l.absConfigPath,
 		"LOADED_CONFIG": c.Config(),
 		"LOADED_VARS":   c.Variables(),
 		"LOADED_RAW":    c.Raw(),
@@ -228,7 +253,7 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 			return errors.Wrapf(err, "parsing require.commands[%d].version", index)
 		}
 
-		out, err := exec.Command(c.Name, versionArgs...).Output()
+		out, err := command.Output(context.TODO(), filepath.Dir(l.absConfigPath), c.Name, versionArgs...)
 		if err != nil {
 			return fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version)
 		}
@@ -251,33 +276,24 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 	return nil
 }
 
-func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]interface{}, parser Parser, options *ConfigOptions, log log.Logger) (*latest.Config, *generated.Config, variable.Resolver, error) {
-	// load the generated config
-	generatedConfig, err := l.LoadGenerated(options)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// restore vars if wanted
-	if options.KubeClient != nil && options.RestoreVars {
-		vars, _, err := RestoreVarsFromSecret(options.KubeClient, options.VarsSecretName)
-		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "restore vars")
-		} else if vars != nil {
-			generatedConfig.Vars = vars
-		}
-	}
-
-	// check if we should load the profile from the generated config
-	if generatedConfig.ActiveProfile != "" && len(options.Profiles) == 0 {
-		options.Profiles = []string{generatedConfig.ActiveProfile}
-	}
-
+func (l *configLoader) parseConfig(
+	ctx context.Context,
+	rawConfig map[string]interface{},
+	localCache localcache.Cache,
+	remoteCache remotecache.Cache,
+	client kubectl.Client,
+	parser Parser,
+	options *ConfigOptions,
+	log log.Logger,
+) (*latest.Config, map[string]interface{}, variable.Resolver, error) {
 	// copy raw config
-	copiedRawConfig, err := copyRaw(rawConfig)
+	copiedRawConfig, err := ResolveImports(ctx, filepath.Dir(l.absConfigPath), rawConfig, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	// Delete imports from config
+	delete(copiedRawConfig, "imports")
 
 	// Load defined variables
 	vars, err := versions.ParseVariables(copiedRawConfig, log)
@@ -292,7 +308,7 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 	}
 
 	// create a new variable resolver
-	resolver := l.newVariableResolver(generatedConfig, absPath, options, vars, log)
+	resolver := l.newVariableResolver(localCache, client, options, vars, log)
 
 	// parse cli --var's, the resolver will cache them for us
 	_, err = resolver.ConvertFlags(options.Vars)
@@ -301,13 +317,13 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 	}
 
 	// prepare profiles
-	copiedRawConfig, err = prepareProfiles(copiedRawConfig, resolver)
+	copiedRawConfig, err = prepareProfiles(ctx, copiedRawConfig, resolver)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	// apply the profiles
-	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, resolver, log)
+	copiedRawConfig, err = l.applyProfiles(ctx, copiedRawConfig, options, resolver, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -331,13 +347,7 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 	delete(copiedRawConfig, "vars")
 
 	// parse the config
-	latestConfig, err := parser.Parse(rawConfig, copiedRawConfig, resolver, log)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// now we validate the config
-	err = validate(latestConfig, log)
+	latestConfig, rawBeforeConversion, err := parser.Parse(ctx, rawConfig, copiedRawConfig, resolver, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -345,32 +355,20 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 	// check if we do not want to change the generated config or
 	// secret vars.
 	if options.Dry {
-		return latestConfig, generatedConfig, resolver, nil
+		return latestConfig, rawBeforeConversion, resolver, nil
 	}
 
-	// Save generated config
-	if options.GeneratedLoader == nil {
-		err = generated.NewConfigLoaderFromDevSpacePath(GetLastProfile(options.Profiles), l.configPath).Save(generatedConfig)
-	} else {
-		err = options.GeneratedLoader.Save(generatedConfig)
-	}
+	// save local cache
+	err = localCache.Save()
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	// save vars if wanted
-	if options.KubeClient != nil && options.SaveVars {
-		err = SaveVarsInSecret(options.KubeClient, generatedConfig.Vars, options.VarsSecretName, log)
-		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "save vars")
-		}
-	}
-
-	return latestConfig, generatedConfig, resolver, nil
+	return latestConfig, rawBeforeConversion, resolver, nil
 }
 
 func validateProfile(profile interface{}) error {
-	profileMap, ok := profile.(map[interface{}]interface{})
+	profileMap, ok := profile.(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("profile is not an object")
 	}
@@ -445,13 +443,13 @@ func validateProfile(profile interface{}) error {
 	return nil
 }
 
-func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resolver) (map[interface{}]interface{}, error) {
+func prepareProfiles(ctx context.Context, config map[string]interface{}, resolver variable.Resolver) (map[string]interface{}, error) {
 	rawProfiles := config["profiles"]
 	if rawProfiles == nil {
 		return config, nil
 	}
 
-	resolved, err := resolve(rawProfiles, resolver)
+	resolved, err := resolve(ctx, rawProfiles, resolver)
 	if err != nil {
 		return nil, err
 	}
@@ -462,19 +460,19 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 	}
 
 	for idx, profile := range profiles {
-		resolvedProfile, err := resolve(profile, resolver)
+		resolvedProfile, err := resolve(ctx, profile, resolver)
 		if err != nil {
 			return nil, err
 		}
 
-		profileMap, ok := resolvedProfile.(map[interface{}]interface{})
+		profileMap, ok := resolvedProfile.(map[string]interface{})
 		if !ok {
 			return nil, errors.Wrapf(err, "error resolving profiles[%d], object expected", idx)
 		}
 
 		// Resolve merge field
 		if profileMap["merge"] != nil {
-			merge, err := resolve(profileMap["merge"], resolver)
+			merge, err := resolve(ctx, profileMap["merge"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -483,7 +481,7 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 
 		// Resolve patches field
 		if profileMap["patches"] != nil {
-			patches, err := resolve(profileMap["patches"], resolver)
+			patches, err := resolve(ctx, profileMap["patches"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -492,7 +490,7 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 
 		// Resolve replace field
 		if profileMap["replace"] != nil {
-			replace, err := resolve(profileMap["replace"], resolver)
+			replace, err := resolve(ctx, profileMap["replace"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -501,7 +499,7 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 
 		// Resolve strategicMerge field
 		if profileMap["strategicMerge"] != nil {
-			strategicMerge, err := resolve(profileMap["strategicMerge"], resolver)
+			strategicMerge, err := resolve(ctx, profileMap["strategicMerge"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -522,19 +520,19 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 	return config, nil
 }
 
-func resolve(data interface{}, resolver variable.Resolver) (interface{}, error) {
+func resolve(ctx context.Context, data interface{}, resolver variable.Resolver) (interface{}, error) {
 	_, ok := data.(string)
 	if !ok {
 		return data, nil
 	}
 
 	// find and fill variables
-	return resolver.FillVariables(data)
+	return resolver.FillVariables(ctx, data)
 }
 
-func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, resolver variable.Resolver, log log.Logger) (map[interface{}]interface{}, error) {
+func (l *configLoader) applyProfiles(ctx context.Context, data map[string]interface{}, options *ConfigOptions, resolver variable.Resolver, log log.Logger) (map[string]interface{}, error) {
 	// Get profile
-	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, log)
+	profiles, err := versions.ParseProfile(ctx, filepath.Dir(l.absConfigPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, log)
 	if err != nil {
 		return nil, err
 	}
@@ -572,14 +570,11 @@ func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *
 	return data, nil
 }
 
-func (l *configLoader) newVariableResolver(generatedConfig *generated.Config, absPath string, options *ConfigOptions, vars []*latest.Variable, log log.Logger) variable.Resolver {
-	return variable.NewResolver(generatedConfig.Vars, &variable.PredefinedVariableOptions{
-		BasePath:         options.BasePath,
-		ConfigPath:       absPath,
-		KubeContextFlag:  options.KubeContext,
-		NamespaceFlag:    options.Namespace,
-		KubeConfigLoader: l.kubeConfigLoader,
-		Profile:          GetLastProfile(options.Profiles),
+func (l *configLoader) newVariableResolver(localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, vars map[string]*latest.Variable, log log.Logger) variable.Resolver {
+	return variable.NewResolver(localCache, &variable.PredefinedVariableOptions{
+		ConfigPath: l.absConfigPath,
+		KubeClient: client,
+		Profile:    GetLastProfile(options.Profiles),
 	}, vars, log)
 }
 
@@ -592,15 +587,14 @@ func GetLastProfile(profiles []string) string {
 
 // configExistsInPath checks whether a devspace configuration exists at a certain path
 func configExistsInPath(path string) bool {
-	// check devspace.yaml
 	_, err := os.Stat(path)
 	return err == nil // false, no config file found
 }
 
 // LoadRaw loads the raw config
-func (l *configLoader) LoadRaw() (map[interface{}]interface{}, error) {
+func (l *configLoader) LoadRaw() (map[string]interface{}, error) {
 	// What path should we use
-	configPath := ConfigPath(l.configPath)
+	configPath := ConfigPath(l.absConfigPath)
 	_, err := os.Stat(configPath)
 	if err != nil {
 		return nil, errors.Errorf("Couldn't load '%s': %v", configPath, err)
@@ -611,10 +605,22 @@ func (l *configLoader) LoadRaw() (map[interface{}]interface{}, error) {
 		return nil, err
 	}
 
-	rawMap := map[interface{}]interface{}{}
+	rawMap := map[string]interface{}{}
 	err = yaml.Unmarshal(fileContent, &rawMap)
 	if err != nil {
 		return nil, err
+	}
+
+	name, ok := rawMap["name"].(string)
+	if !ok || name == "" {
+		directoryName := filepath.Base(filepath.Dir(l.absConfigPath))
+		if directoryName != "" && len(directoryName) > 2 {
+			name = directoryName
+		} else {
+			name = "devspace"
+		}
+
+		rawMap["name"] = name
 	}
 
 	return rawMap, nil
@@ -622,22 +628,22 @@ func (l *configLoader) LoadRaw() (map[interface{}]interface{}, error) {
 
 // Exists checks whether the yaml file for the config exists or the configs.yaml exists
 func (l *configLoader) Exists() bool {
-	return configExistsInPath(ConfigPath(l.configPath))
+	return configExistsInPath(ConfigPath(l.absConfigPath))
 }
 
 // SetDevSpaceRoot checks the current directory and all parent directories for a .devspace folder with a config and sets the current working directory accordingly
 func (l *configLoader) SetDevSpaceRoot(log log.Logger) (bool, error) {
-	if l.configPath != "" {
-		configExists := configExistsInPath(l.configPath)
+	if l.absConfigPath != "" {
+		configExists := configExistsInPath(l.absConfigPath)
 		if !configExists {
 			return configExists, nil
 		}
 
-		err := os.Chdir(filepath.Dir(ConfigPath(l.configPath)))
+		err := os.Chdir(filepath.Dir(l.absConfigPath))
 		if err != nil {
 			return false, err
 		}
-		l.configPath = filepath.Base(ConfigPath(l.configPath))
+
 		return true, nil
 	}
 
@@ -688,13 +694,13 @@ func ConfigPath(configPath string) string {
 	return path
 }
 
-func copyRaw(in map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+func copyRaw(in map[string]interface{}) (map[string]interface{}, error) {
 	o, err := yaml.Marshal(in)
 	if err != nil {
 		return nil, err
 	}
 
-	n := map[interface{}]interface{}{}
+	n := map[string]interface{}{}
 	err = yaml.Unmarshal(o, &n)
 	if err != nil {
 		return nil, err
@@ -704,12 +710,12 @@ func copyRaw(in map[interface{}]interface{}) (map[interface{}]interface{}, error
 }
 
 func copyForValidation(profile interface{}) (*latest.ProfileConfig, error) {
-	profileMap, ok := profile.(map[interface{}]interface{})
+	profileMap, ok := profile.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("error loading profiles: invalid format")
 	}
 
-	clone := map[interface{}]interface{}{
+	clone := map[string]interface{}{
 		"name":       profileMap["name"],
 		"parent":     profileMap["parent"],
 		"parents":    profileMap["parents"],
@@ -723,7 +729,9 @@ func copyForValidation(profile interface{}) (*latest.ProfileConfig, error) {
 	}
 
 	profileConfig := &latest.ProfileConfig{}
-	err = yaml.UnmarshalStrict(o, profileConfig)
+	decoder := yaml.NewDecoder(bytes.NewReader(o))
+	decoder.KnownFields(true)
+	err = decoder.Decode(profileConfig)
 	if err != nil {
 		return nil, err
 	}

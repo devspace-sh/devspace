@@ -60,12 +60,12 @@ func TestWriteRead(t *testing.T) {
 	assert.Equal(t, inputObj["testEmptyString"], outputObj["testEmptyString"], "Readed yaml doesn't match written yaml")
 	assert.Equal(t, inputObj["testInt"], outputObj["testInt"], "Readed yaml doesn't match written yaml")
 
-	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testString"], outputObj["someArr"].([]interface{})[0].(map[interface{}]interface{})["testString"], "Readed yaml doesn't match written yaml")
-	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testTrue"], outputObj["someArr"].([]interface{})[0].(map[interface{}]interface{})["testTrue"], "Readed yaml doesn't match written yaml")
-	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testFalse"], outputObj["someArr"].([]interface{})[0].(map[interface{}]interface{})["testFalse"], "Readed yaml doesn't match written yaml")
-	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testBoolString"], outputObj["someArr"].([]interface{})[0].(map[interface{}]interface{})["testBoolString"], "Readed yaml doesn't match written yaml")
-	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testEmptyString"], outputObj["someArr"].([]interface{})[0].(map[interface{}]interface{})["testEmptyString"], "Readed yaml doesn't match written yaml")
-	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testInt"], outputObj["someArr"].([]interface{})[0].(map[interface{}]interface{})["testInt"], "Readed yaml doesn't match written yaml")
+	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testString"], outputObj["someArr"].([]interface{})[0].(map[string]interface{})["testString"], "Readed yaml doesn't match written yaml")
+	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testTrue"], outputObj["someArr"].([]interface{})[0].(map[string]interface{})["testTrue"], "Readed yaml doesn't match written yaml")
+	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testFalse"], outputObj["someArr"].([]interface{})[0].(map[string]interface{})["testFalse"], "Readed yaml doesn't match written yaml")
+	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testBoolString"], outputObj["someArr"].([]interface{})[0].(map[string]interface{})["testBoolString"], "Readed yaml doesn't match written yaml")
+	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testEmptyString"], outputObj["someArr"].([]interface{})[0].(map[string]interface{})["testEmptyString"], "Readed yaml doesn't match written yaml")
+	assert.Equal(t, inputObj["someArr"].([]interface{})[0].(map[string]interface{})["testInt"], outputObj["someArr"].([]interface{})[0].(map[string]interface{})["testInt"], "Readed yaml doesn't match written yaml")
 
 	assert.Equal(t, inputObj["someArr"].([]interface{})[1], outputObj["someArr"].([]interface{})[1], "Readed yaml doesn't match written yaml")
 	assert.Equal(t, inputObj["someArr"].([]interface{})[2], outputObj["someArr"].([]interface{})[2], "Readed yaml doesn't match written yaml")

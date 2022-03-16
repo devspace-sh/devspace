@@ -2,73 +2,69 @@ package build
 
 import (
 	"context"
-
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/buildkit"
-
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/buildkit"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/custom"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 )
 
 // createBuilder creates a new builder
-func (c *controller) createBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, options *Options, log log.Logger) (builder.Interface, error) {
+func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName string, imageConf *latest.Image, imageTags []string, options *Options) (builder.Interface, error) {
 	var err error
-	var builder builder.Interface
+	var bldr builder.Interface
 
-	if imageConf.Build != nil && imageConf.Build.Custom != nil {
-		builder = custom.NewBuilder(imageConfigName, imageConf, imageTags, c.config, c.dependencies)
-	} else if imageConf.Build != nil && imageConf.Build.BuildKit != nil {
-		log.StartWait("Creating BuildKit builder")
-		defer log.StopWait()
-		builder, err = buildkit.NewBuilder(c.config, c.client, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
+	if imageConf.Custom != nil {
+		bldr = custom.NewBuilder(imageConfigName, imageConf, imageTags)
+	} else if imageConf.BuildKit != nil {
+		bldr, err = buildkit.NewBuilder(ctx, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
-	} else if imageConf.Build != nil && imageConf.Build.Docker == nil && imageConf.Build.Kaniko != nil {
-		dockerClient, err := dockerclient.NewClient(log)
+	} else if imageConf.Docker == nil && imageConf.Kaniko != nil {
+		dockerClient, err := dockerclient.NewClient(ctx.Log)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker client: %v", err)
 		}
 
-		if c.client == nil {
+		if ctx.KubeClient == nil {
 			// Create kubectl client if not specified
-			c.client, err = kubectl.NewDefaultClient()
+			kubeClient, err := kubectl.NewDefaultClient()
 			if err != nil {
 				return nil, errors.Errorf("Unable to create new kubectl client: %v", err)
 			}
+
+			ctx = ctx.WithKubeClient(kubeClient)
 		}
 
-		log.StartWait("Creating kaniko builder")
-		defer log.StopWait()
-		builder, err = kaniko.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, log)
+		bldr, err = kaniko.NewBuilder(ctx, dockerClient, imageConfigName, imageConf, imageTags)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
 	} else {
 		preferMinikube := true
-		if imageConf.Build != nil && imageConf.Build.Docker != nil && imageConf.Build.Docker.PreferMinikube != nil {
-			preferMinikube = *imageConf.Build.Docker.PreferMinikube
+		if imageConf.Docker != nil && imageConf.Docker.PreferMinikube != nil {
+			preferMinikube = *imageConf.Docker.PreferMinikube
 		}
 
 		kubeContext := ""
-		if c.client == nil {
+		if ctx.KubeClient == nil {
 			kubeContext, err = kubeconfig.NewLoader().GetCurrentContext()
 			if err != nil {
 				return nil, errors.Wrap(err, "get current context")
 			}
 		} else {
-			kubeContext = c.client.CurrentContext()
+			kubeContext = ctx.KubeClient.CurrentContext()
 		}
 
-		dockerClient, err := dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, log)
+		dockerClient, err := dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, ctx.Log)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker client: %v", err)
 		}
@@ -76,48 +72,62 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 		// Check if docker daemon is running
 		_, err = dockerClient.Ping(context.Background())
 		if err != nil {
-			if imageConf.Build != nil && imageConf.Build.Docker != nil && imageConf.Build.Docker.DisableFallback != nil && *imageConf.Build.Docker.DisableFallback {
+			if imageConf.Docker != nil && imageConf.Docker.DisableFallback != nil && *imageConf.Docker.DisableFallback {
 				return nil, errors.Errorf("Couldn't reach docker daemon: %v. Is the docker daemon running?", err)
 			}
 
 			// Fallback to kaniko
-			log.Infof("Couldn't find a running docker daemon. Will fallback to kaniko")
-			return c.createBuilder(imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTags, options, log)
+			ctx.Log.Infof("Couldn't find a running docker daemon. Will fallback to kaniko")
+			return c.createBuilder(ctx, imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTags, options)
 		}
 
-		builder, err = docker.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
+		bldr, err = docker.NewBuilder(ctx, dockerClient, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker builder: %v", err)
 		}
 	}
 
-	return builder, nil
+	// create image pull secret if possible
+	if ctx.KubeClient != nil && (imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret) {
+		registryURL, err := pullsecrets.GetRegistryFromImageName(imageConf.Image)
+		if err != nil {
+			return nil, err
+		}
+
+		dockerClient, err := dockerclient.NewClient(ctx.Log)
+		if err == nil {
+			err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, ctx.KubeClient.Namespace(), registryURL)
+			if err != nil {
+				ctx.Log.Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
+			}
+		}
+	}
+
+	return bldr, nil
 }
 
-func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest.ImageConfig {
+func convertDockerConfigToKanikoConfig(dockerConfig *latest.Image) *latest.Image {
 	kanikoBuildOptions := &latest.KanikoConfig{
-		Cache: ptr.Bool(true),
+		Cache: true,
 	}
-
-	if dockerConfig.Build != nil && dockerConfig.Build.Kaniko != nil {
-		kanikoBuildOptions = dockerConfig.Build.Kaniko
-	} else if dockerConfig.Build != nil && dockerConfig.Build.Docker != nil && dockerConfig.Build.Docker.Options != nil {
-		kanikoBuildOptions.Options = dockerConfig.Build.Docker.Options
+	if dockerConfig.Kaniko != nil {
+		kanikoBuildOptions = dockerConfig.Kaniko
 	}
-
-	kanikoConfig := &latest.ImageConfig{
-		Image:               dockerConfig.Image,
-		Tags:                dockerConfig.Tags,
-		Dockerfile:          dockerConfig.Dockerfile,
-		Context:             dockerConfig.Context,
-		Entrypoint:          dockerConfig.Entrypoint,
-		Cmd:                 dockerConfig.Cmd,
-		RebuildStrategy:     dockerConfig.RebuildStrategy,
-		InjectRestartHelper: dockerConfig.InjectRestartHelper,
-		CreatePullSecret:    dockerConfig.CreatePullSecret,
-		Build: &latest.BuildConfig{
-			Kaniko: kanikoBuildOptions,
-		},
+	kanikoConfig := &latest.Image{
+		Image:                        dockerConfig.Image,
+		Tags:                         dockerConfig.Tags,
+		Dockerfile:                   dockerConfig.Dockerfile,
+		Context:                      dockerConfig.Context,
+		Entrypoint:                   dockerConfig.Entrypoint,
+		Cmd:                          dockerConfig.Cmd,
+		RebuildStrategy:              dockerConfig.RebuildStrategy,
+		InjectRestartHelper:          dockerConfig.InjectRestartHelper,
+		AppendDockerfileInstructions: dockerConfig.AppendDockerfileInstructions,
+		CreatePullSecret:             dockerConfig.CreatePullSecret,
+		BuildArgs:                    dockerConfig.BuildArgs,
+		Network:                      dockerConfig.Network,
+		Target:                       dockerConfig.Target,
+		Kaniko:                       kanikoBuildOptions,
 	}
 
 	return kanikoConfig

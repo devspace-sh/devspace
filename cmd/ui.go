@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -13,7 +17,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -71,8 +74,11 @@ Opens the localhost UI in the browser
 func (cmd *UICmd) RunUI(f factory.Factory) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	configOptions := cmd.ToConfigOptions(cmd.log)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
@@ -130,53 +136,49 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 	}
 
 	var (
-		config          config2.Config
-		generatedConfig *generated.Config
+		config     config2.Config
+		localCache localcache.Cache
 	)
 
-	if configExists {
-		// Load generated config
-		generatedConfig, err = configLoader.LoadGenerated(configOptions)
-		if err != nil {
-			return errors.Errorf("Error loading generated.yaml: %v", err)
-		}
-		configOptions.GeneratedConfig = generatedConfig
-	}
-
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, cmd.log)
-	if err != nil {
-		return err
-	}
-
 	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
+	if configExists {
+		// Load generated config
+		localCache, err = configLoader.LoadLocalCache()
+		if err != nil {
+			return errors.Errorf("Error loading generated.yaml: %v", err)
+		}
+	}
+
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, cmd.log)
 	if err != nil {
 		return err
 	}
 
-	configOptions.KubeClient = client
-
 	// Load config
 	if configExists {
-		config, err = configLoader.Load(configOptions, cmd.log)
+		config, err = configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, cmd.log)
 		if err != nil {
 			return err
 		}
 	}
 
+	// dev context
+	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+		WithConfig(config).
+		WithKubeClient(client)
+
 	// Override error runtime handler
 	log.OverrideRuntimeErrorHandler(true)
 
 	// Execute plugin hook
-	err = hook.ExecuteHooks(nil, nil, nil, nil, nil, "ui")
+	err = hook.ExecuteHooks(ctx, nil, "ui")
 	if err != nil {
 		return err
 	}
@@ -188,7 +190,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 	}
 
 	// Create server
-	server, err := server.NewServer(config, nil, cmd.Host, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, cmd.log)
+	server, err := server.NewServer(ctx, cmd.Host, cmd.Dev, forcePort, nil)
 	if err != nil {
 		return err
 	}

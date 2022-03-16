@@ -13,13 +13,12 @@ import (
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	fakegenerated "github.com/loft-sh/devspace/pkg/devspace/config/generated/testing"
+	fakegenerated "github.com/loft-sh/devspace/pkg/devspace/config/localcache/testing"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	fakekubeconfig "github.com/loft-sh/devspace/pkg/util/kubeconfig/testing"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -143,7 +142,7 @@ type loadTestCase struct {
 
 	configPath        string
 	options           ConfigOptions
-	returnedGenerated generated.Config
+	returnedGenerated localcache.Config
 	files             map[string]interface{}
 	withProfile       bool
 
@@ -167,7 +166,7 @@ func TestLoad(t *testing.T) {
 					},
 				},
 			},
-			returnedGenerated: generated.Config{
+			returnedGenerated: localcache.Config{
 				ActiveProfile: "active",
 			},
 			withProfile: true,
@@ -392,7 +391,7 @@ func TestGetProfiles(t *testing.T) {
 		{
 			name: "Empty file",
 			files: map[string]interface{}{
-				"devspace.yaml": map[interface{}]interface{}{
+				"devspace.yaml": map[string]interface{}{
 					"version": "v1beta9",
 				},
 			},
@@ -401,10 +400,10 @@ func TestGetProfiles(t *testing.T) {
 			name:       "Parse several profiles",
 			configPath: "custom.yaml",
 			files: map[string]interface{}{
-				"custom.yaml": map[interface{}]interface{}{
+				"custom.yaml": map[string]interface{}{
 					"version": "v1beta9",
 					"profiles": []interface{}{
-						map[interface{}]interface{}{
+						map[string]interface{}{
 							"name": "myprofile",
 						},
 					},
@@ -474,8 +473,8 @@ func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
 type parseCommandsTestCase struct {
 	name string
 
-	generatedConfig *generated.Config
-	data            map[interface{}]interface{}
+	generatedConfig *localcache.Config
+	data            map[string]interface{}
 
 	expectedCommands []*latest.CommandConfig
 	expectedErr      string
@@ -485,7 +484,7 @@ type parseCommandsTestCase struct {
 func TestParseCommands(t *testing.T) {
 	testCases := []parseCommandsTestCase{
 		{
-			data: map[interface{}]interface{}{
+			data: map[string]interface{}{
 				"version": latest.Version,
 			},
 		},
@@ -547,7 +546,7 @@ type parseTestCase struct {
 type parseTestCaseInput struct {
 	config          string
 	options         *ConfigOptions
-	generatedConfig *generated.Config
+	generatedConfig *localcache.Config
 }
 
 func TestParseConfig(t *testing.T) {
@@ -557,7 +556,7 @@ func TestParseConfig(t *testing.T) {
 				config: `
 version: v1alpha1`,
 				options:         &ConfigOptions{},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -576,7 +575,7 @@ deployments:
     containers:
     - image: nginx`,
 				options:         &ConfigOptions{},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -587,9 +586,9 @@ deployments:
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
 							V2:             true,
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -609,7 +608,7 @@ deployments:
     containers:
     - image: nginx`,
 				options: &ConfigOptions{},
-				generatedConfig: &generated.Config{Vars: map[string]string{
+				generatedConfig: &localcache.Config{Vars: map[string]string{
 					"my_var": "test",
 				}},
 			},
@@ -622,9 +621,9 @@ deployments:
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
 							V2:             true,
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -652,7 +651,7 @@ profiles:
 				containers:
 				- image: ubuntu`,
 				options: &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{
+				generatedConfig: &localcache.Config{Vars: map[string]string{
 					"test_var": "test",
 				}},
 			},
@@ -665,9 +664,9 @@ profiles:
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
 							V2:             true,
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -702,7 +701,7 @@ profiles: |-
   """)
 		`,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -712,9 +711,9 @@ profiles: |-
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -750,7 +749,7 @@ profiles:
   """)
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -760,9 +759,9 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -797,7 +796,7 @@ profiles:
     """)
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -807,9 +806,9 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -844,7 +843,7 @@ profiles:
     """)
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -854,9 +853,9 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -891,7 +890,7 @@ profiles:
     """)
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -901,9 +900,9 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -914,9 +913,9 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -943,7 +942,7 @@ profiles:
   parent: $(echo testparent)
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expectedErr: `error validating profiles[1]: parent cannot be an expression`,
 		},
@@ -964,7 +963,7 @@ profiles:
   parent: ${testparent}
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{"testparent": "testparent"}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{"testparent": "testparent"}},
 			},
 			expectedErr: `error validating profiles[1]: parent cannot be a variable`,
 		},
@@ -985,7 +984,7 @@ profiles:
   parents: $(echo [testparent])
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expectedErr: `error validating profiles[1]: parents cannot be an expression`,
 		},
@@ -1006,7 +1005,7 @@ profiles:
   parents: ${testparents}
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{"testparent": "testparent"}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{"testparent": "testparent"}},
 			},
 			expectedErr: `error validating profiles[1]: parents cannot be a variable`,
 		},
@@ -1026,7 +1025,7 @@ profiles:
   activation: $(echo [testparent])
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expectedErr: `error validating profiles[0]: activation cannot be an expression`,
 		},
@@ -1046,7 +1045,7 @@ profiles:
   activation: ${testparents}
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{"testparent": "testparent"}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{"testparent": "testparent"}},
 			},
 			expectedErr: `error validating profiles[0]: activation cannot be a variable`,
 		},
@@ -1077,7 +1076,7 @@ profiles:
     """)
 `,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -1087,9 +1086,9 @@ profiles:
 						Name: "deployments",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -1124,7 +1123,7 @@ profiles:
             - image: ubuntu
 `,
 				options: &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{
+				generatedConfig: &localcache.Config{Vars: map[string]string{
 					"path": "deployments",
 				}},
 			},
@@ -1155,7 +1154,7 @@ profiles:
             - image: ubuntu
 `,
 				options: &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{
+				generatedConfig: &localcache.Config{Vars: map[string]string{
 					"op": "replace",
 				}},
 			},
@@ -1186,7 +1185,7 @@ profiles:
             - image: ubuntu
 `,
 				options: &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{
+				generatedConfig: &localcache.Config{Vars: map[string]string{
 					"path": "deployments",
 				}},
 			},
@@ -1217,7 +1216,7 @@ profiles:
             - image: ubuntu
 `,
 				options: &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{
+				generatedConfig: &localcache.Config{Vars: map[string]string{
 					"path": "deployments",
 				}},
 			},
@@ -1242,7 +1241,7 @@ profiles:
     value: $(echo ubuntu)
 `,
 				options: &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{
+				generatedConfig: &localcache.Config{Vars: map[string]string{
 					"test_var": "test",
 				}},
 			},
@@ -1292,7 +1291,7 @@ profiles:
       """)
 `,
 				options: &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{
+				generatedConfig: &localcache.Config{Vars: map[string]string{
 					"IMAGE": "foo",
 				}},
 			},
@@ -1304,9 +1303,9 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "foo",
 									},
 								},
@@ -1343,7 +1342,7 @@ profiles:
     value: ${IMAGE_B}
 `,
 				options:         &ConfigOptions{Profiles: []string{"B"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{"IMAGE_B": "ubuntu"}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{"IMAGE_B": "ubuntu"}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -1353,9 +1352,9 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "${IMAGE_B}",
 									},
 								},
@@ -1391,7 +1390,7 @@ profiles:
     value: $(echo ${IMAGE_B})
 `,
 				options:         &ConfigOptions{Profiles: []string{"B"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{"IMAGE_B": "ubuntu"}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{"IMAGE_B": "ubuntu"}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -1430,7 +1429,7 @@ profiles:
 	value: ubuntu
 `,
 				options:         &ConfigOptions{Profiles: []string{"A"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{"IMAGE_A": "production"}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{"IMAGE_A": "production"}},
 			},
 			expectedErr: "error validating profiles[0]: name cannot be a variable",
 		},
@@ -1453,7 +1452,7 @@ profiles:
 	value: ubuntu
 `,
 				options:         &ConfigOptions{Profiles: []string{"production"}},
-				generatedConfig: &generated.Config{},
+				generatedConfig: &localcache.Config{},
 			},
 			expectedErr: "error validating profiles[0]: name cannot be an expression",
 		},
@@ -1482,7 +1481,7 @@ profiles:
 		path: deployments[0].name
 		value: ${test_var_2}`,
 				options: &ConfigOptions{Profiles: []string{"testprofile"}, Vars: []string{"test_var=ubuntu"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{
+				generatedConfig: &localcache.Config{Vars: map[string]string{
 					"test_var_2": "test",
 				}},
 			},
@@ -1495,9 +1494,9 @@ profiles:
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
 							V2:             true,
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -1532,7 +1531,7 @@ profiles:
 		path: deployments[0].name
 		value: ${should-not-show-up}`,
 				options:         &ConfigOptions{Vars: []string{"test_var=test"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -1543,9 +1542,9 @@ profiles:
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
 							V2:             true,
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -1579,7 +1578,7 @@ profiles:
 		path: vars[0].name
 		value: new`,
 				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{"new": "newdefault"}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{"new": "newdefault"}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -1589,9 +1588,9 @@ profiles:
 						Name: "newdefault",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -1615,7 +1614,7 @@ vars:
   source: none
   default: test`,
 				options:         &ConfigOptions{},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -1664,7 +1663,7 @@ profiles:
 		path: deployments[0].name
 		value: replaced2`,
 				options:         &ConfigOptions{Profiles: []string{"test"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -1687,7 +1686,7 @@ profiles:
 						},
 					},
 				},
-				Images: map[string]*latest.ImageConfig{
+				Images: map[string]*latest.Image{
 					"test": {
 						Image: "test",
 					},
@@ -1721,7 +1720,7 @@ profiles:
 		path: deployments[1].name
 		value: replaced2`,
 				options:         &ConfigOptions{Profiles: []string{"test"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expectedErr: "cannot load config with profile parent: max config loading depth reached. Seems like you have a profile cycle somewhere",
 		},
@@ -1765,12 +1764,12 @@ profiles:
           containers:
           - image: test123/test123`,
 				options:         &ConfigOptions{Profiles: []string{"test"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
 				Dev:     latest.DevConfig{},
-				Images: map[string]*latest.ImageConfig{
+				Images: map[string]*latest.Image{
 					"test": {
 						Image: "test2/test2",
 					},
@@ -1780,16 +1779,16 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
-								"service": map[interface{}]interface{}{
+							Values: map[string]interface{}{
+								"service": map[string]interface{}{
 									"ports": []interface{}{
-										map[interface{}]interface{}{
+										map[string]interface{}{
 											"port": 3000,
 										},
 									},
 								},
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "test123/test123",
 									},
 								},
@@ -1800,9 +1799,9 @@ profiles:
 						Name: "test2",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "test/test",
 									},
 								},
@@ -1830,7 +1829,7 @@ profiles:
     path: dev.ports.name=devbackend.imageSelector
     value: john/prodbackend`,
 				options:         &ConfigOptions{Profiles: []string{"production"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -1870,7 +1869,7 @@ profiles:
     path: dev.sync.name=devbackend.imageSelector
     value: john/prodbackend`,
 				options:         &ConfigOptions{Profiles: []string{"production"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -1913,11 +1912,11 @@ profiles:
         image: node
 `,
 				options:         &ConfigOptions{Profiles: []string{"production"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Images: map[string]*latest.ImageConfig{
+				Images: map[string]*latest.Image{
 					"image1": {
 						Image: "node",
 					},
@@ -1960,7 +1959,7 @@ profiles:
       image: node:14
 `,
 				options:         &ConfigOptions{Profiles: []string{"production"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{}},
 			},
 			expectedErr: `convert config: Error loading config: yaml: unmarshal errors:
   line 10: field images/image1 not found in type v1beta10.Config`,
@@ -1995,7 +1994,7 @@ profiles:
     value: nginx:b
 		`,
 				options:         &ConfigOptions{},
-				generatedConfig: &generated.Config{Vars: map[string]string{"USE_A": "true"}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{"USE_A": "true"}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -2005,9 +2004,9 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx:a",
 									},
 								},
@@ -2047,7 +2046,7 @@ profiles:
     value: nginx:b
 		`,
 				options:         &ConfigOptions{},
-				generatedConfig: &generated.Config{Vars: map[string]string{"USE_A": "false"}},
+				generatedConfig: &localcache.Config{Vars: map[string]string{"USE_A": "false"}},
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
@@ -2057,9 +2056,9 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -2073,7 +2072,7 @@ profiles:
 
 	// Execute test cases
 	for index, testCase := range testCases {
-		testMap := map[interface{}]interface{}{}
+		testMap := map[string]interface{}{}
 		err := yaml.Unmarshal([]byte(strings.Replace(testCase.in.config, "	", "  ", -1)), &testMap)
 		if err != nil {
 			t.Fatal(err)
@@ -2108,12 +2107,12 @@ profiles:
 
 type fakeGeneratedLoader struct{}
 
-func (fl *fakeGeneratedLoader) ForDevspace(path string) generated.ConfigLoader {
+func (fl *fakeGeneratedLoader) ForDevspace(path string) localcache.ConfigLoader {
 	return fl
 }
-func (fl *fakeGeneratedLoader) Load() (*generated.Config, error) {
+func (fl *fakeGeneratedLoader) Load() (*localcache.Config, error) {
 	panic("unimplemented")
 }
-func (fl *fakeGeneratedLoader) Save(config *generated.Config) error {
+func (fl *fakeGeneratedLoader) Save(config *localcache.Config) error {
 	return nil
 }

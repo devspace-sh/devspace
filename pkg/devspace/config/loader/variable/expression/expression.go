@@ -2,15 +2,16 @@ package expression
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
-	"github.com/loft-sh/devspace/pkg/util/shell"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // ExpressionMatchRegex is the regex to check if a value matches the devspace var format
@@ -30,17 +31,17 @@ func ExcludedPath(path string, excluded []*regexp.Regexp) bool {
 	return false
 }
 
-func ResolveAllExpressions(preparedConfig interface{}, dir string, exclude []*regexp.Regexp) (interface{}, error) {
+func ResolveAllExpressions(ctx context.Context, preparedConfig interface{}, dir string, exclude []*regexp.Regexp) (interface{}, error) {
 	switch t := preparedConfig.(type) {
 	case string:
-		return ResolveExpressions(t, dir)
-	case map[interface{}]interface{}:
+		return ResolveExpressions(ctx, t, dir)
+	case map[string]interface{}:
 		err := walk.Walk(t, expressionMatchFn, func(path, value string) (interface{}, error) {
 			if ExcludedPath(path, exclude) {
 				return value, nil
 			}
 
-			return ResolveExpressions(value, dir)
+			return ResolveExpressions(ctx, value, dir)
 		})
 		if err != nil {
 			return nil, err
@@ -50,19 +51,19 @@ func ResolveAllExpressions(preparedConfig interface{}, dir string, exclude []*re
 	case []interface{}:
 		for i := range t {
 			var err error
-			t[i], err = ResolveAllExpressions(t[i], dir, exclude)
+			t[i], err = ResolveAllExpressions(ctx, t[i], dir, exclude)
 			if err != nil {
 				return nil, err
 			}
 		}
-		
+
 		return t, nil
 	}
 
 	return preparedConfig, nil
 }
 
-func ResolveExpressions(value, dir string) (interface{}, error) {
+func ResolveExpressions(ctx context.Context, value, dir string) (interface{}, error) {
 	matches := ExpressionMatchRegex.FindAllStringSubmatch(value, -1)
 	if len(matches) == 0 {
 		return value, nil
@@ -76,7 +77,7 @@ func ResolveExpressions(value, dir string) (interface{}, error) {
 
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
-		err := shell.ExecuteShellCommand(match[1], os.Args[1:], dir, stdout, stderr, nil)
+		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, nil, nil, match[1], os.Args[1:]...)
 		if err != nil {
 			return nil, fmt.Errorf("error executing config expression %s: %v (stdout: %s, stderr: %s)", match[1], err, stdout.String(), stderr.String())
 		}
@@ -109,7 +110,7 @@ func ResolveExpressions(value, dir string) (interface{}, error) {
 		}
 
 		// is yaml object?
-		m := map[interface{}]interface{}{}
+		m := map[string]interface{}{}
 		err = yaml.Unmarshal([]byte(out), &m)
 		if err == nil {
 			return m, nil

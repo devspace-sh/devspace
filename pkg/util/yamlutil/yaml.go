@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // Convert converts an map[interface{}] to map[string] type
@@ -15,12 +15,6 @@ func Convert(i interface{}) interface{} {
 		m2 := map[string]interface{}{}
 		for k, v := range x {
 			m2[k] = Convert(v)
-		}
-		return m2
-	case map[interface{}]interface{}:
-		m2 := map[string]interface{}{}
-		for k, v := range x {
-			m2[k.(string)] = Convert(v)
 		}
 		return m2
 	case []interface{}:
@@ -55,14 +49,14 @@ func ReadYamlFromFile(filePath string, yamlTarget interface{}) error {
 	return yaml.Unmarshal(yamlFile, yamlTarget)
 }
 
-// ToInterfaceMap converts to yaml and back to generate map[interface{}]interface{}
-func ToInterfaceMap(yamlData interface{}) (map[interface{}]interface{}, error) {
+// ToInterfaceMap converts to yaml and back to generate map[string]interface{}
+func ToInterfaceMap(yamlData interface{}) (map[string]interface{}, error) {
 	yamlString, err := yaml.Marshal(yamlData)
 	if err != nil {
 		return nil, err
 	}
 
-	interfaceMap := map[interface{}]interface{}{}
+	interfaceMap := map[string]interface{}{}
 
 	err = yaml.Unmarshal(yamlString, interfaceMap)
 	if err != nil {

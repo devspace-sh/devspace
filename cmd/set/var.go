@@ -1,6 +1,7 @@
 package set
 
 import (
+	"context"
 	"strings"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -50,7 +51,10 @@ devspace set var key=value key2=value2
 func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
@@ -61,11 +65,10 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 
 	// Load config and find all variables in it
 	variableParser := &variableParser{}
-	c, err := configLoader.LoadWithParser(variableParser, cmd.ToConfigOptions(log), log)
+	c, err := configLoader.LoadWithParser(context.Background(), nil, nil, variableParser, cmd.ToConfigOptions(), log)
 	if err != nil {
 		return err
 	}
-	generatedConfig := c.Generated()
 
 	// Set vars
 	for _, v := range args {
@@ -79,14 +82,19 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 			return errors.Errorf("Unexpected variable format. Expected key=value, got %s", v)
 		} else if variable.IsPredefinedVariable(splitted[0]) {
 			return errors.Errorf("cannot set predefined variable %s", splitted[0])
-		} else if !variableParser.Used[splitted[0]] {
-			allowedVarsArr := []string{}
-			for k := range variableParser.Used {
-				if variable.IsPredefinedVariable(k) {
-					continue
-				}
+		}
 
-				allowedVarsArr = append(allowedVarsArr, k)
+		found := false
+		for _, u := range variableParser.Used {
+			if u.Name == splitted[0] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			allowedVarsArr := []string{}
+			for _, v := range variableParser.Used {
+				allowedVarsArr = append(allowedVarsArr, v.Name)
 			}
 
 			return errors.Errorf("variable %s is not allowed. Allowed vars: %+v", splitted[0], allowedVarsArr)
@@ -102,15 +110,16 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 		}
 
 		// only overwrite it if the flag is true and value is not set yet
-		if cmd.Overwrite || generatedConfig.Vars[splitted[0]] == "" {
-			generatedConfig.Vars[splitted[0]] = splitted[1]
+		_, found = c.LocalCache().GetVar(splitted[0])
+		if cmd.Overwrite || !found {
+			c.LocalCache().SetVar(splitted[0], splitted[1])
 		} else {
 			log.Infof("Skip variable %s, because it already has a value", splitted[0])
 		}
 	}
 
 	// Save the config
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = c.LocalCache().Save()
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}
@@ -120,18 +129,18 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 }
 
 type variableParser struct {
-	Definitions []*latest.Variable
-	Used        map[string]bool
+	Definitions map[string]*latest.Variable
+	Used        []*latest.Variable
 }
 
-func (v *variableParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+func (v *variableParser) Parse(ctx context.Context, originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, map[string]interface{}, error) {
 	// Find out what vars are really used
 	varsUsed, err := resolver.FindVariables(rawConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	v.Definitions = resolver.DefinedVars()
 	v.Used = varsUsed
-	return latest.NewRaw(), nil
+	return latest.NewRaw(), map[string]interface{}{}, nil
 }

@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -78,7 +79,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 			},
 			SkipPush: true,
 		}
-		err = devCmd.Run(f, nil)
+		err = devCmd.Run(f)
 		framework.ExpectError(err)
 
 		// check if files are correctly created
@@ -123,16 +124,14 @@ var _ = DevSpaceDescribe("hooks", func() {
 		waitGroup := sync.WaitGroup{}
 
 		// create first dev command
-		interrupt1, stop1 := framework.InterruptChan()
-		defer stop1()
+		cancelCtx1, cancel1 := context.WithCancel(context.Background())
+		defer cancel1()
 		devCmd1 := &cmd.DevCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Portforwarding: true,
-			Sync:           true,
-			Interrupt:      interrupt1,
+			Ctx: cancelCtx1,
 		}
 
 		// start the command
@@ -140,7 +139,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd1.Run(f, nil)
+			err = devCmd1.Run(f)
 			framework.ExpectNoError(err)
 		}()
 
@@ -169,19 +168,17 @@ var _ = DevSpaceDescribe("hooks", func() {
 		framework.ExpectNoError(err)
 
 		// stop first command
-		stop1()
+		cancel1()
 
 		// create second dev command
-		interrupt2, stop2 := framework.InterruptChan()
-		defer stop2()
+		cancelCtx2, cancel2 := context.WithCancel(context.Background())
+		defer cancel2()
 		devCmd2 := &cmd.DevCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Portforwarding: true,
-			Sync:           true,
-			Interrupt:      interrupt2,
+			Ctx: cancelCtx2,
 		}
 
 		// start the command
@@ -189,7 +186,8 @@ var _ = DevSpaceDescribe("hooks", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd2.Run(f, nil)
+			err = devCmd2.Run(f)
+
 			framework.ExpectNoError(err)
 		}()
 
@@ -218,7 +216,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 		framework.ExpectNoError(err)
 
 		// stop second command
-		stop2()
+		cancel2()
 
 		// Verify that the 'once' hook did not run again
 		framework.ExpectEqual(onceOutput1, onceOutput2)

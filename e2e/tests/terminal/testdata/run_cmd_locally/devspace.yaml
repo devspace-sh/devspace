@@ -28,4 +28,4 @@ dev:
           path: spec.containers[0].workingDir
           value: "/workdir"
   terminal:
-    command: ["echo", "hello"]
+    command: ["sh", "-c", "echo 'Hello World!' > terminal-done.txt"]

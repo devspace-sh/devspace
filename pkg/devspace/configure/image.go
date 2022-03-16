@@ -1,10 +1,13 @@
 package configure
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/encoding"
+	"github.com/sirupsen/logrus"
 	"os"
-	"os/exec"
 	"path"
 	"regexp"
 	"strings"
@@ -37,12 +40,9 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 		err                   error
 	)
 
-	imageConfig := &latest.ImageConfig{
+	imageConfig := &latest.Image{
 		Image:      strings.ToLower(image),
 		Dockerfile: dockerfile,
-		Build: &latest.BuildConfig{
-			Disabled: true,
-		},
 	}
 
 	buildMethods := []string{createNewDockerfile, subPathDockerfile}
@@ -69,14 +69,8 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 			return err
 		}
 
-		buildCommandSplit := strings.Split(strings.TrimSpace(buildCommand), " ")
-
-		imageConfig.Build = &latest.BuildConfig{
-			Disabled: true,
-			Custom: &latest.CustomConfig{
-				Command: buildCommandSplit[0],
-				Args:    buildCommandSplit[1:],
-			},
+		imageConfig.Custom = &latest.CustomConfig{
+			Command: buildCommand + "${runtime.images." + imageName + "}",
 		}
 	} else {
 		if buildMethod == createNewDockerfile {
@@ -132,7 +126,7 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 	}
 
 	if image == "" {
-		m.log.WriteString("\n")
+		m.log.WriteString(logrus.InfoLevel, "\n")
 		m.log.Info("DevSpace does *not* require pushing your images to a registry but let's assume you wanted to do that (optional)")
 
 		registryOptions := []string{skipRegistry, useDockerHub, useGithubRegistry, useOtherRegistry}
@@ -201,8 +195,7 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 			} else {
 				projectPath := registryUsername + "/project"
 				if regexp.MustCompile(`^(.+\.)?gcr.io$`).Match([]byte(registryHostname)) {
-					project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
-
+					project, err := command.Output(context.TODO(), "", "gcloud", "config", "get-value", "project")
 					if err == nil {
 						projectPath = strings.TrimSpace(string(project))
 					}
@@ -214,7 +207,7 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 			imageConfig.Image = "username" + "/" + imageName
 		}
 	} else {
-		m.log.WriteString("\n")
+		m.log.WriteString(logrus.InfoLevel, "\n")
 		m.log.Info("DevSpace does *not* require pushing your images to a registry but let's check your registry credentials for this image (optional)")
 
 		_, err := m.addPullSecretConfig(dockerClient, image)
@@ -260,9 +253,8 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 	registryPassword := ""
 
 	for {
-		m.log.StartWait("Checking registry authentication for " + registryHostnamePrintable)
+		m.log.Info("Checking registry authentication for " + registryHostnamePrintable + "...")
 		authConfig, err := dockerClient.Login(registryHostname, registryUsername, registryPassword, true, false, false)
-		m.log.StopWait()
 		if err == nil && (authConfig.Username != "" || authConfig.Password != "") {
 			registryUsername = authConfig.Username
 
@@ -270,7 +262,7 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 			break
 		}
 
-		m.log.WriteString("\n")
+		m.log.WriteString(logrus.WarnLevel, "\n")
 		m.log.Warnf("Unable to find registry credentials for %s", registryHostnamePrintable)
 		m.log.Warnf("Running `docker login%s` for you to authenticate with the registry (optional)", registryHostnameSpaced)
 
@@ -293,10 +285,10 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 			}
 		}
 
-		m.log.WriteString("\n")
+		m.log.WriteString(logrus.WarnLevel, "\n")
 
 		// Check if docker is running
-		runErr := exec.Command("docker", "version").Run()
+		_, runErr := command.Output(context.TODO(), "", "docker", "version")
 		if runErr != nil || registryUsername == "" {
 			if registryUsername == "" {
 				m.log.Warn("Skipping image registry authentication.")
@@ -309,21 +301,24 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 			usernameVar := "REGISTRY_USERNAME"
 			passwordVar := "REGISTRY_PASSWORD"
 
-			m.config.PullSecrets = []*latest.PullSecretConfig{
-				{
+			m.config.PullSecrets = map[string]*latest.PullSecretConfig{
+				encoding.Convert(registryHostname): {
 					Registry: registryHostname,
 					Username: fmt.Sprintf("${%s}", usernameVar),
 					Password: fmt.Sprintf("${%s}", passwordVar),
 				},
 			}
 
-			m.config.Vars = append(m.config.Vars, &latest.Variable{
+			if m.config.Vars == nil {
+				m.config.Vars = map[string]*latest.Variable{}
+			}
+			m.config.Vars[passwordVar] = &latest.Variable{
 				Name:     passwordVar,
 				Password: true,
-			})
+			}
 
-			m.generated.Vars[usernameVar] = registryUsername
-			m.generated.Vars[passwordVar] = registryPassword
+			m.localCache.SetVar(usernameVar, registryUsername)
+			m.localCache.SetVar(passwordVar, registryPassword)
 
 			break
 		}

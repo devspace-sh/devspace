@@ -3,6 +3,7 @@ package podreplace
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -10,23 +11,31 @@ import (
 	"strings"
 )
 
-func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *corev1.Pod) error {
-	name := podName
-	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
-		name = replacePod.PersistenceOptions.Name
+type containerPath struct {
+	latest.PersistentPath
+	Container string
+}
+
+func persistPaths(name string, devPod *latest.DevPod, podTemplate *corev1.PodTemplateSpec) error {
+	if devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Name != "" {
+		name = devPod.PersistenceOptions.Name
 	}
 
-	copiedPod.Spec.Volumes = append(copiedPod.Spec.Volumes, corev1.Volume{
-		Name: "devspace-persistence",
-		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: name,
-				ReadOnly:  replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.ReadOnly,
-			},
-		},
+	paths := []containerPath{}
+	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		for _, p := range devContainer.PersistPaths {
+			paths = append(paths, containerPath{
+				PersistentPath: p,
+				Container:      devContainer.Container,
+			})
+		}
+		return true
 	})
+	if len(paths) == 0 {
+		return nil
+	}
 
-	for i, p := range replacePod.PersistPaths {
+	for i, p := range paths {
 		if p.Path == "" {
 			continue
 		}
@@ -36,23 +45,19 @@ func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *core
 			subPath = fmt.Sprintf("path-%d", i)
 		}
 
-		if len(copiedPod.Spec.Containers) > 1 && p.ContainerName == "" {
-			if replacePod.ContainerName == "" {
-				names := []string{}
-				for _, c := range copiedPod.Spec.Containers {
-					names = append(names, c.Name)
-				}
-
-				return fmt.Errorf("couldn't persist path %s as multiple containers were found %s, but no containerName was specified", p.Path, strings.Join(names, " "))
+		if len(podTemplate.Spec.Containers) > 1 && p.Container == "" {
+			names := []string{}
+			for _, c := range podTemplate.Spec.Containers {
+				names = append(names, c.Name)
 			}
 
-			p.ContainerName = replacePod.ContainerName
+			return fmt.Errorf("couldn't persist path %s as multiple containers were found %s, but no containerName was specified", p.Path, strings.Join(names, " "))
 		}
 
 		var container *corev1.Container
-		for i, con := range copiedPod.Spec.Containers {
-			if p.ContainerName == "" || p.ContainerName == con.Name {
-				copiedPod.Spec.Containers[i].VolumeMounts = append(copiedPod.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+		for i, con := range podTemplate.Spec.Containers {
+			if p.Container == "" || p.Container == con.Name {
+				podTemplate.Spec.Containers[i].VolumeMounts = append(podTemplate.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
 					Name:      "devspace-persistence",
 					MountPath: p.Path,
 					SubPath:   subPath,
@@ -64,7 +69,7 @@ func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *core
 			}
 		}
 
-		if container == nil || p.SkipPopulate || p.ReadOnly || (replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.ReadOnly) {
+		if container == nil || p.SkipPopulate || p.ReadOnly || (devPod.PersistenceOptions != nil && devPod.PersistenceOptions.ReadOnly) {
 			continue
 		}
 
@@ -98,8 +103,18 @@ func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *core
 		}
 
 		// add an init container that pre-populates the persistent volume for that path
-		copiedPod.Spec.InitContainers = append(copiedPod.Spec.InitContainers, initContainer)
+		podTemplate.Spec.InitContainers = append(podTemplate.Spec.InitContainers, initContainer)
 	}
+
+	podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, corev1.Volume{
+		Name: "devspace-persistence",
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+				ClaimName: name,
+				ReadOnly:  devPod.PersistenceOptions != nil && devPod.PersistenceOptions.ReadOnly,
+			},
+		},
+	})
 
 	return nil
 }

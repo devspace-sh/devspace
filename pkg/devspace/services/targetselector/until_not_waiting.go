@@ -14,9 +14,10 @@ import (
 // NewUntilNotWaitingStrategy creates a new waiting strategy
 func NewUntilNotWaitingStrategy(initialDelay time.Duration) WaitingStrategy {
 	return &untilNotWaiting{
-		initialDelay: time.Now().Add(initialDelay),
+		originalDelay: initialDelay,
+		initialDelay:  time.Now().Add(initialDelay),
 		podInfoPrinter: &PodInfoPrinter{
-			lastWarning: time.Now().Add(initialDelay),
+			LastWarning: time.Now().Add(initialDelay),
 		},
 	}
 }
@@ -24,9 +25,20 @@ func NewUntilNotWaitingStrategy(initialDelay time.Duration) WaitingStrategy {
 // this waiting strategy will wait until the newest pod / container is not in waiting
 // stage anymore and either terminated or running.
 type untilNotWaiting struct {
-	initialDelay time.Time
+	originalDelay time.Duration
+	initialDelay  time.Time
 
 	podInfoPrinter *PodInfoPrinter
+}
+
+func (u *untilNotWaiting) Reset() WaitingStrategy {
+	return &untilNotWaiting{
+		originalDelay: u.originalDelay,
+		initialDelay:  time.Now().Add(u.originalDelay),
+		podInfoPrinter: &PodInfoPrinter{
+			LastWarning: time.Now().Add(u.originalDelay),
+		},
+	}
 }
 
 func (u *untilNotWaiting) SelectPod(ctx context.Context, client kubectl.Client, namespace string, pods []*v1.Pod, log log.Logger) (bool, *v1.Pod, error) {

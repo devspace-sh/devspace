@@ -14,18 +14,30 @@ import (
 // NewUntilNotTerminatingStrategy creates a new waiting strategy
 func NewUntilNotTerminatingStrategy(initialDelay time.Duration) WaitingStrategy {
 	return &untilNotTerminating{
-		initialDelay: time.Now().Add(initialDelay),
+		originalDelay: initialDelay,
+		initialDelay:  time.Now().Add(initialDelay),
 		podInfoPrinter: &PodInfoPrinter{
-			lastWarning: time.Now().Add(initialDelay),
+			LastWarning: time.Now().Add(initialDelay),
 		},
 	}
 }
 
 // this waiting strategy will wait until there is a pod that is not terminating
 type untilNotTerminating struct {
-	initialDelay time.Time
+	originalDelay time.Duration
+	initialDelay  time.Time
 
 	podInfoPrinter *PodInfoPrinter
+}
+
+func (u *untilNotTerminating) Reset() WaitingStrategy {
+	return &untilNotTerminating{
+		originalDelay: u.originalDelay,
+		initialDelay:  time.Now().Add(u.originalDelay),
+		podInfoPrinter: &PodInfoPrinter{
+			LastWarning: time.Now().Add(u.originalDelay),
+		},
+	}
 }
 
 func (u *untilNotTerminating) SelectPod(ctx context.Context, client kubectl.Client, namespace string, pods []*v1.Pod, log log.Logger) (bool, *v1.Pod, error) {

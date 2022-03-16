@@ -4,6 +4,7 @@ vars:
     value: devspace.yaml
   - name: NOT_USED
     value: not_used
+  - name: TEST_1
   - name: TEST_2
     command: "echo test2"
 dependencies:
@@ -12,9 +13,10 @@ dependencies:
       path: dep1
       configName: dev.yaml
 deployments:
-  - name: ${TEST_1}
+  - name: test
     kubectl:
       manifests:
+        - ${TEST_1}
         - ${TEST_2}
         - ${TEST_OVERRIDE}
 

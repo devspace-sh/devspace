@@ -1,0 +1,13 @@
+version: v2beta1
+name: import2
+
+vars:
+  IMPORT2: import2
+
+pipelines:
+  import2-name:
+    run: |-
+      echo ${devspace.name}
+  import2:
+    run: |-
+      echo ${IMPORT2}

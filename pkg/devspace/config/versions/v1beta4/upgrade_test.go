@@ -7,7 +7,7 @@ import (
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta5"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 type testCase struct {

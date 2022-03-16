@@ -70,7 +70,7 @@ func ExpectRemoteFileContents(imageSelector string, namespace string, filePath s
 			return false, nil
 		}
 
-		return out == contents, nil
+		return strings.TrimSpace(out) == strings.TrimSpace(contents), nil
 	})
 	ExpectNoErrorWithOffset(1, err)
 }
@@ -133,6 +133,12 @@ func ExpectLocalFileContents(filePath string, contents string) {
 		return string(out) == contents, nil
 	})
 	ExpectNoErrorWithOffset(1, err)
+}
+
+func ExpectLocalFileContentsWithoutSpaces(filePath string, contents string) {
+	out, err := ioutil.ReadFile(filePath)
+	ExpectNoError(err)
+	gomega.ExpectWithOffset(1, strings.TrimSpace(string(out))).To(gomega.Equal(contents))
 }
 
 func ExpectLocalFileNotFound(filePath string) {

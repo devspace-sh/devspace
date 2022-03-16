@@ -8,8 +8,8 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -18,12 +18,12 @@ import (
 // FakeConfigLoader is the fake config loader
 type FakeConfigLoader struct {
 	Config          *latest.Config
-	GeneratedConfig *generated.Config
+	GeneratedConfig *localcache.Config
 	Log             log.Logger
 }
 
 // NewFakeConfigLoader creates a new config loader
-func NewFakeConfigLoader(generatedConfig *generated.Config, config *latest.Config, log log.Logger) loader.ConfigLoader {
+func NewFakeConfigLoader(generatedConfig *localcache.Config, config *latest.Config, log log.Logger) loader.ConfigLoader {
 	return &FakeConfigLoader{
 		Config:          config,
 		GeneratedConfig: generatedConfig,
@@ -50,7 +50,7 @@ func (f *FakeConfigLoader) ConfigPath() string {
 }
 
 // LoadFromPath implements interface
-func (f *FakeConfigLoader) LoadFromPath(generatedConfig *generated.Config, path string) (*latest.Config, error) {
+func (f *FakeConfigLoader) LoadFromPath(generatedConfig *localcache.Config, path string) (*latest.Config, error) {
 	if f.Config == nil {
 		return nil, errors.New("Couldn't load config")
 	}
@@ -62,12 +62,12 @@ func (f *FakeConfigLoader) RestoreLoadSave(client kubectl.Client) (*latest.Confi
 	return f.Config, nil
 }
 
-func (f *FakeConfigLoader) LoadGenerated(options *loader.ConfigOptions) (*generated.Config, error) {
+func (f *FakeConfigLoader) LoadGenerated(options *loader.ConfigOptions) (*localcache.Config, error) {
 	return f.GeneratedConfig, nil
 }
 
 // LoadRaw implements interface
-func (f *FakeConfigLoader) LoadRaw() (map[interface{}]interface{}, error) {
+func (f *FakeConfigLoader) LoadRaw() (map[string]interface{}, error) {
 	if f.Config == nil {
 		return nil, errors.New("Couldn't load config")
 	}
@@ -77,7 +77,7 @@ func (f *FakeConfigLoader) LoadRaw() (map[interface{}]interface{}, error) {
 		return nil, err
 	}
 
-	retConfig := map[interface{}]interface{}{}
+	retConfig := map[string]interface{}{}
 	err = yaml.Unmarshal(out, &retConfig)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (f *FakeConfigLoader) LoadWithParser(parser loader.Parser, options *loader.
 }
 
 // Generated implements interface
-func (f *FakeConfigLoader) Generated() (*generated.Config, error) {
+func (f *FakeConfigLoader) Generated() (*localcache.Config, error) {
 	if f.GeneratedConfig == nil {
 		return nil, errors.New("Couldn't load config")
 	}
@@ -106,7 +106,7 @@ func (f *FakeConfigLoader) Generated() (*generated.Config, error) {
 }
 
 // SaveGenerated implements interface
-func (f *FakeConfigLoader) SaveGenerated(generatedConfig *generated.Config) error {
+func (f *FakeConfigLoader) SaveGenerated(generatedConfig *localcache.Config) error {
 	return nil
 }
 

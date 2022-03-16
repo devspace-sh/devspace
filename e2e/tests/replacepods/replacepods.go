@@ -12,7 +12,6 @@ import (
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
-	"github.com/loft-sh/devspace/pkg/devspace/services/podreplace"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
 	corev1 "k8s.io/api/core/v1"
@@ -39,6 +38,55 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectNoError(err)
 	})
 
+	ginkgo.It("should inject restart helper and restart container", func() {
+		tempDir, err := framework.CopyToTempDir("tests/replacepods/testdata/restart-helper")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("replacepods")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		// create a new dev command and start it
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go func() {
+			devCmd := &cmd.DevCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Ctx: cancelCtx,
+			}
+			err := devCmd.Run(f)
+			if err != nil {
+				f.GetLog().Errorf("error: %v", err)
+			}
+			done <- err
+		}()
+
+		// check if file is there
+		framework.ExpectRemoteFileContents("ubuntu", ns, "/app/test2.txt", "Hello World 123")
+
+		// check if file is there
+		framework.ExpectRemoteFileContents("ubuntu", ns, "/test.txt", "Hello World\n")
+
+		// upload a file and restart the container
+		err = ioutil.WriteFile("test1.txt", []byte("Hello World2!"), 0777)
+		framework.ExpectNoError(err)
+
+		// wait for uploaded
+		framework.ExpectRemoteFileContents("ubuntu", ns, "/app/test1.txt", "Hello World2!")
+
+		// wait for restarted
+		framework.ExpectRemoteFileContents("ubuntu", ns, "/test.txt", "Hello World\nHello World\n")
+
+		cancel()
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
 	ginkgo.It("should replace statefulset pod", func() {
 		tempDir, err := framework.CopyToTempDir("tests/replacepods/testdata/statefulset")
 		framework.ExpectNoError(err)
@@ -54,14 +102,12 @@ var _ = DevSpaceDescribe("replacepods", func() {
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Portforwarding: true,
-			Sync:           true,
 		}
-		err = devCmd.Run(f, []string{"sh", "-c", "exit"})
+		err = devCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// check if replica set exists & pod got replaced correctly
-		list, err := kubeClient.Client().KubeClient().AppsV1().ReplicaSets(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: podreplace.ReplicaSetLabel + "=true"})
+		list, err := kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 1)
 
@@ -97,14 +143,12 @@ var _ = DevSpaceDescribe("replacepods", func() {
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Portforwarding: true,
-			Sync:           true,
 		}
-		err = devCmd.Run(f, []string{"sh", "-c", "exit"})
+		err = devCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// check if replica set exists & pod got replaced correctly
-		list, err = kubeClient.Client().KubeClient().AppsV1().ReplicaSets(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: podreplace.ReplicaSetLabel + "=true"})
+		list, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 1)
 
@@ -142,7 +186,7 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectNoError(err)
 
 		// make sure no replaced replica set exists anymore
-		list, err = kubeClient.Client().KubeClient().AppsV1().ReplicaSets(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: podreplace.ReplicaSetLabel + "=true"})
+		list, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 0)
 	})
@@ -162,14 +206,12 @@ var _ = DevSpaceDescribe("replacepods", func() {
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Portforwarding: true,
-			Sync:           true,
 		}
-		err = devCmd.Run(f, []string{"sh", "-c", "exit"})
+		err = devCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// check if replica set exists & pod got replaced correctly
-		list, err := kubeClient.Client().KubeClient().AppsV1().ReplicaSets(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: podreplace.ReplicaSetLabel + "=true"})
+		list, err := kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 1)
 
@@ -200,14 +242,12 @@ var _ = DevSpaceDescribe("replacepods", func() {
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Portforwarding: true,
-			Sync:           true,
 		}
-		err = devCmd.Run(f, []string{"sh", "-c", "exit"})
+		err = devCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// check if replica set exists & pod got replaced correctly
-		list, err = kubeClient.Client().KubeClient().AppsV1().ReplicaSets(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: podreplace.ReplicaSetLabel + "=true"})
+		list, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 1)
 
@@ -245,7 +285,7 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectNoError(err)
 
 		// make sure no replaced replica set exists anymore
-		list, err = kubeClient.Client().KubeClient().AppsV1().ReplicaSets(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: podreplace.ReplicaSetLabel + "=true"})
+		list, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 0)
 	})

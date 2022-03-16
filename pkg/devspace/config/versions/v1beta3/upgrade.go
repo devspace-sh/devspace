@@ -19,7 +19,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	if len(c.Deployments) > 0 {
 		for idx, deploymentConfig := range c.Deployments {
 			if deploymentConfig.Component != nil {
-				helmValues := map[interface{}]interface{}{}
+				helmValues := map[string]interface{}{}
 				err = util.Convert(deploymentConfig.Component, &helmValues)
 				if err != nil {
 					return nil, err

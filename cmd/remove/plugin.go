@@ -46,15 +46,12 @@ func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		}
 	}
 
-	f.GetLog().StartWait("Removing plugin " + args[0])
-	defer f.GetLog().StopWait()
-
+	f.GetLog().Info("Removing plugin " + args[0] + "...")
 	err = pluginManager.Remove(args[0])
 	if err != nil {
 		return err
 	}
 
-	f.GetLog().StopWait()
 	f.GetLog().Donef("Successfully removed plugin %s", args[0])
 	return nil
 }

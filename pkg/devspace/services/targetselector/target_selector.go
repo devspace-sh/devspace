@@ -2,11 +2,8 @@ package targetselector
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
-	"github.com/loft-sh/devspace/pkg/util/lockfactory"
-	"sync"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
@@ -63,6 +60,24 @@ func NewOptionsFromFlags(containerName string, labelSelector string, imageSelect
 		},
 		sortContainers: selector.SortContainersByNewest,
 	}
+}
+
+func (o Options) WithPod(pod string) Options {
+	newOptions := o
+	newOptions.selector.Pod = pod
+	return newOptions
+}
+
+func (o Options) WithLabelSelector(labelSelector string) Options {
+	newOptions := o
+	newOptions.selector.LabelSelector = labelSelector
+	return newOptions
+}
+
+func (o Options) WithContainer(container string) Options {
+	newOptions := o
+	newOptions.selector.ContainerName = container
+	return newOptions
 }
 
 func (o Options) WithQuestion(question string) Options {
@@ -153,34 +168,38 @@ func ToStringImageSelector(imageSelector []imageselector.ImageSelector) []string
 }
 
 type TargetSelector interface {
-	SelectSinglePod(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (*v1.Pod, error)
-	SelectSingleContainer(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (*selector.SelectedPodContainer, error)
-}
+	SelectSinglePod(ctx context.Context, client kubectl.Client, log log.Logger) (*v1.Pod, error)
+	SelectSingleContainer(ctx context.Context, client kubectl.Client, log log.Logger) (*selector.SelectedPodContainer, error)
 
-// GlobalTargetSelector is used to make sure we don't wait for the same pod
-// multiple times concurrently.
-var GlobalTargetSelector = NewTargetSelector()
+	WithContainer(container string) TargetSelector
+}
 
 // targetSelector is the struct that will select a target
 type targetSelector struct {
-	// lock factory is used to make sure we don't wait for the same pod
-	// multiple times.
-	lockFactory lockfactory.LockFactory
+	options Options
 }
 
 // NewTargetSelector creates a new target selector for selecting a target pod or container
-func NewTargetSelector() TargetSelector {
+func NewTargetSelector(options Options) TargetSelector {
 	return &targetSelector{
-		lockFactory: lockfactory.NewDefaultLockFactory(),
+		options: options,
 	}
 }
 
-func (t *targetSelector) SelectSingleContainer(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (*selector.SelectedPodContainer, error) {
-	lock := t.getSelectorLock(options.selector)
-	lock.Lock()
-	defer lock.Unlock()
+func (t *targetSelector) WithContainer(container string) TargetSelector {
+	return &targetSelector{
+		options: t.options.WithContainer(container),
+	}
+}
 
-	container, err := t.selectSingle(ctx, client, options, log, t.selectSingleContainer)
+func (t *targetSelector) SelectSingleContainer(ctx context.Context, client kubectl.Client, log log.Logger) (*selector.SelectedPodContainer, error) {
+	log.Debugf("Start selecting a single container with selector %v", t.options.selector.String())
+
+	if t.options.waitingStrategy != nil {
+		t.options.waitingStrategy = t.options.waitingStrategy.Reset()
+	}
+
+	container, err := t.selectSingle(ctx, client, t.options, log, t.selectSingleContainer)
 	if err != nil {
 		return nil, err
 	} else if container == nil {
@@ -190,12 +209,14 @@ func (t *targetSelector) SelectSingleContainer(ctx context.Context, client kubec
 	return container.(*selector.SelectedPodContainer), nil
 }
 
-func (t *targetSelector) SelectSinglePod(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (*v1.Pod, error) {
-	lock := t.getSelectorLock(options.selector)
-	lock.Lock()
-	defer lock.Unlock()
+func (t *targetSelector) SelectSinglePod(ctx context.Context, client kubectl.Client, log log.Logger) (*v1.Pod, error) {
+	log.Debugf("Start selecting a single pod with selector %v", t.options.selector.String())
 
-	pod, err := t.selectSingle(ctx, client, options, log, t.selectSinglePod)
+	if t.options.waitingStrategy != nil {
+		t.options.waitingStrategy = t.options.waitingStrategy.Reset()
+	}
+
+	pod, err := t.selectSingle(ctx, client, t.options, log, t.selectSinglePod)
 	if err != nil {
 		return nil, err
 	} else if pod == nil {
@@ -203,11 +224,6 @@ func (t *targetSelector) SelectSinglePod(ctx context.Context, client kubectl.Cli
 	}
 
 	return pod.(*v1.Pod), nil
-}
-
-func (t *targetSelector) getSelectorLock(s selector.Selector) sync.Locker {
-	out, _ := json.Marshal(s)
-	return t.lockFactory.GetLock(string(out))
 }
 
 func (t *targetSelector) selectSingle(ctx context.Context, client kubectl.Client, options Options, log log.Logger, selectFn func(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (bool, interface{}, error)) (interface{}, error) {
@@ -218,7 +234,7 @@ func (t *targetSelector) selectSingle(ctx context.Context, client kubectl.Client
 		}
 
 		var out interface{}
-		err := wait.PollImmediateWithContext(ctx, time.Second, timeout, func(ctx context.Context) (done bool, err error) {
+		err := wait.PollImmediateWithContext(ctx, time.Millisecond*500, timeout, func(ctx context.Context) (done bool, err error) {
 			done, o, err := selectFn(ctx, client, options, log)
 			if err != nil {
 				return false, err
@@ -316,7 +332,12 @@ func (t *targetSelector) selectSinglePod(ctx context.Context, client kubectl.Cli
 	// transform stack
 	pods := selector.PodsFromPodContainer(stack)
 	if options.waitingStrategy != nil {
-		return options.waitingStrategy.SelectPod(ctx, client, options.selector.Namespace, pods, log)
+		namespace := options.selector.Namespace
+		if namespace == "" {
+			namespace = client.Namespace()
+		}
+
+		return options.waitingStrategy.SelectPod(ctx, client, namespace, pods, log)
 	}
 
 	if len(pods) == 0 {

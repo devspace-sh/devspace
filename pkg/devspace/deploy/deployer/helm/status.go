@@ -2,13 +2,14 @@ package helm
 
 import (
 	"fmt"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
 )
 
 // Status gets the status of the deployment
-func (d *DeployConfig) Status() (*deployer.StatusResult, error) {
+func (d *DeployConfig) Status(ctx *devspacecontext.Context) (*deployer.StatusResult, error) {
 	var (
 		deployTargetStr = d.getDeployTarget()
 		err             error
@@ -16,14 +17,14 @@ func (d *DeployConfig) Status() (*deployer.StatusResult, error) {
 
 	if d.Helm == nil {
 		// Get HelmClient
-		d.Helm, err = helm.NewClient(d.config.Config(), d.DeploymentConfig, d.Kube, d.TillerNamespace, false, false, d.Log)
+		d.Helm, err = helm.NewClient(ctx.Log)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Get all releases
-	releases, err := d.Helm.ListReleases(d.DeploymentConfig.Helm)
+	releases, err := d.Helm.ListReleases(ctx, ctx.KubeClient.Namespace())
 	if err != nil {
 		return &deployer.StatusResult{
 			Name:   d.DeploymentConfig.Name,

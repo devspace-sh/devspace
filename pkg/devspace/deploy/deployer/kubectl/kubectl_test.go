@@ -9,7 +9,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -18,7 +17,7 @@ import (
 	log "github.com/loft-sh/devspace/pkg/util/log/testing"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 
@@ -159,7 +158,7 @@ type renderTestCase struct {
 	output      string
 	manifests   []string
 	kustomize   bool
-	cache       *generated.CacheConfig
+	cache       *localcache.CacheConfig
 	builtImages map[string]string
 
 	expectedStreamOutput string
@@ -176,7 +175,7 @@ func TestRender(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		cache := generated.New()
+		cache := localcache.New()
 		cache.Profiles[""] = testCase.cache
 
 		deployer := &DeployConfig{
@@ -271,9 +270,9 @@ type deleteTestCase struct {
 	cmdPath   string
 	manifests []string
 	kustomize bool
-	cache     *generated.CacheConfig
+	cache     *localcache.CacheConfig
 
-	expectedDeployments map[string]*generated.DeploymentCache
+	expectedDeployments map[string]*localcache.DeploymentCache
 	expectedErr         string
 	expectedPaths       []string
 	expectedArgs        [][]string
@@ -294,7 +293,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		cache := generated.New()
+		cache := localcache.New()
 		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
 			config:    config.NewConfig(nil, nil, cache, nil, constants.DefaultConfigPath),
@@ -317,8 +316,8 @@ func TestDelete(t *testing.T) {
 		}
 
 		if testCase.cache == nil {
-			testCase.cache = &generated.CacheConfig{
-				Deployments: map[string]*generated.DeploymentCache{},
+			testCase.cache = &localcache.CacheConfig{
+				Deployments: map[string]*localcache.DeploymentCache{},
 			}
 		}
 
@@ -350,7 +349,7 @@ type deployTestCase struct {
 	manifests    []string
 	kustomize    bool
 	kubectlFlags []string
-	cache        *generated.CacheConfig
+	cache        *localcache.CacheConfig
 	forceDeploy  bool
 	builtImages  map[string]string
 
@@ -379,7 +378,7 @@ func TestDeploy(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		cache := generated.New()
+		cache := localcache.New()
 		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
 			config:    config.NewConfig(nil, latest.NewRaw(), cache, nil, constants.DefaultConfigPath),
@@ -404,8 +403,8 @@ func TestDeploy(t *testing.T) {
 		}
 
 		if testCase.cache == nil {
-			testCase.cache = &generated.CacheConfig{
-				Deployments: map[string]*generated.DeploymentCache{},
+			testCase.cache = &localcache.CacheConfig{
+				Deployments: map[string]*localcache.DeploymentCache{},
 			}
 		}
 
@@ -430,8 +429,8 @@ type getReplacedManifestTestCase struct {
 	cmdOutput    interface{}
 	manifest     string
 	kustomize    bool
-	cache        *generated.CacheConfig
-	imageConfigs map[string]*latest.ImageConfig
+	cache        *localcache.CacheConfig
+	imageConfigs map[string]*latest.Image
 	builtImages  map[string]string
 
 	expectedRedeploy bool
@@ -452,15 +451,15 @@ func TestGetReplacedManifest(t *testing.T) {
 				"kind":       "Pod",
 				"image":      "myimage",
 			},
-			cache: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
+			cache: &localcache.CacheConfig{
+				Images: map[string]*localcache.ImageCache{
 					"myimage": {
 						ImageName: "myimage",
 						Tag:       "mytag",
 					},
 				},
 			},
-			imageConfigs: map[string]*latest.ImageConfig{
+			imageConfigs: map[string]*latest.Image{
 				"myimage": {
 					Image: "myimage",
 				},
@@ -474,7 +473,7 @@ func TestGetReplacedManifest(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		cache := generated.New()
+		cache := localcache.New()
 		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
 			DeploymentConfig: &latest.DeploymentConfig{

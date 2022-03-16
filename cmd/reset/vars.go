@@ -1,6 +1,7 @@
 package reset
 
 import (
+	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
 
@@ -8,10 +9,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type varsCmd struct{}
+type varsCmd struct {
+	*flags.GlobalFlags
+}
 
-func newVarsCmd(f factory.Factory) *cobra.Command {
-	cmd := &varsCmd{}
+func newVarsCmd(f factory.Factory, flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &varsCmd{
+		GlobalFlags: flags,
+	}
 
 	varsCmd := &cobra.Command{
 		Use:   "vars",
@@ -28,17 +33,20 @@ devspace reset vars
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunResetVars(f, cobraCmd, args)
+			return cmd.RunResetVars(f)
 		}}
 
 	return varsCmd
 }
 
 // RunResetVars executes the reset vars command logic
-func (cmd *varsCmd) RunResetVars(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *varsCmd) RunResetVars(f factory.Factory) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader("")
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
@@ -48,16 +56,16 @@ func (cmd *varsCmd) RunResetVars(f factory.Factory, cobraCmd *cobra.Command, arg
 	}
 
 	// Load generated config
-	generatedConfig, err := configLoader.LoadGenerated(nil)
+	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
 		return err
 	}
 
 	// Clear the vars map
-	generatedConfig.Vars = map[string]string{}
+	localCache.ClearVars()
 
 	// Save the config
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = localCache.Save()
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}

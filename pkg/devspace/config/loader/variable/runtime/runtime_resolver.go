@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
@@ -9,7 +10,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	varspkg "github.com/loft-sh/devspace/pkg/util/vars"
-	"path/filepath"
 	"strings"
 )
 
@@ -18,18 +18,20 @@ func varMatchFn(key, value string) bool {
 }
 
 // NewRuntimeResolver creates a new resolver that caches resolved variables in memory and in the provided cache
-func NewRuntimeResolver(enableLegacyHelpers bool) RuntimeResolver {
+func NewRuntimeResolver(workingDir string, enableLegacyHelpers bool) RuntimeResolver {
 	return &runtimeResolver{
+		workingDirectory:    workingDir,
 		enableLegacyHelpers: enableLegacyHelpers,
 	}
 }
 
 type runtimeResolver struct {
 	enableLegacyHelpers bool
+	workingDirectory    string
 }
 
-func (r *runtimeResolver) FillRuntimeVariablesAsString(haystack interface{}, config config.Config, dependencies []types.Dependency) (string, error) {
-	out, err := r.FillRuntimeVariables(haystack, config, dependencies)
+func (r *runtimeResolver) FillRuntimeVariablesAsString(ctx context.Context, haystack interface{}, config config.Config, dependencies []types.Dependency) (string, error) {
+	out, err := r.FillRuntimeVariables(ctx, haystack, config, dependencies)
 	if err != nil {
 		return "", err
 	}
@@ -37,8 +39,8 @@ func (r *runtimeResolver) FillRuntimeVariablesAsString(haystack interface{}, con
 	return fmt.Sprintf("%v", out), nil
 }
 
-func (r *runtimeResolver) FillRuntimeVariablesAsImageSelector(haystack interface{}, config config.Config, dependencies []types.Dependency) (*imageselector.ImageSelector, error) {
-	out, err := r.FillRuntimeVariablesAsString(haystack, config, dependencies)
+func (r *runtimeResolver) FillRuntimeVariablesAsImageSelector(ctx context.Context, haystack interface{}, config config.Config, dependencies []types.Dependency) (*imageselector.ImageSelector, error) {
+	out, err := r.FillRuntimeVariablesAsString(ctx, haystack, config, dependencies)
 	if err != nil {
 		return nil, err
 	}
@@ -48,20 +50,20 @@ func (r *runtimeResolver) FillRuntimeVariablesAsImageSelector(haystack interface
 	}, nil
 }
 
-func (r *runtimeResolver) FillRuntimeVariablesWithRebuild(haystack interface{}, config config.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error) {
-	shouldRebuild, haystack, err := r.fillVariables(haystack, config, dependencies, r.enableLegacyHelpers, builtImages)
+func (r *runtimeResolver) FillRuntimeVariablesWithRebuild(ctx context.Context, haystack interface{}, config config.Config, dependencies []types.Dependency) (bool, interface{}, error) {
+	shouldRebuild, haystack, err := r.fillVariables(haystack, config, dependencies, r.enableLegacyHelpers)
 	if err != nil {
 		return false, nil, err
 	}
 
 	// resolve expressions
-	haystack, err = expression.ResolveAllExpressions(haystack, filepath.Dir(config.Path()), nil)
+	haystack, err = expression.ResolveAllExpressions(ctx, haystack, r.workingDirectory, nil)
 	if err != nil {
 		return false, nil, err
 	}
 
 	// just resolve variables again
-	rebuild, haystack, err := r.fillVariables(haystack, config, dependencies, false, builtImages)
+	rebuild, haystack, err := r.fillVariables(haystack, config, dependencies, false)
 	if err != nil {
 		return false, nil, err
 	}
@@ -69,19 +71,19 @@ func (r *runtimeResolver) FillRuntimeVariablesWithRebuild(haystack interface{}, 
 	return shouldRebuild || rebuild, haystack, nil
 }
 
-func (r *runtimeResolver) FillRuntimeVariables(haystack interface{}, config config.Config, dependencies []types.Dependency) (interface{}, error) {
-	_, out, err := r.FillRuntimeVariablesWithRebuild(haystack, config, dependencies, map[string]string{})
+func (r *runtimeResolver) FillRuntimeVariables(ctx context.Context, haystack interface{}, config config.Config, dependencies []types.Dependency) (interface{}, error) {
+	_, out, err := r.FillRuntimeVariablesWithRebuild(ctx, haystack, config, dependencies)
 	return out, err
 }
 
-func (r *runtimeResolver) fillVariables(haystack interface{}, config config.Config, dependencies []types.Dependency, legacyHelpers bool, builtImages map[string]string) (bool, interface{}, error) {
+func (r *runtimeResolver) fillVariables(haystack interface{}, config config.Config, dependencies []types.Dependency, legacyHelpers bool) (bool, interface{}, error) {
 	switch t := haystack.(type) {
 	case string:
-		return r.replaceString(t, config, dependencies, legacyHelpers, builtImages)
-	case map[interface{}]interface{}:
+		return r.replaceString(t, config, dependencies, legacyHelpers)
+	case map[string]interface{}:
 		shouldRebuild := false
 		err := walk.Walk(t, varMatchFn, func(path, value string) (interface{}, error) {
-			rebuild, val, err := r.replaceString(value, config, dependencies, legacyHelpers, builtImages)
+			rebuild, val, err := r.replaceString(value, config, dependencies, legacyHelpers)
 			shouldRebuild = shouldRebuild || rebuild
 			return val, err
 		})
@@ -91,14 +93,14 @@ func (r *runtimeResolver) fillVariables(haystack interface{}, config config.Conf
 	return false, nil, fmt.Errorf("unrecognized haystack type: %#v", haystack)
 }
 
-func (r *runtimeResolver) replaceString(str string, config config.Config, dependencies []types.Dependency, legacyHelpers bool, builtImages map[string]string) (bool, interface{}, error) {
+func (r *runtimeResolver) replaceString(str string, config config.Config, dependencies []types.Dependency, legacyHelpers bool) (bool, interface{}, error) {
 	shouldRebuild := false
 	value, err := varspkg.ParseString(str, func(name string) (interface{}, error) {
 		if strings.HasPrefix(name, "runtime.") {
 			return "${" + name + "}", nil
 		}
 
-		rebuild, val, err := r.resolve(name, config, dependencies, builtImages)
+		rebuild, val, err := r.resolve(name, config, dependencies)
 		if err != nil {
 			return "", err
 		}
@@ -118,7 +120,7 @@ func (r *runtimeResolver) replaceString(str string, config config.Config, depend
 	}
 
 	if legacyHelpers {
-		rebuild, val, err := legacy.Replace(str, config, dependencies, map[string]string{})
+		rebuild, val, err := legacy.Replace(str, config, dependencies)
 		if err != nil {
 			return false, "", err
 		}
@@ -132,7 +134,7 @@ func (r *runtimeResolver) replaceString(str string, config config.Config, depend
 			return "${" + name + "}", nil
 		}
 
-		rebuild, val, err := r.resolve(name, config, dependencies, builtImages)
+		rebuild, val, err := r.resolve(name, config, dependencies)
 		if err != nil {
 			return "", err
 		}
@@ -143,7 +145,7 @@ func (r *runtimeResolver) replaceString(str string, config config.Config, depend
 	return shouldRebuild, value, err
 }
 
-func (r *runtimeResolver) resolve(name string, config config.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error) {
+func (r *runtimeResolver) resolve(name string, config config.Config, dependencies []types.Dependency) (bool, interface{}, error) {
 	name = strings.TrimSpace(name)
 
 	// check if in vars already
@@ -153,7 +155,7 @@ func (r *runtimeResolver) resolve(name string, config config.Config, dependencie
 	}
 
 	// fill the variable if not found
-	shouldRebuild, value, err := r.fillRuntimeVariable(name, config, dependencies, builtImages)
+	shouldRebuild, value, err := r.fillRuntimeVariable(name, config, dependencies)
 	if err != nil {
 		return false, nil, err
 	}
@@ -161,10 +163,10 @@ func (r *runtimeResolver) resolve(name string, config config.Config, dependencie
 	return shouldRebuild, value, nil
 }
 
-func (r *runtimeResolver) fillRuntimeVariable(name string, config config.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error) {
+func (r *runtimeResolver) fillRuntimeVariable(name string, config config.Config, dependencies []types.Dependency) (bool, interface{}, error) {
 	// is runtime variable
 	if strings.HasPrefix(name, "runtime.") {
-		return NewRuntimeVariable(name, config, dependencies, builtImages).Load()
+		return NewRuntimeVariable(name, config, dependencies).Load()
 	}
 
 	return false, "${" + name + "}", nil

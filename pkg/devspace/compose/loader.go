@@ -1,5 +1,6 @@
 package compose
 
+/*
 import (
 	"fmt"
 	"io/ioutil"
@@ -13,7 +14,7 @@ import (
 
 	composeloader "github.com/compose-spec/compose-go/loader"
 	composetypes "github.com/compose-spec/compose-go/types"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -334,7 +335,7 @@ func deleteSecretHook(name string) *latest.HookConfig {
 }
 
 func deploymentConfig(service composetypes.ServiceConfig, composeVolumes map[string]composetypes.VolumeConfig, log log.Logger) (*latest.DeploymentConfig, error) {
-	values := map[interface{}]interface{}{}
+	values := map[string]interface{}{}
 
 	volumes, volumeMounts, bindVolumeMounts := volumesConfig(service, composeVolumes, log)
 	if len(volumes) > 0 {
@@ -380,7 +381,7 @@ func deploymentConfig(service composetypes.ServiceConfig, composeVolumes map[str
 				continue
 			}
 
-			ports = append(ports, map[interface{}]interface{}{
+			ports = append(ports, map[string]interface{}{
 				"port":          int(port.Published),
 				"containerPort": int(port.Target),
 				"protocol":      protocol,
@@ -394,14 +395,14 @@ func deploymentConfig(service composetypes.ServiceConfig, composeVolumes map[str
 			if err != nil {
 				return nil, fmt.Errorf("expected integer for port number: %s", err.Error())
 			}
-			ports = append(ports, map[interface{}]interface{}{
+			ports = append(ports, map[string]interface{}{
 				"port": intPort,
 			})
 		}
 	}
 
 	if len(ports) > 0 {
-		values["service"] = map[interface{}]interface{}{
+		values["service"] = map[string]interface{}{
 			"ports": ports,
 		}
 	}
@@ -417,7 +418,7 @@ func deploymentConfig(service composetypes.ServiceConfig, composeVolumes map[str
 
 		hostAliases := []interface{}{}
 		for ip, hosts := range hostsMap {
-			hostAliases = append(hostAliases, map[interface{}]interface{}{
+			hostAliases = append(hostAliases, map[string]interface{}{
 				"ip":        ip,
 				"hostnames": hosts,
 			})
@@ -503,8 +504,8 @@ func volumesConfig(
 
 }
 
-func containerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) (map[interface{}]interface{}, error) {
-	container := map[interface{}]interface{}{
+func containerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) (map[string]interface{}, error) {
+	container := map[string]interface{}{
 		"name":  resolveContainerName(service),
 		"image": resolveImage(service),
 	}
@@ -551,7 +552,7 @@ func containerEnv(env composetypes.MappingWithEquals) []interface{} {
 
 	for _, name := range keys {
 		value := env[name]
-		envs = append(envs, map[interface{}]interface{}{
+		envs = append(envs, map[string]interface{}{
 			"name":  name,
 			"value": *value,
 		})
@@ -559,7 +560,7 @@ func containerEnv(env composetypes.MappingWithEquals) []interface{} {
 	return envs
 }
 
-func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[interface{}]interface{}, error) {
+func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[string]interface{}, error) {
 	if len(health.Test) == 0 {
 		return nil, nil
 	}
@@ -581,8 +582,8 @@ func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[interfa
 		command = append(command, health.Test[0:])
 	}
 
-	livenessProbe := map[interface{}]interface{}{
-		"exec": map[interface{}]interface{}{
+	livenessProbe := map[string]interface{}{
+		"exec": map[string]interface{}{
 			"command": command,
 		},
 	}
@@ -612,20 +613,20 @@ func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[interfa
 
 func createEmptyDirVolume(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
 	// create an emptyDir volume
-	emptyDir := map[interface{}]interface{}{}
+	emptyDir := map[string]interface{}{}
 	if volume.Tmpfs != nil {
 		emptyDir["sizeLimit"] = fmt.Sprintf("%d", volume.Tmpfs.Size)
 	}
-	return map[interface{}]interface{}{
+	return map[string]interface{}{
 		"name":     volumeName,
 		"emptyDir": emptyDir,
 	}
 }
 
 func createSecretVolume(secret composetypes.ServiceSecretConfig) interface{} {
-	return map[interface{}]interface{}{
+	return map[string]interface{}{
 		"name": secret.Source,
-		"secret": map[interface{}]interface{}{
+		"secret": map[string]interface{}{
 			"secretName": secret.Source,
 		},
 	}
@@ -636,9 +637,9 @@ func createSecretVolumeMount(secret composetypes.ServiceSecretConfig) interface{
 	if secret.Target != "" {
 		target = secret.Target
 	}
-	return map[interface{}]interface{}{
+	return map[string]interface{}{
 		"containerPath": fmt.Sprintf("/run/secrets/%s", target),
-		"volume": map[interface{}]interface{}{
+		"volume": map[string]interface{}{
 			"name":     secret.Source,
 			"subPath":  target,
 			"readOnly": true,
@@ -647,9 +648,9 @@ func createSecretVolumeMount(secret composetypes.ServiceSecretConfig) interface{
 }
 
 func createServiceVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
-	return map[interface{}]interface{}{
+	return map[string]interface{}{
 		"containerPath": volume.Target,
-		"volume": map[interface{}]interface{}{
+		"volume": map[string]interface{}{
 			"name":     volumeName,
 			"readOnly": volume.ReadOnly,
 		},
@@ -657,9 +658,9 @@ func createServiceVolumeMount(volumeName string, volume composetypes.ServiceVolu
 }
 
 func createInitVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
-	return map[interface{}]interface{}{
+	return map[string]interface{}{
 		"containerPath": volume.Target,
-		"volume": map[interface{}]interface{}{
+		"volume": map[string]interface{}{
 			"name":     volumeName,
 			"readOnly": false,
 		},
@@ -667,7 +668,7 @@ func createInitVolumeMount(volumeName string, volume composetypes.ServiceVolumeC
 }
 
 func createVolume(name string, size string) interface{} {
-	return map[interface{}]interface{}{
+	return map[string]interface{}{
 		"name": name,
 		"size": size,
 	}
@@ -677,8 +678,8 @@ func formatName(name string) string {
 	return regexp.MustCompile(`[\._]`).ReplaceAllString(name, "-")
 }
 
-func initContainerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) map[interface{}]interface{} {
-	return map[interface{}]interface{}{
+func initContainerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) map[string]interface{} {
+	return map[string]interface{}{
 		"name":    UploadVolumesContainerName,
 		"image":   "alpine",
 		"command": []interface{}{"sh"},
@@ -801,3 +802,4 @@ func hasLocalSync(service composetypes.ServiceConfig) bool {
 	}
 	return false
 }
+*/

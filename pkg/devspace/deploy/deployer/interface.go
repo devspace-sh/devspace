@@ -1,15 +1,15 @@
 package deployer
 
 import (
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 )
 
 // Interface defines the common interface used for the deployment methods
 type Interface interface {
-	Status() (*StatusResult, error)
-	Deploy(forceDeploy bool, builtImages map[string]string) (bool, error)
-	Render(builtImages map[string]string, out io.Writer) error
-	Delete() error
+	Status(ctx *devspacecontext.Context) (*StatusResult, error)
+	Deploy(ctx *devspacecontext.Context, forceDeploy bool) (bool, error)
+	Render(ctx *devspacecontext.Context, out io.Writer) error
 }
 
 // StatusResult holds the status of a deployment

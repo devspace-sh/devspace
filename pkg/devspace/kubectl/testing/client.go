@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
@@ -37,6 +37,10 @@ type Client struct {
 
 // ClientConfig implements the interface
 func (c *Client) ClientConfig() clientcmd.ClientConfig {
+	return nil
+}
+
+func (c *Client) EnsureNamespace(ctx context.Context, namespace string, log log.Logger) error {
 	return nil
 }
 
@@ -73,42 +77,37 @@ func (c *Client) KubeConfigLoader() kubeconfig.Loader {
 }
 
 // PrintWarning is a fake implementation of function
-func (c *Client) CheckKubeContext(generatedConfig *generated.Config, noWarning bool, log log.Logger) (kubectl.Client, error) {
+func (c *Client) CheckKubeContext(generatedConfig localcache.Cache, noWarning bool, log log.Logger) (kubectl.Client, error) {
 	return c, nil
 }
 
 // CopyFromReader is a fake implementation of function
-func (c *Client) CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error {
+func (c *Client) CopyFromReader(ctx context.Context, pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error {
 	return nil
 }
 
 // Copy is a fake implementation of function
-func (c *Client) Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error {
-	return nil
-}
-
-// ExecStreamWithTransport is a fake implementation of function
-func (c *Client) ExecStreamWithTransport(options *kubectl.ExecStreamWithTransportOptions) error {
+func (c *Client) Copy(ctx context.Context, pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error {
 	return nil
 }
 
 // ExecStream is a fake implementation of function
-func (c *Client) ExecStream(options *kubectl.ExecStreamOptions) error {
+func (c *Client) ExecStream(ctx context.Context, options *kubectl.ExecStreamOptions) error {
 	return nil
 }
 
 // ExecBuffered is a fake implementation of function
-func (c *Client) ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
+func (c *Client) ExecBuffered(ctx context.Context, od *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
 	return []byte{}, []byte{}, nil
 }
 
 // GenericRequest is a fake implementation of function
-func (c *Client) GenericRequest(options *kubectl.GenericRequestOptions) (string, error) {
+func (c *Client) GenericRequest(ctx context.Context, options *kubectl.GenericRequestOptions) (string, error) {
 	return "", nil
 }
 
 // ReadLogs is a fake implementation of function
-func (c *Client) ReadLogs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error) {
+func (c *Client) ReadLogs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error) {
 	return "ContainerLogs", nil
 }
 
@@ -136,12 +135,7 @@ func (c *Client) GetUpgraderWrapper() (http.RoundTripper, kubectl.UpgraderWrappe
 }
 
 // EnsureDefaultNamespace is a fake implementation of function
-func (c *Client) EnsureDeployNamespaces(config *latest.Config, log log.Logger) error {
-	return nil
-}
-
-// EnsureGoogleCloudClusterRoleBinding is a fake implementation of function
-func (c *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error {
+func (c *Client) EnsureDeployNamespaces(ctx context.Context, config *latest.Config, log log.Logger) error {
 	return nil
 }
 

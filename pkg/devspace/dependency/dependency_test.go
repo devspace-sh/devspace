@@ -11,9 +11,9 @@ import (
 	fakebuild "github.com/loft-sh/devspace/pkg/devspace/build/testing"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	fakegeneratedloader "github.com/loft-sh/devspace/pkg/devspace/config/generated/testing"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	fakegeneratedloader "github.com/loft-sh/devspace/pkg/devspace/config/localcache/testing"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	fakedeploy "github.com/loft-sh/devspace/pkg/devspace/deploy/testing"
 	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
@@ -54,7 +54,7 @@ type updateAllTestCase struct {
 	name             string
 	files            map[string]string
 	dependencyTasks  []*latest.DependencyConfig
-	activeConfig     *generated.CacheConfig
+	activeConfig     *localcache.CacheConfig
 	allowCyclicParam bool
 	expectedErr      string
 }
@@ -77,8 +77,8 @@ func TestUpdateAll(t *testing.T) {
 					},
 				},
 			},
-			activeConfig: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
+			activeConfig: &localcache.CacheConfig{
+				Images: map[string]*localcache.ImageCache{
 					"default": {
 						Tag: "1.15", // This will be appended to nginx during deploy
 					},
@@ -122,9 +122,9 @@ func TestUpdateAll(t *testing.T) {
 				},
 			},
 		}
-		generatedConfig := &generated.Config{
+		generatedConfig := &localcache.Config{
 			ActiveProfile: "default",
-			Profiles: map[string]*generated.CacheConfig{
+			Profiles: map[string]*localcache.CacheConfig{
 				"default": testCase.activeConfig,
 			},
 		}
@@ -189,9 +189,9 @@ func TestBuildAll(t *testing.T) {
 				&Dependency{
 					localPath:        "./",
 					dependencyConfig: &latest.DependencyConfig{},
-					dependencyCache: &generated.Config{
+					dependencyCache: &localcache.Config{
 						ActiveProfile: "",
-						Profiles: map[string]*generated.CacheConfig{
+						Profiles: map[string]*localcache.CacheConfig{
 							"": {
 								Dependencies: map[string]string{
 									"": replaceWithHash,
@@ -279,9 +279,9 @@ func TestDeployAll(t *testing.T) {
 				&Dependency{
 					localPath:        "./",
 					dependencyConfig: &latest.DependencyConfig{},
-					dependencyCache: &generated.Config{
+					dependencyCache: &localcache.Config{
 						ActiveProfile: "",
-						Profiles: map[string]*generated.CacheConfig{
+						Profiles: map[string]*localcache.CacheConfig{
 							"": {
 								Dependencies: map[string]string{
 									"": replaceWithHash,
@@ -375,9 +375,9 @@ func TestPurgeAll(t *testing.T) {
 				&Dependency{
 					localPath:        "./",
 					dependencyConfig: &latest.DependencyConfig{},
-					dependencyCache: &generated.Config{
+					dependencyCache: &localcache.Config{
 						ActiveProfile: "",
-						Profiles: map[string]*generated.CacheConfig{
+						Profiles: map[string]*localcache.CacheConfig{
 							"": {
 								Dependencies: map[string]string{
 									"": replaceWithHash,
@@ -460,9 +460,9 @@ func TestBuild(t *testing.T) {
 			name: "Skipped",
 			dependency: &Dependency{
 				localPath: "./",
-				dependencyCache: &generated.Config{
+				dependencyCache: &localcache.Config{
 					ActiveProfile: "",
-					Profiles: map[string]*generated.CacheConfig{
+					Profiles: map[string]*localcache.CacheConfig{
 						"": {
 							Dependencies: map[string]string{
 								"": replaceWithHash,
@@ -477,9 +477,9 @@ func TestBuild(t *testing.T) {
 			dependency: &Dependency{
 				localPath:        "./",
 				dependencyConfig: &latest.DependencyConfig{},
-				dependencyCache: &generated.Config{
+				dependencyCache: &localcache.Config{
 					ActiveProfile: "",
-					Profiles: map[string]*generated.CacheConfig{
+					Profiles: map[string]*localcache.CacheConfig{
 						"": {
 							Dependencies: map[string]string{
 								"": "",
@@ -573,9 +573,9 @@ func TestDeploy(t *testing.T) {
 			name: "Skipped",
 			dependency: &Dependency{
 				localPath: "./",
-				dependencyCache: &generated.Config{
+				dependencyCache: &localcache.Config{
 					ActiveProfile: "",
-					Profiles: map[string]*generated.CacheConfig{
+					Profiles: map[string]*localcache.CacheConfig{
 						"": {
 							Dependencies: map[string]string{
 								"": replaceWithHash,
@@ -590,9 +590,9 @@ func TestDeploy(t *testing.T) {
 			dependency: &Dependency{
 				localPath:        "./",
 				dependencyConfig: &latest.DependencyConfig{},
-				dependencyCache: &generated.Config{
+				dependencyCache: &localcache.Config{
 					ActiveProfile: "",
-					Profiles: map[string]*generated.CacheConfig{
+					Profiles: map[string]*localcache.CacheConfig{
 						"": {
 							Dependencies: map[string]string{
 								"": "",

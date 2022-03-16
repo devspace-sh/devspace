@@ -3,19 +3,18 @@ package log
 import (
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
+	"io"
 )
 
 // Level type
 type logFunctionType uint32
 
 const (
-	panicFn logFunctionType = iota
-	fatalFn
+	fatalFn logFunctionType = iota
 	errorFn
 	warnFn
 	infoFn
 	debugFn
-	failFn
 	doneFn
 )
 
@@ -27,6 +26,9 @@ type Logger interface {
 	Info(args ...interface{})
 	Infof(format string, args ...interface{})
 
+	Done(args ...interface{})
+	Donef(format string, args ...interface{})
+
 	Warn(args ...interface{})
 	Warnf(format string, args ...interface{})
 
@@ -36,26 +38,21 @@ type Logger interface {
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
 
-	Panic(args ...interface{})
-	Panicf(format string, args ...interface{})
-
-	Done(args ...interface{})
-	Donef(format string, args ...interface{})
-
-	Fail(args ...interface{})
-	Failf(format string, args ...interface{})
-
-	StartWait(message string)
-	StopWait()
-
 	Print(level logrus.Level, args ...interface{})
 	Printf(level logrus.Level, format string, args ...interface{})
 
-	Write(message []byte) (int, error)
-	WriteString(message string)
+	Writer(level logrus.Level, raw bool) io.WriteCloser
+	WriteString(level logrus.Level, message string)
 
 	Question(params *survey.QuestionOptions) (string, error)
 
 	SetLevel(level logrus.Level)
 	GetLevel() logrus.Level
+
+	// WithLevel creates a new logger with the given level
+	WithLevel(level logrus.Level) Logger
+
+	WithPrefix(prefix string) Logger
+	WithSink(sink Logger) Logger
+	AddSink(sink Logger)
 }

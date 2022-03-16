@@ -8,7 +8,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -17,7 +16,7 @@ import (
 
 const (
 	MatchedContainerAnnotation = "devspace.sh/container"
-	ImageSelectorLabel         = "devspace.sh/imageSelector"
+	ImageSelectorAnnotation    = "devspace.sh/imageSelector"
 
 	ReplacedLabel = "devspace.sh/replaced"
 )
@@ -53,12 +52,12 @@ var FilterNonRunningContainers = func(p *corev1.Pod, c *corev1.Container) bool {
 		return true
 	}
 	for _, cs := range p.Status.InitContainerStatuses {
-		if cs.Name == c.Name && cs.State.Running != nil {
+		if cs.Name == c.Name && cs.Ready && cs.State.Running != nil {
 			return false
 		}
 	}
 	for _, cs := range p.Status.ContainerStatuses {
-		if cs.Name == c.Name && cs.State.Running != nil {
+		if cs.Name == c.Name && cs.Ready && cs.State.Running != nil {
 			return false
 		}
 	}
@@ -350,8 +349,15 @@ func byImageName(ctx context.Context, client kubectl.Client, namespace string, i
 					}
 
 					// check if it is a replaced pod and if yes, check if the imageName and container name matches
-					if pod.Labels != nil && pod.Labels[ReplacedLabel] == "true" && pod.Annotations != nil && pod.Annotations[MatchedContainerAnnotation] == container.Name {
-						if pod.Labels[ImageSelectorLabel] != "" && pod.Labels[ImageSelectorLabel] == hash.String(imageName)[:32] {
+					containers := map[string]bool{}
+					if pod.Annotations != nil && pod.Annotations[MatchedContainerAnnotation] != "" {
+						splitted := strings.Split(pod.Annotations[MatchedContainerAnnotation], ";")
+						for _, s := range splitted {
+							containers[s] = true
+						}
+					}
+					if pod.Labels != nil && pod.Labels[ReplacedLabel] == "true" && containers[container.Name] {
+						if pod.Annotations != nil && pod.Annotations[ImageSelectorAnnotation] != "" && pod.Annotations[ImageSelectorAnnotation] == imageName {
 							retPod := pod
 							retContainer := container
 							retPods = append(retPods, &SelectedPodContainer{

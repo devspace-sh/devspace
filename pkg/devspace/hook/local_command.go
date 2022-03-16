@@ -2,20 +2,19 @@ package hook
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/command"
-	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/pkg/errors"
 )
 
@@ -31,7 +30,7 @@ type localCommandHook struct {
 	Stderr io.Writer
 }
 
-func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Client, config config.Config, dependencies []types.Dependency, cmdExtraEnv map[string]string, log logpkg.Logger) error {
+func (l *localCommandHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig, cmdExtraEnv map[string]string) error {
 	// Create extra env variables
 	osArgsBytes, err := json.Marshal(os.Args)
 	if err != nil {
@@ -40,18 +39,16 @@ func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Clien
 	extraEnv := map[string]string{
 		OsArgsEnv: string(osArgsBytes),
 	}
-	if client != nil {
-		extraEnv[KubeContextEnv] = client.CurrentContext()
-		extraEnv[KubeNamespaceEnv] = client.Namespace()
+	if ctx.KubeClient != nil {
+		extraEnv[KubeContextEnv] = ctx.KubeClient.CurrentContext()
+		extraEnv[KubeNamespaceEnv] = ctx.KubeClient.Namespace()
 	}
 	for k, v := range cmdExtraEnv {
 		extraEnv[k] = v
 	}
 
-	dir := filepath.Dir(config.Path())
-
 	// resolve hook command and args
-	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, config, dependencies)
+	hookCommand, hookArgs, err := ResolveCommand(ctx.Context, hook.Command, hook.Args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
@@ -61,22 +58,22 @@ func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Clien
 	stderr := &bytes.Buffer{}
 	defer func() {
 		if hook.Name != "" {
-			config.SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
-			config.SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
+			ctx.Config.SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
+			ctx.Config.SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
 		}
 	}()
 
 	if hook.Args == nil {
-		return shell.ExecuteShellCommand(hookCommand, nil, dir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), extraEnv)
+		return engine.ExecuteSimpleShellCommand(ctx.Context, ctx.WorkingDir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand)
 	}
 
 	// else we execute it directly
-	return command.ExecuteCommandWithEnv(hookCommand, hookArgs, dir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), extraEnv)
+	return command.CommandWithEnv(ctx.Context, ctx.WorkingDir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand, hookArgs...)
 }
 
-func ResolveCommand(command string, args []string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
+func ResolveCommand(ctx context.Context, command string, args []string, dir string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
 	// resolve hook command
-	hookCommand, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsString(command, config, dependencies)
+	hookCommand, err := runtimevar.NewRuntimeResolver(dir, true).FillRuntimeVariablesAsString(ctx, command, config, dependencies)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "resolve image helpers")
 	}
@@ -85,7 +82,7 @@ func ResolveCommand(command string, args []string, config config.Config, depende
 	if args != nil {
 		newArgs := []string{}
 		for _, a := range args {
-			newArg, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsString(a, config, dependencies)
+			newArg, err := runtimevar.NewRuntimeResolver(dir, true).FillRuntimeVariablesAsString(ctx, a, config, dependencies)
 			if err != nil {
 				return "", nil, errors.Wrap(err, "resolve image helpers")
 			}

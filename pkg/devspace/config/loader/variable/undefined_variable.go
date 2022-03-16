@@ -1,7 +1,9 @@
 package variable
 
 import (
+	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"os"
 	"strconv"
 
@@ -11,41 +13,41 @@ import (
 )
 
 // NewUndefinedVariable creates a new variable that is loaded without definition
-func NewUndefinedVariable(name string, cache map[string]string, log log.Logger) Variable {
+func NewUndefinedVariable(name string, localCache localcache.Cache, log log.Logger) Variable {
 	return &undefinedVariable{
-		name:  name,
-		cache: cache,
-		log:   log,
+		name:       name,
+		localCache: localCache,
+		log:        log,
 	}
 }
 
 type undefinedVariable struct {
-	name  string
-	cache map[string]string
-	log   log.Logger
+	name       string
+	localCache localcache.Cache
+	log        log.Logger
 }
 
-func (u *undefinedVariable) Load(definition *latest.Variable) (interface{}, error) {
+func (u *undefinedVariable) Load(ctx context.Context, _ *latest.Variable) (interface{}, error) {
 	// Is in environment?
 	if os.Getenv(u.name) != "" {
 		return convertStringValue(os.Getenv(u.name)), nil
 	}
 
 	// Is in generated config?
-	if _, ok := u.cache[u.name]; ok {
-		return convertStringValue(u.cache[u.name]), nil
+	if v, ok := u.localCache.GetVar(u.name); ok {
+		return convertStringValue(v), nil
 	}
 
 	// Ask for variable
-	var err error
-	u.cache[u.name], err = askQuestion(&latest.Variable{
+	val, err := askQuestion(&latest.Variable{
 		Question: "Please enter a value for " + u.name,
 	}, u.log)
 	if err != nil {
 		return "", err
 	}
 
-	return convertStringValue(u.cache[u.name]), nil
+	u.localCache.SetVar(u.name, val)
+	return convertStringValue(val), nil
 }
 
 func convertStringValue(value string) interface{} {

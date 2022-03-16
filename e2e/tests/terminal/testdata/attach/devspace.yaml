@@ -1,0 +1,12 @@
+version: v2beta1
+name: attach
+
+pipelines:
+  dev:
+    run: |-
+      create_deployments test --set helm.values.containers[0].image=ubuntu
+      
+      start_dev test --set imageSelector=ubuntu \
+                     --set attach.enabled=true \
+                     --set attach.disableTTY=true  
+        

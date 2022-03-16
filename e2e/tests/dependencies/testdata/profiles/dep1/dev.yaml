@@ -1,8 +1,0 @@
-version: v1beta10
-deployments:
-- name: nginx
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: nginx

@@ -2,10 +2,12 @@ package helper
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"os/exec"
 	"testing"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"gotest.tools/assert"
@@ -40,64 +42,64 @@ func (c *fakeDockerAPIClient) ImageList(ctx context.Context, options types.Image
 func TestIsImageAvailableLocally(t *testing.T) {
 	helper := &BuildHelper{
 		DockerfilePath:  "Doesn'tExist",
-		ImageConf:       &latest.ImageConfig{},
+		ImageConf:       &latest.Image{},
 		Entrypoint:      []string{"echo"},
 		ImageConfigName: "ImageConf",
 	}
 
 	client := &fakeDockerClient{}
 
-	cache1 := &generated.CacheConfig{
-		Images: map[string]*generated.ImageCache{
+	cache1 := &localcache.LocalCache{
+		Images: map[string]localcache.ImageCache{
 			"ImageConf": {
 				ImageName: "image1",
 				Tag:       "dbysxsH",
 			},
 		},
 	}
-	exists1, err := helper.IsImageAvailableLocally(cache1, client)
+	exists1, err := helper.IsImageAvailableLocally(devspacecontext.NewContext().WithConfig(config.NewConfig(nil, nil, cache1, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Assert(t, exists1, "Expected image1:dbysxsH to be available locally")
 
-	cache2 := &generated.CacheConfig{
-		Images: map[string]*generated.ImageCache{
+	cache2 := &localcache.LocalCache{
+		Images: map[string]localcache.ImageCache{
 			"ImageConf": {
 				ImageName: "image2",
 				Tag:       "xEmrClh",
 			},
 		},
 	}
-	exists2, err := helper.IsImageAvailableLocally(cache2, client)
+	exists2, err := helper.IsImageAvailableLocally(devspacecontext.NewContext().WithConfig(config.NewConfig(nil, nil, cache2, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Assert(t, exists2, "Expected image1:xEmrClh to be available locally")
 
-	cache3 := &generated.CacheConfig{
-		Images: map[string]*generated.ImageCache{
+	cache3 := &localcache.LocalCache{
+		Images: map[string]localcache.ImageCache{
 			"ImageConf": {
 				ImageName: "image2",
 				Tag:       "UgjIYde",
 			},
 		},
 	}
-	exists3, err := helper.IsImageAvailableLocally(cache3, client)
+	exists3, err := helper.IsImageAvailableLocally(devspacecontext.NewContext().WithConfig(config.NewConfig(nil, nil, cache3, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Assert(t, exists3, "Expected image1:UgjIYde to be available locally")
 
-	cache4 := &generated.CacheConfig{
-		Images: map[string]*generated.ImageCache{
+	cache4 := &localcache.LocalCache{
+		Images: map[string]localcache.ImageCache{
 			"ImageConf": {
 				ImageName: "image3",
 				Tag:       "UgjIYde",
 			},
 		},
 	}
-	exists4, err := helper.IsImageAvailableLocally(cache4, client)
+	exists4, err := helper.IsImageAvailableLocally(devspacecontext.NewContext().WithConfig(config.NewConfig(nil, nil, cache4, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -124,7 +126,7 @@ func (builder fakeBuilder) BuildImage(absoluteContextPath string, absoluteDocker
 
 func TestBuild(t *testing.T) {
 	testConfig := &latest.Config{}
-	imageConfig := &latest.ImageConfig{
+	imageConfig := &latest.Image{
 		Image:      "SomeImage",
 		Dockerfile: "Dockerfile",
 		Context:    "ImageConfigContext",
@@ -184,7 +186,7 @@ func TestShouldRebuild(t *testing.T) {
 
 	helper := &BuildHelper{
 		DockerfilePath:  "Doesn'tExist",
-		ImageConf:       &latest.ImageConfig{},
+		ImageConf:       &latest.Image{},
 		Entrypoint:      []string{"echo"},
 		ImageConfigName: "ImageConf",
 	}

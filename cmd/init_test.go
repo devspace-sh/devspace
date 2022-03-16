@@ -19,7 +19,7 @@ import (
 	cloudlatest "github.com/loft-sh/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
@@ -30,7 +30,7 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 
@@ -158,7 +158,7 @@ func TestInit(t *testing.T) {
 						Name: filepath.Base(dir),
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []*latest.ContainerConfig{
 									{
 										Image: "someImage",
@@ -220,7 +220,7 @@ func TestInit(t *testing.T) {
 						Name: filepath.Base(dir),
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
 									struct{}{},
 								},

@@ -2,8 +2,11 @@ package runtime
 
 import (
 	"fmt"
+	buildtypes "github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/pkg/errors"
 	"strings"
 )
 
@@ -16,21 +19,26 @@ var Locations = []string{
 	"/hooks/*/command",
 	"/hooks/*/args/*",
 	"/hooks/*/container/imageSelector",
+	"/dev/*/imageSelector",
+	"/dev/*/replaceImage",
+	"/dev/*/containers/*/replaceImage",
 	"/dev/ports/*/imageSelector",
 	"/dev/sync/*/imageSelector",
 	"/dev/logs/*/selectors/*/imageSelector",
 	"/dev/replacePods/*/imageSelector",
 	"/dev/replacePods/*/replaceImage",
 	"/dev/terminal/imageSelector",
+	"/pipelines/**",
+	"/commands/**",
+	"/functions/**",
 }
 
 // NewRuntimeVariable creates a new variable that is loaded during runtime
-func NewRuntimeVariable(name string, config config.Config, dependencies []types.Dependency, builtImages map[string]string) *runtimeVariable {
+func NewRuntimeVariable(name string, config config.Config, dependencies []types.Dependency) *runtimeVariable {
 	return &runtimeVariable{
 		name:         name,
 		config:       config,
 		dependencies: dependencies,
-		builtImages:  builtImages,
 	}
 }
 
@@ -38,7 +46,6 @@ type runtimeVariable struct {
 	name         string
 	config       config.Config
 	dependencies []types.Dependency
-	builtImages  map[string]string
 }
 
 func (e *runtimeVariable) Load() (bool, interface{}, error) {
@@ -69,7 +76,7 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 		}
 	}
 
-	runtimeVariables := c.RuntimeVariables()
+	runtimeVariables := c.ListRuntimeVariables()
 	if runtimeVariables == nil {
 		return false, nil, fmt.Errorf("couldn't find runtime variable %s", e.name)
 	}
@@ -83,7 +90,7 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 	// get image info from generated config
 	if strings.HasPrefix(runtimeVar, "images.") {
 		runtimeVar = strings.TrimPrefix(runtimeVar, "images.")
-		if c.Config() == nil || c.Generated() == nil {
+		if c.Config() == nil || c.LocalCache() == nil {
 			return false, nil, fmt.Errorf("couldn't find runtime variable %s, because config or cache is empty", e.name)
 		}
 
@@ -98,56 +105,96 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 			onlyImage = true
 		}
 
-		// search for image name
-		generated := c.Generated().GetActive()
-		for configImageKey, configImage := range c.Config().Images {
-			if configImageKey != imageName {
-				continue
-			}
-
-			// check if in built images
-			shouldRedeploy := false
-			if e.builtImages != nil {
-				if _, ok := e.builtImages[configImage.Image]; ok {
-					shouldRedeploy = true
-				}
-			}
-
-			// if we only need the image we are done here
-			if onlyImage {
-				return shouldRedeploy, configImage.Image, nil
-			}
-
-			// try to find the tag for the image
-			tag := ""
-			if generated.Images[configImageKey] != nil && generated.Images[configImageKey].Tag != "" {
-				tag = generated.Images[configImageKey].Tag
-			}
-
-			// does the config have a tag defined?
-			if tag == "" && len(configImage.Tags) > 0 {
-				tag = strings.Replace(configImage.Tags[0], "#", "x", -1)
-			}
-
-			// only return the tag
-			if onlyTag {
-				if tag == "" {
-					return shouldRedeploy, "latest", nil
-				}
-
-				return shouldRedeploy, tag, nil
-			}
-
-			// return either with or without tag
-			if tag == "" {
-				return shouldRedeploy, configImage.Image, nil
-			}
-
-			return shouldRedeploy, configImage.Image + ":" + tag, nil
+		shouldRebuild, image, err := GetImage(c, imageName, onlyImage, onlyTag)
+		if err != nil {
+			return false, nil, errors.Wrapf(err, "resolving variable %s", e.name)
 		}
 
-		return false, nil, fmt.Errorf("couldn't find imageName %s resolving variable %s", imageName, e.name)
+		return shouldRebuild, image, nil
 	}
 
 	return false, nil, fmt.Errorf("couldn't find runtime variable %s", e.name)
+}
+
+func GetImage(c config.Config, imageName string, onlyImage, onlyTag bool) (bool, string, error) {
+	// search for image name in cache
+	imageCache, ok := c.LocalCache().GetImageCache(imageName)
+	if ok && imageCache.ImageName != "" && imageCache.Tag != "" {
+		shouldRedeploy, image := BuildImageString(c, imageName, imageCache.ImageName, imageCache.Tag, onlyImage, onlyTag)
+		if image != "" {
+			return shouldRedeploy, image, nil
+		}
+	}
+
+	// search for image name in config
+	if c.Config().Images != nil && c.Config().Images[imageName] != nil {
+		configImage := c.Config().Images[imageName]
+
+		tag := ""
+		if len(configImage.Tags) > 0 {
+			tag = configImage.Tags[0]
+		}
+
+		shouldRedeploy, image := BuildImageString(c, imageName, configImage.Image, tag, onlyImage, onlyTag)
+		if image != "" {
+			return shouldRedeploy, image, nil
+		}
+	}
+
+	return false, "", fmt.Errorf("couldn't find imageName %s", imageName)
+}
+
+func BuildImageString(c config.Config, name string, fallbackImage string, fallbackTag string, onlyImage, onlyTag bool) (bool, string) {
+	cache := c.LocalCache()
+	imageCache, _ := cache.GetImageCache(name)
+
+	// try to find the image
+	image := ""
+	if imageCache.ImageName != "" {
+		image = imageCache.ImageName
+	} else if fallbackImage != "" {
+		image = fallbackImage
+	} else {
+		return false, ""
+	}
+
+	// check if in built images
+	shouldRedeploy := false
+	builtImagesInterface, ok := c.GetRuntimeVariable(constants.BuiltImagesKey)
+	if ok {
+		builtImages := builtImagesInterface.(map[string]buildtypes.ImageNameTag)
+		_, found := builtImages[name]
+		if found {
+			shouldRedeploy = true
+		}
+	}
+
+	// if we only need the image we are done here
+	if onlyImage {
+		return shouldRedeploy, image
+	}
+
+	// try to find the tag for the image
+	tag := ""
+	if imageCache.Tag != "" {
+		tag = imageCache.Tag
+	} else if fallbackTag != "" {
+		tag = strings.Replace(fallbackTag, "#", "x", -1)
+	}
+
+	// only return the tag
+	if onlyTag {
+		if tag == "" {
+			return shouldRedeploy, "latest"
+		}
+
+		return shouldRedeploy, tag
+	}
+
+	// return either with or without tag
+	if tag == "" {
+		return shouldRedeploy, image
+	}
+
+	return shouldRedeploy, image + ":" + tag
 }

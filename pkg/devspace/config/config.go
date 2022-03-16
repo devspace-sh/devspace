@@ -1,88 +1,82 @@
 package config
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"sync"
 )
 
 type Config interface {
+	RuntimeVariables
+
 	// Config returns the parsed config
 	Config() *latest.Config
 
 	// Raw returns the config as it was loaded from the devspace.yaml
 	// including all sections
-	Raw() map[interface{}]interface{}
+	Raw() map[string]interface{}
 
-	// Generated returns the generated config
-	Generated() *generated.Config
+	// RawBeforeConversion returns the config right before it was converted
+	// up to the latest version
+	RawBeforeConversion() map[string]interface{}
 
 	// Variables returns the variables that were resolved while
 	// loading the config
 	Variables() map[string]interface{}
 
-	// RuntimeVariables returns the runtime variables
-	RuntimeVariables() map[string]interface{}
+	// LocalCache returns the local cache
+	LocalCache() localcache.Cache
 
-	// SetRuntimeVariable allows to set a runtime variable
-	SetRuntimeVariable(key string, value interface{})
+	// RemoteCache returns the remote cache
+	RemoteCache() remotecache.Cache
 
 	// Path returns the absolute path from which the config was loaded
 	Path() string
 }
 
-func NewConfig(raw map[interface{}]interface{}, parsed *latest.Config, generatedConfig *generated.Config, resolvedVariables map[string]interface{}, path string) Config {
+func NewConfig(raw map[string]interface{}, rawBeforeConversion map[string]interface{}, parsed *latest.Config, localCache localcache.Cache, remoteCache remotecache.Cache, resolvedVariables map[string]interface{}, path string) Config {
 	return &config{
-		rawConfig:         raw,
-		parsedConfig:      parsed,
-		generatedConfig:   generatedConfig,
-		resolvedVariables: resolvedVariables,
-		path:              path,
-
-		runtimeVariables: map[string]interface{}{},
+		RuntimeVariables:    newRuntimeVariables(),
+		rawConfig:           raw,
+		rawBeforeConversion: rawBeforeConversion,
+		parsedConfig:        parsed,
+		localCache:          localCache,
+		remoteCache:         remoteCache,
+		resolvedVariables:   resolvedVariables,
+		path:                path,
 	}
 }
 
 type config struct {
-	rawConfig         map[interface{}]interface{}
-	parsedConfig      *latest.Config
-	generatedConfig   *generated.Config
-	resolvedVariables map[string]interface{}
-	path              string
+	RuntimeVariables
 
-	runtimeVariablesMutex sync.Mutex
-	runtimeVariables      map[string]interface{}
+	rawConfig           map[string]interface{}
+	rawBeforeConversion map[string]interface{}
+	parsedConfig        *latest.Config
+	localCache          localcache.Cache
+	remoteCache         remotecache.Cache
+	resolvedVariables   map[string]interface{}
+	path                string
 }
 
-func (c *config) SetRuntimeVariable(key string, value interface{}) {
-	c.runtimeVariablesMutex.Lock()
-	defer c.runtimeVariablesMutex.Unlock()
-
-	c.runtimeVariables[key] = value
+func (c *config) RawBeforeConversion() map[string]interface{} {
+	return c.rawBeforeConversion
 }
 
-func (c *config) RuntimeVariables() map[string]interface{} {
-	c.runtimeVariablesMutex.Lock()
-	defer c.runtimeVariablesMutex.Unlock()
-
-	retVars := map[string]interface{}{}
-	for k, v := range c.runtimeVariables {
-		retVars[k] = v
-	}
-
-	return retVars
+func (c *config) RemoteCache() remotecache.Cache {
+	return c.remoteCache
 }
 
 func (c *config) Config() *latest.Config {
 	return c.parsedConfig
 }
 
-func (c *config) Raw() map[interface{}]interface{} {
+func (c *config) Raw() map[string]interface{} {
 	return c.rawConfig
 }
 
-func (c *config) Generated() *generated.Config {
-	return c.generatedConfig
+func (c *config) LocalCache() localcache.Cache {
+	return c.localCache
 }
 
 func (c *config) Variables() map[string]interface{} {
@@ -96,19 +90,22 @@ func (c *config) Path() string {
 func Ensure(config Config) Config {
 	retConfig := config
 	if retConfig == nil {
-		retConfig = NewConfig(nil, nil, nil, nil, "")
+		retConfig = NewConfig(nil, nil, nil, nil, nil, nil, "")
 	}
 	if retConfig.Raw() == nil {
-		retConfig = NewConfig(map[interface{}]interface{}{}, retConfig.Config(), retConfig.Generated(), retConfig.Variables(), retConfig.Path())
+		retConfig = NewConfig(map[string]interface{}{}, retConfig.RawBeforeConversion(), retConfig.Config(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
+	}
+	if retConfig.RawBeforeConversion() == nil {
+		retConfig = NewConfig(retConfig.Raw(), map[string]interface{}{}, latest.NewRaw(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
 	}
 	if retConfig.Config() == nil {
-		retConfig = NewConfig(retConfig.Raw(), latest.NewRaw(), retConfig.Generated(), retConfig.Variables(), retConfig.Path())
+		retConfig = NewConfig(retConfig.Raw(), retConfig.RawBeforeConversion(), latest.NewRaw(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
 	}
-	if retConfig.Generated() == nil {
-		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), generated.New(), retConfig.Variables(), retConfig.Path())
+	if retConfig.LocalCache() == nil {
+		retConfig = NewConfig(retConfig.Raw(), retConfig.RawBeforeConversion(), retConfig.Config(), localcache.New(""), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
 	}
 	if retConfig.Variables() == nil {
-		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), retConfig.Generated(), map[string]interface{}{}, retConfig.Path())
+		retConfig = NewConfig(retConfig.Raw(), retConfig.RawBeforeConversion(), retConfig.Config(), retConfig.LocalCache(), retConfig.RemoteCache(), map[string]interface{}{}, retConfig.Path())
 	}
 
 	return retConfig

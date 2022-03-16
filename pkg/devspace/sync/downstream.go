@@ -20,8 +20,7 @@ import (
 )
 
 type downstream struct {
-	interrupt chan bool
-	sync      *Sync
+	sync *Sync
 
 	reader io.ReadCloser
 	writer io.WriteCloser
@@ -54,7 +53,6 @@ func newDownstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*do
 	}
 
 	return &downstream{
-		interrupt:  make(chan bool, 1),
 		sync:       sync,
 		reader:     reader,
 		writer:     writer,
@@ -86,7 +84,7 @@ func (d *downstream) collectChanges() ([]*remote.Change, error) {
 	defer d.sync.log.Debugf("Downstream - Done collecting changes")
 
 	changes := make([]*remote.Change, 0, 128)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*30)
+	ctx, cancel := context.WithTimeout(d.sync.ctx, time.Minute*30)
 	defer cancel()
 
 	// Create a change client and collect all changes
@@ -123,7 +121,7 @@ func (d *downstream) startPing(doneChan chan struct{}) {
 				return
 			case <-time.After(time.Second * 15):
 				if d.client != nil {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+					ctx, cancel := context.WithTimeout(d.sync.ctx, time.Second*20)
 					_, err := d.client.Ping(ctx, &remote.Empty{})
 					cancel()
 					if err != nil {
@@ -148,14 +146,14 @@ func (d *downstream) mainLoop() error {
 	)
 	for {
 		select {
-		case <-d.interrupt:
+		case <-d.sync.ctx.Done():
 			return nil
 		case <-time.After(time.Duration(recheckInterval) * time.Millisecond):
 			break
 		}
 
 		// Check for changes remotely
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+		ctx, cancel := context.WithTimeout(d.sync.ctx, time.Minute*10)
 		changeAmount, err := d.client.ChangesCount(ctx, &remote.Empty{})
 		cancel()
 		if err != nil {
@@ -294,7 +292,7 @@ func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Chan
 	defer writer.Close()
 
 	// cancel after 1 hour
-	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	ctx, cancel := context.WithTimeout(d.sync.ctx, time.Hour)
 	defer cancel()
 
 	// Print log message

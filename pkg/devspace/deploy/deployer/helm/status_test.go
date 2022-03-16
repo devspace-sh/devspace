@@ -1,13 +1,14 @@
 package helm
 
 import (
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	fakehelm "github.com/loft-sh/devspace/pkg/devspace/helm/testing"
 	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 
@@ -74,7 +75,6 @@ func TestStatus(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-
 		deployer := &DeployConfig{
 			Helm: &fakehelm.Client{
 				Releases: testCase.releases,
@@ -85,8 +85,7 @@ func TestStatus(t *testing.T) {
 			},
 		}
 
-		status, err := deployer.Status()
-
+		status, err := deployer.Status(devspacecontext.NewContext())
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {

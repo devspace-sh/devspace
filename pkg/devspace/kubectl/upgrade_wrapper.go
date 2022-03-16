@@ -44,8 +44,8 @@ func (uw *upgraderWrapper) Close() error {
 }
 
 // GetUpgraderWrapper returns an upgrade wrapper for the given config @Factory
-func (client *client) GetUpgraderWrapper() (http.RoundTripper, UpgraderWrapper, error) {
-	wrapper, upgradeRoundTripper, err := clientspdy.RoundTripperFor(client.restConfig)
+func GetUpgraderWrapper(client Client) (http.RoundTripper, UpgraderWrapper, error) {
+	wrapper, upgradeRoundTripper, err := clientspdy.RoundTripperFor(client.RestConfig())
 	if err != nil {
 		return nil, nil, err
 	}

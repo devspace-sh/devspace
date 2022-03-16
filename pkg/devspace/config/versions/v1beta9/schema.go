@@ -31,6 +31,9 @@ type Config struct {
 	// Version holds the config version
 	Version string `yaml:"version"`
 
+	// Name specifies the name of the DevSpace project
+	Name string `yaml:"name" json:"name"`
+
 	// Images holds configuration of how devspace should build images
 	Images map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
 
@@ -278,7 +281,7 @@ type KanikoConfig struct {
 
 	// extra environment variables from configmap or secret that will be added to the build kaniko container
 	// Will populate the env.valueFrom field.
-	EnvFrom map[string]map[interface{}]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
+	EnvFrom map[string]map[string]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
 
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`
@@ -426,76 +429,76 @@ type DeploymentConfig struct {
 
 // ComponentConfig holds the component information
 type ComponentConfig struct {
-	InitContainers      []*ContainerConfig            `yaml:"initContainers,omitempty" json:"initContainers,omitempty"`
-	Containers          []*ContainerConfig            `yaml:"containers,omitempty" json:"containers,omitempty"`
-	Labels              map[string]string             `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Annotations         map[string]string             `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	Volumes             []*VolumeConfig               `yaml:"volumes,omitempty" json:"volumes,omitempty"`
-	Service             *ServiceConfig                `yaml:"service,omitempty" json:"service,omitempty"`
-	ServiceName         string                        `yaml:"serviceName,omitempty" json:"serviceName,omitempty"`
-	Ingress             *IngressConfig                `yaml:"ingress,omitempty" json:"ingress,omitempty"`
-	Replicas            *int                          `yaml:"replicas,omitempty" json:"replicas,omitempty"`
-	Autoscaling         *AutoScalingConfig            `yaml:"autoScaling,omitempty" json:"autoScaling,omitempty"`
-	RollingUpdate       *RollingUpdateConfig          `yaml:"rollingUpdate,omitempty" json:"rollingUpdate,omitempty"`
-	PullSecrets         []*string                     `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
-	Tolerations         []map[interface{}]interface{} `yaml:"tolerations,omitempty" json:"tolerations,omitempty"`
-	Affinity            map[interface{}]interface{}   `yaml:"affinity,omitempty" json:"affinity,omitempty"`
-	NodeSelector        map[interface{}]interface{}   `yaml:"nodeSelector,omitempty" json:"nodeSelector,omitempty"`
-	NodeName            string                        `yaml:"nodeName,omitempty" json:"nodeName,omitempty"`
-	PodManagementPolicy string                        `yaml:"podManagementPolicy,omitempty" json:"podManagementPolicy,omitempty"`
+	InitContainers      []*ContainerConfig       `yaml:"initContainers,omitempty" json:"initContainers,omitempty"`
+	Containers          []*ContainerConfig       `yaml:"containers,omitempty" json:"containers,omitempty"`
+	Labels              map[string]string        `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations         map[string]string        `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	Volumes             []*VolumeConfig          `yaml:"volumes,omitempty" json:"volumes,omitempty"`
+	Service             *ServiceConfig           `yaml:"service,omitempty" json:"service,omitempty"`
+	ServiceName         string                   `yaml:"serviceName,omitempty" json:"serviceName,omitempty"`
+	Ingress             *IngressConfig           `yaml:"ingress,omitempty" json:"ingress,omitempty"`
+	Replicas            *int                     `yaml:"replicas,omitempty" json:"replicas,omitempty"`
+	Autoscaling         *AutoScalingConfig       `yaml:"autoScaling,omitempty" json:"autoScaling,omitempty"`
+	RollingUpdate       *RollingUpdateConfig     `yaml:"rollingUpdate,omitempty" json:"rollingUpdate,omitempty"`
+	PullSecrets         []*string                `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
+	Tolerations         []map[string]interface{} `yaml:"tolerations,omitempty" json:"tolerations,omitempty"`
+	Affinity            map[string]interface{}   `yaml:"affinity,omitempty" json:"affinity,omitempty"`
+	NodeSelector        map[string]interface{}   `yaml:"nodeSelector,omitempty" json:"nodeSelector,omitempty"`
+	NodeName            string                   `yaml:"nodeName,omitempty" json:"nodeName,omitempty"`
+	PodManagementPolicy string                   `yaml:"podManagementPolicy,omitempty" json:"podManagementPolicy,omitempty"`
 
-	DNSConfig                     map[interface{}]interface{}   `yaml:"dnsConfig,omitempty" json:"dnsConfig,omitempty"`
-	HostAliases                   []map[interface{}]interface{} `yaml:"hostAliases,omitempty" json:"hostAliases,omitempty"`
-	Overhead                      map[interface{}]interface{}   `yaml:"overhead,omitempty" json:"overhead,omitempty"`
-	ReadinessGates                []map[interface{}]interface{} `yaml:"readinessGates,omitempty" json:"readinessGates,omitempty"`
-	SecurityContext               map[interface{}]interface{}   `yaml:"securityContext,omitempty" json:"securityContext,omitempty"`
-	TopologySpreadConstraints     []map[interface{}]interface{} `yaml:"topologySpreadConstraints,omitempty" json:"topologySpreadConstraints,omitempty"`
-	ActiveDeadlineSeconds         *int                          `yaml:"activeDeadlineSeconds,omitempty" json:"activeDeadlineSeconds,omitempty"`
-	AutomountServiceAccountToken  *bool                         `yaml:"automountServiceAccountToken,omitempty" json:"automountServiceAccountToken,omitempty"`
-	DNSPolicy                     *string                       `yaml:"dnsPolicy,omitempty" json:"dnsPolicy,omitempty"`
-	EnableServiceLinks            *bool                         `yaml:"enableServiceLinks,omitempty" json:"enableServiceLinks,omitempty"`
-	HostIPC                       *bool                         `yaml:"hostIPC,omitempty" json:"hostIPC,omitempty"`
-	HostNetwork                   *bool                         `yaml:"hostNetwork,omitempty" json:"hostNetwork,omitempty"`
-	HostPID                       *bool                         `yaml:"hostPID,omitempty" json:"hostPID,omitempty"`
-	Hostname                      *string                       `yaml:"hostname,omitempty" json:"hostname,omitempty"`
-	PreemptionPolicy              *string                       `yaml:"preemptionPolicy,omitempty" json:"preemptionPolicy,omitempty"`
-	Priority                      *int                          `yaml:"priority,omitempty" json:"priority,omitempty"`
-	PriorityClassName             *string                       `yaml:"priorityClassName,omitempty" json:"priorityClassName,omitempty"`
-	RestartPolicy                 *string                       `yaml:"restartPolicy,omitempty" json:"restartPolicy,omitempty"`
-	RuntimeClassName              *string                       `yaml:"runtimeClassName,omitempty" json:"runtimeClassName,omitempty"`
-	SchedulerName                 *string                       `yaml:"schedulerName,omitempty" json:"schedulerName,omitempty"`
-	ServiceAccount                *string                       `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
-	ServiceAccountName            *string                       `yaml:"serviceAccountName,omitempty" json:"serviceAccountName,omitempty"`
-	SetHostnameAsFQDN             *bool                         `yaml:"setHostnameAsFQDN,omitempty" json:"setHostnameAsFQDN,omitempty"`
-	ShareProcessNamespace         *bool                         `yaml:"shareProcessNamespace,omitempty" json:"shareProcessNamespace,omitempty"`
-	Subdomain                     *string                       `yaml:"subdomain,omitempty" json:"subdomain,omitempty"`
-	TerminationGracePeriodSeconds *int                          `yaml:"terminationGracePeriodSeconds,omitempty" json:"terminationGracePeriodSeconds,omitempty"`
-	EphemeralContainers           []map[interface{}]interface{} `yaml:"ephemeralContainers,omitempty" json:"ephemeralContainers,omitempty"`
+	DNSConfig                     map[string]interface{}   `yaml:"dnsConfig,omitempty" json:"dnsConfig,omitempty"`
+	HostAliases                   []map[string]interface{} `yaml:"hostAliases,omitempty" json:"hostAliases,omitempty"`
+	Overhead                      map[string]interface{}   `yaml:"overhead,omitempty" json:"overhead,omitempty"`
+	ReadinessGates                []map[string]interface{} `yaml:"readinessGates,omitempty" json:"readinessGates,omitempty"`
+	SecurityContext               map[string]interface{}   `yaml:"securityContext,omitempty" json:"securityContext,omitempty"`
+	TopologySpreadConstraints     []map[string]interface{} `yaml:"topologySpreadConstraints,omitempty" json:"topologySpreadConstraints,omitempty"`
+	ActiveDeadlineSeconds         *int                     `yaml:"activeDeadlineSeconds,omitempty" json:"activeDeadlineSeconds,omitempty"`
+	AutomountServiceAccountToken  *bool                    `yaml:"automountServiceAccountToken,omitempty" json:"automountServiceAccountToken,omitempty"`
+	DNSPolicy                     *string                  `yaml:"dnsPolicy,omitempty" json:"dnsPolicy,omitempty"`
+	EnableServiceLinks            *bool                    `yaml:"enableServiceLinks,omitempty" json:"enableServiceLinks,omitempty"`
+	HostIPC                       *bool                    `yaml:"hostIPC,omitempty" json:"hostIPC,omitempty"`
+	HostNetwork                   *bool                    `yaml:"hostNetwork,omitempty" json:"hostNetwork,omitempty"`
+	HostPID                       *bool                    `yaml:"hostPID,omitempty" json:"hostPID,omitempty"`
+	Hostname                      *string                  `yaml:"hostname,omitempty" json:"hostname,omitempty"`
+	PreemptionPolicy              *string                  `yaml:"preemptionPolicy,omitempty" json:"preemptionPolicy,omitempty"`
+	Priority                      *int                     `yaml:"priority,omitempty" json:"priority,omitempty"`
+	PriorityClassName             *string                  `yaml:"priorityClassName,omitempty" json:"priorityClassName,omitempty"`
+	RestartPolicy                 *string                  `yaml:"restartPolicy,omitempty" json:"restartPolicy,omitempty"`
+	RuntimeClassName              *string                  `yaml:"runtimeClassName,omitempty" json:"runtimeClassName,omitempty"`
+	SchedulerName                 *string                  `yaml:"schedulerName,omitempty" json:"schedulerName,omitempty"`
+	ServiceAccount                *string                  `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
+	ServiceAccountName            *string                  `yaml:"serviceAccountName,omitempty" json:"serviceAccountName,omitempty"`
+	SetHostnameAsFQDN             *bool                    `yaml:"setHostnameAsFQDN,omitempty" json:"setHostnameAsFQDN,omitempty"`
+	ShareProcessNamespace         *bool                    `yaml:"shareProcessNamespace,omitempty" json:"shareProcessNamespace,omitempty"`
+	Subdomain                     *string                  `yaml:"subdomain,omitempty" json:"subdomain,omitempty"`
+	TerminationGracePeriodSeconds *int                     `yaml:"terminationGracePeriodSeconds,omitempty" json:"terminationGracePeriodSeconds,omitempty"`
+	EphemeralContainers           []map[string]interface{} `yaml:"ephemeralContainers,omitempty" json:"ephemeralContainers,omitempty"`
 }
 
 // ContainerConfig holds the configurations of a container
 type ContainerConfig struct {
-	Name                     string                        `yaml:"name,omitempty" json:"name,omitempty"`
-	Image                    string                        `yaml:"image,omitempty" json:"image,omitempty"`
-	Command                  []string                      `yaml:"command,omitempty" json:"command,omitempty"`
-	Args                     []string                      `yaml:"args,omitempty" json:"args,omitempty"`
-	Stdin                    bool                          `yaml:"stdin,omitempty" json:"stdin,omitempty"`
-	TTY                      bool                          `yaml:"tty,omitempty" json:"tty,omitempty"`
-	Env                      []map[interface{}]interface{} `yaml:"env,omitempty" json:"env,omitempty"`
-	EnvFrom                  []map[interface{}]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
-	VolumeMounts             []*VolumeMountConfig          `yaml:"volumeMounts,omitempty" json:"volumeMounts,omitempty"`
-	Resources                map[interface{}]interface{}   `yaml:"resources,omitempty" json:"resources,omitempty"`
-	LivenessProbe            map[interface{}]interface{}   `yaml:"livenessProbe,omitempty" json:"livenessProbe,omitempty"`
-	ReadinessProbe           map[interface{}]interface{}   `yaml:"readinessProbe,omitempty" json:"readinessProbe,omitempty"`
-	StartupProbe             map[interface{}]interface{}   `yaml:"startupProbe,omitempty" json:"startupProbe,omitempty"`
-	SecurityContext          map[interface{}]interface{}   `yaml:"securityContext,omitempty" json:"securityContext,omitempty"`
-	Lifecycle                map[interface{}]interface{}   `yaml:"lifecycle,omitempty" json:"lifecycle,omitempty"`
-	VolumeDevices            []map[interface{}]interface{} `yaml:"volumeDevices,omitempty" json:"volumeDevices,omitempty"`
-	ImagePullPolicy          string                        `yaml:"imagePullPolicy,omitempty" json:"imagePullPolicy,omitempty"`
-	WorkingDir               string                        `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
-	StdinOnce                bool                          `yaml:"stdinOnce,omitempty" json:"stdinOnce,omitempty"`
-	TerminationMessagePath   string                        `yaml:"terminationMessagePath,omitempty" json:"terminationMessagePath,omitempty"`
-	TerminationMessagePolicy string                        `yaml:"terminationMessagePolicy,omitempty" json:"terminationMessagePolicy,omitempty"`
+	Name                     string                   `yaml:"name,omitempty" json:"name,omitempty"`
+	Image                    string                   `yaml:"image,omitempty" json:"image,omitempty"`
+	Command                  []string                 `yaml:"command,omitempty" json:"command,omitempty"`
+	Args                     []string                 `yaml:"args,omitempty" json:"args,omitempty"`
+	Stdin                    bool                     `yaml:"stdin,omitempty" json:"stdin,omitempty"`
+	TTY                      bool                     `yaml:"tty,omitempty" json:"tty,omitempty"`
+	Env                      []map[string]interface{} `yaml:"env,omitempty" json:"env,omitempty"`
+	EnvFrom                  []map[string]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
+	VolumeMounts             []*VolumeMountConfig     `yaml:"volumeMounts,omitempty" json:"volumeMounts,omitempty"`
+	Resources                map[string]interface{}   `yaml:"resources,omitempty" json:"resources,omitempty"`
+	LivenessProbe            map[string]interface{}   `yaml:"livenessProbe,omitempty" json:"livenessProbe,omitempty"`
+	ReadinessProbe           map[string]interface{}   `yaml:"readinessProbe,omitempty" json:"readinessProbe,omitempty"`
+	StartupProbe             map[string]interface{}   `yaml:"startupProbe,omitempty" json:"startupProbe,omitempty"`
+	SecurityContext          map[string]interface{}   `yaml:"securityContext,omitempty" json:"securityContext,omitempty"`
+	Lifecycle                map[string]interface{}   `yaml:"lifecycle,omitempty" json:"lifecycle,omitempty"`
+	VolumeDevices            []map[string]interface{} `yaml:"volumeDevices,omitempty" json:"volumeDevices,omitempty"`
+	ImagePullPolicy          string                   `yaml:"imagePullPolicy,omitempty" json:"imagePullPolicy,omitempty"`
+	WorkingDir               string                   `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
+	StdinOnce                bool                     `yaml:"stdinOnce,omitempty" json:"stdinOnce,omitempty"`
+	TerminationMessagePath   string                   `yaml:"terminationMessagePath,omitempty" json:"terminationMessagePath,omitempty"`
+	TerminationMessagePolicy string                   `yaml:"terminationMessagePolicy,omitempty" json:"terminationMessagePolicy,omitempty"`
 }
 
 // VolumeMountConfig holds the configuration for a specific mount path
@@ -513,38 +516,38 @@ type VolumeMountVolumeConfig struct {
 
 // VolumeConfig holds the configuration for a specific volume
 type VolumeConfig struct {
-	Name             string                      `yaml:"name,omitempty" json:"name,omitempty"`
-	Labels           map[string]string           `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Annotations      map[string]string           `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	Size             string                      `yaml:"size,omitempty" json:"size,omitempty"`
-	ConfigMap        map[interface{}]interface{} `yaml:"configMap,omitempty" json:"configMap,omitempty"`
-	Secret           map[interface{}]interface{} `yaml:"secret,omitempty" json:"secret,omitempty"`
-	StorageClassName string                      `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
-	VolumeMode       string                      `yaml:"volumeMode,omitempty" json:"volumeMode,omitempty"`
-	VolumeName       string                      `yaml:"volumeName,omitempty" json:"volumeName,omitempty"`
-	DataSource       map[interface{}]interface{} `yaml:"dataSource,omitempty" json:"dataSource,omitempty"`
-	AccessModes      []string                    `yaml:"accessModes,omitempty" json:"accessModes,omitempty"`
+	Name             string                 `yaml:"name,omitempty" json:"name,omitempty"`
+	Labels           map[string]string      `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations      map[string]string      `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	Size             string                 `yaml:"size,omitempty" json:"size,omitempty"`
+	ConfigMap        map[string]interface{} `yaml:"configMap,omitempty" json:"configMap,omitempty"`
+	Secret           map[string]interface{} `yaml:"secret,omitempty" json:"secret,omitempty"`
+	StorageClassName string                 `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
+	VolumeMode       string                 `yaml:"volumeMode,omitempty" json:"volumeMode,omitempty"`
+	VolumeName       string                 `yaml:"volumeName,omitempty" json:"volumeName,omitempty"`
+	DataSource       map[string]interface{} `yaml:"dataSource,omitempty" json:"dataSource,omitempty"`
+	AccessModes      []string               `yaml:"accessModes,omitempty" json:"accessModes,omitempty"`
 }
 
 // ServiceConfig holds the configuration of a component service
 type ServiceConfig struct {
-	Name                     string                      `yaml:"name,omitempty" json:"name,omitempty"`
-	Labels                   map[string]string           `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Annotations              map[string]string           `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	Type                     string                      `yaml:"type,omitempty" json:"type,omitempty"`
-	Ports                    []*ServicePortConfig        `yaml:"ports,omitempty" json:"ports,omitempty"`
-	ExternalIPs              []string                    `yaml:"externalIPs,omitempty" json:"externalIPs,omitempty"`
-	ClusterIP                string                      `yaml:"clusterIP,omitempty" json:"clusterIP,omitempty"`
-	ExternalName             string                      `yaml:"externalName,omitempty" json:"externalName,omitempty"`
-	ExternalTrafficPolicy    string                      `yaml:"externalTrafficPolicy,omitempty" json:"externalTrafficPolicy,omitempty"`
-	HealthCheckNodePort      int                         `yaml:"healthCheckNodePort,omitempty" json:"healthCheckNodePort,omitempty"`
-	IPFamily                 *string                     `yaml:"ipFamily,omitempty" json:"ipFamily,omitempty"`
-	LoadBalancerIP           *string                     `yaml:"loadBalancerIP,omitempty" json:"loadBalancerIP,omitempty"`
-	LoadBalancerSourceRanges []string                    `yaml:"loadBalancerSourceRanges,omitempty" json:"loadBalancerSourceRanges,omitempty"`
-	PublishNotReadyAddresses bool                        `yaml:"publishNotReadyAddresses,omitempty" json:"publishNotReadyAddresses,omitempty"`
-	SessionAffinity          map[interface{}]interface{} `yaml:"sessionAffinity,omitempty" json:"sessionAffinity,omitempty"`
-	SessionAffinityConfig    map[interface{}]interface{} `yaml:"sessionAffinityConfig,omitempty" json:"sessionAffinityConfig,omitempty"`
-	TopologyKeys             []string                    `yaml:"topologyKeys,omitempty" json:"topologyKeys,omitempty"`
+	Name                     string                 `yaml:"name,omitempty" json:"name,omitempty"`
+	Labels                   map[string]string      `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations              map[string]string      `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	Type                     string                 `yaml:"type,omitempty" json:"type,omitempty"`
+	Ports                    []*ServicePortConfig   `yaml:"ports,omitempty" json:"ports,omitempty"`
+	ExternalIPs              []string               `yaml:"externalIPs,omitempty" json:"externalIPs,omitempty"`
+	ClusterIP                string                 `yaml:"clusterIP,omitempty" json:"clusterIP,omitempty"`
+	ExternalName             string                 `yaml:"externalName,omitempty" json:"externalName,omitempty"`
+	ExternalTrafficPolicy    string                 `yaml:"externalTrafficPolicy,omitempty" json:"externalTrafficPolicy,omitempty"`
+	HealthCheckNodePort      int                    `yaml:"healthCheckNodePort,omitempty" json:"healthCheckNodePort,omitempty"`
+	IPFamily                 *string                `yaml:"ipFamily,omitempty" json:"ipFamily,omitempty"`
+	LoadBalancerIP           *string                `yaml:"loadBalancerIP,omitempty" json:"loadBalancerIP,omitempty"`
+	LoadBalancerSourceRanges []string               `yaml:"loadBalancerSourceRanges,omitempty" json:"loadBalancerSourceRanges,omitempty"`
+	PublishNotReadyAddresses bool                   `yaml:"publishNotReadyAddresses,omitempty" json:"publishNotReadyAddresses,omitempty"`
+	SessionAffinity          map[string]interface{} `yaml:"sessionAffinity,omitempty" json:"sessionAffinity,omitempty"`
+	SessionAffinityConfig    map[string]interface{} `yaml:"sessionAffinityConfig,omitempty" json:"sessionAffinityConfig,omitempty"`
+	TopologyKeys             []string               `yaml:"topologyKeys,omitempty" json:"topologyKeys,omitempty"`
 }
 
 // ServicePortConfig holds the port configuration of a component service
@@ -556,15 +559,15 @@ type ServicePortConfig struct {
 
 // IngressConfig holds the configuration of a component ingress
 type IngressConfig struct {
-	Name             string                      `yaml:"name,omitempty" json:"name,omitempty"`
-	Labels           map[string]string           `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Annotations      map[string]string           `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	TLS              string                      `yaml:"tls,omitempty" json:"tls,omitempty"`
-	TLSClusterIssuer string                      `yaml:"tlsClusterIssuer,omitempty" json:"tlsClusterIssuer,omitempty"`
-	IngressClass     string                      `yaml:"ingressClass,omitempty" json:"ingressClass,omitempty"`
-	Rules            []*IngressRuleConfig        `yaml:"rules,omitempty" json:"rules,omitempty"`
-	Backend          map[interface{}]interface{} `yaml:"backend,omitempty" json:"backend,omitempty"`
-	IngressClassName *string                     `yaml:"ingressClassName,omitempty" json:"ingressClassName,omitempty"`
+	Name             string                 `yaml:"name,omitempty" json:"name,omitempty"`
+	Labels           map[string]string      `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations      map[string]string      `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	TLS              string                 `yaml:"tls,omitempty" json:"tls,omitempty"`
+	TLSClusterIssuer string                 `yaml:"tlsClusterIssuer,omitempty" json:"tlsClusterIssuer,omitempty"`
+	IngressClass     string                 `yaml:"ingressClass,omitempty" json:"ingressClass,omitempty"`
+	Rules            []*IngressRuleConfig   `yaml:"rules,omitempty" json:"rules,omitempty"`
+	Backend          map[string]interface{} `yaml:"backend,omitempty" json:"backend,omitempty"`
+	IngressClassName *string                `yaml:"ingressClassName,omitempty" json:"ingressClassName,omitempty"`
 }
 
 // IngressRuleConfig holds the port configuration of a component service
@@ -600,23 +603,23 @@ type RollingUpdateConfig struct {
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
-	Chart            *ChartConfig                `yaml:"chart,omitempty" json:"chart,omitempty"`
-	ComponentChart   *bool                       `yaml:"componentChart,omitempty" json:"componentChart,omitempty"`
-	Values           map[interface{}]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
-	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
-	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
-	Wait             bool                        `yaml:"wait,omitempty" json:"wait,omitempty"`
-	DisplayOutput    bool                        `yaml:"displayOutput,omitempty" json:"output,omitempty"`
-	Timeout          *int64                      `yaml:"timeout,omitempty" json:"timeout,omitempty"`
-	Force            bool                        `yaml:"force,omitempty" json:"force,omitempty"`
-	Atomic           bool                        `yaml:"atomic,omitempty" json:"atomic,omitempty"`
-	CleanupOnFail    bool                        `yaml:"cleanupOnFail,omitempty" json:"cleanupOnFail,omitempty"`
-	Recreate         bool                        `yaml:"recreate,omitempty" json:"recreate,omitempty"`
-	DisableHooks     bool                        `yaml:"disableHooks,omitempty" json:"disableHooks,omitempty"`
-	Driver           string                      `yaml:"driver,omitempty" json:"driver,omitempty"`
-	Path             string                      `yaml:"path,omitempty" json:"path,omitempty"`
-	V2               bool                        `yaml:"v2,omitempty" json:"v2,omitempty"`
-	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty" json:"tillerNamespace,omitempty"`
+	Chart            *ChartConfig           `yaml:"chart,omitempty" json:"chart,omitempty"`
+	ComponentChart   *bool                  `yaml:"componentChart,omitempty" json:"componentChart,omitempty"`
+	Values           map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
+	ValuesFiles      []string               `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
+	ReplaceImageTags *bool                  `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
+	Wait             bool                   `yaml:"wait,omitempty" json:"wait,omitempty"`
+	DisplayOutput    bool                   `yaml:"displayOutput,omitempty" json:"output,omitempty"`
+	Timeout          *int64                 `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	Force            bool                   `yaml:"force,omitempty" json:"force,omitempty"`
+	Atomic           bool                   `yaml:"atomic,omitempty" json:"atomic,omitempty"`
+	CleanupOnFail    bool                   `yaml:"cleanupOnFail,omitempty" json:"cleanupOnFail,omitempty"`
+	Recreate         bool                   `yaml:"recreate,omitempty" json:"recreate,omitempty"`
+	DisableHooks     bool                   `yaml:"disableHooks,omitempty" json:"disableHooks,omitempty"`
+	Driver           string                 `yaml:"driver,omitempty" json:"driver,omitempty"`
+	Path             string                 `yaml:"path,omitempty" json:"path,omitempty"`
+	V2               bool                   `yaml:"v2,omitempty" json:"v2,omitempty"`
+	TillerNamespace  string                 `yaml:"tillerNamespace,omitempty" json:"tillerNamespace,omitempty"`
 
 	DeleteArgs   []string `yaml:"deleteArgs,omitempty" json:"deleteArgs,omitempty"`
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
@@ -1026,14 +1029,14 @@ type ProfileConfig struct {
 
 // ProfileConfigStructure is the base structure used to validate profiles
 type ProfileConfigStructure struct {
-	Images       map[interface{}]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments  []interface{}               `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Dev          map[interface{}]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
-	Dependencies []interface{}               `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Hooks        []interface{}               `yaml:"hooks,omitempty" json:"hooks,omitempty"`
-	PullSecrets  []interface{}               `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
-	Commands     []interface{}               `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Vars         []interface{}               `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Images       map[string]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
+	Deployments  []interface{}          `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Dev          map[string]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Dependencies []interface{}          `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Hooks        []interface{}          `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+	PullSecrets  []interface{}          `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+	Commands     []interface{}          `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Vars         []interface{}          `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // ProfileParent defines where to load the profile from

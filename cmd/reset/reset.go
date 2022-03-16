@@ -20,7 +20,7 @@ func NewResetCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []pl
 		Args: cobra.NoArgs,
 	}
 
-	resetCmd.AddCommand(newVarsCmd(f))
+	resetCmd.AddCommand(newVarsCmd(f, globalFlags))
 	resetCmd.AddCommand(newDependenciesCmd(f))
 	resetCmd.AddCommand(newPodsCmd(f, globalFlags))
 

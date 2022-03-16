@@ -1,22 +1,15 @@
 package cmd
 
 import (
-	"strings"
-
+	"context"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	pipelinetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/mgutz/ansi"
-
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -28,14 +21,16 @@ type BuildCmd struct {
 
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
-	VerboseDependencies     bool
 	SkipDependency          []string
 	Dependency              []string
+
+	Pipeline string
 
 	ForceBuild          bool
 	BuildSequential     bool
 	MaxConcurrentBuilds int
-	ForceDependencies   bool
+
+	Ctx context.Context
 }
 
 // NewBuildCmd creates a new devspace build command
@@ -61,12 +56,10 @@ Builds all defined images and pushes them
 	buildCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	buildCmd.Flags().IntVar(&cmd.MaxConcurrentBuilds, "max-concurrent-builds", 0, "The maximum number of image builds built in parallel (0 for infinite)")
 
-	buildCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
-	buildCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Builds the dependencies verbosely")
-
 	buildCmd.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "Use the given tag for all built images")
 	buildCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips building the following dependencies")
 	buildCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Builds only the specific named dependencies")
+	buildCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "", "The pipeline to execute")
 
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 	buildCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", false, "Skips image pushing, if a local kubernetes environment is detected")
@@ -76,136 +69,47 @@ Builds all defined images and pushes them
 
 // Run executes the command logic
 func (cmd *BuildCmd) Run(f factory.Factory) error {
-	// Set config root
-	log := f.GetLog()
-	configOptions := cmd.ToConfigOptions(log)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
-	configExists, err := configLoader.SetDevSpaceRoot(log)
-	if err != nil {
-		return err
-	}
-	if !configExists {
-		return errors.New(message.ConfigNotFound)
+	if cmd.Ctx == nil {
+		var cancelFn context.CancelFunc
+		cmd.Ctx, cancelFn = context.WithCancel(context.Background())
+		defer cancelFn()
 	}
 
-	// Start file logging
-	logpkg.StartFileLogging()
+	// set command in context
+	cmd.Ctx = values.WithCommand(cmd.Ctx, "build")
 
-	// Load config
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
-	if err != nil {
-		return err
-	}
-	configOptions.GeneratedConfig = generatedConfig
-
-	// create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
-	if err != nil {
-		log.Warnf("Unable to create new kubectl client: %v", err)
-	}
-	configOptions.KubeClient = client
-
-	// Get the config
-	configInterface, err := configLoader.Load(configOptions, log)
+	configOptions := cmd.ToConfigOptions()
+	ctx, err := prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, true)
 	if err != nil {
 		return err
 	}
 
-	return runWithHooks("buildCommand", client, configInterface, log, func() error {
-		return cmd.runCommand(f, client, configInterface, configLoader, configOptions, log)
+	return runWithHooks(ctx, "buildCommand", func() error {
+		return cmd.runCommand(ctx, f, configOptions)
 	})
 }
 
-func (cmd *BuildCmd) runCommand(f factory.Factory, client kubectl.Client, configInterface config.Config, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log logpkg.Logger) error {
-	err := cmd.ensureDeployNamespaces(client, configInterface, log)
-	if err != nil {
-		return errors.Errorf("unable to create namespace: %v", err)
-	}
-	// Force tag
-	if len(cmd.Tags) > 0 {
-		for _, imageConfig := range configInterface.Config().Images {
-			imageConfig.Tags = cmd.Tags
-		}
+func (cmd *BuildCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
+	if cmd.Pipeline == "" {
+		cmd.Pipeline = "build"
 	}
 
-	// Dependencies
-	dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, log).BuildAll(dependency.BuildOptions{
-		Dependencies:            cmd.Dependency,
-		SkipDependencies:        cmd.SkipDependency,
-		ForceDeployDependencies: cmd.ForceDependencies,
-		Verbose:                 cmd.VerboseDependencies,
-
-		BuildOptions: build.Options{
-			SkipPush:                  cmd.SkipPush,
-			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
-			ForceRebuild:              cmd.ForceBuild,
-			Sequential:                cmd.BuildSequential,
-			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
-		},
-	})
-	if err != nil {
-		return errors.Wrap(err, "build dependencies")
-	}
-
-	// Execute plugin hook
-	err = hook.ExecuteHooks(client, configInterface, dependencies, nil, log, "build")
-	if err != nil {
-		return err
-	}
-
-	// Build images if necessary
-	if len(cmd.Dependency) == 0 {
-		if len(configInterface.Config().Images) > 0 {
-			builtImages, err := f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
+	return runPipeline(ctx, f, true, &PipelineOptions{
+		Options: pipelinetypes.Options{
+			BuildOptions: build.Options{
+				Tags:                      cmd.Tags,
 				SkipPush:                  cmd.SkipPush,
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 				ForceRebuild:              cmd.ForceBuild,
 				Sequential:                cmd.BuildSequential,
 				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
-			}, log)
-			if err != nil {
-				if strings.Contains(err.Error(), "no space left on device") {
-					return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
-				}
-
-				return errors.Wrap(err, "build images")
-			}
-
-			// Save config if an image was built
-			if len(builtImages) > 0 {
-				err := configLoader.SaveGenerated(configInterface.Generated())
-				if err != nil {
-					return err
-				}
-
-				log.Donef("Successfully built %d images", len(builtImages))
-			} else {
-				log.Info("No images to rebuild. Run with -b to force rebuilding")
-			}
-		} else {
-			log.Info("No images defined for this profile")
-		}
-	} else {
-		log.Donef("Successfully built images for dependencies: %s", strings.Join(cmd.Dependency, " "))
-	}
-
-	return nil
-}
-
-func (cmd *BuildCmd) ensureDeployNamespaces(client kubectl.Client, configInterface config.Config, log logpkg.Logger) error {
-	c := configInterface.Config()
-	if c.Images == nil || client == nil {
-		return nil
-	}
-	usesKanikoOrBuildKit := false
-
-	for _, image := range c.Images {
-		usesKanikoOrBuildKit = image != nil && image.Build != nil && (image.Build.Kaniko != nil || image.Build.BuildKit != nil)
-	}
-
-	if usesKanikoOrBuildKit {
-		err := client.EnsureDeployNamespaces(configInterface.Config(), log)
-		return err
-	}
-	return nil
+			},
+			DependencyOptions: pipelinetypes.DependencyOptions{
+				Exclude: cmd.SkipDependency,
+				Only:    cmd.Dependency,
+			},
+		},
+		ConfigOptions: configOptions,
+		Pipeline:      cmd.Pipeline,
+	})
 }

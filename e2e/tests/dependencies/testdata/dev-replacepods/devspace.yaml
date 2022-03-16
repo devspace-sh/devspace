@@ -1,10 +1,15 @@
-version: v1beta11
+version: v2beta1
+
 dev:
   terminal:
     imageSelector: username/app
+    terminal:
+      command: "sh -c 'exit 0'"
+      disableReplace: true
+
 dependencies:
-  - name: dep
-    source:
-      path: dep.yaml
-    dev:
-      replacePods: true
+  dep:
+    path: dep.yaml
+    pipeline: dev
+
+

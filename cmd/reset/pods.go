@@ -2,12 +2,11 @@ package reset
 
 import (
 	"context"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
-	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/podreplace"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -53,8 +52,11 @@ devspace reset pods
 func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	configOptions := cmd.ToConfigOptions(cmd.log)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
@@ -63,80 +65,75 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 		return errors.New(message.ConfigNotFound)
 	}
 
-	// Get config with adjusted cluster config
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
-	if err != nil {
-		return err
-	}
-	configOptions.GeneratedConfig = generatedConfig
-
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}
 
+	// Get config with adjusted cluster config
+	localCache, err := configLoader.LoadLocalCache()
+	if err != nil {
+		return err
+	}
+
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, cmd.log)
 	if err != nil {
 		return err
 	}
-
-	configOptions.KubeClient = client
 
 	// Get config with adjusted cluster config
-	configInterface, err := configLoader.Load(configOptions, cmd.log)
+	conf, err := configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
 
+	// create devspace context
+	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+		WithConfig(conf).
+		WithKubeClient(client)
+
 	// Resolve dependencies
-	dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
-		UpdateDependencies: false,
-		Silent:             true,
-		Verbose:            false,
-	})
+	dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 	if err != nil {
 		cmd.log.Warnf("Error resolving dependencies: %v", err)
 	}
-	for _, dep := range dependencies {
-		if dep.DependencyConfig().Dev != nil && dep.DependencyConfig().Dev.ReplacePods && len(dep.Config().Config().Dev.ReplacePods) > 0 {
-			ResetPods(client, dep.Config(), dep.Children(), cmd.log)
-		}
-	}
+	ctx = ctx.WithDependencies(dependencies)
 
 	// reset the pods
-	ResetPods(client, configInterface, dependencies, cmd.log)
+	ResetPods(ctx, true)
 	return nil
 }
 
 // ResetPods deletes the pods created by dev.replacePods
-func ResetPods(client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, log log.Logger) {
-	// create pod replacer
+func ResetPods(ctx *devspacecontext.Context, dependencies bool) {
+	resetted := ResetPodsRecursive(ctx, dependencies)
+	if resetted == 0 {
+		ctx.Log.Info("No dev pods to reset found")
+	} else {
+		ctx.Log.Donef("Successfully reset %d pods", resetted)
+	}
+}
+
+func ResetPodsRecursive(ctx *devspacecontext.Context, dependencies bool) int {
 	resetted := 0
-	errored := false
+	if dependencies {
+		for _, d := range ctx.Dependencies {
+			resetted += ResetPodsRecursive(ctx.AsDependency(d), dependencies)
+		}
+	}
+
+	// create pod replacer
 	podReplacer := podreplace.NewPodReplacer()
-	for _, replacePod := range config.Config().Dev.ReplacePods {
-		deletedPod, err := podReplacer.RevertReplacePod(context.TODO(), client, config, dependencies, replacePod, log)
+	for _, replacePodCache := range ctx.Config.RemoteCache().ListDevPods() {
+		deleted, err := podReplacer.RevertReplacePod(ctx, &replacePodCache)
 		if err != nil {
-			errored = true
-			log.Warnf("Error reverting replaced pod: %v", err)
-		} else if deletedPod != nil {
+			ctx.Log.Warnf("Error resetting replaced pod: %v", err)
+		} else if deleted {
 			resetted++
 		}
 	}
 
-	if resetted == 0 {
-		if !errored {
-			log.Info("No pods to reset found")
-		}
-	} else {
-		log.Donef("Successfully reset %d pods", resetted)
-	}
+	return resetted
 }

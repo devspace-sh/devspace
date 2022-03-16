@@ -1,0 +1,14 @@
+version: v2beta1
+name: attach
+
+pipelines:
+  dev:
+    run: |-
+      create_deployments test --set helm.values.containers[0].image=ubuntu
+      
+      start_dev test --set imageSelector=ubuntu \
+                     --set 'command={sh,-c,echo Hello World >> /test.txt; sleep 100000}' \
+                     --set logs.enabled=true \
+                     --set sync[0].path=.:/app \
+                     --set sync[0].onUpload.restartContainer=true \
+                     --set sync[0].excludePaths[0]=devspace.yaml

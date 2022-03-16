@@ -2,6 +2,7 @@ package helm
 
 import (
 	"fmt"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,13 +11,9 @@ import (
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
 	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
-	helmv2 "github.com/loft-sh/devspace/pkg/devspace/helm/v2"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 )
@@ -34,31 +31,16 @@ var DevSpaceChartConfig = &latest.ChartConfig{
 // DeployConfig holds the information necessary to deploy via helm
 type DeployConfig struct {
 	// Public because we can switch them to fake clients for testing
-	Kube kubectl.Client
-	Helm helmtypes.Client
-
-	TillerNamespace  string
+	Helm             helmtypes.Client
 	DeploymentConfig *latest.DeploymentConfig
-	Log              log.Logger
-
-	config       config2.Config
-	dependencies []types.Dependency
 }
 
 // New creates a new helm deployment client
-func New(config config2.Config, dependencies []types.Dependency, helmClient helmtypes.Client, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (deployer.Interface, error) {
-	config = config2.Ensure(config)
-
-	tillerNamespace := ""
-	if kubeClient != nil {
-		tillerNamespace = kubeClient.Namespace()
-		if deployConfig.Helm.TillerNamespace != "" {
-			tillerNamespace = deployConfig.Helm.TillerNamespace
-		}
-	}
+func New(ctx *devspacecontext.Context, helmClient helmtypes.Client, deployConfig *latest.DeploymentConfig) (deployer.Interface, error) {
+	ctx.Config = config2.Ensure(ctx.Config)
 
 	// Exchange chart
-	if deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart {
+	if deployConfig.Helm.Chart == nil || (deployConfig.Helm.Chart.Name == DevSpaceChartConfig.Name && deployConfig.Helm.Chart.RepoURL == DevSpaceChartConfig.RepoURL) {
 		// extract component chart if possible
 		filename := "component-chart-" + DevSpaceChartConfig.Version + ".tgz"
 		componentChartBytes, err := assets.Asset(filename)
@@ -89,42 +71,30 @@ func New(config config2.Config, dependencies []types.Dependency, helmClient helm
 	}
 
 	return &DeployConfig{
-		Kube:             kubeClient,
 		Helm:             helmClient,
-		TillerNamespace:  tillerNamespace,
 		DeploymentConfig: deployConfig,
-		Log:              log,
-		config:           config,
-		dependencies:     dependencies,
 	}, nil
 }
 
-// Delete deletes the release
-func (d *DeployConfig) Delete() error {
-	// Delete with helm engine
-	if d.DeploymentConfig.Helm.V2 {
-		isDeployed := helmv2.IsTillerDeployed(d.Kube, d.TillerNamespace)
-		if !isDeployed {
-			return nil
-		}
+// Delete deletes the deployment
+func Delete(ctx *devspacecontext.Context, deploymentName string) error {
+	deploymentCache, ok := ctx.Config.RemoteCache().GetDeployment(deploymentName)
+	if !ok || deploymentCache.Helm == nil || deploymentCache.Helm.Release == "" || deploymentCache.Helm.ReleaseNamespace == "" {
+		ctx.Config.RemoteCache().DeleteDeployment(deploymentName)
+		return nil
 	}
 
-	if d.Helm == nil {
-		var err error
-
-		// Get HelmClient
-		d.Helm, err = helm.NewClient(d.config.Config(), d.DeploymentConfig, d.Kube, d.TillerNamespace, false, false, d.Log)
-		if err != nil {
-			return errors.Wrap(err, "new helm client")
-		}
+	helmClient, err := helm.NewClient(ctx.Log)
+	if err != nil {
+		return errors.Wrap(err, "new helm client")
 	}
 
-	err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, d.DeploymentConfig.Namespace, d.DeploymentConfig.Helm)
+	err = helmClient.DeleteRelease(ctx, deploymentCache.Helm.Release, deploymentCache.Helm.ReleaseNamespace)
 	if err != nil {
 		return err
 	}
 
 	// Delete from cache
-	delete(d.config.Generated().GetActive().Deployments, d.DeploymentConfig.Helm.Chart.Name)
+	ctx.Config.RemoteCache().DeleteDeployment(deploymentName)
 	return nil
 }

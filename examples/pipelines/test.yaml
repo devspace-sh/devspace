@@ -1,0 +1,6 @@
+version: v2beta1
+name: test
+
+vars:
+  - name: IMAGE
+    value: testme

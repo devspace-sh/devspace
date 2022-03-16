@@ -2,6 +2,7 @@ package v2
 
 import (
 	"fmt"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -19,7 +20,7 @@ func (f *Client) UpdateRepos() error {
 }
 
 // DeleteRelease deletes a helm release and optionally purges it
-func (f *Client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
+func (f *Client) DeleteRelease(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
 	for i, release := range f.Releases {
 		if release.Name == releaseName {
 			f.Releases = append(f.Releases[:i], f.Releases[i+1:]...)
@@ -30,12 +31,12 @@ func (f *Client) DeleteRelease(releaseName string, releaseNamespace string, helm
 }
 
 // ListReleases lists all helm Releases
-func (f *Client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, error) {
+func (f *Client) ListReleases(ctx *devspacecontext.Context, helmConfig *latest.HelmConfig) ([]*types.Release, error) {
 	return f.Releases, nil
 }
 
 // InstallChart implements interface
-func (f *Client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
+func (f *Client) InstallChart(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	for _, release := range f.Releases {
 		if release.Name == releaseName {
 			return release, nil
@@ -56,6 +57,6 @@ func (f *Client) InstallChart(releaseName string, releaseNamespace string, value
 }
 
 // Template implements interface
-func (f *Client) Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+func (f *Client) Template(ctx *devspacecontext.Context, releaseName, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (string, error) {
 	return "", nil
 }

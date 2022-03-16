@@ -30,6 +30,9 @@ func NewRaw() *Config {
 type Config struct {
 	Version string `yaml:"version"`
 
+	// Name specifies the name of the DevSpace project
+	Name string `yaml:"name" json:"name"`
+
 	Images       map[string]*ImageConfig `yaml:"images,omitempty"`
 	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty"`
 	Dev          *DevConfig              `yaml:"dev,omitempty"`
@@ -125,17 +128,17 @@ type ComponentConfig struct {
 
 // ContainerConfig holds the configurations of a container
 type ContainerConfig struct {
-	Name           string                        `yaml:"name,omitempty"`
-	Image          string                        `yaml:"image,omitempty"`
-	Command        []string                      `yaml:"command,omitempty"`
-	Args           []string                      `yaml:"args,omitempty"`
-	Stdin          bool                          `yaml:"stdin,omitempty"`
-	TTY            bool                          `yaml:"tty,omitempty"`
-	Env            []map[interface{}]interface{} `yaml:"env,omitempty"`
-	VolumeMounts   []*VolumeMountConfig          `yaml:"volumeMounts,omitempty"`
-	Resources      map[interface{}]interface{}   `yaml:"resources,omitempty"`
-	LivenessProbe  map[interface{}]interface{}   `yaml:"livenessProbe,omitempty"`
-	ReadinessProbe map[interface{}]interface{}   `yaml:"readinessProbe,omitempty"`
+	Name           string                   `yaml:"name,omitempty"`
+	Image          string                   `yaml:"image,omitempty"`
+	Command        []string                 `yaml:"command,omitempty"`
+	Args           []string                 `yaml:"args,omitempty"`
+	Stdin          bool                     `yaml:"stdin,omitempty"`
+	TTY            bool                     `yaml:"tty,omitempty"`
+	Env            []map[string]interface{} `yaml:"env,omitempty"`
+	VolumeMounts   []*VolumeMountConfig     `yaml:"volumeMounts,omitempty"`
+	Resources      map[string]interface{}   `yaml:"resources,omitempty"`
+	LivenessProbe  map[string]interface{}   `yaml:"livenessProbe,omitempty"`
+	ReadinessProbe map[string]interface{}   `yaml:"readinessProbe,omitempty"`
 }
 
 // VolumeMountConfig holds the configuration for a specific mount path
@@ -153,12 +156,12 @@ type VolumeMountVolumeConfig struct {
 
 // VolumeConfig holds the configuration for a specific volume
 type VolumeConfig struct {
-	Name        string                      `yaml:"name,omitempty"`
-	Labels      map[string]string           `yaml:"labels,omitempty"`
-	Annotations map[string]string           `yaml:"annotations,omitempty"`
-	Size        string                      `yaml:"size,omitempty"`
-	ConfigMap   map[interface{}]interface{} `yaml:"configMap,omitempty"`
-	Secret      map[interface{}]interface{} `yaml:"secret,omitempty"`
+	Name        string                 `yaml:"name,omitempty"`
+	Labels      map[string]string      `yaml:"labels,omitempty"`
+	Annotations map[string]string      `yaml:"annotations,omitempty"`
+	Size        string                 `yaml:"size,omitempty"`
+	ConfigMap   map[string]interface{} `yaml:"configMap,omitempty"`
+	Secret      map[string]interface{} `yaml:"secret,omitempty"`
 }
 
 // ServiceConfig holds the configuration of a component service
@@ -222,22 +225,22 @@ type RollingUpdateConfig struct {
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
-	Chart            *ChartConfig                `yaml:"chart,omitempty"`
-	ComponentChart   *bool                       `yaml:"componentChart,omitempty"`
-	Values           map[interface{}]interface{} `yaml:"values,omitempty"`
-	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty"`
-	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty"`
-	Wait             bool                        `yaml:"wait,omitempty"`
-	Timeout          *int64                      `yaml:"timeout,omitempty"`
-	Force            bool                        `yaml:"force,omitempty"`
-	Atomic           bool                        `yaml:"atomic,omitempty"`
-	CleanupOnFail    bool                        `yaml:"cleanupOnFail,omitempty"`
-	Recreate         bool                        `yaml:"recreate,omitempty"`
-	DisableHooks     bool                        `yaml:"disableHooks,omitempty"`
-	Driver           string                      `yaml:"driver,omitempty"`
-	Path             string                      `yaml:"path,omitempty"`
-	V2               bool                        `yaml:"v2,omitempty"`
-	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty"`
+	Chart            *ChartConfig           `yaml:"chart,omitempty"`
+	ComponentChart   *bool                  `yaml:"componentChart,omitempty"`
+	Values           map[string]interface{} `yaml:"values,omitempty"`
+	ValuesFiles      []string               `yaml:"valuesFiles,omitempty"`
+	ReplaceImageTags *bool                  `yaml:"replaceImageTags,omitempty"`
+	Wait             bool                   `yaml:"wait,omitempty"`
+	Timeout          *int64                 `yaml:"timeout,omitempty"`
+	Force            bool                   `yaml:"force,omitempty"`
+	Atomic           bool                   `yaml:"atomic,omitempty"`
+	CleanupOnFail    bool                   `yaml:"cleanupOnFail,omitempty"`
+	Recreate         bool                   `yaml:"recreate,omitempty"`
+	DisableHooks     bool                   `yaml:"disableHooks,omitempty"`
+	Driver           string                 `yaml:"driver,omitempty"`
+	Path             string                 `yaml:"path,omitempty"`
+	V2               bool                   `yaml:"v2,omitempty"`
+	TillerNamespace  string                 `yaml:"tillerNamespace,omitempty"`
 }
 
 // ChartConfig defines the helm chart options

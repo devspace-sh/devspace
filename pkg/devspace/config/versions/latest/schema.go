@@ -2,11 +2,13 @@ package latest
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
+	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
+	"strings"
 )
 
 // Version is the current api version
-const Version string = "v1beta11"
+const Version string = "v2beta1"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -22,46 +24,85 @@ func New() config.Config {
 func NewRaw() *Config {
 	return &Config{
 		Version: Version,
-		Images:  map[string]*ImageConfig{},
+		Images:  map[string]*Image{},
 	}
+}
+
+func (c *Config) Clone() *Config {
+	out, _ := yaml.Marshal(c)
+	n := &Config{}
+	_ = yaml.Unmarshal(out, n)
+	return n
 }
 
 // Config defines the configuration
 type Config struct {
 	// Version holds the config version
-	Version string `yaml:"version"`
+	Version string `yaml:"version" json:"version"`
+
+	// Name specifies the name of the DevSpace project
+	Name string `yaml:"name" json:"name"`
+
+	// Pipelines are the pipelines to execute
+	Pipelines map[string]*Pipeline `yaml:"pipelines,omitempty" json:"pipelines,omitempty"`
+
+	// Imports merges specified config files into this one
+	Imports []Import `yaml:"imports,omitempty" json:"imports,omitempty"`
+
+	// Functions are bash functions that can be used within pipelines
+	Functions map[string]string `yaml:"functions,omitempty" json:"functions,omitempty"`
 
 	// Require defines what DevSpace, plugins and command versions are needed to use this config
 	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
 
 	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
-	Vars []*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Vars map[string]*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
 	// during devspace dev or devspace deploy
-	PullSecrets []*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+	PullSecrets map[string]*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
 
 	// Images holds configuration of how devspace should build images
-	Images map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
+	Images map[string]*Image `yaml:"images,omitempty" json:"images,omitempty"`
 
 	// Deployments is an ordered list of deployments to deploy via helm, kustomize or kubectl.
-	Deployments []*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Deployments map[string]*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty"`
 
 	// Dev holds development configuration for the 'devspace dev' command.
-	Dev DevConfig `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Dev map[string]*DevPod `yaml:"dev,omitempty" json:"dev,omitempty"`
+
+	// Commands are custom commands that can be executed via 'devspace run COMMAND'
+	Commands map[string]*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
 	// in the order they are specified.
 	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
 
-	// Commands are custom commands that can be executed via 'devspace run COMMAND'
-	Commands []*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-
 	// Profiles can be used to change the current configuration and change the behavior of devspace
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 
 	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
-	Dependencies []*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Dependencies map[string]*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+// Import specifies the source of the devspace config to merge
+type Import struct {
+	SourceConfig `yaml:",inline" json:",inline"`
+}
+
+// Pipeline defines what DevSpace should do. A pipeline consists of one or more
+// jobs that are run in parallel and can depend on each other. Each job consists
+// of one or more conditional steps that are executed in order.
+type Pipeline struct {
+	// Name of the pipeline, will be filled automatically
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// ContinueOnError will not fail the whole job and pipeline if
+	// a call within the step fails.
+	ContinueOnError bool `yaml:"continueOnError,omitempty" json:"continueOnError,omitempty"`
+
+	// Run is the actual shell command that should be executed during this pipeline
+	Run string `yaml:"run,omitempty" json:"run,omitempty"`
 }
 
 type RequireConfig struct {
@@ -97,8 +138,8 @@ type RequireCommand struct {
 	Version string `yaml:"version,omitempty" json:"version,omitempty"`
 }
 
-// ImageConfig defines the image specification
-type ImageConfig struct {
+// Image defines the image specification
+type Image struct {
 	// Image is the complete image name including registry and repository
 	// for example myregistry.com/mynamespace/myimage
 	Image string `yaml:"image" json:"image"`
@@ -147,23 +188,19 @@ type ImageConfig struct {
 	// This option is ignored for custom builds.
 	RebuildStrategy RebuildStrategy `yaml:"rebuildStrategy,omitempty" json:"rebuildStrategy,omitempty"`
 
-	// Specific build options how to build the specified image
-	Build *BuildConfig `yaml:"build,omitempty" json:"build,omitempty"`
-}
+	// Target is the target that should get used during the build. Only works if the dockerfile supports this
+	Target string `yaml:"target,omitempty" json:"target,omitempty"`
 
-// RebuildStrategy is the type of a image rebuild strategy
-type RebuildStrategy string
+	// Network is the network that should get used to build the image
+	Network string `yaml:"network,omitempty" json:"network,omitempty"`
 
-// List of values that source can take
-const (
-	RebuildStrategyDefault              RebuildStrategy = ""
-	RebuildStrategyAlways               RebuildStrategy = "always"
-	RebuildStrategyIgnoreContextChanges RebuildStrategy = "ignoreContextChanges"
-)
+	// BuildArgs are the build args that should get passed to the build config
+	BuildArgs map[string]*string `yaml:"buildArgs,omitempty" json:"buildArgs,omitempty"`
 
-// BuildConfig defines the build process for an image. Only one of the options below
-// can be specified.
-type BuildConfig struct {
+	// SkipPush will not push the image to a registry if enabled. Only works if docker or buildkit is chosen as
+	// as build method
+	SkipPush bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
+
 	// If docker is specified, DevSpace will build the image using the local docker daemon
 	Docker *DockerConfig `yaml:"docker,omitempty" json:"docker,omitempty"`
 
@@ -176,28 +213,31 @@ type BuildConfig struct {
 	// If custom is specified, DevSpace will build the image with the help of
 	// a custom script.
 	Custom *CustomConfig `yaml:"custom,omitempty" json:"custom,omitempty"`
-
-	// This overrides other options and is able to disable the build for this image.
-	// Useful if you just want to select the image in a sync path or via devspace enter --image
-	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 }
+
+// RebuildStrategy is the type of a image rebuild strategy
+type RebuildStrategy string
+
+// List of values that source can take
+const (
+	RebuildStrategyDefault              RebuildStrategy = "default"
+	RebuildStrategyAlways               RebuildStrategy = "always"
+	RebuildStrategyIgnoreContextChanges RebuildStrategy = "ignoreContextChanges"
+)
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type DockerConfig struct {
-	PreferMinikube  *bool         `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
-	SkipPush        bool          `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
-	DisableFallback *bool         `yaml:"disableFallback,omitempty" json:"disableFallback,omitempty"`
-	UseBuildKit     bool          `yaml:"useBuildKit,omitempty" json:"useBuildKit,omitempty"`
-	UseCLI          bool          `yaml:"useCli,omitempty" json:"useCli,omitempty"`
-	Args            []string      `yaml:"args,omitempty" json:"args,omitempty"`
-	Options         *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
+	PreferMinikube  *bool    `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
+	DisableFallback *bool    `yaml:"disableFallback,omitempty" json:"disableFallback,omitempty"`
+	UseCLI          bool     `yaml:"useCli,omitempty" json:"useCli,omitempty"`
+	Args            []string `yaml:"args,omitempty" json:"args,omitempty"`
+
+	// Deprecated
+	UseBuildKit bool `yaml:"useBuildKit,omitempty" json:"useBuildKit,omitempty"`
 }
 
 // BuildKitConfig tells the DevSpace CLI to
 type BuildKitConfig struct {
-	// If this is true, DevSpace will not push any images
-	SkipPush bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
-
 	// If false, will not try to use the minikube docker daemon to build the image
 	PreferMinikube *bool `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
 
@@ -209,9 +249,6 @@ type BuildKitConfig struct {
 
 	// Override the base command to create a builder and build images. Defaults to ["docker", "buildx"]
 	Command []string `yaml:"command,omitempty" json:"command,omitempty"`
-
-	// Additional build options
-	Options *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
 }
 
 // BuildKitInClusterConfig holds the buildkit builder config
@@ -253,7 +290,7 @@ type BuildKitInClusterConfig struct {
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
 	// if a cache repository should be used. defaults to true
-	Cache *bool `yaml:"cache,omitempty" json:"cache,omitempty"`
+	Cache bool `yaml:"cache,omitempty" json:"cache,omitempty"`
 
 	// the snapshot mode kaniko should use. defaults to time
 	SnapshotMode string `yaml:"snapshotMode,omitempty" json:"snapshotMode,omitempty"`
@@ -306,16 +343,13 @@ type KanikoConfig struct {
 
 	// extra environment variables from configmap or secret that will be added to the build kaniko container
 	// Will populate the env.valueFrom field.
-	EnvFrom map[string]map[interface{}]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
+	EnvFrom map[string]map[string]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
 
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`
 
 	// the resources that should be set on the kaniko pod
 	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
-
-	// other build options that will be passed to the kaniko pod
-	Options *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
 }
 
 // PodResources describes the resources section of the started kaniko pod
@@ -419,16 +453,16 @@ type KanikoAdditionalMountKeyToPath struct {
 
 // CustomConfig tells the DevSpace CLI to build with a custom build script
 type CustomConfig struct {
-	Command  string                `yaml:"command,omitempty" json:"command,omitempty"`
-	Commands []CustomConfigCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
-
-	Args         []string `yaml:"args,omitempty" json:"args,omitempty"`
-	AppendArgs   []string `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
-	ImageFlag    string   `yaml:"imageFlag,omitempty" json:"imageFlag,omitempty"`
-	ImageTagOnly bool     `yaml:"imageTagOnly,omitempty" json:"imageTagOnly,omitempty"`
-	SkipImageArg bool     `yaml:"skipImageArg,omitempty" json:"skipImageArg,omitempty"`
-
+	Command  string   `yaml:"command,omitempty" json:"command,omitempty"`
 	OnChange []string `yaml:"onChange,omitempty" json:"onChange,omitempty"`
+
+	// Depreacted do not use anymore
+	Commands     []CustomConfigCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Args         []string              `yaml:"args,omitempty" json:"args,omitempty"`
+	AppendArgs   []string              `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
+	ImageFlag    string                `yaml:"imageFlag,omitempty" json:"imageFlag,omitempty"`
+	ImageTagOnly bool                  `yaml:"imageTagOnly,omitempty" json:"imageTagOnly,omitempty"`
+	SkipImageArg *bool                 `yaml:"skipImageArg,omitempty" json:"skipImageArg,omitempty"`
 }
 
 // CustomConfigCommand holds the information about a command on a specific operating system
@@ -437,95 +471,87 @@ type CustomConfigCommand struct {
 	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
 }
 
-// BuildOptions defines options for building Docker images
-type BuildOptions struct {
-	Target    string             `yaml:"target,omitempty" json:"target,omitempty"`
-	Network   string             `yaml:"network,omitempty" json:"network,omitempty"`
-	BuildArgs map[string]*string `yaml:"buildArgs,omitempty" json:"buildArgs,omitempty"`
-}
-
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
-	Name       string         `yaml:"name" json:"name"`
-	Namespace  string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Disabled   bool           `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-	Helm       *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
-	Kubectl    *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
-	Concurrent bool           `yaml:"concurrent,omitempty" json:"concurrent,omitempty"`
+	Name            string         `yaml:"name" json:"name"`
+	Namespace       string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	UpdateImageTags bool           `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
+	Helm            *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
+	Kubectl         *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
 }
 
 // ComponentConfig holds the component information
 type ComponentConfig struct {
-	InitContainers      []*ContainerConfig            `yaml:"initContainers,omitempty" json:"initContainers,omitempty"`
-	Containers          []*ContainerConfig            `yaml:"containers,omitempty" json:"containers,omitempty"`
-	Labels              map[string]string             `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Annotations         map[string]string             `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	Volumes             []*VolumeConfig               `yaml:"volumes,omitempty" json:"volumes,omitempty"`
-	Service             *ServiceConfig                `yaml:"service,omitempty" json:"service,omitempty"`
-	ServiceName         string                        `yaml:"serviceName,omitempty" json:"serviceName,omitempty"`
-	Ingress             *IngressConfig                `yaml:"ingress,omitempty" json:"ingress,omitempty"`
-	Replicas            *int                          `yaml:"replicas,omitempty" json:"replicas,omitempty"`
-	Autoscaling         *AutoScalingConfig            `yaml:"autoScaling,omitempty" json:"autoScaling,omitempty"`
-	RollingUpdate       *RollingUpdateConfig          `yaml:"rollingUpdate,omitempty" json:"rollingUpdate,omitempty"`
-	PullSecrets         []*string                     `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
-	Tolerations         []map[interface{}]interface{} `yaml:"tolerations,omitempty" json:"tolerations,omitempty"`
-	Affinity            map[interface{}]interface{}   `yaml:"affinity,omitempty" json:"affinity,omitempty"`
-	NodeSelector        map[interface{}]interface{}   `yaml:"nodeSelector,omitempty" json:"nodeSelector,omitempty"`
-	NodeName            string                        `yaml:"nodeName,omitempty" json:"nodeName,omitempty"`
-	PodManagementPolicy string                        `yaml:"podManagementPolicy,omitempty" json:"podManagementPolicy,omitempty"`
+	InitContainers      []*ContainerConfig       `yaml:"initContainers,omitempty" json:"initContainers,omitempty"`
+	Containers          []*ContainerConfig       `yaml:"containers,omitempty" json:"containers,omitempty"`
+	Labels              map[string]string        `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations         map[string]string        `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	Volumes             []*VolumeConfig          `yaml:"volumes,omitempty" json:"volumes,omitempty"`
+	Service             *ServiceConfig           `yaml:"service,omitempty" json:"service,omitempty"`
+	ServiceName         string                   `yaml:"serviceName,omitempty" json:"serviceName,omitempty"`
+	Ingress             *IngressConfig           `yaml:"ingress,omitempty" json:"ingress,omitempty"`
+	Replicas            *int                     `yaml:"replicas,omitempty" json:"replicas,omitempty"`
+	Autoscaling         *AutoScalingConfig       `yaml:"autoScaling,omitempty" json:"autoScaling,omitempty"`
+	RollingUpdate       *RollingUpdateConfig     `yaml:"rollingUpdate,omitempty" json:"rollingUpdate,omitempty"`
+	PullSecrets         []*string                `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
+	Tolerations         []map[string]interface{} `yaml:"tolerations,omitempty" json:"tolerations,omitempty"`
+	Affinity            map[string]interface{}   `yaml:"affinity,omitempty" json:"affinity,omitempty"`
+	NodeSelector        map[string]interface{}   `yaml:"nodeSelector,omitempty" json:"nodeSelector,omitempty"`
+	NodeName            string                   `yaml:"nodeName,omitempty" json:"nodeName,omitempty"`
+	PodManagementPolicy string                   `yaml:"podManagementPolicy,omitempty" json:"podManagementPolicy,omitempty"`
 
-	DNSConfig                     map[interface{}]interface{}   `yaml:"dnsConfig,omitempty" json:"dnsConfig,omitempty"`
-	HostAliases                   []map[interface{}]interface{} `yaml:"hostAliases,omitempty" json:"hostAliases,omitempty"`
-	Overhead                      map[interface{}]interface{}   `yaml:"overhead,omitempty" json:"overhead,omitempty"`
-	ReadinessGates                []map[interface{}]interface{} `yaml:"readinessGates,omitempty" json:"readinessGates,omitempty"`
-	SecurityContext               map[interface{}]interface{}   `yaml:"securityContext,omitempty" json:"securityContext,omitempty"`
-	TopologySpreadConstraints     []map[interface{}]interface{} `yaml:"topologySpreadConstraints,omitempty" json:"topologySpreadConstraints,omitempty"`
-	ActiveDeadlineSeconds         *int                          `yaml:"activeDeadlineSeconds,omitempty" json:"activeDeadlineSeconds,omitempty"`
-	AutomountServiceAccountToken  *bool                         `yaml:"automountServiceAccountToken,omitempty" json:"automountServiceAccountToken,omitempty"`
-	DNSPolicy                     *string                       `yaml:"dnsPolicy,omitempty" json:"dnsPolicy,omitempty"`
-	EnableServiceLinks            *bool                         `yaml:"enableServiceLinks,omitempty" json:"enableServiceLinks,omitempty"`
-	HostIPC                       *bool                         `yaml:"hostIPC,omitempty" json:"hostIPC,omitempty"`
-	HostNetwork                   *bool                         `yaml:"hostNetwork,omitempty" json:"hostNetwork,omitempty"`
-	HostPID                       *bool                         `yaml:"hostPID,omitempty" json:"hostPID,omitempty"`
-	Hostname                      *string                       `yaml:"hostname,omitempty" json:"hostname,omitempty"`
-	PreemptionPolicy              *string                       `yaml:"preemptionPolicy,omitempty" json:"preemptionPolicy,omitempty"`
-	Priority                      *int                          `yaml:"priority,omitempty" json:"priority,omitempty"`
-	PriorityClassName             *string                       `yaml:"priorityClassName,omitempty" json:"priorityClassName,omitempty"`
-	RestartPolicy                 *string                       `yaml:"restartPolicy,omitempty" json:"restartPolicy,omitempty"`
-	RuntimeClassName              *string                       `yaml:"runtimeClassName,omitempty" json:"runtimeClassName,omitempty"`
-	SchedulerName                 *string                       `yaml:"schedulerName,omitempty" json:"schedulerName,omitempty"`
-	ServiceAccount                *string                       `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
-	ServiceAccountName            *string                       `yaml:"serviceAccountName,omitempty" json:"serviceAccountName,omitempty"`
-	SetHostnameAsFQDN             *bool                         `yaml:"setHostnameAsFQDN,omitempty" json:"setHostnameAsFQDN,omitempty"`
-	ShareProcessNamespace         *bool                         `yaml:"shareProcessNamespace,omitempty" json:"shareProcessNamespace,omitempty"`
-	Subdomain                     *string                       `yaml:"subdomain,omitempty" json:"subdomain,omitempty"`
-	TerminationGracePeriodSeconds *int                          `yaml:"terminationGracePeriodSeconds,omitempty" json:"terminationGracePeriodSeconds,omitempty"`
-	EphemeralContainers           []map[interface{}]interface{} `yaml:"ephemeralContainers,omitempty" json:"ephemeralContainers,omitempty"`
+	DNSConfig                     map[string]interface{}   `yaml:"dnsConfig,omitempty" json:"dnsConfig,omitempty"`
+	HostAliases                   []map[string]interface{} `yaml:"hostAliases,omitempty" json:"hostAliases,omitempty"`
+	Overhead                      map[string]interface{}   `yaml:"overhead,omitempty" json:"overhead,omitempty"`
+	ReadinessGates                []map[string]interface{} `yaml:"readinessGates,omitempty" json:"readinessGates,omitempty"`
+	SecurityContext               map[string]interface{}   `yaml:"securityContext,omitempty" json:"securityContext,omitempty"`
+	TopologySpreadConstraints     []map[string]interface{} `yaml:"topologySpreadConstraints,omitempty" json:"topologySpreadConstraints,omitempty"`
+	ActiveDeadlineSeconds         *int                     `yaml:"activeDeadlineSeconds,omitempty" json:"activeDeadlineSeconds,omitempty"`
+	AutomountServiceAccountToken  *bool                    `yaml:"automountServiceAccountToken,omitempty" json:"automountServiceAccountToken,omitempty"`
+	DNSPolicy                     *string                  `yaml:"dnsPolicy,omitempty" json:"dnsPolicy,omitempty"`
+	EnableServiceLinks            *bool                    `yaml:"enableServiceLinks,omitempty" json:"enableServiceLinks,omitempty"`
+	HostIPC                       *bool                    `yaml:"hostIPC,omitempty" json:"hostIPC,omitempty"`
+	HostNetwork                   *bool                    `yaml:"hostNetwork,omitempty" json:"hostNetwork,omitempty"`
+	HostPID                       *bool                    `yaml:"hostPID,omitempty" json:"hostPID,omitempty"`
+	Hostname                      *string                  `yaml:"hostname,omitempty" json:"hostname,omitempty"`
+	PreemptionPolicy              *string                  `yaml:"preemptionPolicy,omitempty" json:"preemptionPolicy,omitempty"`
+	Priority                      *int                     `yaml:"priority,omitempty" json:"priority,omitempty"`
+	PriorityClassName             *string                  `yaml:"priorityClassName,omitempty" json:"priorityClassName,omitempty"`
+	RestartPolicy                 *string                  `yaml:"restartPolicy,omitempty" json:"restartPolicy,omitempty"`
+	RuntimeClassName              *string                  `yaml:"runtimeClassName,omitempty" json:"runtimeClassName,omitempty"`
+	SchedulerName                 *string                  `yaml:"schedulerName,omitempty" json:"schedulerName,omitempty"`
+	ServiceAccount                *string                  `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
+	ServiceAccountName            *string                  `yaml:"serviceAccountName,omitempty" json:"serviceAccountName,omitempty"`
+	SetHostnameAsFQDN             *bool                    `yaml:"setHostnameAsFQDN,omitempty" json:"setHostnameAsFQDN,omitempty"`
+	ShareProcessNamespace         *bool                    `yaml:"shareProcessNamespace,omitempty" json:"shareProcessNamespace,omitempty"`
+	Subdomain                     *string                  `yaml:"subdomain,omitempty" json:"subdomain,omitempty"`
+	TerminationGracePeriodSeconds *int                     `yaml:"terminationGracePeriodSeconds,omitempty" json:"terminationGracePeriodSeconds,omitempty"`
+	EphemeralContainers           []map[string]interface{} `yaml:"ephemeralContainers,omitempty" json:"ephemeralContainers,omitempty"`
 }
 
 // ContainerConfig holds the configurations of a container
 type ContainerConfig struct {
-	Name                     string                        `yaml:"name,omitempty" json:"name,omitempty"`
-	Image                    string                        `yaml:"image,omitempty" json:"image,omitempty"`
-	Command                  []string                      `yaml:"command,omitempty" json:"command,omitempty"`
-	Args                     []string                      `yaml:"args,omitempty" json:"args,omitempty"`
-	Stdin                    bool                          `yaml:"stdin,omitempty" json:"stdin,omitempty"`
-	TTY                      bool                          `yaml:"tty,omitempty" json:"tty,omitempty"`
-	Env                      []map[interface{}]interface{} `yaml:"env,omitempty" json:"env,omitempty"`
-	EnvFrom                  []map[interface{}]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
-	VolumeMounts             []*VolumeMountConfig          `yaml:"volumeMounts,omitempty" json:"volumeMounts,omitempty"`
-	Resources                map[interface{}]interface{}   `yaml:"resources,omitempty" json:"resources,omitempty"`
-	LivenessProbe            map[interface{}]interface{}   `yaml:"livenessProbe,omitempty" json:"livenessProbe,omitempty"`
-	ReadinessProbe           map[interface{}]interface{}   `yaml:"readinessProbe,omitempty" json:"readinessProbe,omitempty"`
-	StartupProbe             map[interface{}]interface{}   `yaml:"startupProbe,omitempty" json:"startupProbe,omitempty"`
-	SecurityContext          map[interface{}]interface{}   `yaml:"securityContext,omitempty" json:"securityContext,omitempty"`
-	Lifecycle                map[interface{}]interface{}   `yaml:"lifecycle,omitempty" json:"lifecycle,omitempty"`
-	VolumeDevices            []map[interface{}]interface{} `yaml:"volumeDevices,omitempty" json:"volumeDevices,omitempty"`
-	ImagePullPolicy          string                        `yaml:"imagePullPolicy,omitempty" json:"imagePullPolicy,omitempty"`
-	WorkingDir               string                        `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
-	StdinOnce                bool                          `yaml:"stdinOnce,omitempty" json:"stdinOnce,omitempty"`
-	TerminationMessagePath   string                        `yaml:"terminationMessagePath,omitempty" json:"terminationMessagePath,omitempty"`
-	TerminationMessagePolicy string                        `yaml:"terminationMessagePolicy,omitempty" json:"terminationMessagePolicy,omitempty"`
+	Name                     string                   `yaml:"name,omitempty" json:"name,omitempty"`
+	Image                    string                   `yaml:"image,omitempty" json:"image,omitempty"`
+	Command                  []string                 `yaml:"command,omitempty" json:"command,omitempty"`
+	Args                     []string                 `yaml:"args,omitempty" json:"args,omitempty"`
+	Stdin                    bool                     `yaml:"stdin,omitempty" json:"stdin,omitempty"`
+	TTY                      bool                     `yaml:"tty,omitempty" json:"tty,omitempty"`
+	Env                      []map[string]interface{} `yaml:"env,omitempty" json:"env,omitempty"`
+	EnvFrom                  []map[string]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
+	VolumeMounts             []*VolumeMountConfig     `yaml:"volumeMounts,omitempty" json:"volumeMounts,omitempty"`
+	Resources                map[string]interface{}   `yaml:"resources,omitempty" json:"resources,omitempty"`
+	LivenessProbe            map[string]interface{}   `yaml:"livenessProbe,omitempty" json:"livenessProbe,omitempty"`
+	ReadinessProbe           map[string]interface{}   `yaml:"readinessProbe,omitempty" json:"readinessProbe,omitempty"`
+	StartupProbe             map[string]interface{}   `yaml:"startupProbe,omitempty" json:"startupProbe,omitempty"`
+	SecurityContext          map[string]interface{}   `yaml:"securityContext,omitempty" json:"securityContext,omitempty"`
+	Lifecycle                map[string]interface{}   `yaml:"lifecycle,omitempty" json:"lifecycle,omitempty"`
+	VolumeDevices            []map[string]interface{} `yaml:"volumeDevices,omitempty" json:"volumeDevices,omitempty"`
+	ImagePullPolicy          string                   `yaml:"imagePullPolicy,omitempty" json:"imagePullPolicy,omitempty"`
+	WorkingDir               string                   `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
+	StdinOnce                bool                     `yaml:"stdinOnce,omitempty" json:"stdinOnce,omitempty"`
+	TerminationMessagePath   string                   `yaml:"terminationMessagePath,omitempty" json:"terminationMessagePath,omitempty"`
+	TerminationMessagePolicy string                   `yaml:"terminationMessagePolicy,omitempty" json:"terminationMessagePolicy,omitempty"`
 }
 
 // VolumeMountConfig holds the configuration for a specific mount path
@@ -544,39 +570,39 @@ type VolumeMountVolumeConfig struct {
 
 // VolumeConfig holds the configuration for a specific volume
 type VolumeConfig struct {
-	Name             string                      `yaml:"name,omitempty" json:"name,omitempty"`
-	Labels           map[string]string           `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Annotations      map[string]string           `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	Size             string                      `yaml:"size,omitempty" json:"size,omitempty"`
-	ConfigMap        map[interface{}]interface{} `yaml:"configMap,omitempty" json:"configMap,omitempty"`
-	Secret           map[interface{}]interface{} `yaml:"secret,omitempty" json:"secret,omitempty"`
-	EmptyDir         map[interface{}]interface{} `yaml:"emptyDir,omitempty" json:"emptyDir,omitempty"`
-	StorageClassName string                      `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
-	VolumeMode       string                      `yaml:"volumeMode,omitempty" json:"volumeMode,omitempty"`
-	VolumeName       string                      `yaml:"volumeName,omitempty" json:"volumeName,omitempty"`
-	DataSource       map[interface{}]interface{} `yaml:"dataSource,omitempty" json:"dataSource,omitempty"`
-	AccessModes      []string                    `yaml:"accessModes,omitempty" json:"accessModes,omitempty"`
+	Name             string                 `yaml:"name,omitempty" json:"name,omitempty"`
+	Labels           map[string]string      `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations      map[string]string      `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	Size             string                 `yaml:"size,omitempty" json:"size,omitempty"`
+	ConfigMap        map[string]interface{} `yaml:"configMap,omitempty" json:"configMap,omitempty"`
+	Secret           map[string]interface{} `yaml:"secret,omitempty" json:"secret,omitempty"`
+	EmptyDir         map[string]interface{} `yaml:"emptyDir,omitempty" json:"emptyDir,omitempty"`
+	StorageClassName string                 `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
+	VolumeMode       string                 `yaml:"volumeMode,omitempty" json:"volumeMode,omitempty"`
+	VolumeName       string                 `yaml:"volumeName,omitempty" json:"volumeName,omitempty"`
+	DataSource       map[string]interface{} `yaml:"dataSource,omitempty" json:"dataSource,omitempty"`
+	AccessModes      []string               `yaml:"accessModes,omitempty" json:"accessModes,omitempty"`
 }
 
 // ServiceConfig holds the configuration of a component service
 type ServiceConfig struct {
-	Name                     string                      `yaml:"name,omitempty" json:"name,omitempty"`
-	Labels                   map[string]string           `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Annotations              map[string]string           `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	Type                     string                      `yaml:"type,omitempty" json:"type,omitempty"`
-	Ports                    []*ServicePortConfig        `yaml:"ports,omitempty" json:"ports,omitempty"`
-	ExternalIPs              []string                    `yaml:"externalIPs,omitempty" json:"externalIPs,omitempty"`
-	ClusterIP                string                      `yaml:"clusterIP,omitempty" json:"clusterIP,omitempty"`
-	ExternalName             string                      `yaml:"externalName,omitempty" json:"externalName,omitempty"`
-	ExternalTrafficPolicy    string                      `yaml:"externalTrafficPolicy,omitempty" json:"externalTrafficPolicy,omitempty"`
-	HealthCheckNodePort      int                         `yaml:"healthCheckNodePort,omitempty" json:"healthCheckNodePort,omitempty"`
-	IPFamily                 *string                     `yaml:"ipFamily,omitempty" json:"ipFamily,omitempty"`
-	LoadBalancerIP           *string                     `yaml:"loadBalancerIP,omitempty" json:"loadBalancerIP,omitempty"`
-	LoadBalancerSourceRanges []string                    `yaml:"loadBalancerSourceRanges,omitempty" json:"loadBalancerSourceRanges,omitempty"`
-	PublishNotReadyAddresses bool                        `yaml:"publishNotReadyAddresses,omitempty" json:"publishNotReadyAddresses,omitempty"`
-	SessionAffinity          map[interface{}]interface{} `yaml:"sessionAffinity,omitempty" json:"sessionAffinity,omitempty"`
-	SessionAffinityConfig    map[interface{}]interface{} `yaml:"sessionAffinityConfig,omitempty" json:"sessionAffinityConfig,omitempty"`
-	TopologyKeys             []string                    `yaml:"topologyKeys,omitempty" json:"topologyKeys,omitempty"`
+	Name                     string                 `yaml:"name,omitempty" json:"name,omitempty"`
+	Labels                   map[string]string      `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations              map[string]string      `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	Type                     string                 `yaml:"type,omitempty" json:"type,omitempty"`
+	Ports                    []*ServicePortConfig   `yaml:"ports,omitempty" json:"ports,omitempty"`
+	ExternalIPs              []string               `yaml:"externalIPs,omitempty" json:"externalIPs,omitempty"`
+	ClusterIP                string                 `yaml:"clusterIP,omitempty" json:"clusterIP,omitempty"`
+	ExternalName             string                 `yaml:"externalName,omitempty" json:"externalName,omitempty"`
+	ExternalTrafficPolicy    string                 `yaml:"externalTrafficPolicy,omitempty" json:"externalTrafficPolicy,omitempty"`
+	HealthCheckNodePort      int                    `yaml:"healthCheckNodePort,omitempty" json:"healthCheckNodePort,omitempty"`
+	IPFamily                 *string                `yaml:"ipFamily,omitempty" json:"ipFamily,omitempty"`
+	LoadBalancerIP           *string                `yaml:"loadBalancerIP,omitempty" json:"loadBalancerIP,omitempty"`
+	LoadBalancerSourceRanges []string               `yaml:"loadBalancerSourceRanges,omitempty" json:"loadBalancerSourceRanges,omitempty"`
+	PublishNotReadyAddresses bool                   `yaml:"publishNotReadyAddresses,omitempty" json:"publishNotReadyAddresses,omitempty"`
+	SessionAffinity          map[string]interface{} `yaml:"sessionAffinity,omitempty" json:"sessionAffinity,omitempty"`
+	SessionAffinityConfig    map[string]interface{} `yaml:"sessionAffinityConfig,omitempty" json:"sessionAffinityConfig,omitempty"`
+	TopologyKeys             []string               `yaml:"topologyKeys,omitempty" json:"topologyKeys,omitempty"`
 }
 
 // ServicePortConfig holds the port configuration of a component service
@@ -589,15 +615,15 @@ type ServicePortConfig struct {
 
 // IngressConfig holds the configuration of a component ingress
 type IngressConfig struct {
-	Name             string                      `yaml:"name,omitempty" json:"name,omitempty"`
-	Labels           map[string]string           `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Annotations      map[string]string           `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	TLS              string                      `yaml:"tls,omitempty" json:"tls,omitempty"`
-	TLSClusterIssuer string                      `yaml:"tlsClusterIssuer,omitempty" json:"tlsClusterIssuer,omitempty"`
-	IngressClass     string                      `yaml:"ingressClass,omitempty" json:"ingressClass,omitempty"`
-	Rules            []*IngressRuleConfig        `yaml:"rules,omitempty" json:"rules,omitempty"`
-	Backend          map[interface{}]interface{} `yaml:"backend,omitempty" json:"backend,omitempty"`
-	IngressClassName *string                     `yaml:"ingressClassName,omitempty" json:"ingressClassName,omitempty"`
+	Name             string                 `yaml:"name,omitempty" json:"name,omitempty"`
+	Labels           map[string]string      `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations      map[string]string      `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	TLS              string                 `yaml:"tls,omitempty" json:"tls,omitempty"`
+	TLSClusterIssuer string                 `yaml:"tlsClusterIssuer,omitempty" json:"tlsClusterIssuer,omitempty"`
+	IngressClass     string                 `yaml:"ingressClass,omitempty" json:"ingressClass,omitempty"`
+	Rules            []*IngressRuleConfig   `yaml:"rules,omitempty" json:"rules,omitempty"`
+	Backend          map[string]interface{} `yaml:"backend,omitempty" json:"backend,omitempty"`
+	IngressClassName *string                `yaml:"ingressClassName,omitempty" json:"ingressClassName,omitempty"`
 }
 
 // IngressRuleConfig holds the port configuration of a component service
@@ -634,25 +660,11 @@ type RollingUpdateConfig struct {
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
-	Chart            *ChartConfig                `yaml:"chart,omitempty" json:"chart,omitempty"`
-	ComponentChart   *bool                       `yaml:"componentChart,omitempty" json:"componentChart,omitempty"`
-	Values           map[interface{}]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
-	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
-	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
-	Wait             bool                        `yaml:"wait,omitempty" json:"wait,omitempty"`
-	DisplayOutput    bool                        `yaml:"displayOutput,omitempty" json:"output,omitempty"`
-	Timeout          string                      `yaml:"timeout,omitempty" json:"timeout,omitempty"`
-	Force            bool                        `yaml:"force,omitempty" json:"force,omitempty"`
-	Atomic           bool                        `yaml:"atomic,omitempty" json:"atomic,omitempty"`
-	CleanupOnFail    bool                        `yaml:"cleanupOnFail,omitempty" json:"cleanupOnFail,omitempty"`
-	Recreate         bool                        `yaml:"recreate,omitempty" json:"recreate,omitempty"`
-	DisableHooks     bool                        `yaml:"disableHooks,omitempty" json:"disableHooks,omitempty"`
-	Driver           string                      `yaml:"driver,omitempty" json:"driver,omitempty"`
-	Path             string                      `yaml:"path,omitempty" json:"path,omitempty"`
-	V2               bool                        `yaml:"v2,omitempty" json:"v2,omitempty"`
-	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty" json:"tillerNamespace,omitempty"`
+	Chart         *ChartConfig           `yaml:"chart,omitempty" json:"chart,omitempty"`
+	Values        map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
+	ValuesFiles   []string               `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
+	DisplayOutput bool                   `yaml:"displayOutput,omitempty" json:"output,omitempty"`
 
-	DeleteArgs   []string `yaml:"deleteArgs,omitempty" json:"deleteArgs,omitempty"`
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
 	UpgradeArgs  []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
 	FetchArgs    []string `yaml:"fetchArgs,omitempty" json:"fetchArgs,omitempty"`
@@ -660,68 +672,86 @@ type HelmConfig struct {
 
 // ChartConfig defines the helm chart options
 type ChartConfig struct {
-	Name     string     `yaml:"name,omitempty" json:"name,omitempty"`
-	Version  string     `yaml:"version,omitempty" json:"version,omitempty"`
-	RepoURL  string     `yaml:"repo,omitempty" json:"repo,omitempty"`
-	Username string     `yaml:"username,omitempty" json:"username,omitempty"`
-	Password string     `yaml:"password,omitempty" json:"password,omitempty"`
-	Git      *GitSource `yaml:"git,omitempty" json:"git,omitempty"`
-}
-
-//GitSource defines the git repository options
-type GitSource struct {
-	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
-	CloneArgs []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty"`
-	Branch    string   `yaml:"branch,omitempty" json:"branch,omitempty"`
-	Tag       string   `yaml:"tag,omitempty" json:"tag,omitempty"`
-	Revision  string   `yaml:"revision,omitempty" json:"revision,omitempty"`
-	SubPath   string   `yaml:"subPath,omitempty" json:"subPath,omitempty"`
+	Source   *SourceConfig `yaml:",inline" json:",inline"`
+	Name     string        `yaml:"name,omitempty" json:"name,omitempty"`
+	Version  string        `yaml:"version,omitempty" json:"version,omitempty"`
+	RepoURL  string        `yaml:"repo,omitempty" json:"repo,omitempty"`
+	Username string        `yaml:"username,omitempty" json:"username,omitempty"`
+	Password string        `yaml:"password,omitempty" json:"password,omitempty"`
 }
 
 // KubectlConfig defines the specific kubectl options used during deployment
 type KubectlConfig struct {
-	Manifests        []string `yaml:"manifests,omitempty" json:"manifests,omitempty"`
-	Kustomize        *bool    `yaml:"kustomize,omitempty" json:"kustomize,omitempty"`
-	KustomizeArgs    []string `yaml:"kustomizeArgs,omitempty" json:"kustomizeArgs,omitempty"`
-	ReplaceImageTags *bool    `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
-	DeleteArgs       []string `yaml:"deleteArgs,omitempty" json:"deleteArgs,omitempty"`
-	CreateArgs       []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
-	ApplyArgs        []string `yaml:"applyArgs,omitempty" json:"applyArgs,omitempty"`
-	CmdPath          string   `yaml:"cmdPath,omitempty" json:"cmdPath,omitempty"`
+	Manifests     []string `yaml:"manifests,omitempty" json:"manifests,omitempty"`
+	Kustomize     *bool    `yaml:"kustomize,omitempty" json:"kustomize,omitempty"`
+	KustomizeArgs []string `yaml:"kustomizeArgs,omitempty" json:"kustomizeArgs,omitempty"`
+	CreateArgs    []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
+	ApplyArgs     []string `yaml:"applyArgs,omitempty" json:"applyArgs,omitempty"`
+
+	KustomizeBinaryPath string `yaml:"kustomizeBinaryPath,omitempty" json:"kustomizeBinaryPath,omitempty"`
+	KubectlBinaryPath   string `yaml:"kubectlBinaryPath,omitempty" json:"kubectlBinaryPath,omitempty"`
 }
 
-// DevConfig defines the devspace deployment
-type DevConfig struct {
-	Ports      []*PortForwardingConfig `yaml:"ports,omitempty" json:"ports,omitempty"`
-	Open       []*OpenConfig           `yaml:"open,omitempty" json:"open,omitempty"`
-	Sync       []*SyncConfig           `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
-	Logs       *LogsConfig             `yaml:"logs,omitempty" json:"logs,omitempty"`
-	AutoReload *AutoReloadConfig       `yaml:"autoReload,omitempty" json:"autoReload,omitempty"`
-	Terminal   *Terminal               `yaml:"terminal,omitempty" json:"terminal,omitempty"`
-
-	// Replace pods will replace the selected target pod/container with a new image and optionally apply
-	// pod patches.
-	ReplacePods []*ReplacePod `yaml:"replacePods,omitempty" json:"replacePods,omitempty"`
-
-	// DEPRECATED: Only used for backwards compatibility with older config versions
-	InteractiveEnabled bool `yaml:"deprecatedInteractiveEnabled,omitempty" json:"deprecatedInteractiveEnabled,omitempty"`
-	// DEPRECATED: Only used for backwards compatibility with older config versions
-	InteractiveImages []*InteractiveImageConfig `yaml:"deprecatedInteractiveImages,omitempty" json:"deprecatedInteractiveImages,omitempty"`
-}
-
-// ReplacePod will replace the selected target pod/container with a new image and optionally apply
-// pod patches.
-type ReplacePod struct {
+type DevPod struct {
 	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
-	ReplaceImage       string              `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
-	PersistPaths       []PersistentPath    `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
-	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
+	// Open holds the open config for urls
+	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
+
+	Ports              []*PortMapping      `yaml:"ports,omitempty" json:"ports,omitempty"`
 	Patches            []*PatchConfig      `yaml:"patches,omitempty" json:"patches,omitempty"`
+	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
+
+	// Container Options
+	DevContainer `yaml:",inline" json:",inline"`
+	Containers   map[string]*DevContainer `yaml:"containers,omitempty" json:"containers,omitempty"`
+}
+
+type DevContainer struct {
+	Container string `yaml:"container,omitempty" json:"container,omitempty"`
+
+	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
+	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
+
+	ReversePorts         []*PortMapping   `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty"`
+	Command              []string         `yaml:"command,omitempty" json:"command,omitempty"`
+	Args                 []string         `yaml:"args,omitempty" json:"args,omitempty"`
+	WorkingDir           string           `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
+	Resources            *PodResources    `yaml:"resources,omitempty" json:"resources,omitempty"`
+	Env                  []EnvVar         `yaml:"env,omitempty" json:"env,omitempty"`
+	RestartHelperPath    string           `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
+	DisableRestartHelper bool             `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
+	Terminal             *Terminal        `yaml:"terminal,omitempty" json:"terminal,omitempty"`
+	Logs                 *Logs            `yaml:"logs,omitempty" json:"logs,omitempty"`
+	Attach               *Attach          `yaml:"attach,omitempty" json:"attach,omitempty"`
+	DevImage             string           `yaml:"devImage,omitempty" json:"devImage,omitempty"`
+	PersistPaths         []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
+	Sync                 []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
+}
+
+type EnvVar struct {
+	Name  string `yaml:"name" json:"name"`
+	Value string `yaml:"value" json:"value"`
+}
+
+type Attach struct {
+	// If enabled is false, DevSpace will not attach to the pod
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// If this is true, DevSpace will not replace the pod
+	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`
+	DisableTTY     bool `yaml:"disableTTY,omitempty" json:"disableTTY,omitempty"`
+}
+
+type Logs struct {
+	// If enabled is false, DevSpace will not print any logs
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// LastLines is the amount of lines to print of the running container initially
+	LastLines int64 `yaml:"lastLines,omitempty" json:"lastLines,omitempty"`
 }
 
 type PersistenceOptions struct {
@@ -733,11 +763,10 @@ type PersistenceOptions struct {
 }
 
 type PersistentPath struct {
-	Path          string `yaml:"path,omitempty" json:"path,omitempty"`
-	ContainerName string `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-	VolumePath    string `yaml:"volumePath,omitempty" json:"volumePath,omitempty"`
-	ReadOnly      bool   `yaml:"readOnly,omitempty" json:"readOnly,omitempty"`
-	SkipPopulate  bool   `yaml:"skipPopulate,omitempty" json:"skipPopulate,omitempty"`
+	Path         string `yaml:"path,omitempty" json:"path,omitempty"`
+	VolumePath   string `yaml:"volumePath,omitempty" json:"volumePath,omitempty"`
+	ReadOnly     bool   `yaml:"readOnly,omitempty" json:"readOnly,omitempty"`
+	SkipPopulate bool   `yaml:"skipPopulate,omitempty" json:"skipPopulate,omitempty"`
 
 	InitContainer *PersistentPathInitContainer `yaml:"initContainer,omitempty" json:"initContainer,omitempty"`
 }
@@ -746,25 +775,9 @@ type PersistentPathInitContainer struct {
 	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
 }
 
-// PortForwardingConfig defines the ports for a port forwarding to a DevSpace
-type PortForwardingConfig struct {
-	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
-	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-
-	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
-	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
-
-	PortMappings        []*PortMapping `yaml:"forward,omitempty" json:"forward,omitempty"`
-	PortMappingsReverse []*PortMapping `yaml:"reverseForward,omitempty" json:"reverseForward,omitempty"`
-}
-
 // PortMapping defines the ports for a PortMapping
 type PortMapping struct {
-	LocalPort   *int   `yaml:"port" json:"port"`
-	RemotePort  *int   `yaml:"remotePort,omitempty" json:"remotePort,omitempty"`
+	Port        string `yaml:"port" json:"port"`
 	BindAddress string `yaml:"bindAddress,omitempty" json:"bindAddress,omitempty"`
 }
 
@@ -775,13 +788,9 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
-	Name                 string               `yaml:"name,omitempty" json:"name,omitempty"`
-	ImageSelector        string               `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	LabelSelector        map[string]string    `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName        string               `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-	Namespace            string               `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	LocalSubPath         string               `yaml:"localSubPath,omitempty" json:"localSubPath,omitempty"`
-	ContainerPath        string               `yaml:"containerPath,omitempty" json:"containerPath,omitempty"`
+	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty"`
+
+	Path                 string               `yaml:"path,omitempty" json:"path,omitempty"`
 	ExcludePaths         []string             `yaml:"excludePaths,omitempty" json:"excludePaths,omitempty"`
 	ExcludeFile          string               `yaml:"excludeFile,omitempty" json:"excludeFile,omitempty"`
 	DownloadExcludePaths []string             `yaml:"downloadExcludePaths,omitempty" json:"downloadExcludePaths,omitempty"`
@@ -791,22 +800,16 @@ type SyncConfig struct {
 	InitialSync          InitialSyncStrategy  `yaml:"initialSync,omitempty" json:"initialSync,omitempty"`
 	InitialSyncCompareBy InitialSyncCompareBy `yaml:"initialSyncCompareBy,omitempty" json:"initialSyncCompareBy,omitempty"`
 
-	DisableDownload *bool `yaml:"disableDownload,omitempty" json:"disableDownload,omitempty"`
-	DisableUpload   *bool `yaml:"disableUpload,omitempty" json:"disableUpload,omitempty"`
+	DisableDownload bool `yaml:"disableDownload,omitempty" json:"disableDownload,omitempty"`
+	DisableUpload   bool `yaml:"disableUpload,omitempty" json:"disableUpload,omitempty"`
+	NoWatch         bool `yaml:"noWatch,omitempty" json:"noWatch,omitempty"`
 
 	Polling bool `yaml:"polling,omitempty" json:"polling,omitempty"`
 
 	WaitInitialSync *bool            `yaml:"waitInitialSync,omitempty" json:"waitInitialSync,omitempty"`
 	BandwidthLimits *BandwidthLimits `yaml:"bandwidthLimits,omitempty" json:"bandwidthLimits,omitempty"`
 
-	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
-	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
-
-	// If greater zero, describes the amount of milliseconds to wait after each checked 100 files
-	ThrottleChangeDetection *int64 `yaml:"throttleChangeDetection,omitempty" json:"throttleChangeDetection,omitempty"`
-
-	OnUpload   *SyncOnUpload   `yaml:"onUpload,omitempty" json:"onUpload,omitempty"`
-	OnDownload *SyncOnDownload `yaml:"onDownload,omitempty" json:"onDownload,omitempty"`
+	OnUpload *SyncOnUpload `yaml:"onUpload,omitempty" json:"onUpload,omitempty"`
 }
 
 type ContainerArchitecture string
@@ -898,22 +901,6 @@ type BandwidthLimits struct {
 	Upload   *int64 `yaml:"upload,omitempty" json:"upload,omitempty"`
 }
 
-// LogsConfig specifies the logs options for devspace dev
-type LogsConfig struct {
-	Disabled  *bool          `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-	ShowLast  *int           `yaml:"showLast,omitempty" json:"showLast,omitempty"`
-	Sync      *bool          `yaml:"sync,omitempty" json:"sync,omitempty"`
-	Selectors []LogsSelector `yaml:"selectors,omitempty" json:"selectors,omitempty"`
-}
-
-// LogsSelector holds configuration how to select a log target
-type LogsSelector struct {
-	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-}
-
 // AutoReloadConfig defines the struct for auto reloading devspace with additional paths
 type AutoReloadConfig struct {
 	Paths       []string `yaml:"paths,omitempty" json:"paths,omitempty"`
@@ -930,15 +917,15 @@ type InteractiveImageConfig struct {
 
 // Terminal describes the terminal options
 type Terminal struct {
-	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Command       []string          `yaml:"command,omitempty" json:"command,omitempty"`
-	WorkDir       string            `yaml:"workDir,omitempty" json:"workDir,omitempty"`
+	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+	WorkDir string `yaml:"workDir,omitempty" json:"workDir,omitempty"`
 
-	// If disabled is true, DevSpace will not use the terminal
-	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	// If enabled is true, DevSpace will not use the terminal
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// Needed to turn pod replace off
+	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`
+	DisableScreen  bool `yaml:"disableScreen,omitempty" json:"disableScreen,omitempty"`
 }
 
 // PodPatch will patch a pod's owning ReplicaSet, Deployment or StatefulSet with the givens patches or image
@@ -957,44 +944,15 @@ type PodPatch struct {
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	Name                     string          `yaml:"name" json:"name"`
-	Source                   *SourceConfig   `yaml:"source" json:"source"`
-	Disabled                 bool            `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-	Profile                  string          `yaml:"profile,omitempty" json:"profile,omitempty"`
-	Profiles                 []string        `yaml:"profiles,omitempty" json:"profiles,omitempty"`
-	ProfileParents           []string        `yaml:"profileParents,omitempty" json:"profileParents,omitempty"`
-	DisableProfileActivation bool            `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
-	Vars                     []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
-	OverwriteVars            bool            `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
-	SkipBuild                bool            `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
-	IgnoreDependencies       bool            `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
-	Namespace                string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Dev                      *DependencyDev  `yaml:"dev,omitempty" json:"dev,omitempty"`
-}
-
-// DependencyDev specifies which parts of the dependency dev config should
-// be reused
-type DependencyDev struct {
-	// If ports is true, DevSpace will forward and reverse forward the
-	// specified ports in the dependency's dev.ports config.
-	Ports bool `yaml:"ports,omitempty" json:"ports,omitempty"`
-
-	// If sync is true, DevSpace will run the specified sync paths
-	// from the dependency's dev.sync config
-	Sync bool `yaml:"sync,omitempty" json:"sync,omitempty"`
-
-	// If replacePods is true, DevSpace will replace the specified pods
-	// from the dependency's dev.replacePods config
-	ReplacePods bool `yaml:"replacePods,omitempty" json:"replacePods,omitempty"`
-}
-
-// DependencyVar holds an override value for a config variable
-type DependencyVar struct {
-	// Name is the name of the variable
-	Name string `yaml:"name,omitempty" json:"name,omitempty"`
-
-	// Value is the value to override
-	Value string `yaml:"value,omitempty" json:"value,omitempty"`
+	Source                   *SourceConfig     `yaml:",inline" json:",inline"`
+	Name                     string            `yaml:"name" json:"name"`
+	Pipeline                 string            `yaml:"pipeline,omitempty" json:"pipeline,omitempty"`
+	Profiles                 []string          `yaml:"profiles,omitempty" json:"profiles,omitempty"`
+	DisableProfileActivation bool              `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
+	Vars                     map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
+	OverwriteVars            bool              `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
+	IgnoreDependencies       bool              `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
+	Namespace                string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 }
 
 // SourceConfig defines the dependency source
@@ -1002,11 +960,11 @@ type SourceConfig struct {
 	Git            string   `yaml:"git,omitempty" json:"git,omitempty"`
 	CloneArgs      []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty"`
 	DisableShallow bool     `yaml:"disableShallow,omitempty" json:"disableShallow,omitempty"`
+	DisablePull    bool     `yaml:"disablePull,omitempty" json:"disablePull,omitempty"`
 	SubPath        string   `yaml:"subPath,omitempty" json:"subPath,omitempty"`
 	Branch         string   `yaml:"branch,omitempty" json:"branch,omitempty"`
 	Tag            string   `yaml:"tag,omitempty" json:"tag,omitempty"`
 	Revision       string   `yaml:"revision,omitempty" json:"revision,omitempty"`
-	ConfigName     string   `yaml:"configName,omitempty" json:"configName,omitempty"`
 
 	Path string `yaml:"path,omitempty" json:"path,omitempty"`
 }
@@ -1106,6 +1064,9 @@ type CommandConfig struct {
 	// Command is the command that should be executed. For example: 'echo 123'
 	Command string `yaml:"command" json:"command"`
 
+	// Internal commands are not show in list and are usable through run_command
+	Internal bool `yaml:"internal,omitempty" json:"internal,omitempty"`
+
 	// Args are optional and if defined, command is not executed within a shell
 	// and rather directly.
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
@@ -1150,6 +1111,23 @@ type Variable struct {
 	Commands []VariableCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
 }
 
+func (v *Variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// try string next
+	varString := ""
+	err := unmarshal(&varString)
+	if err != nil {
+		return unmarshal(v)
+	}
+	if strings.HasPrefix(varString, "$(") && strings.HasSuffix(varString, ")") {
+		varString = strings.TrimPrefix(strings.TrimSuffix(varString, ")"), "$(")
+		v.Command = varString
+		return nil
+	}
+
+	v.Value = varString
+	return nil
+}
+
 type VariableCommand struct {
 	Command         string   `yaml:"command,omitempty" json:"command,omitempty"`
 	Args            []string `yaml:"args,omitempty" json:"args,omitempty"`
@@ -1184,14 +1162,14 @@ type ProfileConfig struct {
 
 // ProfileConfigStructure is the base structure used to validate profiles
 type ProfileConfigStructure struct {
-	Vars         []interface{}               `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	PullSecrets  []interface{}               `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
-	Images       map[interface{}]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments  []interface{}               `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Dev          map[interface{}]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
-	Hooks        []interface{}               `yaml:"hooks,omitempty" json:"hooks,omitempty"`
-	Commands     []interface{}               `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Dependencies []interface{}               `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Vars         []interface{}          `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	PullSecrets  []interface{}          `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+	Images       map[string]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
+	Deployments  []interface{}          `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Dev          map[string]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Hooks        []interface{}          `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+	Commands     []interface{}          `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Dependencies []interface{}          `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // ProfileParent defines where to load the profile from
@@ -1221,8 +1199,8 @@ type PatchConfig struct {
 
 // PullSecretConfig defines a pull secret that should be created by DevSpace
 type PullSecretConfig struct {
-	// If true, the pull secret will be not created
-	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	// Name is the pull secret name to deploy
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// The registry to create the image pull secret for.
 	// e.g. gcr.io

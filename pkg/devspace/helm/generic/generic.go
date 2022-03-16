@@ -1,17 +1,18 @@
 package generic
 
 import (
+	"context"
 	"fmt"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/downloader"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/extract"
@@ -22,41 +23,31 @@ import (
 
 const stableChartRepo = "https://charts.helm.sh/stable"
 
-type VersionedClient interface {
-	IsInCluster() bool
-	KubeContext() string
-	Command() commands.Command
-}
-
 type Client interface {
-	Exec(args []string, helmConfig *latest.HelmConfig) ([]byte, error)
-	FetchChart(helmConfig *latest.HelmConfig) (bool, string, error)
-	WriteValues(values map[interface{}]interface{}) (string, error)
+	Exec(ctx *devspacecontext.Context, args []string) ([]byte, error)
+	FetchChart(ctx *devspacecontext.Context, helmConfig *latest.HelmConfig) (bool, string, error)
+	WriteValues(values map[string]interface{}) (string, error)
 }
 
-func NewGenericClient(versionedClient VersionedClient, log log.Logger) Client {
+func NewGenericClient(command commands.Command, log log.Logger) Client {
 	c := &client{
-		log:             log,
-		exec:            command.NewStreamCommand,
-		versionedClient: versionedClient,
-		extract:         extract.NewExtractor(),
+		log:     log,
+		extract: extract.NewExtractor(),
 	}
 
-	c.downloader = downloader.NewDownloader(versionedClient.Command(), log)
+	c.downloader = downloader.NewDownloader(command, log)
 	return c
 }
 
 type client struct {
-	exec            command.Exec
-	log             log.Logger
-	versionedClient VersionedClient
-	extract         extract.Extract
-	downloader      downloader.Downloader
+	log        log.Logger
+	extract    extract.Extract
+	downloader downloader.Downloader
 
 	helmPath string
 }
 
-func (c *client) WriteValues(values map[interface{}]interface{}) (string, error) {
+func (c *client) WriteValues(values map[string]interface{}) (string, error) {
 	f, err := ioutil.TempFile("", "")
 	if err != nil {
 		return "", err
@@ -75,55 +66,39 @@ func (c *client) WriteValues(values map[interface{}]interface{}) (string, error)
 	return f.Name(), nil
 }
 
-func (c *client) Exec(args []string, helmConfig *latest.HelmConfig) ([]byte, error) {
-	err := c.ensureHelmBinary(helmConfig)
+func (c *client) Exec(ctx *devspacecontext.Context, args []string) ([]byte, error) {
+	err := c.ensureHelmBinary(ctx.Context)
 	if err != nil {
 		return nil, err
 	}
 
-	if !c.versionedClient.IsInCluster() {
-		args = append(args, "--kube-context", c.versionedClient.KubeContext())
+	if !ctx.KubeClient.IsInCluster() {
+		args = append(args, "--kube-context", ctx.KubeClient.CurrentContext())
 	}
 
 	// disable log for list, because it prints same command multiple times if we've multiple deployments.
 	if args[0] != "list" {
 		c.log.Infof("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
 	}
-	result, err := c.exec(c.helmPath, args).Output()
+	result, err := command.Output(ctx.Context, ctx.WorkingDir, c.helmPath, args...)
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("error during '%s %s': %s%s => %v", c.helmPath, strings.Join(args, " "), string(result), string(exitError.Stderr), err)
-		}
-
-		return nil, fmt.Errorf("error during '%s %s': %s => %v", c.helmPath, strings.Join(args, " "), string(result), err)
+		return nil, fmt.Errorf("%s %v", string(result), err)
 	}
 
 	return result, nil
 }
 
-func (c *client) ensureHelmBinary(helmConfig *latest.HelmConfig) error {
+func (c *client) ensureHelmBinary(ctx context.Context) error {
 	if c.helmPath != "" {
 		return nil
 	}
 
-	if helmConfig != nil && helmConfig.Path != "" {
-		valid, err := c.versionedClient.Command().IsValid(helmConfig.Path)
-		if err != nil {
-			return err
-		} else if !valid {
-			return fmt.Errorf("helm binary at '%s' is not a valid helm v2 binary", helmConfig.Path)
-		}
-
-		c.helmPath = helmConfig.Path
-		return nil
-	}
-
 	var err error
-	c.helmPath, err = c.downloader.EnsureCommand()
+	c.helmPath, err = c.downloader.EnsureCommand(ctx)
 	return err
 }
 
-func (c *client) FetchChart(helmConfig *latest.HelmConfig) (bool, string, error) {
+func (c *client) FetchChart(ctx *devspacecontext.Context, helmConfig *latest.HelmConfig) (bool, string, error) {
 	chartName, chartRepo := ChartNameAndRepo(helmConfig)
 	if chartRepo == "" {
 		return false, chartName, nil
@@ -144,12 +119,10 @@ func (c *client) FetchChart(helmConfig *latest.HelmConfig) (bool, string, error)
 	if helmConfig.Chart.Password != "" {
 		args = append(args, "--password", helmConfig.Chart.Password)
 	}
-	if !helmConfig.V2 {
-		args = append(args, "--repository-config=''")
-	}
+	args = append(args, "--repository-config=''")
 
 	args = append(args, helmConfig.FetchArgs...)
-	out, err := c.Exec(args, helmConfig)
+	out, err := c.Exec(ctx, args)
 	if err != nil {
 		_ = os.RemoveAll(tempFolder)
 		return false, "", fmt.Errorf("error running helm fetch: %s => %v", string(out), err)

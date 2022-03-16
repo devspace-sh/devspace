@@ -2,47 +2,44 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/port"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Server is listens on a given port for the ui functionality
 type Server struct {
 	Server *http.Server
-	log    log.Logger
 }
 
 // DefaultPort is the default port the ui server will listen to
 const DefaultPort = 8090
 
 // NewServer creates a new server from the given parameters
-func NewServer(config config.Config, dependencies []types.Dependency, host string, ignoreDownloadError bool, defaultContext, defaultNamespace string, forcePort *int, log log.Logger) (*Server, error) {
+func NewServer(ctx *devspacecontext.Context, host string, ignoreDownloadError bool, forcePort *int, pipeline types.Pipeline) (*Server, error) {
 	path, err := downloadUI()
 	if err != nil {
 		if !ignoreDownloadError {
 			return nil, errors.Wrap(err, "download ui")
 		}
 
-		log.Warnf("Couldn't download ui: %v", err)
+		ctx.Log.Warnf("Couldn't download ui: %v", err)
 	}
 
 	// Find an open port
@@ -73,7 +70,7 @@ func NewServer(config config.Config, dependencies []types.Dependency, host strin
 	}
 
 	// Create handler
-	handler, err := newHandler(config, dependencies, defaultContext, defaultNamespace, path, log)
+	handler, err := newHandler(ctx, path, pipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +83,6 @@ func NewServer(config config.Config, dependencies []types.Dependency, host strin
 			// WriteTimeout: 10 * time.Second,
 			// IdleTimeout:  60 * time.Second,
 		},
-		log: log,
 	}, nil
 }
 
@@ -96,17 +92,12 @@ func (s *Server) ListenAndServe() error {
 }
 
 type handler struct {
-	config       config.Config
-	dependencies []types.Dependency
+	ctx      *devspacecontext.Context
+	pipeline types.Pipeline
 
-	defaultContext   string
-	defaultNamespace string
-	rawConfig        map[interface{}]interface{}
 	kubeContexts     map[string]string
-	workingDirectory string
 	analyticsEnabled bool
 	path             string
-	log              log.Logger
 	mux              *http.ServeMux
 
 	clientCache      map[string]kubectl.Client
@@ -127,7 +118,7 @@ type forward struct {
 	podUUID string
 }
 
-func newHandler(config config.Config, dependencies []types.Dependency, defaultContext, defaultNamespace, path string, log log.Logger) (*handler, error) { // Get kube config
+func newHandler(ctx *devspacecontext.Context, path string, pipeline types.Pipeline) (*handler, error) { // Get kube config
 	kubeConfig, err := kubeconfig.NewLoader().LoadConfig().RawConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "load kube config")
@@ -143,35 +134,22 @@ func newHandler(config config.Config, dependencies []types.Dependency, defaultCo
 		kubeContexts[name] = namespace
 	}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, errors.Wrap(err, "get working directory")
-	}
-
 	handler := &handler{
+		ctx:                  ctx,
+		pipeline:             pipeline,
 		mux:                  http.NewServeMux(),
 		path:                 path,
-		defaultContext:       defaultContext,
-		defaultNamespace:     defaultNamespace,
 		kubeContexts:         kubeContexts,
-		workingDirectory:     cwd,
-		log:                  log,
-		dependencies:         dependencies,
 		ports:                make(map[string]*forward),
 		clientCache:          make(map[string]kubectl.Client),
 		terminalResizeQueues: make(map[string]TerminalResizeQueue),
 	}
-
-	// Load raw config
-	if config != nil {
-		handler.rawConfig = config.Raw()
-		handler.config = config
-	}
-
 	handler.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(path, "index.html"))
 	})
 	handler.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(path, "static")))))
+	handler.mux.HandleFunc("/api/ping", handler.ping)
+	handler.mux.HandleFunc("/api/exclude-dependency", handler.excludeDependency)
 	handler.mux.HandleFunc("/api/version", handler.version)
 	handler.mux.HandleFunc("/api/command", handler.command)
 	handler.mux.HandleFunc("/api/resource", handler.request)
@@ -192,7 +170,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}*/
 
-	if r.Method != "GET" {
+	if r.Method != "GET" && r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -222,9 +200,9 @@ func (h *handler) version(w http.ResponseWriter, r *http.Request) {
 }
 
 type returnConfig struct {
-	Config          *latest.Config              `yaml:"config"`
-	RawConfig       map[interface{}]interface{} `yaml:"rawConfig"`
-	GeneratedConfig *generated.Config           `yaml:"generatedConfig"`
+	Config     *latest.Config         `yaml:"config"`
+	RawConfig  map[string]interface{} `yaml:"rawConfig"`
+	LocalCache localcache.Cache       `yaml:"generatedConfig"`
 
 	AnalyticsEnabled bool              `yaml:"analyticsEnabled"`
 	Profile          string            `yaml:"profile"`
@@ -236,22 +214,20 @@ type returnConfig struct {
 
 func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	profile := ""
-	if h.config != nil {
-		profile = h.config.Generated().GetActiveProfile()
-	}
-
 	retConfig := &returnConfig{
 		AnalyticsEnabled: h.analyticsEnabled,
 		Profile:          profile,
-		RawConfig:        h.rawConfig,
-		WorkingDirectory: h.workingDirectory,
+		WorkingDirectory: h.ctx.WorkingDir,
 		KubeContexts:     h.kubeContexts,
-		KubeContext:      h.defaultContext,
-		KubeNamespace:    h.defaultNamespace,
 	}
-	if h.config != nil {
-		retConfig.Config = h.config.Config()
-		retConfig.GeneratedConfig = h.config.Generated()
+	if h.ctx.Config != nil {
+		retConfig.RawConfig = h.ctx.Config.Raw()
+		retConfig.Config = h.ctx.Config.Config()
+		retConfig.LocalCache = h.ctx.Config.LocalCache()
+	}
+	if h.ctx.KubeClient != nil {
+		retConfig.KubeNamespace = h.ctx.KubeClient.Namespace()
+		retConfig.KubeContext = h.ctx.KubeClient.CurrentContext()
 	}
 
 	s, err := yaml.Marshal(retConfig)
@@ -289,14 +265,14 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	options := &kubectl.GenericRequestOptions{Resource: resource[0]}
 
 	// Kube Context
-	kubeContext := h.defaultContext
+	kubeContext := h.ctx.KubeClient.CurrentContext()
 	context, ok := r.URL.Query()["context"]
 	if ok && len(context) == 1 && context[0] != "" {
 		kubeContext = context[0]
 	}
 
 	// Namespace
-	kubeNamespace := h.defaultNamespace
+	kubeNamespace := h.ctx.KubeClient.Namespace()
 	namespace, ok := r.URL.Query()["namespace"]
 	if ok && len(namespace) == 1 && namespace[0] != "" {
 		kubeNamespace = namespace[0]
@@ -324,16 +300,16 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	// check client cache
 	client, err := h.getClientFromCache(kubeContext, kubeNamespace)
 	if err != nil {
-		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Do the request
-	out, err := client.GenericRequest(options)
+	out, err := client.GenericRequest(r.Context(), options)
 	if err != nil {
 		if strings.Index(err.Error(), "request: unknown") != 0 {
-			h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+			h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
 		}
 
 		http.Error(w, err.Error(), http.StatusInternalServerError)

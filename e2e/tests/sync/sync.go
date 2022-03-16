@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -71,7 +72,7 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace: ns,
 				Debug:     true,
 			},
-			ContainerPath: "/test_sync",
+			Path:          ".:/test_sync",
 			NoWatch:       true,
 			ImageSelector: "busybox",
 		}
@@ -89,6 +90,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// rerun sync command
+		syncCmd.Ctx = nil
 		err = syncCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -122,7 +124,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// interrupt chan for the sync command
-		interrupt, stop := framework.InterruptChan()
+		cancelCtx, stop := context.WithCancel(context.Background())
 		defer stop()
 
 		// sync with watch
@@ -132,11 +134,11 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace: ns,
 			},
 			ImageSelector: "node:13.14-alpine",
-			ContainerPath: "/app",
+			Path:          ".:/app",
 			UploadOnly:    true,
 			Polling:       true,
 			Wait:          true,
-			Interrupt:     interrupt,
+			Ctx:           cancelCtx,
 		}
 
 		// start the command
@@ -182,8 +184,8 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// interrupt chan for the dev command
-		interrupt, stop := framework.InterruptChan()
-		defer stop()
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
 		// create a new dev command
 		devCmd := &cmd.DevCmd{
@@ -191,9 +193,7 @@ var _ = DevSpaceDescribe("sync", func() {
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Portforwarding: true,
-			Sync:           true,
-			Interrupt:      interrupt,
+			Ctx: cancelCtx,
 		}
 
 		// start the command
@@ -202,7 +202,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd.Run(f, nil)
+			err = devCmd.Run(f)
 			framework.ExpectNoError(err)
 		}()
 
@@ -263,7 +263,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// stop command
-		stop()
+		cancel()
 
 		// wait for the command to finish
 		waitGroup.Wait()
@@ -293,7 +293,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// interrupt chan for the sync command
-		interrupt, stop := framework.InterruptChan()
+		cancelCtx, stop := context.WithCancel(context.Background())
 		defer stop()
 
 		// sync with watch
@@ -303,7 +303,7 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace:  ns,
 				ConfigPath: "watch.yaml",
 			},
-			Interrupt: interrupt,
+			Ctx: cancelCtx,
 		}
 
 		// start the command
@@ -408,7 +408,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// sync with --container and --container-path
-		interrupt, stop := framework.InterruptChan()
+		cancelCtx, stop := context.WithCancel(context.Background())
 		defer stop()
 
 		syncCmd := &cmd.SyncCmd{
@@ -417,9 +417,9 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace:  ns,
 				ConfigPath: "devspace.yaml",
 			},
-			Container:     "container2",
-			ContainerPath: "/app2",
-			Interrupt:     interrupt,
+			Container: "container2",
+			Path:      ".:/app2",
+			Ctx:       cancelCtx,
 		}
 
 		// start the command
@@ -429,7 +429,9 @@ var _ = DevSpaceDescribe("sync", func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
 			err = syncCmd.Run(f)
-			framework.ExpectNoError(err)
+			if err != nil && err != context.Canceled {
+				framework.ExpectNoError(err)
+			}
 		}()
 
 		// wait until files were synced
@@ -471,7 +473,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
-		interrupt, stop := framework.InterruptChan()
+		cancelCtx, stop := context.WithCancel(context.Background())
 		defer stop()
 
 		// sync command
@@ -481,7 +483,8 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace:  ns,
 				ConfigPath: "devspace.yaml",
 			},
-			Interrupt: interrupt,
+			Wait: true,
+			Ctx:  cancelCtx,
 		}
 
 		// start the command

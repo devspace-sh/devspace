@@ -2,16 +2,14 @@ package custom
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/util/shell"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/sirupsen/logrus"
 	"io"
-	"path/filepath"
 	"strings"
 
 	"github.com/bmatcuk/doublestar"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/hash"
@@ -19,7 +17,7 @@ import (
 
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -28,30 +26,23 @@ var (
 
 // Builder holds all the relevant information for a custom build
 type Builder struct {
-	imageConf *latest.ImageConfig
-
+	imageConf       *latest.Image
 	imageConfigName string
 	imageTags       []string
-
-	config       config.Config
-	dependencies []types.Dependency
 }
 
 // NewBuilder creates a new custom builder
-func NewBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, config config.Config, dependencies []types.Dependency) *Builder {
+func NewBuilder(imageConfigName string, imageConf *latest.Image, imageTags []string) *Builder {
 	return &Builder{
 		imageConfigName: imageConfigName,
 		imageConf:       imageConf,
 		imageTags:       imageTags,
-
-		config:       config,
-		dependencies: dependencies,
 	}
 }
 
 // ShouldRebuild implements interface
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log logpkg.Logger) (bool, error) {
-	if b.imageConf.Build.Custom.OnChange == nil || len(b.imageConf.Build.Custom.OnChange) == 0 {
+func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool) (bool, error) {
+	if b.imageConf.Custom.OnChange == nil || len(b.imageConf.Custom.OnChange) == 0 {
 		return true, nil
 	}
 
@@ -64,8 +55,8 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool,
 
 	// Loop over on change globs
 	customFilesHash := ""
-	for _, pattern := range b.imageConf.Build.Custom.OnChange {
-		files, err := doublestar.Glob(pattern)
+	for _, pattern := range b.imageConf.Custom.OnChange {
+		files, err := doublestar.Glob(ctx.ResolvePath(pattern))
 		if err != nil {
 			return false, err
 		}
@@ -81,48 +72,49 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool,
 	}
 	customFilesHash = hash.String(customFilesHash)
 
-	imageCache := cache.GetImageCache(b.imageConfigName)
+	imageCache, _ := ctx.Config.LocalCache().GetImageCache(b.imageConfigName)
 
 	// only rebuild Docker image when Dockerfile or context has changed since latest build
 	mustRebuild := forceRebuild || b.imageConf.RebuildStrategy == latest.RebuildStrategyAlways || imageCache.Tag == "" || imageCache.ImageConfigHash != imageConfigHash || imageCache.CustomFilesHash != customFilesHash
 
 	imageCache.ImageConfigHash = imageConfigHash
 	imageCache.CustomFilesHash = customFilesHash
+	ctx.Config.LocalCache().SetImageCache(b.imageConfigName, imageCache)
 
 	return mustRebuild, nil
 }
 
 // Build implements interface
-func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
+func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	// Build arguments
 	args := []string{}
 
 	// resolve command
 	if len(b.imageTags) > 0 {
 		key := fmt.Sprintf("images.%s", b.imageConfigName)
-		b.config.SetRuntimeVariable(key, b.imageConf.Image+":"+b.imageTags[0])
-		b.config.SetRuntimeVariable(key+".image", b.imageConf.Image)
-		b.config.SetRuntimeVariable(key+".tag", b.imageTags[0])
+		ctx.Config.SetRuntimeVariable(key, b.imageConf.Image+":"+b.imageTags[0])
+		ctx.Config.SetRuntimeVariable(key+".image", b.imageConf.Image)
+		ctx.Config.SetRuntimeVariable(key+".tag", b.imageTags[0])
 	}
-	
+
 	// loop over args
-	for i := range b.imageConf.Build.Custom.Args {
-		resolvedArg, err := runtime.NewRuntimeResolver(false).FillRuntimeVariablesAsString(b.imageConf.Build.Custom.Args[i], b.config, b.dependencies)
+	for i := range b.imageConf.Custom.Args {
+		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, b.imageConf.Custom.Args[i], ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return err
 		}
-		
+
 		args = append(args, resolvedArg)
 	}
 
 	// add image arg
-	if !b.imageConf.Build.Custom.SkipImageArg {
+	if b.imageConf.Custom.SkipImageArg == nil || !*b.imageConf.Custom.SkipImageArg {
 		for _, tag := range b.imageTags {
-			if b.imageConf.Build.Custom.ImageFlag != "" {
-				args = append(args, b.imageConf.Build.Custom.ImageFlag)
+			if b.imageConf.Custom.ImageFlag != "" {
+				args = append(args, b.imageConf.Custom.ImageFlag)
 			}
 
-			if !b.imageConf.Build.Custom.ImageTagOnly {
+			if !b.imageConf.Custom.ImageTagOnly {
 				args = append(args, b.imageConf.Image+":"+tag)
 			} else {
 				args = append(args, tag)
@@ -131,8 +123,8 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 	}
 
 	// append the rest
-	for i := range b.imageConf.Build.Custom.AppendArgs {
-		resolvedArg, err := runtime.NewRuntimeResolver(false).FillRuntimeVariablesAsString(b.imageConf.Build.Custom.AppendArgs[i], b.config, b.dependencies)
+	for i := range b.imageConf.Custom.AppendArgs {
+		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, b.imageConf.Custom.AppendArgs[i], ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return err
 		}
@@ -141,8 +133,8 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 	}
 
 	// get the command
-	commandPath := b.imageConf.Build.Custom.Command
-	for _, c := range b.imageConf.Build.Custom.Commands {
+	commandPath := b.imageConf.Custom.Command
+	for _, c := range b.imageConf.Custom.Commands {
 		if !command.ShouldExecuteOnOS(c.OperatingSystem) {
 			continue
 		}
@@ -155,33 +147,33 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 	}
 
 	// resolve command and args
-	commandPath, err := runtime.NewRuntimeResolver(false).FillRuntimeVariablesAsString(commandPath, b.config, b.dependencies)
+	commandPath, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, commandPath, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
 
 	// Determine output writer
-	var writer io.Writer
-	if log == logpkg.GetInstance() {
-		writer = stdout
+	var writer io.WriteCloser
+	if ctx.Log == logpkg.GetInstance() {
+		writer = logpkg.WithNopCloser(stdout)
 	} else {
-		writer = log
+		writer = ctx.Log.Writer(logrus.InfoLevel, false)
 	}
+	defer writer.Close()
 
-	log.Infof("Build %s:%s with custom command '%s %s'", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "))
-
+	ctx.Log.Infof("Build %s:%s with custom command '%s %s'", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "))
 	if len(args) == 0 {
-		err = shell.ExecuteShellCommand(commandPath, args, filepath.Dir(b.config.Path()), writer, writer, nil)
+		err = engine.ExecuteSimpleShellCommand(ctx.Context, ctx.WorkingDir, writer, writer, nil, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}
 	} else {
-		err = command.NewStreamCommand(commandPath, args).Run(writer, writer, nil)
+		err = command.Command(ctx.Context, ctx.WorkingDir, writer, writer, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}
 	}
 
-	log.Done("Done processing image '" + b.imageConf.Image + "'")
+	ctx.Log.Done("Done processing image '" + b.imageConf.Image + "'")
 	return nil
 }

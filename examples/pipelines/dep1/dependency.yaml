@@ -1,0 +1,22 @@
+version: v2beta1
+name: dependency
+
+commands:
+  - name: dev
+    command: |-
+      echo 123
+      #devspace dev --config dependency.yaml -n test
+
+pipelines:
+  dev:
+    steps:
+      - run: |-
+          # Deploy test here
+          create_deployments test2 --set helm.componentChart=true \
+                                   --set helm.values.containers[0].image=nginx
+          
+          # Start development mode for test here
+          start_dev test --set imageSelector=nginx \
+                         --set forward[0].port=8080 \
+                         --set forward[0].containerPort=80 \
+                         --set terminal.command=sh

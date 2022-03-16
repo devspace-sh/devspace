@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -48,12 +49,12 @@ func (i *installer) DownloadBinary(metadataPath, version, binaryPath, outFile st
 	}
 
 	defer os.RemoveAll(tempDir)
-	repo, err := git.NewGitCLIRepository(tempDir)
+	repo, err := git.NewGitCLIRepository(context.Background(), tempDir)
 	if err != nil {
 		return err
 	}
 
-	err = repo.Clone(git.CloneOptions{
+	err = repo.Clone(context.Background(), git.CloneOptions{
 		URL: metadataPath,
 		Tag: version,
 	})
@@ -120,12 +121,12 @@ func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 	}
 
 	defer os.RemoveAll(tempDir)
-	repo, err := git.NewGitCLIRepository(tempDir)
+	repo, err := git.NewGitCLIRepository(context.Background(), tempDir)
 	if err != nil {
 		return nil, err
 	}
 
-	err = repo.Clone(git.CloneOptions{
+	err = repo.Clone(context.Background(), git.CloneOptions{
 		URL: path,
 		Tag: version,
 	})

@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -64,7 +65,7 @@ func (cg *DockerfileGenerator) ContainerizeApplication(dockerfilePath string) er
 		return fmt.Errorf("dockerfile at %s already exists", dockerfilePath)
 	}
 
-	cg.log.StartWait("Detecting programming language")
+	cg.log.Info("Detecting programming language...")
 
 	detectedLang := "none"
 	supportedLanguages, err := cg.GetSupportedLanguages()
@@ -83,8 +84,6 @@ func (cg *DockerfileGenerator) ContainerizeApplication(dockerfilePath string) er
 		supportedLanguages = []string{"none"}
 	}
 
-	cg.log.StopWait()
-
 	// Let the user select the language
 	selectedLanguage, err := cg.log.Question(&survey.QuestionOptions{
 		Question:     "Select the programming language of this project",
@@ -95,7 +94,7 @@ func (cg *DockerfileGenerator) ContainerizeApplication(dockerfilePath string) er
 		return err
 	}
 
-	cg.log.WriteString("\n")
+	cg.log.WriteString(logrus.InfoLevel, "\n")
 
 	return cg.CreateDockerfile(selectedLanguage)
 }

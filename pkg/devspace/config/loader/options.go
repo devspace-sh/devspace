@@ -1,33 +1,15 @@
 package loader
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
-
-func OptionsWithGeneratedConfig(generatedConfig *generated.Config) *ConfigOptions {
-	return &ConfigOptions{
-		GeneratedConfig: generatedConfig,
-	}
-}
 
 // ConfigOptions defines options to load the config
 type ConfigOptions struct {
 	Dry bool
 
-	// KubeClient is needed if variables were saved in the namespace
-	KubeClient kubectl.Client `yaml:"-" json:"-"`
+	OverrideName string
 
-	// Optionally passed generated config that is used for loading the config
-	GeneratedConfig *generated.Config
-
-	KubeContext string
-	Namespace   string
-
-	// If the config is loaded from a dependency, this points to the original
-	// path where the base config was loaded from
-	BasePath string
 	// The profile that should be loaded
 	Profiles []string
 	// If the profile parents that are loaded from other sources should be refreshed
@@ -36,16 +18,8 @@ type ConfigOptions struct {
 	DisableProfileActivation bool
 
 	Vars []string
-
-	RestoreVars    bool
-	SaveVars       bool
-	VarsSecretName string
-
-	// can be used for testing
-	GeneratedLoader generated.ConfigLoader `yaml:"-" json:"-"`
 }
 
-// Clone clones the config options
 func (co *ConfigOptions) Clone() (*ConfigOptions, error) {
 	out, err := yaml.Marshal(co)
 	if err != nil {

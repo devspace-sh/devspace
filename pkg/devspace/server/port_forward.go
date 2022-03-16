@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -18,14 +19,14 @@ const maxPort = 40000
 
 func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	// Kube Context
-	kubeContext := h.defaultContext
+	kubeContext := h.ctx.KubeClient.CurrentContext()
 	ctx, ok := r.URL.Query()["context"]
 	if ok && len(ctx) == 1 && ctx[0] != "" {
 		kubeContext = ctx[0]
 	}
 
 	// Namespace
-	kubeNamespace := h.defaultNamespace
+	kubeNamespace := h.ctx.KubeClient.Namespace()
 	namespace, ok := r.URL.Query()["namespace"]
 	if ok && len(namespace) == 1 && namespace[0] != "" {
 		kubeNamespace = namespace[0]
@@ -52,14 +53,14 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	// Create kubectl client
 	client, err := h.getClientFromCache(kubeContext, kubeNamespace)
 	if err != nil {
-		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	pod, err := client.KubeClient().CoreV1().Pods(kubeNamespace).Get(context.TODO(), name[0], metav1.GetOptions{})
 	if err != nil {
-		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -91,19 +92,19 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	errorChan := make(chan error)
 	ports := []string{strconv.Itoa(checkPort) + ":" + targetPort[0]}
 
-	pf, err := client.NewPortForwarder(pod, ports, []string{"127.0.0.1"}, stopChan, readyChan, nil)
+	pf, err := kubectl.NewPortForwarder(client, pod, ports, []string{"127.0.0.1"}, stopChan, readyChan, nil)
 
 	if err != nil {
-		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	go func(key string, port int) {
-		defer h.log.Infof("Stop listening on on %d", port)
-		err := pf.ForwardPorts()
+		defer h.ctx.Log.Infof("Stop listening on on %d", port)
+		err := pf.ForwardPorts(context.TODO())
 		if err != nil {
-			h.log.Warnf("Error forwarding ports: %v", err)
+			h.ctx.Log.Warnf("Error forwarding ports: %v", err)
 		}
 
 		h.portsMutex.Lock()
@@ -126,7 +127,7 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	// Wait till forwarding is ready
 	select {
 	case <-readyChan:
-		h.log.Infof("Port forwarding started on %s", strings.Join(ports, ","))
+		h.ctx.Log.Infof("Port forwarding started on %s", strings.Join(ports, ","))
 		h.ports[key] = &forward{
 			portForwarder:     pf,
 			portForwarderPort: checkPort,
@@ -137,7 +138,7 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(strconv.Itoa(h.ports[key].portForwarderPort)))
 		return
 	case <-time.After(10 * time.Second):
-		h.log.Errorf("Error in %s: %v", r.URL.String(), "Timeout waiting for port forwarding to start")
+		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), "Timeout waiting for port forwarding to start")
 		http.Error(w, "Timeout waiting for port forwarding to start", http.StatusInternalServerError)
 		return
 	}

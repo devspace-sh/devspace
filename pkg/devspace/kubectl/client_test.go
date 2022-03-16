@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	configTesting "github.com/loft-sh/devspace/pkg/util/kubeconfig/testing"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
@@ -149,11 +149,11 @@ func TestCheckKubeContext(t *testing.T) {
 	ns1 := "n1"
 	ns2 := "ns2"
 
-	generatedConfig := &generated.Config{
+	generatedConfig := &localcache.Config{
 		ActiveProfile: "someProfile",
-		Profiles: map[string]*generated.CacheConfig{
+		Profiles: map[string]*localcache.CacheConfig{
 			"someProfile": {
-				LastContext: &generated.LastContextConfig{
+				LastContext: &localcache.LastContextConfig{
 					Context:   context1,
 					Namespace: ns1,
 				},
@@ -227,11 +227,11 @@ func TestCheckKubeContextNamespace(t *testing.T) {
 	ns1 := "n1"
 	ns2 := "ns2"
 
-	generatedConfig := &generated.Config{
+	generatedConfig := &localcache.Config{
 		ActiveProfile: "someProfile",
-		Profiles: map[string]*generated.CacheConfig{
+		Profiles: map[string]*localcache.CacheConfig{
 			"someProfile": {
-				LastContext: &generated.LastContextConfig{
+				LastContext: &localcache.LastContextConfig{
 					Context:   context1,
 					Namespace: ns1,
 				},

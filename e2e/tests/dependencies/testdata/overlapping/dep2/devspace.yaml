@@ -4,9 +4,6 @@ dependencies:
   - name: dep3
     source:
       path: ../dep3
-    vars:
-    - name: NAME
-      value: dep4
 
 hooks:
   - events: ["before:deploy"]

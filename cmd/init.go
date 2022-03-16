@@ -3,6 +3,8 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -15,7 +17,6 @@ import (
 	"github.com/vmware-labs/yaml-jsonpath/pkg/yamlpath"
 	yaml "gopkg.in/yaml.v3"
 
-	"github.com/loft-sh/devspace/pkg/devspace/compose"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -106,7 +107,10 @@ folder. Creates a devspace.yaml with all configuration.
 func (cmd *InitCmd) Run(f factory.Factory) error {
 	// Check if config already exists
 	cmd.log = f.GetLog()
-	configLoader := f.NewConfigLoader("")
+	configLoader, err := f.NewConfigLoader("")
+	if err != nil {
+		return err
+	}
 	configExists := configLoader.Exists()
 	if configExists && !cmd.Reconfigure {
 		cmd.log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
@@ -127,7 +131,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	os.Remove(constants.DefaultVarsPath)
 
 	// Execute plugin hook
-	err := hook.ExecuteHooks(nil, nil, nil, nil, nil, "init")
+	err = hook.ExecuteHooks(nil, nil, "init")
 	if err != nil {
 		return err
 	}
@@ -136,10 +140,10 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	log.PrintLogo()
 
 	// Create config
-	generated, err := configLoader.LoadGenerated(nil)
-
+	localCache, err := localcache.NewCacheLoader().Load(constants.DefaultConfigPath)
 	generateFromDockerCompose := false
-	dockerComposePath := compose.GetDockerComposePath()
+	// TODO: Enable again
+	dockerComposePath := "" // compose.GetDockerComposePath()
 	if dockerComposePath != "" {
 		selectedDockerComposeOption, err := cmd.log.Question(&survey.QuestionOptions{
 			Question:     "Docker Compose configuration detected. Do you want to create a DevSpace configuration based on Docker Compose?",
@@ -157,7 +161,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	}
 
 	if generateFromDockerCompose {
-		composeLoader := compose.NewDockerComposeLoader(dockerComposePath)
+		/*composeLoader := compose.NewDockerComposeLoader(dockerComposePath)
 		if err != nil {
 			return err
 		}
@@ -172,7 +176,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		err = composeLoader.Save(config)
 		if err != nil {
 			return err
-		}
+		}*/
 	} else {
 		config := latest.New().(*latest.Config)
 		if err != nil {
@@ -180,7 +184,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		}
 
 		// Create ConfigureManager
-		configureManager := f.NewConfigureManager(config, generated, cmd.log)
+		configureManager := f.NewConfigureManager(config, localCache, cmd.log)
 
 		// Add deployment and image config
 		deploymentName, err := getDeploymentName()
@@ -217,7 +221,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 
 			if err != nil {
 				if err.Error() != "" {
-					cmd.log.WriteString("\n")
+					cmd.log.WriteString(logrus.InfoLevel, "\n")
 					cmd.log.Errorf("Error: %s", err.Error())
 				}
 			} else {
@@ -273,10 +277,13 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 
 		if config.Images != nil && config.Images[imageName] != nil {
 			// Move full image name to variables
-			config.Vars = append(config.Vars, &latest.Variable{
+			if config.Vars == nil {
+				config.Vars = map[string]*latest.Variable{}
+			}
+			config.Vars[imageVarName] = &latest.Variable{
 				Name:  imageVarName,
 				Value: config.Images[imageName].Image,
-			})
+			}
 
 			// Use variable in images section
 			config.Images[imageName].Image = imageVar
@@ -344,14 +351,14 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		}
 
 		// Save config
-		err = configLoader.Save(config)
+		err = loader.Save(constants.DefaultConfigPath, config)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Save generated
-	err = configLoader.SaveGenerated(generated)
+	err = localCache.Save()
 	if err != nil {
 		return errors.Errorf("Error saving generated file: %v", err)
 	}
@@ -407,7 +414,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		return err
 	}
 
-	cmd.log.WriteString("\n")
+	cmd.log.WriteString(logrus.InfoLevel, "\n")
 	cmd.log.Info("Configuration saved in devspace.yaml - you can make adjustments as needed")
 	cmd.log.Done("Project successfully initialized")
 	cmd.log.Infof("\r         \nYou can now run:\n- `%s` to pick which Kubernetes namespace to work in\n- `%s` to start developing your project in Kubernetes\n- `%s` to deploy your project to Kubernetes\n- `%s` to get a list of available commands", ansi.Color("devspace use namespace", "blue+b"), ansi.Color("devspace dev", "blue+b"), ansi.Color("devspace deploy -p production", "blue+b"), ansi.Color("devspace -h", "blue+b"))
@@ -466,7 +473,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		if port > 0 {
 			localPort := port
 			if localPort < 1024 {
-				cmd.log.WriteString("\n")
+				cmd.log.WriteString(logrus.InfoLevel, "\n")
 				cmd.log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
 
 				portString, err := cmd.log.Question(&survey.QuestionOptions{
@@ -484,13 +491,11 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 			}
 
 			portMapping := latest.PortMapping{
-				LocalPort: &port,
+				Port: fmt.Sprintf("%d", port),
 			}
-
 			if port != localPort {
 				portMapping = latest.PortMapping{
-					LocalPort:  &localPort,
-					RemotePort: &port,
+					Port: fmt.Sprintf("%d:%d", &localPort, &port),
 				}
 			}
 
@@ -498,24 +503,34 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 			portMappings = append(portMappings, &portMapping)
 
 			// Add dev.ports config
-			config.Dev.Ports = []*latest.PortForwardingConfig{
-				{
-					ImageSelector: image,
-					PortMappings:  portMappings,
-				},
+			if config.Dev == nil {
+				config.Dev = map[string]*latest.DevPod{}
 			}
+			if config.Dev["default"] == nil {
+				config.Dev["default"] = &latest.DevPod{
+					Name:          "default",
+					ImageSelector: image,
+				}
+			}
+			config.Dev["default"].Ports = portMappings
 
 			// Add dev.open config
-			config.Dev.Open = []*latest.OpenConfig{
+			config.Dev["default"].Open = []*latest.OpenConfig{
 				{
 					URL: "http://localhost:" + strconv.Itoa(localPort),
 				},
 			}
 		}
 
-		// Specify sync path
-		if config.Dev.Sync == nil {
-			config.Dev.Sync = []*latest.SyncConfig{}
+		// Add sync config
+		if config.Dev == nil {
+			config.Dev = map[string]*latest.DevPod{}
+		}
+		if config.Dev["default"] == nil {
+			config.Dev["default"] = &latest.DevPod{
+				Name:          "default",
+				ImageSelector: image,
+			}
 		}
 
 		dockerignore, err := ioutil.ReadFile(".dockerignore")
@@ -531,7 +546,6 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		}
 
 		syncConfig := &latest.SyncConfig{
-			ImageSelector:      image,
 			UploadExcludePaths: excludePaths,
 			ExcludePaths: []string{
 				".git/",
@@ -585,9 +599,8 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 				_ = os.Chmod(startScriptName, 0777)
 			}
 
-			config.Dev.Terminal = &latest.Terminal{
-				ImageSelector: image,
-				Command:       []string{"./" + startScriptName},
+			config.Dev["default"].Terminal = &latest.Terminal{
+				Command: "./" + startScriptName,
 			}
 
 			replacePodPatches := []*latest.PatchConfig{
@@ -612,16 +625,11 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 				}, replacePodPatches...)
 			}
 
-			config.Dev.ReplacePods = []*latest.ReplacePod{
-				{
-					ImageSelector: image,
-					ReplaceImage:  fmt.Sprintf("loftsh/%s:latest", language),
-					Patches:       replacePodPatches,
-				},
-			}
+			config.Dev["default"].DevImage = fmt.Sprintf("loftsh/%s:latest", language)
+			config.Dev["default"].Patches = replacePodPatches
 		}
 
-		config.Dev.Sync = append(config.Dev.Sync, syncConfig)
+		config.Dev["default"].Sync = append(config.Dev["default"].Sync, syncConfig)
 	}
 
 	return nil
@@ -663,73 +671,49 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) er
 			}
 
 			// If image building is disabled, move it to production profile instead of disabling it
-			if imageConfig.Build != nil && imageConfig.Build.Disabled {
-				imageConfig.AppendDockerfileInstructions = []string{}
-				imageConfig.InjectRestartHelper = false
-				imageConfig.RebuildStrategy = latest.RebuildStrategyDefault
-				imageConfig.Entrypoint = []string{}
+			patchRemoveOp := "remove"
+			patches := []*latest.PatchConfig{}
 
-				if imageConfig.Build.Docker != nil && imageConfig.Build.Docker.Options != nil && imageConfig.Build.Docker.Options.Target != "" {
-					imageConfig.Build.Docker.Options.Target = ""
-				}
-
-				imageConfig.Build.Disabled = false
-				if imageConfig.Build.Docker == nil && imageConfig.Build.BuildKit == nil && imageConfig.Build.Kaniko == nil {
-					imageConfig.Build = nil
-				}
-
-				profile.Merge = &latest.ProfileConfigStructure{
-					Images: map[interface{}]interface{}{
-						imageName: imageConfig,
-					},
-				}
-
-				delete(config.Images, imageName)
-			} else {
-				patchRemoveOp := "remove"
-				patches := []*latest.PatchConfig{}
-
-				if len(imageConfig.AppendDockerfileInstructions) > 0 {
-					patches = append(patches, &latest.PatchConfig{
-						Operation: patchRemoveOp,
-						Path:      "images." + imageName + ".appendDockerfileInstructions",
-					})
-				}
-
-				if imageConfig.InjectRestartHelper {
-					patches = append(patches, &latest.PatchConfig{
-						Operation: patchRemoveOp,
-						Path:      "images." + imageName + ".injectRestartHelper",
-					})
-				}
-
-				if imageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
-					patches = append(patches, &latest.PatchConfig{
-						Operation: patchRemoveOp,
-						Path:      "images." + imageName + ".rebuildStrategy",
-					})
-				}
-
-				if len(imageConfig.Entrypoint) > 0 {
-					patches = append(patches, &latest.PatchConfig{
-						Operation: patchRemoveOp,
-						Path:      "images." + imageName + ".entrypoint",
-					})
-				}
-
-				if imageConfig.Build != nil && imageConfig.Build.Docker != nil && imageConfig.Build.Docker.Options != nil && imageConfig.Build.Docker.Options.Target != "" {
-					patches = append(patches, &latest.PatchConfig{
-						Operation: patchRemoveOp,
-						Path:      "images." + imageName + ".build.docker.options.target",
-					})
-				}
-
-				if len(patches) == 0 {
-					return nil
-				}
-
-				profile.Patches = patches
+			if len(imageConfig.AppendDockerfileInstructions) > 0 {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".appendDockerfileInstructions",
+				})
 			}
+
+			if imageConfig.InjectRestartHelper {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".injectRestartHelper",
+				})
+			}
+
+			if imageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".rebuildStrategy",
+				})
+			}
+
+			if len(imageConfig.Entrypoint) > 0 {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".entrypoint",
+				})
+			}
+
+			if imageConfig.Target != "" {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".build.docker.options.target",
+				})
+			}
+
+			if len(patches) == 0 {
+				return nil
+			}
+
+			profile.Patches = patches
 
 			config.Profiles = append(config.Profiles, profile)
 
@@ -741,9 +725,7 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) er
 func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, error) {
 	// Save temporary file to render it
 	renderPath := loader.ConfigPath("render.yaml")
-	configLoader := loader.NewConfigLoader(renderPath)
-
-	err := configLoader.Save(config)
+	err := loader.Save(renderPath, config)
 	defer os.Remove(renderPath)
 	if err != nil {
 		return "", err

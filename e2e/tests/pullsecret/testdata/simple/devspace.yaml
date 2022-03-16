@@ -1,0 +1,13 @@
+version: v2beta1
+name: pullsecrets
+pullSecrets:
+  test2:
+    registry: ghcr2.io
+    username: my-user2
+    password: my-password2
+    serviceAccounts: ["default"]
+  test:
+    registry: ghcr.io
+    username: my-user
+    password: my-password
+    secret: test-secret

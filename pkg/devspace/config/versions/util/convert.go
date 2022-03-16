@@ -1,6 +1,6 @@
 package util
 
-import yaml "gopkg.in/yaml.v2"
+import yaml "gopkg.in/yaml.v3"
 
 // Convert converts the old object into the new object through json serialization / deserialization
 func Convert(old interface{}, new interface{}) error {

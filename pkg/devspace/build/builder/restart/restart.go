@@ -13,6 +13,10 @@ var LegacyScriptPath = "/" + ScriptName
 // ScriptPath is the absolute path of the restart script in the container
 var ScriptPath = "/.devspace/" + ScriptName
 
+// TouchPath is the absolute path of the touch file that signals initial syncing is done
+// and the container can start
+var TouchPath = "/.devspace/start"
+
 // ScriptContextPath is the absolute path of the restart script in the build context
 var ScriptContextPath = "/.devspace/.devspace/" + ScriptName
 
@@ -28,30 +32,79 @@ const ProcessIDFilePath = "/.devspace/devspace-pid"
 // HelperScript is the content of the restart script in the container
 const HelperScript = `#!/bin/sh
 #
-# A process wrapper script to simulate a container restart. This file was injected with devspace during the build process
+# DevSpace Restart Helper
 #
 set -e
-pid=""
+
+restart=true
+screenSessionName="devspace"
+workDir="$PWD"
+tmpDir="/.devspace"
+screenLogFile="$tmpDir/screenlog.0"
+pidFile="$tmpDir/devspace-pid"
+sidFile="$tmpDir/devspace-sid"
+touchFile="$tmpDir/start"
+
+mkdir -p $tmpDir
+
 trap quit TERM INT
 quit() {
-  if [ -n "$pid" ]; then
-    kill $pid
+  restart=false
+  if [ -f "$pidFile" ]; then
+    pidToKill="$(cat $pidFile)"
+    kill -2 $((0-$pidToKill)) >/dev/null 2>&1
+    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+    kill -15 $((0-$pidToKill)) >/dev/null 2>&1
+    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+    kill -9 $((0-$pidToKill)) >/dev/null 2>&1
+    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+  fi
+
+  if [ -f "$ppidFile" ]; then
+    pidToKill="$(cat $ppidFile)"
+    kill -9 $((0-$pidToKill)) >/dev/null 2>&1
   fi
 }
-while true; do
-  setsid "$@" &
-  pid=$!
-  echo "$pid" > /.devspace/devspace-pid
+
+until [ -f $touchFile ]; do
+     sleep 1
+done
+
+while $restart; do
   set +e
-  wait $pid
-  exit_code=$?
-  if [ -f /.devspace/devspace-pid ]; then
-    rm -f /.devspace/devspace-pid 	
-    printf "\nContainer exited with $exit_code. Will restart in 7 seconds...\n"
-    sleep 7
+  if command -v screen >/dev/null; then
+    rm -f "$screenLogFile"
+    rm -f "$pidFile"
+    rm -f "$sidFile"
+
+    cd "$tmpDir"
+
+    screen -q -L -dmS $screenSessionName sh -c 'echo $$>"'$pidFile'"; echo $PPID>"'$sidFile'"; cd "'$workDir'"; exec "$@"; exit;' _ "$@"
+
+    while [ ! -f "$sidFile" ]; do
+      sleep 0.1
+    done
+    sid="$(cat $sidFile).${screenSessionName}"
+    pid="$(cat $pidFile)"
+
+    screen -q -S "${sid}" -X colon "logfile flush 1^M"
+    tail --pid=$pid -f "$screenLogFile"
+  else
+    setsid "$@" &
+    pid=$!
+    echo "$pid" >"$pidFile"
+    tail --pid=$pid -f /dev/null
   fi
   set -e
-  printf "\n\n############### Restart container ###############\n\n"
+
+  if $restart; then
+    if [ -f "$pidFile" ]; then
+      rm -f "$pidFile"
+      printf "\nContainer exited. Will restart in 7 seconds...\n"
+      sleep 7
+    fi
+    printf "\n\n############### Restart container ###############\n\n"
+  fi
 done
 `
 

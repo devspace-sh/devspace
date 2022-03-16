@@ -2,9 +2,12 @@ package variable
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -12,57 +15,60 @@ import (
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/git"
-	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/mitchellh/go-homedir"
 )
 
 // PredefinedVariableOptions holds the options for a predefined variable to load
 type PredefinedVariableOptions struct {
-	BasePath   string
 	ConfigPath string
-
-	KubeContextFlag  string
-	NamespaceFlag    string
-	KubeConfigLoader kubeconfig.Loader
-
-	Profile string
+	KubeClient kubectl.Client
+	Profile    string
 }
 
 // PredefinedVariableFunction is the definition of a predefined variable
-type PredefinedVariableFunction func(options *PredefinedVariableOptions) (interface{}, error)
+type PredefinedVariableFunction func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error)
 
 // predefinedVars holds all predefined variables that can be used in the config
 var predefinedVars = map[string]PredefinedVariableFunction{
-	"devspace.version": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.name": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+		name, ok := values.NameFrom(ctx)
+		if !ok {
+			return "", nil
+		}
+		return name, nil
+	},
+	"devspace.tempFolder": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+		tempFolder, ok := values.TempFolderFrom(ctx)
+		if !ok {
+			return os.TempDir(), nil
+		}
+		return tempFolder, nil
+	},
+	"devspace.version": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return upgrade.GetVersion(), nil
 	},
-	"devspace.random": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.random": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return randutil.GenerateRandomString(6), nil
 	},
-	"devspace.profile": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.profile": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return options.Profile, nil
 	},
-	"devspace.userHome": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.userHome": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		homeDir, err := homedir.Dir()
 		if err != nil {
 			return nil, err
 		}
 		return homeDir, nil
 	},
-	"devspace.timestamp": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.timestamp": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return strconv.FormatInt(time.Now().Unix(), 10), nil
 	},
-	"devspace.git.branch": func(options *PredefinedVariableOptions) (interface{}, error) {
-		configPath := options.BasePath
-		if configPath == "" {
-			configPath = options.ConfigPath
-		}
-
+	"devspace.git.branch": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+		configPath := options.ConfigPath
 		branch, err := git.GetBranch(filepath.Dir(configPath))
 		if err != nil {
 			return "", fmt.Errorf("error retrieving git branch: %v, but predefined var devspace.git.branch is used", err)
@@ -70,34 +76,28 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		return branch, nil
 	},
-	"devspace.git.commit": func(options *PredefinedVariableOptions) (interface{}, error) {
-		configPath := options.BasePath
-		if configPath == "" {
-			configPath = options.ConfigPath
-		}
-
-		hash, err := git.GetHash(filepath.Dir(configPath))
+	"devspace.git.commit": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+		configPath := options.ConfigPath
+		hash, err := git.GetHash(ctx, filepath.Dir(configPath))
 		if err != nil {
 			return "", fmt.Errorf("no git repository found (%v), but predefined var devspace.git.commit is used", err)
 		}
 
 		return hash[:8], nil
 	},
-	"devspace.context": func(options *PredefinedVariableOptions) (interface{}, error) {
-		_, activeContext, _, _, err := util.NewClientByContext(options.KubeContextFlag, options.NamespaceFlag, false, options.KubeConfigLoader)
-		if err != nil {
-			return "", err
+	"devspace.context": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+		if options.KubeClient == nil {
+			return "", nil
 		}
 
-		return activeContext, nil
+		return options.KubeClient.CurrentContext(), nil
 	},
-	"devspace.namespace": func(options *PredefinedVariableOptions) (interface{}, error) {
-		_, _, activeNamespace, _, err := util.NewClientByContext(options.KubeContextFlag, options.NamespaceFlag, false, options.KubeConfigLoader)
-		if err != nil {
-			return "", err
+	"devspace.namespace": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+		if options.KubeClient == nil {
+			return "", nil
 		}
 
-		return activeNamespace, nil
+		return options.KubeClient.Namespace(), nil
 	},
 }
 
@@ -125,7 +125,7 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 		pluginFolder := p.PluginFolder
 		for _, variable := range p.Vars {
 			v := variable
-			predefinedVars[variable.Name] = func(options *PredefinedVariableOptions) (interface{}, error) {
+			predefinedVars[variable.Name] = func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 				args, err := json.Marshal(os.Args)
 				if err != nil {
 					return "", err
@@ -133,9 +133,7 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 
 				buffer := &bytes.Buffer{}
 				err = plugin.CallPluginExecutable(filepath.Join(pluginFolder, plugin.PluginBinary), v.BaseArgs, map[string]string{
-					plugin.KubeContextFlagEnv:   options.KubeContextFlag,
-					plugin.KubeNamespaceFlagEnv: options.NamespaceFlag,
-					plugin.OsArgsEnv:            string(args),
+					plugin.OsArgsEnv: string(args),
 				}, buffer)
 				if err != nil {
 					return "", fmt.Errorf("executing plugin %s: %s - %v", pluginName, buffer.String(), err)
@@ -149,39 +147,27 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 
 // NewPredefinedVariable creates a new predefined variable for the given name or fails if there
 // is none with the given name
-func NewPredefinedVariable(name string, cache map[string]string, options *PredefinedVariableOptions) (Variable, error) {
+func NewPredefinedVariable(name string, options *PredefinedVariableOptions) (Variable, error) {
 	if _, ok := predefinedVars[name]; !ok {
-		// Load space domain environment variable
-		if strings.HasPrefix(name, "DEVSPACE_SPACE_DOMAIN") {
-			// Check if its in generated config
-			if val, ok := cache[name]; ok {
-				return NewCachedValueVariable(val), nil
-			}
-
-			return NewCachedValueVariable(name), nil
-		}
-
 		return nil, errors.New("predefined variable " + name + " not found")
 	}
 
 	return &predefinedVariable{
 		name:    name,
-		cache:   cache,
 		options: options,
 	}, nil
 }
 
 type predefinedVariable struct {
 	name    string
-	cache   map[string]string
 	options *PredefinedVariableOptions
 }
 
-func (p *predefinedVariable) Load(definition *latest.Variable) (interface{}, error) {
+func (p *predefinedVariable) Load(ctx context.Context, definition *latest.Variable) (interface{}, error) {
 	getVar, ok := predefinedVars[p.name]
 	if !ok {
 		return nil, errors.New("predefined variable " + p.name + " not found")
 	}
 
-	return getVar(p.options)
+	return getVar(ctx, p.options)
 }

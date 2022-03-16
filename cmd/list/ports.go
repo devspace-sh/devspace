@@ -1,13 +1,8 @@
 package list
 
 import (
-	"strconv"
-
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +33,7 @@ Lists the port forwarding configurations
 
 // RunListPort runs the list port command logic
 func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
-	logger := f.GetLog()
+	/*logger := f.GetLog()
 	// Set config root
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(logger)
@@ -103,5 +98,6 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 	}
 
 	log.PrintTable(logger, headerColumnNames, portForwards)
+	return nil*/
 	return nil
 }

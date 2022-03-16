@@ -1,6 +1,7 @@
 package use
 
 import (
+	"fmt"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -34,7 +35,7 @@ devspace use context my-context
 	`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunUseContext(f, cobraCmd, args)
+			return cmd.RunUseContext(f, args)
 		},
 	}
 
@@ -42,7 +43,7 @@ devspace use context my-context
 }
 
 // RunUseContext executes the functionality "devspace use namespace"
-func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *ContextCmd) RunUseContext(f factory.Factory, args []string) error {
 	// Load kube-config
 	log := f.GetLog()
 	kubeLoader := f.NewKubeConfigLoader()
@@ -72,6 +73,12 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 		}
 	}
 
+	// check if context exists
+	_, found := kubeConfig.Contexts[context]
+	if !found {
+		return fmt.Errorf("couldn't find context %s in kube config", context)
+	}
+
 	// Save old context
 	oldContext := kubeConfig.CurrentContext
 
@@ -87,7 +94,11 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 	}
 
 	// clear project kube context
-	err = ClearProjectKubeContext(f.NewConfigLoader(cmd.ConfigPath), cmd.ToConfigOptions(log), log)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
+	err = ClearProjectKubeContext(configLoader, log)
 	if err != nil {
 		return errors.Wrap(err, "clear generated kube context")
 	}
@@ -96,7 +107,7 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 	return nil
 }
 
-func ClearProjectKubeContext(configLoader loader.ConfigLoader, options *loader.ConfigOptions, log log.Logger) error {
+func ClearProjectKubeContext(configLoader loader.ConfigLoader, log log.Logger) error {
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
@@ -105,14 +116,14 @@ func ClearProjectKubeContext(configLoader loader.ConfigLoader, options *loader.C
 	}
 
 	// load config if it exists
-	generatedConfig, err := configLoader.LoadGenerated(options)
+	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
 		return err
 	}
 
 	// update last context
-	generatedConfig.GetActive().LastContext = nil
+	localCache.SetLastContext(nil)
 
 	// save it
-	return configLoader.SaveGenerated(generatedConfig)
+	return localCache.Save()
 }

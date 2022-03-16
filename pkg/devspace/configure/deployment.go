@@ -1,8 +1,12 @@
 package configure
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"path"
@@ -11,7 +15,6 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 )
@@ -56,17 +59,17 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 		splittedPointer = append(splittedPointer, trimmed)
 	}
 
-	m.config.Deployments = append([]*latest.DeploymentConfig{
-		{
-			Name: deploymentName,
-			Kubectl: &latest.KubectlConfig{
-				Manifests: splittedPointer,
-			},
+	if m.config.Deployments == nil {
+		m.config.Deployments = map[string]*latest.DeploymentConfig{}
+	}
+	m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
+		Name: deploymentName,
+		Kubectl: &latest.KubectlConfig{
+			Manifests: splittedPointer,
 		},
-	}, m.config.Deployments...)
-
+	}
 	if isKustomization {
-		m.config.Deployments[0].Kubectl.Kustomize = ptr.Bool(isKustomization)
+		m.config.Deployments[deploymentName].Kubectl.Kustomize = ptr.Bool(isKustomization)
 	}
 
 	return nil
@@ -77,7 +80,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 	for {
 		helmConfig := &latest.HelmConfig{
 			Chart: &latest.ChartConfig{},
-			Values: map[interface{}]interface{}{
+			Values: map[string]interface{}{
 				"someChartValue": "",
 			},
 		}
@@ -128,7 +131,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 
 			stat, err := os.Stat(path.Join(localChartPathRel, "Chart.yaml"))
 			if err != nil || stat.IsDir() {
-				m.log.WriteString("\n")
+				m.log.WriteString(logrus.InfoLevel, "\n")
 				m.log.Errorf("Local path `%s` is not a Helm chart (Chart.yaml missing)", localChartPathRel)
 				continue
 			}
@@ -216,13 +219,16 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 							helmConfig.Chart.Username = fmt.Sprintf("${%s}", usernameVar)
 							helmConfig.Chart.Password = fmt.Sprintf("${%s}", passwordVar)
 
-							m.config.Vars = append(m.config.Vars, &latest.Variable{
+							if m.config.Vars == nil {
+								m.config.Vars = map[string]*latest.Variable{}
+							}
+							m.config.Vars[passwordVar] = &latest.Variable{
 								Name:     passwordVar,
 								Password: true,
-							})
+							}
 
-							m.generated.Vars[usernameVar] = username
-							m.generated.Vars[passwordVar] = password
+							m.localCache.SetVar(usernameVar, username)
+							m.localCache.SetVar(passwordVar, password)
 						}
 
 						break ChartRepoLoop
@@ -257,12 +263,12 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 
 				gitCommand := fmt.Sprintf("if [ -d '%s/.git' ]; then cd \"%s\" && git pull origin %s; else mkdir -p %s; git clone --single-branch --branch %s %s %s; fi", chartTempPath, chartTempPath, gitBranch, chartTempPath, gitBranch, gitRepo, chartTempPath)
 
-				m.log.WriteString("\n")
+				m.log.WriteString(logrus.InfoLevel, "\n")
 				m.log.Infof("Cloning external repo `%s` containing to retrieve Helm chart", gitRepo)
 
-				err = shell.ExecuteShellCommand(gitCommand, nil, "", os.Stdout, os.Stderr, nil)
+				err = engine.ExecuteSimpleShellCommand(context.TODO(), "", os.Stdout, os.Stderr, nil, nil, gitCommand)
 				if err != nil {
-					m.log.WriteString("\n")
+					m.log.WriteString(logrus.InfoLevel, "\n")
 					m.log.Errorf("Unable to clone repository `%s` (branch: %s)", gitRepo, gitBranch)
 					continue
 				}
@@ -270,7 +276,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				chartFolder := path.Join(chartTempPath, gitSubFolder)
 				stat, err := os.Stat(chartFolder)
 				if err != nil || !stat.IsDir() {
-					m.log.WriteString("\n")
+					m.log.WriteString(logrus.InfoLevel, "\n")
 					m.log.Errorf("Local path `%s` does not exist or is not a directory", chartFolder)
 					continue
 				}
@@ -285,12 +291,13 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 			}
 		}
 
-		m.config.Deployments = append([]*latest.DeploymentConfig{
-			{
-				Name: deploymentName,
-				Helm: helmConfig,
-			},
-		}, m.config.Deployments...)
+		if m.config.Deployments == nil {
+			m.config.Deployments = map[string]*latest.DeploymentConfig{}
+		}
+		m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
+			Name: deploymentName,
+			Helm: helmConfig,
+		}
 
 		break
 	}
@@ -323,15 +330,19 @@ func (m *manager) AddComponentDeployment(deploymentName, image string, servicePo
 		return err
 	}
 
-	m.config.Deployments = append([]*latest.DeploymentConfig{
-		{
-			Name: deploymentName,
-			Helm: &latest.HelmConfig{
-				ComponentChart: ptr.Bool(true),
-				Values:         chartValues,
+	if m.config.Deployments == nil {
+		m.config.Deployments = map[string]*latest.DeploymentConfig{}
+	}
+	m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
+		Name: deploymentName,
+		Helm: &latest.HelmConfig{
+			Chart: &latest.ChartConfig{
+				Name:    helm.DevSpaceChartConfig.Name,
+				RepoURL: helm.DevSpaceChartConfig.RepoURL,
 			},
+			Values: chartValues,
 		},
-	}, m.config.Deployments...)
+	}
 
 	return nil
 }

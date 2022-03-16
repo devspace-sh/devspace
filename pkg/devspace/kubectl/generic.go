@@ -2,6 +2,8 @@ package kubectl
 
 import (
 	"context"
+	"fmt"
+	"k8s.io/client-go/discovery"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -13,19 +15,55 @@ import (
 
 // GenericRequestOptions are the options for the request
 type GenericRequestOptions struct {
+	Kind string
+
 	Resource   string
 	APIVersion string
 
 	Name          string
-	LabelSelector string
 	Namespace     string
+	LabelSelector string
+
+	Method string
 }
 
 // GenericRequest makes a new request to the given server with the specified options
-func (client *client) GenericRequest(options *GenericRequestOptions) (string, error) {
+func (client *client) GenericRequest(ctx context.Context, options *GenericRequestOptions) (string, error) {
+	// resolve Kind -> resource
+	if options.Kind != "" {
+		discoveryClient, err := discovery.NewDiscoveryClientForConfig(client.restConfig)
+		if err != nil {
+			return "", err
+		}
+
+		resources, err := discoveryClient.ServerResourcesForGroupVersion(options.APIVersion)
+		if err != nil {
+			return "", errors.Wrapf(err, "discover api version %s", options.APIVersion)
+		}
+
+		for _, resource := range resources.APIResources {
+			if resource.Kind == options.Kind {
+				options.Resource = resource.Name
+				if resource.Namespaced {
+					if options.Namespace == "" {
+						options.Namespace = client.Namespace()
+					}
+				} else {
+					options.Namespace = ""
+				}
+
+				break
+			}
+		}
+
+		if options.Resource == "" {
+			return "", fmt.Errorf("couldn't find resource for kind %s in api version %s", options.Kind, options.APIVersion)
+		}
+	}
+
 	// Create new client
 	var restClient restclient.Interface
-	if options.APIVersion != "" {
+	if options.APIVersion != "" && options.APIVersion != "v1" {
 		splitted := strings.Split(options.APIVersion, "/")
 		if len(splitted) != 2 {
 			return "", errors.Errorf("Error parsing %s: expected version to be group/version", options.APIVersion)
@@ -52,7 +90,12 @@ func (client *client) GenericRequest(options *GenericRequestOptions) (string, er
 		restClient = client.KubeClient().CoreV1().RESTClient()
 	}
 
-	req := restClient.Get()
+	var req *restclient.Request
+	if options.Method == "" || options.Method == "get" {
+		req = restClient.Get()
+	} else if options.Method == "delete" {
+		req = restClient.Delete()
+	}
 	if options.Namespace != "" {
 		req = req.Namespace(options.Namespace)
 	}
@@ -69,7 +112,7 @@ func (client *client) GenericRequest(options *GenericRequestOptions) (string, er
 	}
 
 	// Make request
-	out, err := req.DoRaw(context.TODO())
+	out, err := req.DoRaw(ctx)
 	if err != nil {
 		return "", errors.Wrap(err, "request")
 	}

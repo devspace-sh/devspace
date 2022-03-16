@@ -7,7 +7,7 @@ import (
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta4"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 type testCase struct {
@@ -38,9 +38,9 @@ func TestSimple(t *testing.T) {
 						Name: "Test",
 						Helm: &next.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"name": "container-1",
 									},
 								},
@@ -75,9 +75,9 @@ func TestSimple(t *testing.T) {
 						Name: "Test",
 						Helm: &next.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"name": "container-1",
 									},
 								},
@@ -100,9 +100,9 @@ func TestSimple(t *testing.T) {
 								RepoURL: "https://charts.devspace.cloud",
 								Version: "v0.0.6",
 							},
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"name": "container-1",
 									},
 								},
@@ -119,9 +119,9 @@ func TestSimple(t *testing.T) {
 						Name: "Test",
 						Helm: &next.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"name": "container-1",
 									},
 								},

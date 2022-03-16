@@ -41,7 +41,7 @@ Upgrades the DevSpace CLI to the newest version
 // Run executes the command logic
 func (cmd *UpgradeCmd) Run() error {
 	// Execute plugin hook
-	err := hook.ExecuteHooks(nil, nil, nil, nil, nil, "upgrade")
+	err := hook.ExecuteHooks(nil, nil, "upgrade")
 	if err != nil {
 		return err
 	}

@@ -1,22 +1,27 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/exit"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
+	"mvdan.cc/sh/v3/interp"
 	"os"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	flagspkg "github.com/loft-sh/devspace/pkg/util/flags"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/sirupsen/logrus"
 
@@ -34,7 +39,7 @@ type RunCmd struct {
 }
 
 // NewRunCmd creates a new run command
-func NewRunCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewRunCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *RawConfig) *cobra.Command {
 	cmd := &RunCmd{
 		GlobalFlags: globalFlags,
 		Stdout:      os.Stdout,
@@ -86,8 +91,12 @@ devspace --dependency my-dependency run any-command --any-command-flag
 			_, err := flagspkg.ApplyExtraFlags(cobraCmd, osArgs, true)
 			if err != nil {
 				return err
-			} else if cmd.Silent {
+			}
+
+			if cmd.Silent {
 				log.SetLevel(logrus.FatalLevel)
+			} else if cmd.Debug {
+				log.SetLevel(logrus.DebugLevel)
 			}
 
 			args := os.Args[index:]
@@ -96,29 +105,32 @@ devspace --dependency my-dependency run any-command --any-command-flag
 		},
 	}
 
-	commands, _ := getCommands(f)
-	for _, command := range commands {
-		description := command.Description
-		if description == "" {
-			description = "Runs command: " + command.Command
-		}
-		if len(description) > 64 {
-			if len(description) > 64 {
-				description = description[:61] + "..."
+	if rawConfig != nil {
+		latest, _, _ := loader.NewCommandsParser().Parse(rawConfig.Ctx, rawConfig.OriginalRawConfig, rawConfig.RawConfig, rawConfig.Resolver, log.Discard)
+		if latest != nil {
+			for _, cmd := range latest.Commands {
+				description := cmd.Description
+				if description == "" {
+					description = "Runs command: " + cmd.Command
+				}
+				if len(description) > 64 {
+					if len(description) > 64 {
+						description = description[:61] + "..."
+					}
+				}
+				runCmd.AddCommand(&cobra.Command{
+					Use:                cmd.Name,
+					Short:              description,
+					Long:               description,
+					Args:               cobra.ArbitraryArgs,
+					DisableFlagParsing: true,
+					RunE: func(cobraCmd *cobra.Command, args []string) error {
+						return cobraCmd.Parent().RunE(cobraCmd, args)
+					},
+				})
 			}
 		}
-		runCmd.AddCommand(&cobra.Command{
-			Use:                command.Name,
-			Short:              description,
-			Long:               description,
-			Args:               cobra.ArbitraryArgs,
-			DisableFlagParsing: true,
-			RunE: func(cobraCmd *cobra.Command, args []string) error {
-				return cobraCmd.Parent().RunE(cobraCmd, args)
-			},
-		})
 	}
-
 	runCmd.Flags().StringVar(&cmd.Dependency, "dependency", "", "Run a command from a specific dependency")
 	return runCmd
 }
@@ -130,13 +142,15 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// Set config root
-	configOptions := cmd.ToConfigOptions(f.GetLog())
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
-	configExists, err := configLoader.SetDevSpaceRoot(f.GetLog())
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
 	if err != nil {
 		return err
 	}
-	if !configExists {
+	configExists, err := configLoader.SetDevSpaceRoot(f.GetLog())
+	if err != nil {
+		return err
+	} else if !configExists {
 		return errors.New(message.ConfigNotFound)
 	}
 
@@ -148,21 +162,36 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// Execute plugin hook
-	err = hook.ExecuteHooks(nil, nil, nil, nil, nil, "run")
+	err = hook.ExecuteHooks(nil, nil, "run")
 	if err != nil {
 		return err
 	}
 
+	// load generated
+	localCache, err := configLoader.LoadLocalCache()
+	if err != nil {
+		return err
+	}
+
+	// Parse commands
+	commandsInterface, err := configLoader.LoadWithParser(context.Background(), localCache, nil, loader.NewCommandsParser(), configOptions, f.GetLog())
+	if err != nil {
+		return err
+	}
+
+	// create context
+	ctx := devspacecontext.NewContext(context.Background(), f.GetLog()).
+		WithConfig(commandsInterface)
+
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
-		config, err := configLoader.Load(configOptions, f.GetLog())
+		config, err := configLoader.LoadWithCache(context.Background(), localCache, nil, configOptions, f.GetLog())
 		if err != nil {
 			return err
 		}
 
-		dependencies, err := f.NewDependencyManager(config, nil, configOptions, f.GetLog()).ResolveAll(dependency.ResolveOptions{
-			Silent: true,
-		})
+		ctx = ctx.WithConfig(config)
+		dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 		if err != nil {
 			return err
 		}
@@ -172,58 +201,63 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 			return fmt.Errorf("couldn't find dependency %s", cmd.Dependency)
 		}
 
-		return dep.Command(args[0], args[1:])
+		ctx = ctx.AsDependency(dep)
+		return ExecuteConfigCommand(ctx.Context, ctx.Config, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
 	}
-
-	// load generated
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
-	if err != nil {
-		return err
-	}
-	configOptions.GeneratedConfig = generatedConfig
-
-	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), configOptions, f.GetLog())
-	if err != nil {
-		return err
-	}
-	commands := commandsInterface.Config().Commands
 
 	// Save variables
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = localCache.Save()
 	if err != nil {
 		return err
 	}
 
 	// Execute command
-	return dependency.ExecuteCommand(commands, args[0], args[1:], cmd.Stdout, cmd.Stderr)
+	return ExecuteConfigCommand(ctx.Context, ctx.Config, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
 }
 
-func getCommands(f factory.Factory) ([]*latest.CommandConfig, error) {
-	// get current working dir
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
+// ExecuteConfigCommand executes a command from the config
+func ExecuteConfigCommand(ctx context.Context, config config.Config, name string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
+	shellCommand := ""
+	var shellArgs []string
+	var appendArgs bool
+	if config.Config().Commands == nil || config.Config().Commands[name] == nil {
+		return errors.Errorf("couldn't find command '%s' in devspace config", name)
 	}
 
-	// set working dir back to original
-	defer func() { _ = os.Chdir(cwd) }()
+	cmd := config.Config().Commands[name]
+	shellCommand = strings.TrimSpace(cmd.Command)
+	shellArgs = cmd.Args
+	appendArgs = cmd.AppendArgs
 
-	// Set config root
-	configLoader := f.NewConfigLoader("")
-	configExists, err := configLoader.SetDevSpaceRoot(log.Discard)
-	if err != nil {
-		return nil, err
+	extraEnv := map[string]string{}
+	for k, v := range config.Variables() {
+		extraEnv[k] = fmt.Sprintf("%v", v)
+	}
+	if shellArgs == nil {
+		if appendArgs {
+			// Append args to shell command
+			for _, arg := range args {
+				arg = strings.Replace(arg, "'", "'\"'\"'", -1)
+
+				shellCommand += " '" + arg + "'"
+			}
+		}
+
+		// execute the command in a shell
+		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, args...)
+		if err != nil {
+			if status, ok := interp.IsExitStatus(err); ok {
+				return &exit.ReturnCodeError{
+					ExitCode: int(status),
+				}
+			}
+
+			return errors.Wrap(err, "execute command")
+		}
+
+		return nil
 	}
 
-	if !configExists {
-		return nil, errors.New(message.ConfigNotFound)
-	}
-
-	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), &loader.ConfigOptions{Dry: true}, log.Discard)
-	if err != nil {
-		return nil, err
-	}
-	return commandsInterface.Config().Commands, nil
+	shellArgs = append(shellArgs, args...)
+	return command.CommandWithEnv(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, shellArgs...)
 }

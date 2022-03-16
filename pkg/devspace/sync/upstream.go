@@ -6,6 +6,8 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"io/ioutil"
@@ -24,16 +26,18 @@ import (
 	"github.com/loft-sh/devspace/helper/util/crc32"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/command"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/loft-sh/notify"
 	"github.com/pkg/errors"
 )
 
+var (
+	TouchFile = ""
+)
+
 type upstream struct {
-	events    chan notify.EventInfo
-	symlinks  map[string]*Symlink
-	interrupt chan bool
-	sync      *Sync
+	events   chan notify.EventInfo
+	symlinks map[string]*Symlink
+	sync     *Sync
 
 	reader io.ReadCloser
 	writer io.WriteCloser
@@ -50,6 +54,7 @@ type upstream struct {
 	initialSyncCompletedMutex sync.Mutex
 	initialSyncChanges        []string
 	initialSyncCompleted      bool
+	initialSyncTouchOnce      sync.Once
 }
 
 const (
@@ -92,7 +97,6 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 		events:      make(chan notify.EventInfo, 1000), // High buffer size so we don't miss any fsevents if there are a lot of changes
 		eventBuffer: make([]notify.EventInfo, 0, 64),
 		symlinks:    make(map[string]*Symlink),
-		interrupt:   make(chan bool, 1),
 		sync:        sync,
 		isBusy:      true,
 
@@ -126,7 +130,7 @@ func (u *upstream) startPing(doneChan chan struct{}) {
 				return
 			case <-time.After(time.Second * 15):
 				if u.client != nil {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+					ctx, cancel := context.WithTimeout(u.sync.ctx, time.Second*15)
 					_, err := u.client.Ping(ctx, &remote.Empty{})
 					cancel()
 					if err != nil {
@@ -200,7 +204,7 @@ func (u *upstream) mainLoop() error {
 		// gather changes
 		for {
 			select {
-			case <-u.interrupt:
+			case <-u.sync.ctx.Done():
 				return nil
 			case <-time.After(time.Millisecond * 600):
 				break
@@ -251,9 +255,21 @@ func (u *upstream) mainLoop() error {
 	}
 }
 
-func (u *upstream) execCommandsAfterInitialSync() error {
+func (u *upstream) execCommandsAfterInitialSync() (err error) {
 	u.initialSyncCompletedMutex.Lock()
 	defer u.initialSyncCompletedMutex.Unlock()
+
+	// make sure the touch file is there
+	defer func() {
+		if err == nil && u.sync.Options.RestartContainer && u.initialSyncCompleted {
+			u.initialSyncTouchOnce.Do(func() {
+				_, err = u.client.Execute(u.sync.ctx, &remote.Command{
+					Cmd:  "touch",
+					Args: []string{restart.TouchPath},
+				})
+			})
+		}
+	}()
 
 	if !u.initialSyncCompleted || len(u.initialSyncChanges) == 0 {
 		return nil
@@ -346,9 +362,9 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 			out = &bytes.Buffer{}
 		)
 		if exec.Args == nil {
-			err = shell.ExecuteShellCommand(execCommand, nil, u.sync.LocalPath, out, out, nil)
+			err = engine.ExecuteSimpleShellCommand(u.sync.ctx, u.sync.LocalPath, out, out, nil, nil, execCommand)
 		} else {
-			err = command.ExecuteCommandWithEnv(execCommand, exec.Args, u.sync.LocalPath, out, out, nil)
+			err = command.CommandWithEnv(u.sync.ctx, u.sync.LocalPath, out, out, nil, nil, execCommand, exec.Args...)
 		}
 		if err != nil {
 			if exec.FailOnError {
@@ -362,7 +378,7 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+	ctx, cancel := context.WithTimeout(u.sync.ctx, time.Minute*10)
 	defer cancel()
 
 	cmd := execCommand
@@ -636,7 +652,7 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 					return changes, nil
 				} else if i+1 >= syncRetries {
 					return nil, errors.Wrap(err, "apply creates")
-				} else if strings.HasSuffix(err.Error(), "transport is closing") || strings.HasSuffix(err.Error(), "broken pipe") {
+				} else if strings.Contains(err.Error(), "closed pipe") || strings.Contains(err.Error(), "transport is closing") || strings.Contains(err.Error(), "broken pipe") {
 					return nil, errors.Wrap(err, "apply creates")
 				}
 
@@ -675,7 +691,7 @@ func (u *upstream) RestartContainer() error {
 	if u.sync.Options.RestartContainer {
 		u.sync.log.Info("Upstream - Restarting container")
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+		ctx, cancel := context.WithTimeout(u.sync.ctx, time.Minute*5)
 		defer cancel()
 
 		_, err := u.client.RestartContainer(ctx, &remote.Empty{})
@@ -691,7 +707,7 @@ func (u *upstream) ExecuteBatchCommand() error {
 	if u.sync.Options.UploadBatchCmd != "" {
 		u.sync.log.Infof("Upstream - Execute command '%s %s'", u.sync.Options.UploadBatchCmd, strings.Join(u.sync.Options.UploadBatchArgs, " "))
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+		ctx, cancel := context.WithTimeout(u.sync.ctx, time.Minute*10)
 		defer cancel()
 
 		_, err := u.client.Execute(ctx, &remote.Command{
@@ -742,6 +758,7 @@ func (u *upstream) applyCreates(files []*FileInformation) (map[string]*FileInfor
 			size += c.Size
 		}
 	}
+
 	u.sync.log.Infof("Upstream - Upload %d create change(s) (Uncompressed ~%0.2f KB)", len(files), float64(size)/1024.0)
 	defer u.sync.log.Debugf("Upstream - Done Uploading")
 
@@ -808,7 +825,7 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 		defer u.sync.log.Debugf("Done hashing %d files", len(needCheck))
 
 		// cancel after 10 minutes
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*30)
+		ctx, cancel := context.WithTimeout(u.sync.ctx, time.Minute*30)
 		defer cancel()
 
 		// create done chan
@@ -920,7 +937,7 @@ func (u *upstream) uploadArchive(reader io.ReadCloser) error {
 	defer reader.Close()
 
 	// cancel after 1 hour
-	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	ctx, cancel := context.WithTimeout(u.sync.ctx, time.Hour)
 	defer cancel()
 
 	// Create upload client
@@ -965,7 +982,7 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 	u.sync.fileIndex.fileMapMutex.Lock()
 	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*30)
+	ctx, cancel := context.WithTimeout(u.sync.ctx, time.Minute*30)
 	defer cancel()
 
 	u.sync.log.Infof("Upstream - Handling %d removes", len(files))

@@ -1,10 +1,10 @@
 package pullsecrets
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"regexp"
 	"strings"
 	"time"
@@ -33,7 +33,7 @@ type PullSecretOptions struct {
 }
 
 // CreatePullSecret creates an image pull secret for a registry
-func (r *client) CreatePullSecret(options *PullSecretOptions) error {
+func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSecretOptions) error {
 	pullSecretName := options.Secret
 	if pullSecretName == "" {
 		pullSecretName = GetRegistryAuthSecretName(options.RegistryURL)
@@ -48,12 +48,17 @@ func (r *client) CreatePullSecret(options *PullSecretOptions) error {
 		authToken = options.Username + ":" + authToken
 	}
 
+	email := options.Email
+	if email == "" {
+		email = "noreply@devspace.sh"
+	}
+
 	registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(authToken))
 	pullSecretDataValue := []byte(`{
 			"auths": {
 				"` + options.RegistryURL + `": {
 					"auth": "` + registryAuthEncoded + `",
-					"email": "` + options.Email + `"
+					"email": "` + email + `"
 				}
 			}
 		}`)
@@ -71,16 +76,16 @@ func (r *client) CreatePullSecret(options *PullSecretOptions) error {
 	}
 
 	err := wait.PollImmediate(time.Second, time.Second*30, func() (bool, error) {
-		secret, err := r.kubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Get(context.TODO(), pullSecretName, metav1.GetOptions{})
+		secret, err := ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Get(ctx.Context, pullSecretName, metav1.GetOptions{})
 		if err != nil {
-			_, err = r.kubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Create(context.TODO(), registryPullSecret, metav1.CreateOptions{})
+			_, err = ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Create(ctx.Context, registryPullSecret, metav1.CreateOptions{})
 			if err != nil {
 				return false, errors.Errorf("Unable to create image pull secret: %s", err.Error())
 			}
 
-			r.log.Donef("Created image pull secret %s/%s", options.Namespace, pullSecretName)
+			ctx.Log.Donef("Created image pull secret %s/%s", options.Namespace, pullSecretName)
 		} else if secret.Data == nil || string(secret.Data[pullSecretDataKey]) != string(pullSecretData[pullSecretDataKey]) {
-			_, err = r.kubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Update(context.TODO(), registryPullSecret, metav1.UpdateOptions{})
+			_, err = ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Update(ctx.Context, registryPullSecret, metav1.UpdateOptions{})
 			if err != nil {
 				if kerrors.IsConflict(err) {
 					return false, nil

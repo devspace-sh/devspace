@@ -1,15 +1,14 @@
 package loader
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
-	"strings"
-
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
 )
 
@@ -31,7 +30,14 @@ func ValidContainerArch(arch latest.ContainerArchitecture) bool {
 		arch == latest.ContainerArchitectureArm64
 }
 
-func validate(config *latest.Config, log log.Logger) error {
+func Validate(config *latest.Config) error {
+	if config.Name == "" {
+		return fmt.Errorf("you need to specify a name for your devspace.yaml")
+	}
+	if encoding.IsUnsafeName(config.Name) {
+		return fmt.Errorf("name has to match the following regex: %v", encoding.UnsafeNameRegEx.String())
+	}
+
 	err := validateRequire(config)
 	if err != nil {
 		return err
@@ -75,17 +81,13 @@ func validate(config *latest.Config, log log.Logger) error {
 	return nil
 }
 
-func validateVars(vars []*latest.Variable) error {
+func validateVars(vars map[string]*latest.Variable) error {
 	for i, v := range vars {
-		if v.Name == "" {
+		if i == "" {
 			return fmt.Errorf("vars[*].name has to be specified")
 		}
-
-		// make sure is unique
-		for j, v2 := range vars {
-			if i != j && v.Name == v2.Name {
-				return fmt.Errorf("multiple definitions for variable %s found", v.Name)
-			}
+		if encoding.IsUnsafeUpperName(v.Name) {
+			return fmt.Errorf("vars[%s].name %s has to match the following regex: %v", i, v.Name, encoding.UnsafeUpperNameRegEx.String())
 		}
 	}
 
@@ -115,52 +117,31 @@ func validateRequire(config *latest.Config) error {
 }
 
 func validateDependencies(config *latest.Config) error {
-	for index, dep := range config.Dependencies {
-		if dep.Name == "" {
-			return errors.Errorf("dependencies[%d].name is required", index)
-		}
-		if strings.Contains(dep.Name, ".") {
-			return errors.Errorf("dependencies[%d].name cannot contain a '.'", index)
-		}
-		if !isDependencyNameUnique(dep.Name, config.Dependencies) {
-			return errors.Errorf("dependencies[%d].name has to be unique", index)
+	for name, dep := range config.Dependencies {
+		if encoding.IsUnsafeName(name) {
+			return fmt.Errorf("dependencies[%s] has to match the following regex: %v", name, encoding.UnsafeNameRegEx.String())
 		}
 		if dep.Source == nil {
-			return errors.Errorf("dependencies[%d].source is required", index)
+			return errors.Errorf("dependencies[%s].source is required", name)
 		}
 		if dep.Source.Git == "" && dep.Source.Path == "" {
-			return errors.Errorf("dependencies[%d].source.git or dependencies[%d].source.path is required", index, index)
-		}
-		if len(dep.Profiles) > 0 && (dep.Profile != "" || len(dep.ProfileParents) > 0) {
-			return errors.Errorf("dependencies[%d].profiles and dependencies[%d].profile & dependencies[%d].profileParents cannot be used together", index, index, index)
+			return errors.Errorf("dependencies[%s].git or dependencies[%s].path is required", name, name)
 		}
 	}
 
 	return nil
 }
 
-func isDependencyNameUnique(name string, dependencies []*latest.DependencyConfig) bool {
-	found := false
-	for _, d := range dependencies {
-		if d.Name == name {
-			if found {
-				return false
-			}
-
-			found = true
-		}
-	}
-
-	return true
-}
-
 func validateCommands(config *latest.Config) error {
-	for index, command := range config.Commands {
+	for key, command := range config.Commands {
 		if command.Name == "" {
-			return errors.Errorf("commands[%d].name is required", index)
+			return errors.Errorf("commands[%s].name is required", key)
+		}
+		if encoding.IsUnsafeUpperName(command.Name) {
+			return fmt.Errorf("commands[%s] has to match the following regex: %v", command.Name, encoding.UnsafeUpperNameRegEx.String())
 		}
 		if command.Command == "" {
-			return errors.Errorf("commands[%d].command is required", index)
+			return errors.Errorf("commands[%s].command is required", key)
 		}
 	}
 
@@ -225,41 +206,33 @@ func validateHooks(config *latest.Config) error {
 func validateDeployments(config *latest.Config) error {
 	for index, deployConfig := range config.Deployments {
 		if deployConfig.Name == "" {
-			return errors.Errorf("deployments[%d].name is required", index)
+			return errors.Errorf("deployments[%s].name is required", index)
+		}
+		if encoding.IsUnsafeName(deployConfig.Name) {
+			return fmt.Errorf("deployments[%s].name %s has to match the following regex: %v", index, deployConfig.Name, encoding.UnsafeNameRegEx.String())
 		}
 		if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
 			return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 		}
-		if deployConfig.Helm != nil {
-			if deployConfig.Helm.Chart == nil &&
-				(deployConfig.Helm.ComponentChart == nil || !*deployConfig.Helm.ComponentChart) {
-				return errors.Errorf("deployments[%d].helm.chart or deployments[%d].helm.componentChart is required", index, index)
-			}
-
-			if deployConfig.Helm.Chart != nil &&
-				((deployConfig.Helm.Chart.Name != "" && deployConfig.Helm.Chart.Git != nil) ||
-					(deployConfig.Helm.Chart.Name == "" && deployConfig.Helm.Chart.Git == nil)) {
-				return errors.Errorf("deployments[%d].helm.chart.name or deployments[%d].helm.chart.git is required", index, index)
-			}
-		}
-
 		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
-			return errors.Errorf("deployments[%d].kubectl.manifests is required", index)
+			return errors.Errorf("deployments[%s].kubectl.manifests is required", index)
 		}
 	}
 
 	return nil
 }
 
-func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteValues map[interface{}]interface{}) error {
-	if deployConfig.Helm != nil && deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart {
-		bytes, err := yaml.Marshal(overwriteValues)
+func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteValues map[string]interface{}) error {
+	if deployConfig.Helm != nil && deployConfig.Helm.Chart == nil {
+		b, err := yaml.Marshal(overwriteValues)
 		if err != nil {
 			return errors.Errorf("deployments[%s].helm: Error marshaling overwrite values: %v", deployConfig.Name, err)
 		}
 
 		componentValues := &latest.ComponentConfig{}
-		err = yaml.UnmarshalStrict(bytes, componentValues)
+		decoder := yaml.NewDecoder(bytes.NewReader(b))
+		decoder.KnownFields(true)
+		err = decoder.Decode(componentValues)
 		if err != nil {
 			return errors.Errorf("deployments[%s].helm.componentChart: component values are incorrect: %v", deployConfig.Name, err)
 		}
@@ -269,9 +242,15 @@ func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteVal
 }
 
 func validatePullSecrets(config *latest.Config) error {
-	for i, ps := range config.PullSecrets {
+	for k, ps := range config.PullSecrets {
+		if ps.Name == "" {
+			return errors.Errorf("pull secret keys cannot be an empty string")
+		}
+		if encoding.IsUnsafeName(ps.Name) {
+			return fmt.Errorf("pullSecrets[%s] has to match the following regex: %v", ps.Name, encoding.UnsafeNameRegEx.String())
+		}
 		if ps.Registry == "" {
-			return errors.Errorf("pullSecrets[%d].registry: cannot be empty", i)
+			return errors.Errorf("pullSecrets[%s].registry: cannot be empty", k)
 		}
 	}
 
@@ -285,6 +264,9 @@ func validateImages(config *latest.Config) error {
 		if imageConfigName == "" {
 			return errors.Errorf("images keys cannot be an empty string")
 		}
+		if encoding.IsUnsafeName(imageConfigName) {
+			return fmt.Errorf("images[%s] has to match the following regex: %v", imageConfigName, encoding.UnsafeNameRegEx.String())
+		}
 		if imageConf == nil {
 			return errors.Errorf("images.%s is empty and should at least contain an image name", imageConfigName)
 		}
@@ -294,17 +276,17 @@ func validateImages(config *latest.Config) error {
 		if _, tag, _ := imageselector.GetStrippedDockerImageName(imageConf.Image); tag != "" {
 			return errors.Errorf("images.%s.image '%s' can not have tag '%s'", imageConfigName, imageConf.Image, tag)
 		}
-		if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" && len(imageConf.Build.Custom.Commands) == 0 {
+		if imageConf.Custom != nil && imageConf.Custom.Command == "" && len(imageConf.Custom.Commands) == 0 {
 			return errors.Errorf("images.%s.build.custom.command or images.%s.build.custom.commands is required", imageConfigName, imageConfigName)
 		}
 		if images[imageConf.Image] {
 			return errors.Errorf("multiple image definitions with the same image name are not allowed")
 		}
-		if imageConf.RebuildStrategy != latest.RebuildStrategyDefault && imageConf.RebuildStrategy != latest.RebuildStrategyAlways && imageConf.RebuildStrategy != latest.RebuildStrategyIgnoreContextChanges {
+		if imageConf.RebuildStrategy != "" && imageConf.RebuildStrategy != latest.RebuildStrategyDefault && imageConf.RebuildStrategy != latest.RebuildStrategyAlways && imageConf.RebuildStrategy != latest.RebuildStrategyIgnoreContextChanges {
 			return errors.Errorf("images.%s.rebuildStrategy %s is invalid. Please choose one of %v", imageConfigName, string(imageConf.RebuildStrategy), []latest.RebuildStrategy{latest.RebuildStrategyAlways, latest.RebuildStrategyIgnoreContextChanges})
 		}
-		if imageConf.Build != nil && imageConf.Build.Kaniko != nil && imageConf.Build.Kaniko.EnvFrom != nil {
-			for _, v := range imageConf.Build.Kaniko.EnvFrom {
+		if imageConf.Kaniko != nil && imageConf.Kaniko.EnvFrom != nil {
+			for _, v := range imageConf.Kaniko.EnvFrom {
 				o, err := yaml.Marshal(v)
 				if err != nil {
 					return errors.Errorf("images.%s.build.kaniko.envFrom is invalid: %v", imageConfigName, err)
@@ -322,121 +304,90 @@ func validateImages(config *latest.Config) error {
 	return nil
 }
 
-func isReplacePodsUnique(index int, rp *latest.ReplacePod, rps []*latest.ReplacePod) bool {
-	for i, r := range rps {
-		if i == index {
-			continue
-		}
-
-		if r.ImageSelector != "" && r.ImageSelector == rp.ImageSelector {
-			return false
-		} else if len(r.LabelSelector) > 0 && len(rp.LabelSelector) > 0 && strMapEquals(r.LabelSelector, rp.LabelSelector) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func strMapEquals(a, b map[string]string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for k, v := range a {
-		if w, ok := b[k]; !ok || v != w {
-			return false
-		}
-	}
-
-	return true
-}
-
 func validateDev(config *latest.Config) error {
-	for index, rp := range config.Dev.ReplacePods {
-		if rp.ContainerName != "" && len(rp.LabelSelector) == 0 {
-			return errors.Errorf("Error in config: containerName is defined but label selector is nil in replace pods at index %d", index)
+	for devPodName, devPod := range config.Dev {
+		if devPodName == "" {
+			return errors.Errorf("dev[%s] is required", devPodName)
 		}
-
-		if len(rp.LabelSelector) == 0 && rp.ImageSelector == "" {
-			return errors.Errorf("Error in config: image selector and label selector are nil in replace pods at index %d", index)
+		if encoding.IsUnsafeName(devPodName) {
+			return fmt.Errorf("dev[%s] has to match the following regex: %v", devPodName, encoding.UnsafeNameRegEx.String())
+		}
+		if len(devPod.LabelSelector) == 0 && devPod.ImageSelector == "" {
+			return errors.Errorf("dev[%s]: image selector and label selector are nil", devPodName)
 		}
 
 		definedSelectors := 0
-		if rp.ImageSelector != "" {
+		if devPod.ImageSelector != "" {
 			definedSelectors++
 		}
-		if len(rp.LabelSelector) > 0 {
+		if len(devPod.LabelSelector) > 0 {
 			definedSelectors++
 		}
 		if definedSelectors > 1 {
-			return errors.Errorf("Error in config: image selector and label selector cannot both be defined in replace pods at index %d", index)
+			return errors.Errorf("dev[%s]: image selector and label selector cannot all be defined", devPodName)
 		}
-		if !isReplacePodsUnique(index, rp, config.Dev.ReplacePods) {
-			return errors.Errorf("Error in config: image selector or label selector is not unique in replace pods at index %d", index)
+
+		err := validateDevContainer(fmt.Sprintf("dev[%s]", devPodName), &devPod.DevContainer, false)
+		if err != nil {
+			return err
 		}
-		for j, p := range rp.PersistPaths {
-			if p.Path == "" {
-				return errors.Errorf("Error in config: dev.replacePods[%d].persistPaths[%d].path is required", index, j)
-			}
-		}
-	}
-
-	if config.Dev.Ports != nil {
-		for index, port := range config.Dev.Ports {
-			// Validate imageName and label selector
-			if len(port.LabelSelector) == 0 && port.ImageSelector == "" {
-				return errors.Errorf("Error in config: image selector and label selector are nil in ports config at index %d", index)
-			}
-
-			if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
-				return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
-			}
-			if !ValidContainerArch(port.Arch) {
-				return errors.Errorf("Error in config: ports.arch is not valid '%s' at index %d", port.Arch, index)
-			}
-		}
-	}
-
-	if config.Dev.Sync != nil {
-		for index, sync := range config.Dev.Sync {
-			// Validate imageName and label selector
-			if len(sync.LabelSelector) == 0 && sync.ImageSelector == "" {
-				return errors.Errorf("Error in config: image selector and label selector are nil in sync config at index %d", index)
-			}
-
-			// Validate initial sync strategy
-			if !ValidInitialSyncStrategy(sync.InitialSync) {
-				return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
-			}
-			if !ValidContainerArch(sync.Arch) {
-				return errors.Errorf("Error in config: sync.arch is not valid '%s' at index %d", sync.Arch, index)
-			}
-			if sync.OnUpload != nil {
-				for j, e := range sync.OnUpload.Exec {
-					if e.Command == "" {
-						return errors.Errorf("Error in config: dev.sync[%d].exec[%d].command is required", index, j)
-					}
+		if len(devPod.Containers) > 0 {
+			for i, c := range devPod.Containers {
+				err := validateDevContainer(fmt.Sprintf("dev[%s].containers[%s]", devPodName, i), c, true)
+				if err != nil {
+					return err
 				}
 			}
 		}
 	}
 
-	if config.Dev.InteractiveImages != nil {
-		for index, imageConf := range config.Dev.InteractiveImages {
-			if imageConf.Name == "" {
-				return errors.Errorf("Error in config: Unnamed interactive image config at index %d", index)
+	return nil
+}
+
+func validateDevContainer(path string, devContainer *latest.DevContainer, nameRequired bool) error {
+	if nameRequired && devContainer.Container == "" {
+		return errors.Errorf("%s.container is required", path)
+	}
+
+	if !ValidContainerArch(devContainer.Arch) {
+		return errors.Errorf("%s.arch is not valid '%s'", path, devContainer.Arch)
+	}
+	for index, sync := range devContainer.Sync {
+		// Validate initial sync strategy
+		if !ValidInitialSyncStrategy(sync.InitialSync) {
+			return errors.Errorf("%s.sync[%d].initialSync is not valid '%s'", path, index, sync.InitialSync)
+		}
+		if sync.OnUpload != nil {
+			for j, e := range sync.OnUpload.Exec {
+				if e.Command == "" {
+					return errors.Errorf("%s.sync[%d].exec[%d].command is required", path, index, j)
+				}
 			}
 		}
 	}
-
-	if config.Dev.Logs != nil {
-		for index, selector := range config.Dev.Logs.Selectors {
-			if selector.ImageSelector != "" && len(selector.LabelSelector) > 0 {
-				return errors.Errorf("Error in config: dev.logs.selectors[%d].imageSelector and dev.logs.selectors[%d].labelSelector cannot be used together", index, index)
-			}
+	for index, port := range devContainer.ReversePorts {
+		if port.Port == "" {
+			return errors.Errorf("%s.reversePorts[%d].port is required", path, index)
+		}
+	}
+	for j, p := range devContainer.PersistPaths {
+		if p.Path == "" {
+			return errors.Errorf("%s.persistPaths[%d].path is required", path, j)
 		}
 	}
 
 	return nil
+}
+
+func EachDevContainer(devPod *latest.DevPod, each func(devContainer *latest.DevContainer) bool) {
+	if len(devPod.Containers) > 0 {
+		for _, devContainer := range devPod.Containers {
+			cont := each(devContainer)
+			if !cont {
+				break
+			}
+		}
+	} else {
+		_ = each(&devPod.DevContainer)
+	}
 }

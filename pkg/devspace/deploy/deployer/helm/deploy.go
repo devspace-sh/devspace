@@ -1,17 +1,18 @@
 package helm
 
 import (
-	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
@@ -21,16 +22,23 @@ import (
 )
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(forceDeploy bool, builtImages map[string]string) (bool, error) {
+func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (bool, error) {
 	var (
 		releaseName = d.DeploymentConfig.Name
 		chartPath   = d.DeploymentConfig.Helm.Chart.Name
 		hash        = ""
 	)
 
+	releaseNamespace := d.DeploymentConfig.Namespace
+	if releaseNamespace == "" {
+		releaseNamespace = ctx.KubeClient.Namespace()
+	}
+
 	// Hash the chart directory if there is any
-	_, err := os.Stat(chartPath)
+	_, err := os.Stat(ctx.ResolvePath(chartPath))
 	if err == nil {
+		chartPath = ctx.ResolvePath(chartPath)
+
 		// Check if the chart directory has changed
 		hash, err = hashpkg.Directory(chartPath)
 		if err != nil {
@@ -39,12 +47,14 @@ func (d *DeployConfig) Deploy(forceDeploy bool, builtImages map[string]string) (
 	}
 
 	// Ensure deployment config is there
-	deployCache := d.config.Generated().GetActive().GetDeploymentCache(d.DeploymentConfig.Name)
+	deployCache, _ := ctx.Config.RemoteCache().GetDeployment(d.DeploymentConfig.Name)
 
 	// Check values files for changes
 	helmOverridesHash := ""
 	if d.DeploymentConfig.Helm.ValuesFiles != nil {
 		for _, override := range d.DeploymentConfig.Helm.ValuesFiles {
+			override = ctx.ResolvePath(override)
+
 			hash, err := hashpkg.Directory(override)
 			if err != nil {
 				return false, errors.Errorf("Error stating override file %s: %v", override, err)
@@ -64,14 +74,14 @@ func (d *DeployConfig) Deploy(forceDeploy bool, builtImages map[string]string) (
 
 	// Get HelmClient if necessary
 	if d.Helm == nil {
-		d.Helm, err = helm.NewClient(d.config.Config(), d.DeploymentConfig, d.Kube, d.TillerNamespace, false, false, d.Log)
+		d.Helm, err = helm.NewClient(ctx.Log)
 		if err != nil {
 			return false, errors.Errorf("Error creating helm client: %v", err)
 		}
 	}
 
 	// Get deployment values
-	redeploy, deployValues, err := d.getDeploymentValues(builtImages)
+	redeploy, deployValues, err := d.getDeploymentValues(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -84,16 +94,21 @@ func (d *DeployConfig) Deploy(forceDeploy bool, builtImages map[string]string) (
 	deployValuesHash := hashpkg.String(string(deployValuesBytes))
 
 	// Check if redeploying is necessary
-	forceDeploy = forceDeploy || redeploy || deployCache.HelmValuesHash != deployValuesHash || deployCache.HelmOverridesHash != helmOverridesHash || deployCache.HelmChartHash != hash || deployCache.DeploymentConfigHash != deploymentConfigHash
+	helmCache := deployCache.Helm
+	if helmCache == nil {
+		helmCache = &remotecache.HelmCache{}
+	}
+
+	forceDeploy = forceDeploy || redeploy || deployCache.DeploymentConfigHash != deploymentConfigHash || helmCache.ValuesHash != deployValuesHash || helmCache.OverridesHash != helmOverridesHash || helmCache.ChartHash != hash
 	if !forceDeploy {
-		releases, err := d.Helm.ListReleases(d.DeploymentConfig.Helm)
+		releases, err := d.Helm.ListReleases(ctx, releaseNamespace)
 		if err != nil {
 			return false, err
 		}
 
 		forceDeploy = true
 		for _, release := range releases {
-			if release.Name == releaseName && release.Revision == deployCache.HelmReleaseRevision {
+			if release.Name == releaseName && release.Revision == helmCache.ReleaseRevision {
 				forceDeploy = false
 				break
 			}
@@ -102,33 +117,37 @@ func (d *DeployConfig) Deploy(forceDeploy bool, builtImages map[string]string) (
 
 	// Deploy
 	if forceDeploy {
-		release, err := d.internalDeploy(deployValues, nil)
+		release, err := d.internalDeploy(ctx, deployValues, nil)
 		if err != nil {
 			return false, err
 		}
 
 		deployCache.DeploymentConfigHash = deploymentConfigHash
-		deployCache.HelmChartHash = hash
-		deployCache.HelmValuesHash = deployValuesHash
-		deployCache.HelmOverridesHash = helmOverridesHash
+		helmCache.Release = releaseName
+		helmCache.ReleaseNamespace = releaseNamespace
+		helmCache.ChartHash = hash
+		helmCache.ValuesHash = deployValuesHash
+		helmCache.OverridesHash = helmOverridesHash
 		if release != nil {
-			deployCache.HelmReleaseRevision = release.Revision
+			helmCache.ReleaseRevision = release.Revision
 		}
 
+		deployCache.Helm = helmCache
+		ctx.Config.RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
 		return true, nil
 	}
 
 	return false, nil
 }
 
-func (d *DeployConfig) internalDeploy(overwriteValues map[interface{}]interface{}, out io.Writer) (*types.Release, error) {
+func (d *DeployConfig) internalDeploy(ctx *devspacecontext.Context, overwriteValues map[string]interface{}, out io.Writer) (*types.Release, error) {
 	var (
 		releaseName      = d.DeploymentConfig.Name
 		releaseNamespace = d.DeploymentConfig.Namespace
 	)
 
 	if out != nil {
-		str, err := d.Helm.Template(releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
+		str, err := d.Helm.Template(ctx, releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
 		if err != nil {
 			return nil, err
 		}
@@ -137,30 +156,31 @@ func (d *DeployConfig) internalDeploy(overwriteValues map[interface{}]interface{
 		return nil, nil
 	}
 
-	d.Log.StartWait(fmt.Sprintf("Deploying chart %s (%s) with helm", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name))
-	defer d.Log.StopWait()
+	ctx.Log.Infof("Deploying chart %s (%s) with helm...", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name)
+	valuesOut, _ := yaml.Marshal(overwriteValues)
+	ctx.Log.Debugf("Deploying chart with values:\n %v\n", string(valuesOut))
 
 	// Deploy chart
-	appRelease, err := d.Helm.InstallChart(releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
+	appRelease, err := d.Helm.InstallChart(ctx, releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
-		return nil, errors.Errorf("Unable to deploy helm chart: %v", err)
+		return nil, errors.Errorf("unable to deploy helm chart: %v", err)
 	}
 
 	// Print revision
 	if appRelease != nil {
-		d.Log.Donef("Deployed helm chart (Release revision: %s)", appRelease.Revision)
+		ctx.Log.Donef("Deployed helm chart (Release revision: %s)", appRelease.Revision)
 	} else {
-		d.Log.Done("Deployed helm chart")
+		ctx.Log.Done("Deployed helm chart")
 	}
 
 	return appRelease, nil
 }
 
-func (d *DeployConfig) getDeploymentValues(builtImages map[string]string) (bool, map[interface{}]interface{}, error) {
+func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, map[string]interface{}, error) {
 	var (
 		chartPath       = d.DeploymentConfig.Helm.Chart.Name
-		chartValuesPath = filepath.Join(chartPath, "values.yaml")
-		overwriteValues = map[interface{}]interface{}{}
+		chartValuesPath = ctx.ResolvePath(filepath.Join(chartPath, "values.yaml"))
+		overwriteValues = map[string]interface{}{}
 		shouldRedeploy  = false
 	)
 
@@ -172,8 +192,8 @@ func (d *DeployConfig) getDeploymentValues(builtImages map[string]string) (bool,
 			return false, nil, errors.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
 		}
 
-		if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags {
-			redeploy, err := legacy.ReplaceImageNames(overwriteValues, d.config, d.dependencies, builtImages, nil)
+		if d.DeploymentConfig.UpdateImageTags {
+			redeploy, err := legacy.ReplaceImageNames(overwriteValues, ctx.Config, ctx.Dependencies, nil)
 			if err != nil {
 				return false, nil, err
 			}
@@ -184,20 +204,17 @@ func (d *DeployConfig) getDeploymentValues(builtImages map[string]string) (bool,
 	// Load override values from path
 	if d.DeploymentConfig.Helm.ValuesFiles != nil {
 		for _, overridePath := range d.DeploymentConfig.Helm.ValuesFiles {
-			overwriteValuesPath, err := filepath.Abs(overridePath)
-			if err != nil {
-				return false, nil, errors.Errorf("Error retrieving absolute path from %s: %v", overridePath, err)
-			}
+			overwriteValuesPath := ctx.ResolvePath(overridePath)
 
-			overwriteValuesFromPath := map[interface{}]interface{}{}
+			overwriteValuesFromPath := map[string]interface{}{}
 			err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValuesFromPath)
 			if err != nil {
-				d.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
+				ctx.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
 			}
 
 			// Replace image names
-			if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags {
-				redeploy, err := legacy.ReplaceImageNames(overwriteValuesFromPath, d.config, d.dependencies, builtImages, nil)
+			if d.DeploymentConfig.UpdateImageTags {
+				redeploy, err := legacy.ReplaceImageNames(overwriteValuesFromPath, ctx.Config, ctx.Dependencies, nil)
 				if err != nil {
 					return false, nil, err
 				}
@@ -211,10 +228,10 @@ func (d *DeployConfig) getDeploymentValues(builtImages map[string]string) (bool,
 	// Load override values from data and merge them
 	if d.DeploymentConfig.Helm.Values != nil {
 		enableLegacy := false
-		if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags {
+		if d.DeploymentConfig.UpdateImageTags {
 			enableLegacy = true
 		}
-		redeploy, _, err := runtimevar.NewRuntimeResolver(enableLegacy).FillRuntimeVariablesWithRebuild(d.DeploymentConfig.Helm.Values, d.config, d.dependencies, builtImages)
+		redeploy, _, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, enableLegacy).FillRuntimeVariablesWithRebuild(ctx.Context, d.DeploymentConfig.Helm.Values, ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return false, nil, err
 		}
