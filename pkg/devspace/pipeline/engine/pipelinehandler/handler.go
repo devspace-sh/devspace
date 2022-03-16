@@ -3,9 +3,10 @@ package pipelinehandler
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/sirupsen/logrus"
-	"io"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler"
@@ -63,6 +64,9 @@ var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline
 	},
 	"is_dependency": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.IsDependency(devCtx.Context, args)
+	},
+	"get_config_value": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.GetConfigValue(devCtx, args)
 	},
 }
 

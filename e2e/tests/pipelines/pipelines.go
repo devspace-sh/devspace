@@ -2,15 +2,16 @@ package pipelines
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"time"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
-	"io/ioutil"
-	"os"
-	"time"
 )
 
 var _ = DevSpaceDescribe("portforward", func() {
@@ -115,5 +116,24 @@ var _ = DevSpaceDescribe("portforward", func() {
 		if err != nil && err != context.Canceled {
 			framework.ExpectNoError(err)
 		}
+	})
+
+	ginkgo.It("should get value from config", func() {
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/getconfigvalue")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("pipelines")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		devCmd := &cmd.DevCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+		}
+		err = devCmd.Run(f)
+		framework.ExpectNoError(err)
 	})
 })
