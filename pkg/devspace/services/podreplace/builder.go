@@ -413,10 +413,10 @@ func hashConfig(replacePod *latest.DevPod) (string, error) {
 func replaceImagesInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec, devPod *latest.DevPod) error {
 	var err error
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
-		if devContainer.ReplaceImage == "" {
+		if devContainer.DevImage == "" {
 			return true
 		}
-		err = replaceImageInPodSpec(ctx, podSpec, devPod.LabelSelector, devPod.ImageSelector, devContainer.Container, devContainer.ReplaceImage)
+		err = replaceImageInPodSpec(ctx, podSpec, devPod.LabelSelector, devPod.ImageSelector, devContainer.Container, devContainer.DevImage)
 		if err != nil {
 			return false
 		}

@@ -625,7 +625,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 				}, replacePodPatches...)
 			}
 
-			config.Dev["default"].ReplaceImage = fmt.Sprintf("loftsh/%s:latest", language)
+			config.Dev["default"].DevImage = fmt.Sprintf("loftsh/%s:latest", language)
 			config.Dev["default"].Patches = replacePodPatches
 		}
 

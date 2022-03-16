@@ -410,7 +410,7 @@ func needPodReplace(devPodConfig *latest.DevPod) bool {
 }
 
 func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
-	if devContainer.ReplaceImage != "" {
+	if devContainer.DevImage != "" {
 		return true
 	}
 	if len(devContainer.PersistPaths) > 0 {

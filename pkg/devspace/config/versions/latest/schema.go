@@ -473,10 +473,11 @@ type CustomConfigCommand struct {
 
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
-	Name      string         `yaml:"name" json:"name"`
-	Namespace string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Helm      *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
-	Kubectl   *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
+	Name            string         `yaml:"name" json:"name"`
+	Namespace       string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	UpdateImageTags bool           `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
+	Helm            *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
+	Kubectl         *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
 }
 
 // ComponentConfig holds the component information
@@ -659,11 +660,10 @@ type RollingUpdateConfig struct {
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
-	Chart            *ChartConfig           `yaml:"chart,omitempty" json:"chart,omitempty"`
-	Values           map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
-	ValuesFiles      []string               `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
-	ReplaceImageTags bool                   `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
-	DisplayOutput    bool                   `yaml:"displayOutput,omitempty" json:"output,omitempty"`
+	Chart         *ChartConfig           `yaml:"chart,omitempty" json:"chart,omitempty"`
+	Values        map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
+	ValuesFiles   []string               `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
+	DisplayOutput bool                   `yaml:"displayOutput,omitempty" json:"output,omitempty"`
 
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
 	UpgradeArgs  []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
@@ -682,12 +682,11 @@ type ChartConfig struct {
 
 // KubectlConfig defines the specific kubectl options used during deployment
 type KubectlConfig struct {
-	Manifests        []string `yaml:"manifests,omitempty" json:"manifests,omitempty"`
-	Kustomize        *bool    `yaml:"kustomize,omitempty" json:"kustomize,omitempty"`
-	KustomizeArgs    []string `yaml:"kustomizeArgs,omitempty" json:"kustomizeArgs,omitempty"`
-	ReplaceImageTags bool     `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
-	CreateArgs       []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
-	ApplyArgs        []string `yaml:"applyArgs,omitempty" json:"applyArgs,omitempty"`
+	Manifests     []string `yaml:"manifests,omitempty" json:"manifests,omitempty"`
+	Kustomize     *bool    `yaml:"kustomize,omitempty" json:"kustomize,omitempty"`
+	KustomizeArgs []string `yaml:"kustomizeArgs,omitempty" json:"kustomizeArgs,omitempty"`
+	CreateArgs    []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
+	ApplyArgs     []string `yaml:"applyArgs,omitempty" json:"applyArgs,omitempty"`
 
 	KustomizeBinaryPath string `yaml:"kustomizeBinaryPath,omitempty" json:"kustomizeBinaryPath,omitempty"`
 	KubectlBinaryPath   string `yaml:"kubectlBinaryPath,omitempty" json:"kubectlBinaryPath,omitempty"`
@@ -728,7 +727,7 @@ type DevContainer struct {
 	Terminal             *Terminal        `yaml:"terminal,omitempty" json:"terminal,omitempty"`
 	Logs                 *Logs            `yaml:"logs,omitempty" json:"logs,omitempty"`
 	Attach               *Attach          `yaml:"attach,omitempty" json:"attach,omitempty"`
-	ReplaceImage         string           `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
+	DevImage             string           `yaml:"devImage,omitempty" json:"devImage,omitempty"`
 	PersistPaths         []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
 	Sync                 []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
 }
