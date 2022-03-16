@@ -9,7 +9,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/loft-sh/notify"
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
+	"mvdan.cc/sh/v3/interp"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,7 +25,6 @@ type RunWatchOptions struct {
 }
 
 func RunWatch(ctx context.Context, args []string, handler types2.ExecHandler, log log.Logger) error {
-	log.Debugf("run_watch %s", strings.Join(args, " "))
 	options := &RunWatchOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
@@ -134,8 +135,10 @@ func (w *watcher) Watch(ctx context.Context, patterns []string, failOnError bool
 }
 
 func (w *watcher) handleCommand(ctx context.Context, patterns []string, failOnError bool, action func(ctx context.Context) error, events chan string, log log.Logger) error {
+	hc := interp.HandlerCtx(ctx)
 	t := w.startCommand(ctx, action)
 	numEvents := 0
+	lastChange := ""
 	for {
 		select {
 		case <-ctx.Done():
@@ -148,13 +151,14 @@ func (w *watcher) handleCommand(ctx context.Context, patterns []string, failOnEr
 				hasMatched, _ := doublestar.Match(p, e)
 				if hasMatched {
 					numEvents++
+					lastChange = e
 					break
 				}
 			}
 		case <-time.After(time.Second * 2):
 			if numEvents > 0 {
 				// kill application and wait for exit
-				log.Infof("Restarting command...")
+				_, _ = hc.Stderr.Write([]byte(fmt.Sprintf("\n%s Restarting command because '%s' has changed...\n\n", ansi.Color("warn", "red+b"), lastChange)))
 				t.Kill(nil)
 				select {
 				case <-ctx.Done():
@@ -165,6 +169,7 @@ func (w *watcher) handleCommand(ctx context.Context, patterns []string, failOnEr
 				// restart the command
 				t = w.startCommand(ctx, action)
 				numEvents = 0
+				lastChange = ""
 			}
 		}
 
