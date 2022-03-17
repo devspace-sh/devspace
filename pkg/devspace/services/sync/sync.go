@@ -68,7 +68,7 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 	// init done array is used to track when sync was initialized
 	initDoneArray := []chan struct{}{}
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
-		for i, syncConfig := range devContainer.Sync {
+		for _, syncConfig := range devContainer.Sync {
 			// start a new go routine in the tomb
 			s := syncConfig
 			var cancel context.CancelFunc
@@ -88,7 +88,7 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 			initDoneArray = append(initDoneArray, initDone)
 
 			// every five we wait
-			if i%5 == 0 {
+			if len(initDoneArray)%5 == 0 {
 				for _, initDone := range initDoneArray {
 					<-initDone
 				}

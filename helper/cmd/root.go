@@ -37,6 +37,7 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewRestartCmd())
 	rootCmd.AddCommand(NewVersionCmd())
 	rootCmd.AddCommand(NewTunnelCmd())
+	rootCmd.AddCommand(NewSSHCmd())
 	rootCmd.AddCommand(sync.NewSyncCmd())
 
 	return rootCmd

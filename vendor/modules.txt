@@ -48,6 +48,8 @@ github.com/Microsoft/hcsshim/osversion
 # github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 ## explicit
 github.com/acarl005/stripansi
+# github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
+github.com/anmitsu/go-shlex
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/blang/semver v3.5.1+incompatible
@@ -80,6 +82,9 @@ github.com/containerd/continuity/fs
 github.com/containerd/continuity/sysx
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
+# github.com/creack/pty v1.1.15
+## explicit
+github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/distribution/distribution/v3 v3.0.0-20210316161203-a01c71e2477e
@@ -177,6 +182,9 @@ github.com/fsnotify/fsnotify
 # github.com/ghodss/yaml v1.0.0
 ## explicit
 github.com/ghodss/yaml
+# github.com/gliderlabs/ssh v0.3.3
+## explicit
+github.com/gliderlabs/ssh
 # github.com/go-logr/logr v1.2.0
 github.com/go-logr/logr
 # github.com/gogo/protobuf v1.3.2
@@ -247,7 +255,10 @@ github.com/k0kubun/go-ansi
 # github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 github.com/kballard/go-shellquote
 # github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd
+## explicit
 github.com/kevinburke/ssh_config
+# github.com/kr/fs v0.1.0
+github.com/kr/fs
 # github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 ## explicit
 github.com/loft-sh/notify
@@ -348,6 +359,9 @@ github.com/otiai10/copy
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
+# github.com/pkg/sftp v1.10.1
+## explicit
+github.com/pkg/sftp
 # github.com/postfinance/single v0.0.1
 ## explicit
 # github.com/prometheus/client_golang v1.11.0
@@ -425,6 +439,7 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/tracestate
 # golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+## explicit
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20

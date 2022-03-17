@@ -269,11 +269,11 @@ Additional run commands:
 }
 
 func replaceCommand(command string, rawConfig *RawConfig, f factory.Factory, globalFlags *flags.GlobalFlags, fallback func(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command) *cobra.Command {
-	if rawConfig != nil && rawConfig.CommandsConfig != nil && rawConfig.CommandsConfig.Commands != nil {
+	if rawConfig != nil && rawConfig.CommandsConfig != nil && rawConfig.Resolver != nil && rawConfig.CommandsConfig.Commands != nil {
 		// get command
 		overwriteCommand, ok := rawConfig.CommandsConfig.Commands[command]
 		if ok && !overwriteCommand.DisableReplace {
-			return NewOverwriteCmd(f, globalFlags, overwriteCommand)
+			return NewOverwriteCmd(f, globalFlags, overwriteCommand, rawConfig.Resolver.ResolvedVariables())
 		}
 	}
 

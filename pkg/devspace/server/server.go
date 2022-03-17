@@ -2,6 +2,8 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/loft-sh/devspace/helper/util/port"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
@@ -16,7 +18,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
-	"github.com/loft-sh/devspace/pkg/util/port"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v3"
@@ -48,16 +49,16 @@ func NewServer(ctx *devspacecontext.Context, host string, ignoreDownloadError bo
 		usePort = *forcePort
 
 		if host == "localhost" {
-			unused, err := port.CheckHostPort(host, usePort)
-			if !unused {
+			available, err := port.IsAvailable(fmt.Sprintf(":%d", usePort))
+			if !available {
 				return nil, errors.Errorf("Port %d already in use: %v", usePort, err)
 			}
 		}
 	} else {
 		if host == "localhost" {
 			for i := 0; i < 20; i++ {
-				unused, err := port.CheckHostPort(host, usePort)
-				if unused {
+				available, _ := port.IsAvailable(fmt.Sprintf(":%d", usePort))
+				if available {
 					break
 				}
 
