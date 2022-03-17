@@ -8,6 +8,7 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -16,10 +17,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-
 	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	flagspkg "github.com/loft-sh/devspace/pkg/util/flags"
@@ -64,15 +63,15 @@ devspace --dependency my-dependency run any-command --any-command-flag
 #######################################################
 	`,
 		Args: cobra.MinimumNArgs(1),
-		RunE: func(cobraCmd *cobra.Command, _ []string) error {
-			args, err := ParseArgs(cobraCmd, cmd.GlobalFlags, f.GetLog())
-			if err != nil {
-				return err
-			}
+	}
+	runCmd.RunE = func(cobraCmd *cobra.Command, _ []string) error {
+		args, err := ParseArgs(runCmd, cmd.GlobalFlags, f.GetLog())
+		if err != nil {
+			return err
+		}
 
-			plugin.SetPluginCommand(cobraCmd, args)
-			return cmd.RunRun(f, args)
-		},
+		plugin.SetPluginCommand(cobraCmd, args)
+		return cmd.RunRun(f, args)
 	}
 
 	if rawConfig != nil && rawConfig.CommandsConfig != nil {
@@ -136,6 +135,9 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 
 	// load the config
 	ctx, err := LoadCommandsConfig(configLoader, configOptions, f.GetLog())
+	if err != nil {
+		return err
+	}
 
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
@@ -157,12 +159,6 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 
 		ctx = ctx.AsDependency(dep)
 		return ExecuteConfigCommand(ctx.Context, ctx.Config, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
-	}
-
-	// Save variables
-	err = ctx.Config.LocalCache().Save()
-	if err != nil {
-		return err
 	}
 
 	// Execute command
