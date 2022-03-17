@@ -1,5 +1,5 @@
 version: v2beta1
-name: get_config_value
+name: get-config-value
 
 deployments:
   test:
