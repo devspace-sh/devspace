@@ -2,9 +2,10 @@ package v1beta11
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"path"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -530,7 +531,7 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 		}
 
 		devContainer := getMatchingDevContainer(devPod, replacePod.ContainerName)
-		devContainer.ReplaceImage = replacePod.ReplaceImage
+		devContainer.DevImage = replacePod.ReplaceImage
 		for _, p := range replacePod.PersistPaths {
 			nextPersistentPath := next.PersistentPath{
 				Path:         p.Path,

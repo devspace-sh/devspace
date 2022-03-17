@@ -3,6 +3,7 @@ package loader
 import (
 	"bytes"
 	"fmt"
+
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
@@ -242,15 +243,12 @@ func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteVal
 }
 
 func validatePullSecrets(config *latest.Config) error {
-	for k, ps := range config.PullSecrets {
+	for _, ps := range config.PullSecrets {
 		if ps.Name == "" {
 			return errors.Errorf("pull secret keys cannot be an empty string")
 		}
 		if encoding.IsUnsafeName(ps.Name) {
 			return fmt.Errorf("pullSecrets[%s] has to match the following regex: %v", ps.Name, encoding.UnsafeNameRegEx.String())
-		}
-		if ps.Registry == "" {
-			return errors.Errorf("pullSecrets[%s].registry: cannot be empty", k)
 		}
 	}
 

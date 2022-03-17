@@ -3,8 +3,9 @@ package podreplace
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
@@ -413,10 +414,10 @@ func hashConfig(replacePod *latest.DevPod) (string, error) {
 func replaceImagesInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec, devPod *latest.DevPod) error {
 	var err error
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
-		if devContainer.ReplaceImage == "" {
+		if devContainer.DevImage == "" {
 			return true
 		}
-		err = replaceImageInPodSpec(ctx, podSpec, devPod.LabelSelector, devPod.ImageSelector, devContainer.Container, devContainer.ReplaceImage)
+		err = replaceImageInPodSpec(ctx, podSpec, devPod.LabelSelector, devPod.ImageSelector, devContainer.Container, devContainer.DevImage)
 		if err != nil {
 			return false
 		}

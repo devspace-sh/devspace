@@ -1,11 +1,12 @@
 package generator
 
 import (
+	"bufio"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,18 +16,22 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	enry "gopkg.in/src-d/enry.v1"
 )
 
 // DockerfileRepoURL is the default repository url
-const DockerfileRepoURL = "https://github.com/loft-sh/dockerfile-templates.git"
+const DockerfileRepoURL = "https://github.com/loft-sh/devtools-containers.git"
 
-// DockerfileRepoPath is the path relative to the user folder where the docker file repo is stored
-const DockerfileRepoPath = ".devspace/dockerfileRepo"
+// devContainersRepoPath is the path relative to the user folder where the docker file repo is stored
+const devContainersRepoPath = ".devspace/devtools-containers"
 
-// DockerfileGenerator is a type of object that generates a Helm Chart
-type DockerfileGenerator struct {
+const langCSharpDotNet = "c# (dotnet)"
+const langFallback = "alpine"
+
+// LanguageHandler is a type of object that generates a Helm Chart
+type LanguageHandler struct {
 	Language  string
 	LocalPath string
 
@@ -36,8 +41,8 @@ type DockerfileGenerator struct {
 	log log.Logger
 }
 
-// NewDockerfileGenerator creates a new dockerfile generator
-func NewDockerfileGenerator(localPath, templateRepoURL string, log log.Logger) (*DockerfileGenerator, error) {
+// NewLanguageHandler creates a new dockerfile generator
+func NewLanguageHandler(localPath, templateRepoURL string, log log.Logger) (*LanguageHandler, error) {
 	repoURL := DockerfileRepoURL
 	if templateRepoURL != "" {
 		repoURL = templateRepoURL
@@ -48,71 +53,110 @@ func NewDockerfileGenerator(localPath, templateRepoURL string, log log.Logger) (
 		return nil, err
 	}
 
-	gitRepository := git.NewGoGitRepository(filepath.Join(homedir, DockerfileRepoPath), repoURL)
+	gitRepository := git.NewGoGitRepository(filepath.Join(homedir, devContainersRepoPath), repoURL)
 
-	return &DockerfileGenerator{
+	return &LanguageHandler{
 		LocalPath: localPath,
 		gitRepo:   gitRepository,
 		log:       log,
 	}, nil
 }
 
-// ContainerizeApplication will create a dockerfile at the given path based on the language detected
-func (cg *DockerfileGenerator) ContainerizeApplication(dockerfilePath string) error {
-	// Check if the user already has a dockerfile
-	_, err := os.Stat(dockerfilePath)
-	if !os.IsNotExist(err) {
-		return fmt.Errorf("dockerfile at %s already exists", dockerfilePath)
+func (cg *LanguageHandler) GetDevImage() (string, error) {
+	language, err := cg.GetLanguage()
+	if err != nil {
+		return "", err
 	}
 
-	cg.log.Info("Detecting programming language...")
+	reader, err := os.OpenFile(filepath.Join(cg.gitRepo.LocalPath, language, "Dockerfile"), os.O_RDONLY, 0600)
+	if err != nil {
+		return "", err
+	}
+	defer reader.Close()
 
-	detectedLang := "none"
-	supportedLanguages, err := cg.GetSupportedLanguages()
-	if err == nil {
-		detectedLang, err = cg.GetLanguage()
-		if err != nil {
-			cg.log.Warnf("Error during language detection: %v", err)
+	tag := "latest"
+	sc := bufio.NewScanner(reader)
+	if sc.Scan() {
+		argParts := strings.Split(sc.Text(), "=")
+		if len(argParts) > 1 {
+			tag = argParts[1]
 		}
-		if detectedLang == "" {
-			detectedLang = "none"
-		}
-	} else {
-		cg.log.Warnf("Error retrieving support languages: %v", err)
-	}
-	if len(supportedLanguages) == 0 {
-		supportedLanguages = []string{"none"}
 	}
 
-	// Let the user select the language
-	selectedLanguage, err := cg.log.Question(&survey.QuestionOptions{
-		Question:     "Select the programming language of this project",
-		DefaultValue: detectedLang,
-		Options:      supportedLanguages,
-	})
+	return fmt.Sprintf("loftsh/%s:%s", language, tag), nil
+}
+
+func (cg *LanguageHandler) CopyFile(fileName, targetPath string, overwrite bool) error {
+	absTargetPath, err := filepath.Abs(targetPath)
 	if err != nil {
 		return err
 	}
 
-	cg.log.WriteString(logrus.InfoLevel, "\n")
+	_, err = os.Stat(absTargetPath)
+	if err == nil && !overwrite {
+		// if file exists and shall not be overwritten, make sure it is executable
+		err = os.Chmod(absTargetPath, 0755)
+		if err != nil {
+			return err
+		}
+	} else {
+		language, err := cg.GetLanguage()
+		if err != nil {
+			return err
+		}
 
-	return cg.CreateDockerfile(selectedLanguage)
-}
-
-// GetLanguage gets the language from DockerfileGenerator either from its field "Language" or by detecting it
-func (cg *DockerfileGenerator) GetLanguage() (string, error) {
-	if len(cg.Language) == 0 {
-		detectionErr := cg.detectLanguage()
-		if detectionErr != nil {
-			return "", detectionErr
+		err = fsutil.Copy(filepath.Join(cg.gitRepo.LocalPath, language, fileName), absTargetPath, overwrite)
+		if err != nil {
+			return err
 		}
 	}
+	return nil
+}
+
+// GetLanguage gets the language from LanguageHandler either from its field "Language" or by detecting it
+func (cg *LanguageHandler) GetLanguage() (string, error) {
+	// If the language was determined already, return it from cache
+	if cg.Language != "" {
+		return cg.Language, nil
+	}
+
+	cg.log.WriteString(logrus.WarnLevel, "\n")
+	cg.log.Info("Detecting programming language...")
+
+	language, detectionErr := cg.detectLanguage()
+	if detectionErr != nil {
+		return "", detectionErr
+	}
+
+	supportedLanguages, err := cg.GetSupportedLanguages()
+	if err != nil {
+		cg.log.Warnf("Error retrieving support languages: %v", err)
+	}
+
+	if len(supportedLanguages) == 0 {
+		language = langFallback
+	} else {
+		// Let the user select the language
+		language, err = cg.log.Question(&survey.QuestionOptions{
+			Question:     "Select the programming language of this project",
+			DefaultValue: language,
+			Options:      supportedLanguages,
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+
+	language = regexp.MustCompile(`^.*\((.*)\)$`).ReplaceAllString(language, "$1")
+
+	// Save user's choice in cache
+	cg.Language = language
 
 	return cg.Language, nil
 }
 
-// IsSupportedLanguage returns true if the given language is supported by the DockerfileGenerator
-func (cg *DockerfileGenerator) IsSupportedLanguage(language string) bool {
+// IsSupportedLanguage returns true if the given language is supported by the LanguageHandler
+func (cg *LanguageHandler) IsSupportedLanguage(language string) bool {
 	supportedLanguages, _ := cg.GetSupportedLanguages()
 
 	for _, supportedLanguage := range supportedLanguages {
@@ -124,7 +168,7 @@ func (cg *DockerfileGenerator) IsSupportedLanguage(language string) bool {
 }
 
 // GetSupportedLanguages returns all languages that are available in the local Template Rempository
-func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
+func (cg *LanguageHandler) GetSupportedLanguages() ([]string, error) {
 	err := cg.gitRepo.Update(true)
 	if err != nil {
 		// try to remove and re-clone
@@ -144,7 +188,10 @@ func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
 		for _, file := range files {
 			fileName := file.Name()
 
-			if file.IsDir() && fileName[0] != '_' && fileName[0] != '.' {
+			if file.IsDir() && fileName[0] != '_' && fileName[0] != '.' && fileName != langFallback {
+				if fileName == "dotnet" {
+					fileName = langCSharpDotNet
+				}
 				cg.supportedLanguages = append(cg.supportedLanguages, fileName)
 			}
 		}
@@ -154,7 +201,7 @@ func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
 }
 
 // CreateDockerfile creates a dockerfile for a given language
-func (cg *DockerfileGenerator) CreateDockerfile(language string) error {
+func (cg *LanguageHandler) CreateDockerfile(language string) error {
 	err := cg.gitRepo.Update(true)
 	if err != nil {
 		return err
@@ -175,7 +222,7 @@ func (cg *DockerfileGenerator) CreateDockerfile(language string) error {
 	return nil
 }
 
-func (cg *DockerfileGenerator) detectLanguage() error {
+func (cg *LanguageHandler) detectLanguage() (string, error) {
 	contentReadLimit := int64(16 * 1024 * 1024)
 	bytesByLanguage := make(map[string]int64)
 
@@ -248,7 +295,7 @@ func (cg *DockerfileGenerator) detectLanguage() error {
 	})
 
 	if walkError != nil {
-		return walkError
+		return "", walkError
 	}
 
 	detectedLanguage := ""
@@ -256,9 +303,17 @@ func (cg *DockerfileGenerator) detectLanguage() error {
 	for language, bytes := range bytesByLanguage {
 		language = strings.ToLower(language)
 
-		if cg.IsSupportedLanguage(language) && bytes > currentMaxBytes {
-			detectedLanguage = language
-			currentMaxBytes = bytes
+		if bytes > currentMaxBytes {
+			isSupported := cg.IsSupportedLanguage(language)
+			if language == "c#" {
+				isSupported = true
+				language = langCSharpDotNet
+			}
+
+			if isSupported {
+				detectedLanguage = language
+				currentMaxBytes = bytes
+			}
 		}
 	}
 
@@ -266,5 +321,5 @@ func (cg *DockerfileGenerator) detectLanguage() error {
 		cg.Language = detectedLanguage
 	}
 
-	return nil
+	return cg.Language, nil
 }

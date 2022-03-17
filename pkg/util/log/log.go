@@ -1,10 +1,11 @@
 package log
 
 import (
-	"github.com/mgutz/ansi"
-	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
+
+	"github.com/mgutz/ansi"
+	"github.com/sirupsen/logrus"
 )
 
 var baseLog = NewStdoutLogger(os.Stdin, stdout, stderr, logrus.InfoLevel)
@@ -18,13 +19,14 @@ var Discard = &DiscardLogger{}
 // PrintLogo prints the devspace logo
 func PrintLogo() {
 	logo := `
-     ____              ____                       
-    |  _ \  _____   __/ ___| _ __   __ _  ___ ___ 
-    | | | |/ _ \ \ / /\___ \| '_ \ / _` + "`" + ` |/ __/ _ \
-    | |_| |  __/\ V /  ___) | |_) | (_| | (_|  __/
-    |____/ \___| \_/  |____/| .__/ \__,_|\___\___|
-                            |_|`
-
+     %########%      
+     %###########%      .____                 _____                      
+         %#########%    |  _ \   ___ __   __ / ___/  ____    ____   ____ ___ 
+         %#########%    | | | | / _ \\ \ / / \___ \ |  _ \  / _  | / __// _ \
+     %#############%    | |_| |(  __/ \ V /  ____) )| |_) )( (_| |( (__(  __/
+     %#############%    |____/  \___|  \_/   \____/ |  __/  \__,_| \___\\___|
+ %###############%                                  | |
+ %###########%`
 	stdout.Write([]byte(ansi.Color(logo+"\r\n\r\n", "cyan+b")))
 }
 

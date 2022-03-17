@@ -2,16 +2,17 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/vmware-labs/yaml-jsonpath/pkg/yamlpath"
@@ -26,6 +27,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/generator"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
@@ -42,6 +44,7 @@ var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30
 var gitFolderIgnoreRegex = regexp.MustCompile(`/?\.git/?`)
 
 const gitIgnoreFile = ".gitignore"
+const startScriptName = "devspace_start.sh"
 
 const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.devspace/\n"
 
@@ -56,9 +59,6 @@ const (
 	KustomizeOption                   = "kustomize: Use an existing Kustomization (e.g. ./kube/kustomization/)"
 	NewDevSpaceConfigOption           = "Create a new devspace.yaml from scratch"
 	DockerComposeDevSpaceConfigOption = "Convert existing docker-compose.yml to devspace.yaml"
-
-	// The default name for the production profile
-	productionProfileName = "production"
 )
 
 // InitCmd is a struct that defines a command call for "init"
@@ -113,9 +113,20 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	}
 	configExists := configLoader.Exists()
 	if configExists && !cmd.Reconfigure {
-		cmd.log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
-		cmd.log.Infof("\r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
-		return nil
+		optionNo := "no"
+		cmd.log.WriteString(cmd.log.GetLevel(), "\n")
+		cmd.log.Warnf("%s already exists in this project", ansi.Color("devspace.yaml", "white+b"))
+		response, err := cmd.log.Question(&survey.QuestionOptions{
+			Question: "Do you want to delete devspace.yaml and recreate it from scratch?",
+			Options:  []string{optionNo, "yes"},
+		})
+		if err != nil {
+			return err
+		}
+
+		if response == optionNo {
+			return nil
+		}
 	}
 
 	// Delete config & overwrite config
@@ -186,11 +197,13 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		// Create ConfigureManager
 		configureManager := f.NewConfigureManager(config, localCache, cmd.log)
 
-		// Add deployment and image config
-		deploymentName, err := getDeploymentName()
+		// Determine name for this devspace project
+		projectName, projectNamespace, err := getProjectName()
 		if err != nil {
 			return err
 		}
+
+		config.Name = projectName
 
 		imageName := "app"
 		imageQuestion := ""
@@ -213,10 +226,10 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 
 			if selectedDeploymentOption == HelmChartOption {
 				imageQuestion = "Which image do you want to develop with DevSpace?"
-				err = configureManager.AddHelmDeployment(deploymentName)
+				err = configureManager.AddHelmDeployment(imageName)
 			} else if selectedDeploymentOption == ManifestsOption || selectedDeploymentOption == KustomizeOption {
 				imageQuestion = "Which image do you want to develop with DevSpace?"
-				err = configureManager.AddKubectlDeployment(deploymentName, selectedDeploymentOption == KustomizeOption)
+				err = configureManager.AddKubectlDeployment(imageName, selectedDeploymentOption == KustomizeOption)
 			}
 
 			if err != nil {
@@ -230,16 +243,13 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		}
 
 		// Create new dockerfile generator
-		dockerfileGenerator, err := generator.NewDockerfileGenerator("", "", cmd.log)
+		languageHandler, err := generator.NewLanguageHandler("", "", cmd.log)
 		if err != nil {
 			return err
 		}
 
-		imageVarName := "IMAGE"
-		imageVar := "${" + imageVarName + "}"
-
+		image := ""
 		for {
-			image := ""
 			if imageQuestion != "" {
 				manifests, err := cmd.render(f, config)
 				if err != nil {
@@ -265,7 +275,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 				}
 			}
 
-			err = configureManager.AddImage(imageName, image, cmd.Dockerfile, dockerfileGenerator)
+			err = configureManager.AddImage(imageName, image, projectNamespace+"/"+projectName, cmd.Dockerfile, languageHandler)
 			if err != nil {
 				if err.Error() != "" {
 					cmd.log.Errorf("Error: %s", err.Error())
@@ -275,19 +285,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 			}
 		}
 
-		if config.Images != nil && config.Images[imageName] != nil {
-			// Move full image name to variables
-			if config.Vars == nil {
-				config.Vars = map[string]*latest.Variable{}
-			}
-			config.Vars[imageVarName] = &latest.Variable{
-				Name:  imageVarName,
-				Value: config.Images[imageName].Image,
-			}
-
-			// Use variable in images section
-			config.Images[imageName].Image = imageVar
-		}
+		image = config.Images[imageName].Image
 
 		// Determine app port
 		portString := ""
@@ -332,22 +330,28 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 
 		// Add component deployment if selected
 		if selectedDeploymentOption == ComponentChartOption {
-			err = configureManager.AddComponentDeployment(deploymentName, imageVar, port)
+			err = configureManager.AddComponentDeployment(imageName, image, port)
 			if err != nil {
 				return err
 			}
 		}
 
 		// Add the development configuration
-		err = cmd.addDevConfig(config, imageName, imageVar, port, dockerfileGenerator)
+		err = cmd.addDevConfig(config, imageName, image, port, languageHandler)
 		if err != nil {
 			return err
 		}
 
-		// Add the profile configuration
-		err = cmd.addProfileConfig(config, imageName)
-		if err != nil {
-			return err
+		// Add pipeline: dev
+		config.Pipelines = map[string]*latest.Pipeline{
+			"dev": {
+				Run: `create_deployments --all
+start_dev ` + imageName + ` --set terminal.command=./` + startScriptName,
+			},
+			"deploy": {
+				Run: `build_images --all
+create_deployments --all --set updateImageTags=true`,
+			},
 		}
 
 		// Save config
@@ -415,9 +419,9 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	}
 
 	cmd.log.WriteString(logrus.InfoLevel, "\n")
-	cmd.log.Info("Configuration saved in devspace.yaml - you can make adjustments as needed")
 	cmd.log.Done("Project successfully initialized")
-	cmd.log.Infof("\r         \nYou can now run:\n- `%s` to pick which Kubernetes namespace to work in\n- `%s` to start developing your project in Kubernetes\n- `%s` to deploy your project to Kubernetes\n- `%s` to get a list of available commands", ansi.Color("devspace use namespace", "blue+b"), ansi.Color("devspace dev", "blue+b"), ansi.Color("devspace deploy -p production", "blue+b"), ansi.Color("devspace -h", "blue+b"))
+	cmd.log.Info("Configuration saved in devspace.yaml - you can make adjustments as needed")
+	cmd.log.Infof("\r         \nYou can now run:\n1. %s - to pick which Kubernetes namespace to work in\n2. %s - to start developing your project in Kubernetes\n\nRun `%s` or `%s` to see a list of available commands and flags\n", ansi.Color("devspace use namespace", "blue+b"), ansi.Color("devspace dev", "blue+b"), ansi.Color("devspace -h", "blue+b"), ansi.Color("devspace [command] -h", "blue+b"))
 	return nil
 }
 
@@ -448,277 +452,124 @@ func appendToIgnoreFile(ignoreFile, content string) error {
 	return nil
 }
 
-func getDeploymentName() (string, error) {
-	absPath, err := filepath.Abs(".")
-	if err != nil {
-		return "", err
+func getProjectName() (string, string, error) {
+	projectName := ""
+	projectNamespace := ""
+	gitRemote, err := command.Output(context.TODO(), "", "git", "config", "--get", "remote.origin.url")
+	if err == nil {
+		sep := "/"
+		projectParts := strings.Split(string(regexp.MustCompile("^.*://github.com/(.*?)(.?git)?").ReplaceAll(gitRemote, []byte("$1"))), sep)
+		partsLen := len(projectParts)
+		if partsLen > 1 {
+			projectNamespace = strings.Join(projectParts[0:partsLen-1], sep)
+			projectName = projectParts[partsLen-1]
+		}
 	}
 
-	dirname := filepath.Base(absPath)
-	dirname = strings.ToLower(dirname)
-	dirname = regexp.MustCompile("[^a-zA-Z0-9- ]+").ReplaceAllString(dirname, "")
-	dirname = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(dirname, "-")
-	dirname = strings.Trim(dirname, "-")
-
-	if !SpaceNameValidationRegEx.MatchString(dirname) || len(dirname) > 42 {
-		dirname = "devspace"
+	if projectName == "" {
+		absPath, err := filepath.Abs(".")
+		if err != nil {
+			return "", "", err
+		}
+		projectName = filepath.Base(absPath)
 	}
 
-	return dirname, nil
+	projectName = strings.ToLower(projectName)
+	projectName = regexp.MustCompile("[^a-zA-Z0-9- ]+").ReplaceAllString(projectName, "")
+	projectName = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(projectName, "-")
+	projectName = strings.Trim(projectName, "-")
+
+	if !SpaceNameValidationRegEx.MatchString(projectName) || len(projectName) > 42 {
+		projectName = "devspace"
+	}
+
+	return projectName, projectNamespace, nil
 }
 
-func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string, port int, dockerfileGenerator *generator.DockerfileGenerator) error {
-	// Forward ports
-	if len(config.Deployments) > 0 {
-		if port > 0 {
-			localPort := port
-			if localPort < 1024 {
-				cmd.log.WriteString(logrus.InfoLevel, "\n")
-				cmd.log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
+func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string, port int, languageHandler *generator.LanguageHandler) error {
+	if config.Dev == nil {
+		config.Dev = map[string]*latest.DevPod{}
+	}
 
-				portString, err := cmd.log.Question(&survey.QuestionOptions{
-					Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
-					DefaultValue: strconv.Itoa(localPort + 8000),
-				})
-				if err != nil {
-					return err
-				}
+	devConfig := &latest.DevPod{
+		ImageSelector: image,
+	}
 
-				localPort, err = strconv.Atoi(portString)
-				if err != nil {
-					return errors.Errorf("Error parsing port '%s'", portString)
-				}
-			}
+	if port > 0 {
+		localPort := port
+		if localPort < 1024 {
+			cmd.log.WriteString(logrus.InfoLevel, "\n")
+			cmd.log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
 
-			portMapping := latest.PortMapping{
-				Port: fmt.Sprintf("%d", port),
-			}
-			if port != localPort {
-				portMapping = latest.PortMapping{
-					Port: fmt.Sprintf("%d:%d", &localPort, &port),
-				}
-			}
-
-			portMappings := []*latest.PortMapping{}
-			portMappings = append(portMappings, &portMapping)
-
-			// Add dev.ports config
-			if config.Dev == nil {
-				config.Dev = map[string]*latest.DevPod{}
-			}
-			if config.Dev["default"] == nil {
-				config.Dev["default"] = &latest.DevPod{
-					Name:          "default",
-					ImageSelector: image,
-				}
-			}
-			config.Dev["default"].Ports = portMappings
-
-			// Add dev.open config
-			config.Dev["default"].Open = []*latest.OpenConfig{
-				{
-					URL: "http://localhost:" + strconv.Itoa(localPort),
-				},
-			}
-		}
-
-		// Add sync config
-		if config.Dev == nil {
-			config.Dev = map[string]*latest.DevPod{}
-		}
-		if config.Dev["default"] == nil {
-			config.Dev["default"] = &latest.DevPod{
-				Name:          "default",
-				ImageSelector: image,
-			}
-		}
-
-		dockerignore, err := ioutil.ReadFile(".dockerignore")
-		excludePaths := []string{}
-		if err == nil {
-			dockerignoreRules := strings.Split(string(dockerignore), "\n")
-			for _, ignoreRule := range dockerignoreRules {
-				ignoreRule = strings.TrimSpace(ignoreRule)
-				if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] && !gitFolderIgnoreRegex.MatchString(ignoreRule) {
-					excludePaths = append(excludePaths, ignoreRule)
-				}
-			}
-		}
-
-		syncConfig := &latest.SyncConfig{
-			UploadExcludePaths: excludePaths,
-			ExcludePaths: []string{
-				".git/",
-			},
-		}
-
-		if config.Images[imageName].InjectRestartHelper {
-			syncConfig.OnUpload = &latest.SyncOnUpload{
-				RestartContainer: true,
-			}
-		} else {
-			fallbackLanguage := "alpine"
-			language, err := dockerfileGenerator.GetLanguage()
+			portString, err := cmd.log.Question(&survey.QuestionOptions{
+				Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
+				DefaultValue: strconv.Itoa(localPort + 8000),
+			})
 			if err != nil {
 				return err
 			}
 
-			if language == "none" {
-				language = fallbackLanguage
-			}
-
-			if language == "java" {
-				stat, err := os.Stat("build.gradle")
-				if err == nil && !stat.IsDir() {
-					language += "-gradle"
-				} else {
-					language += "-maven"
-				}
-			}
-
-			startScriptName := "devspace_start.sh"
-			_, err = os.Stat(startScriptName)
+			localPort, err = strconv.Atoi(portString)
 			if err != nil {
-				startScriptContent, err := getScriptContent(language, startScriptName)
-				if err != nil {
-					// try fall back language
-					startScriptContent, err = getScriptContent(fallbackLanguage, startScriptName)
-					if err != nil {
-						startScriptContent = []byte("#!/bin/bash\nbash")
-					}
-
-					language = fallbackLanguage
-				}
-
-				err = ioutil.WriteFile(startScriptName, startScriptContent, 0755)
-				if err != nil {
-					return err
-				}
-			} else {
-				// make sure the script is executable
-				_ = os.Chmod(startScriptName, 0777)
+				return errors.Errorf("Error parsing port '%s'", portString)
 			}
-
-			config.Dev["default"].Terminal = &latest.Terminal{
-				Command: "./" + startScriptName,
-			}
-
-			replacePodPatches := []*latest.PatchConfig{
-				{
-					Path:      "spec.containers[0].securityContext",
-					Operation: "remove",
-				},
-			}
-
-			if language != "php" {
-				replacePodPatches = append([]*latest.PatchConfig{
-					{
-						Path:      "spec.containers[0].command",
-						Operation: "replace",
-						Value:     []string{"sleep"},
-					},
-					{
-						Path:      "spec.containers[0].args",
-						Operation: "replace",
-						Value:     []string{"9999999"},
-					},
-				}, replacePodPatches...)
-			}
-
-			config.Dev["default"].ReplaceImage = fmt.Sprintf("loftsh/%s:latest", language)
-			config.Dev["default"].Patches = replacePodPatches
 		}
 
-		config.Dev["default"].Sync = append(config.Dev["default"].Sync, syncConfig)
+		// Add dev.ports
+		portMapping := latest.PortMapping{
+			Port: fmt.Sprintf("%d", port),
+		}
+		if port != localPort {
+			portMapping = latest.PortMapping{
+				Port: fmt.Sprintf("%d:%d", &localPort, &port),
+			}
+		}
+		devConfig.Ports = []*latest.PortMapping{&portMapping}
+
+		// Add dev.open config
+		devConfig.Open = []*latest.OpenConfig{
+			{
+				URL: "http://localhost:" + strconv.Itoa(localPort),
+			},
+		}
 	}
 
-	return nil
-}
-
-func getScriptContent(language, startScriptName string) ([]byte, error) {
-	startFileURL := fmt.Sprintf("https://raw.githubusercontent.com/loft-sh/devtools-containers/main/%s/%s", language, startScriptName)
-	client := http.Client{
-		CheckRedirect: func(r *http.Request, via []*http.Request) error {
-			r.URL.Opaque = r.URL.Path
-			return nil
+	devConfig.Sync = []*latest.SyncConfig{
+		{
+			Path: "./",
 		},
 	}
 
-	resp, err := client.Get(startFileURL)
+	// Determine language
+	language, err := languageHandler.GetLanguage()
 	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	out, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if resp.StatusCode == http.StatusOK {
-		return out, nil
-	}
-
-	return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(out))
-}
-
-func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) error {
-	if len(config.Images) > 0 {
-		imageConfig, ok := (config.Images)[imageName]
-		if ok {
-			profile := &latest.ProfileConfig{
-				Name: productionProfileName,
-			}
-
-			// If image building is disabled, move it to production profile instead of disabling it
-			patchRemoveOp := "remove"
-			patches := []*latest.PatchConfig{}
-
-			if len(imageConfig.AppendDockerfileInstructions) > 0 {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".appendDockerfileInstructions",
-				})
-			}
-
-			if imageConfig.InjectRestartHelper {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".injectRestartHelper",
-				})
-			}
-
-			if imageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".rebuildStrategy",
-				})
-			}
-
-			if len(imageConfig.Entrypoint) > 0 {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".entrypoint",
-				})
-			}
-
-			if imageConfig.Target != "" {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".build.docker.options.target",
-				})
-			}
-
-			if len(patches) == 0 {
-				return nil
-			}
-
-			profile.Patches = patches
-
-			config.Profiles = append(config.Profiles, profile)
-
+	if language == "java" {
+		stat, err := os.Stat("build.gradle")
+		if err == nil && !stat.IsDir() {
+			language += "-gradle"
+		} else {
+			language += "-maven"
 		}
 	}
+
+	err = languageHandler.CopyFile(startScriptName, startScriptName, false)
+	if err != nil {
+		return err
+	}
+
+	devImage, err := languageHandler.GetDevImage()
+	if err != nil {
+		return err
+	}
+
+	devConfig.DevImage = devImage
+
+	// Add dev section to config
+	config.Dev[imageName] = devConfig
+
 	return nil
 }
 
