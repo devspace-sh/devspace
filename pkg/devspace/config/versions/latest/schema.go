@@ -1064,6 +1064,10 @@ type CommandConfig struct {
 	// Command is the command that should be executed. For example: 'echo 123'
 	Command string `yaml:"command" json:"command"`
 
+	// DisableReplace signals DevSpace to not replace the default command. E.g.
+	// dev does not replace devspace dev.
+	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`
+
 	// Internal commands are not show in list and are usable through run_command
 	Internal bool `yaml:"internal,omitempty" json:"internal,omitempty"`
 
@@ -1077,6 +1081,17 @@ type CommandConfig struct {
 
 	// Description describes what the command is doing and can be seen in `devspace list commands`
 	Description string `yaml:"description" json:"description"`
+}
+
+func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	commandString := ""
+	err := unmarshal(&commandString)
+	if err != nil {
+		return unmarshal(c)
+	}
+
+	c.Command = commandString
+	return nil
 }
 
 // Variable describes the var definition

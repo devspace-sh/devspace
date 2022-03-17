@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
@@ -64,71 +65,37 @@ devspace --dependency my-dependency run any-command --any-command-flag
 	`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
-			log := f.GetLog()
-
-			// get all flags till "run"
-			index := -1
-			for i, v := range os.Args {
-				if v == "run" {
-					index = i + 1
-					break
-				}
-			}
-			if index == -1 {
-				return fmt.Errorf("error parsing command: couldn't find run in command: %v", os.Args)
-			}
-
-			// check if is help command
-			osArgs := os.Args[:index]
-			if len(os.Args) == index+1 && (os.Args[index] == "-h" || os.Args[index] == "--help") {
-				return cobraCmd.Help()
-			}
-
-			// enable flag parsing
-			cobraCmd.DisableFlagParsing = false
-
-			// apply extra flags
-			_, err := flagspkg.ApplyExtraFlags(cobraCmd, osArgs, true)
+			args, err := ParseArgs(cobraCmd, cmd.GlobalFlags, f.GetLog())
 			if err != nil {
 				return err
 			}
 
-			if cmd.Silent {
-				log.SetLevel(logrus.FatalLevel)
-			} else if cmd.Debug {
-				log.SetLevel(logrus.DebugLevel)
-			}
-
-			args := os.Args[index:]
 			plugin.SetPluginCommand(cobraCmd, args)
 			return cmd.RunRun(f, args)
 		},
 	}
 
-	if rawConfig != nil {
-		latest, _, _ := loader.NewCommandsParser().Parse(rawConfig.Ctx, rawConfig.OriginalRawConfig, rawConfig.RawConfig, rawConfig.Resolver, log.Discard)
-		if latest != nil {
-			for _, cmd := range latest.Commands {
-				description := cmd.Description
-				if description == "" {
-					description = "Runs command: " + cmd.Command
-				}
-				if len(description) > 64 {
-					if len(description) > 64 {
-						description = description[:61] + "..."
-					}
-				}
-				runCmd.AddCommand(&cobra.Command{
-					Use:                cmd.Name,
-					Short:              description,
-					Long:               description,
-					Args:               cobra.ArbitraryArgs,
-					DisableFlagParsing: true,
-					RunE: func(cobraCmd *cobra.Command, args []string) error {
-						return cobraCmd.Parent().RunE(cobraCmd, args)
-					},
-				})
+	if rawConfig != nil && rawConfig.CommandsConfig != nil {
+		for _, cmd := range rawConfig.CommandsConfig.Commands {
+			description := cmd.Description
+			if description == "" {
+				description = "Runs command: " + cmd.Command
 			}
+			if len(description) > 64 {
+				if len(description) > 64 {
+					description = description[:61] + "..."
+				}
+			}
+			runCmd.AddCommand(&cobra.Command{
+				Use:                cmd.Name,
+				Short:              description,
+				Long:               description,
+				Args:               cobra.ArbitraryArgs,
+				DisableFlagParsing: true,
+				RunE: func(cobraCmd *cobra.Command, args []string) error {
+					return cobraCmd.Parent().RunE(cobraCmd, args)
+				},
+			})
 		}
 	}
 	runCmd.Flags().StringVar(&cmd.Dependency, "dependency", "", "Run a command from a specific dependency")
@@ -139,6 +106,19 @@ devspace --dependency my-dependency run any-command --any-command-flag
 func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("run requires at least one argument")
+	}
+
+	// check if dependency command
+	commandSplitted := strings.Split(args[0], ".")
+	if len(commandSplitted) > 1 {
+		cmd.Dependency = strings.Join(commandSplitted[:len(commandSplitted)-1], ".")
+		args[0] = commandSplitted[len(commandSplitted)-1]
+	}
+
+	// Execute plugin hook
+	err := hook.ExecuteHooks(nil, nil, "run")
+	if err != nil {
+		return err
 	}
 
 	// Set config root
@@ -154,38 +134,12 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 		return errors.New(message.ConfigNotFound)
 	}
 
-	// check if dependency command
-	commandSplitted := strings.Split(args[0], ".")
-	if len(commandSplitted) > 1 {
-		cmd.Dependency = strings.Join(commandSplitted[:len(commandSplitted)-1], ".")
-		args[0] = commandSplitted[len(commandSplitted)-1]
-	}
-
-	// Execute plugin hook
-	err = hook.ExecuteHooks(nil, nil, "run")
-	if err != nil {
-		return err
-	}
-
-	// load generated
-	localCache, err := configLoader.LoadLocalCache()
-	if err != nil {
-		return err
-	}
-
-	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(context.Background(), localCache, nil, loader.NewCommandsParser(), configOptions, f.GetLog())
-	if err != nil {
-		return err
-	}
-
-	// create context
-	ctx := devspacecontext.NewContext(context.Background(), f.GetLog()).
-		WithConfig(commandsInterface)
+	// load the config
+	ctx, err := LoadCommandsConfig(configLoader, configOptions, f.GetLog())
 
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
-		config, err := configLoader.LoadWithCache(context.Background(), localCache, nil, configOptions, f.GetLog())
+		config, err := configLoader.LoadWithCache(context.Background(), ctx.Config.LocalCache(), nil, configOptions, f.GetLog())
 		if err != nil {
 			return err
 		}
@@ -206,7 +160,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// Save variables
-	err = localCache.Save()
+	err = ctx.Config.LocalCache().Save()
 	if err != nil {
 		return err
 	}
@@ -215,22 +169,80 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	return ExecuteConfigCommand(ctx.Context, ctx.Config, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
 }
 
+func ParseArgs(cobraCmd *cobra.Command, globalFlags *flags.GlobalFlags, log log.Logger) ([]string, error) {
+	index := -1
+	for i, v := range os.Args {
+		if v == cobraCmd.Use {
+			index = i + 1
+			break
+		}
+	}
+	if index == -1 {
+		return nil, fmt.Errorf("error parsing command: couldn't find %s in command: %v", cobraCmd.Use, os.Args)
+	}
+
+	// check if is help command
+	osArgs := os.Args[:index]
+	if len(os.Args) == index+1 && (os.Args[index] == "-h" || os.Args[index] == "--help") {
+		return nil, cobraCmd.Help()
+	}
+
+	// enable flag parsing
+	cobraCmd.DisableFlagParsing = false
+
+	// apply extra flags
+	_, err := flagspkg.ApplyExtraFlags(cobraCmd, osArgs, true)
+	if err != nil {
+		return nil, err
+	}
+
+	if globalFlags.Silent {
+		log.SetLevel(logrus.FatalLevel)
+	} else if globalFlags.Debug {
+		log.SetLevel(logrus.DebugLevel)
+	}
+
+	args := os.Args[index:]
+	return args, nil
+}
+
+// LoadCommandsConfig loads the commands config
+func LoadCommandsConfig(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log log.Logger) (*devspacecontext.Context, error) {
+	// load generated
+	localCache, err := configLoader.LoadLocalCache()
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse commands
+	commandsInterface, err := configLoader.LoadWithParser(context.Background(), localCache, nil, loader.NewCommandsParser(), configOptions, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// create context
+	return devspacecontext.NewContext(context.Background(), log).
+		WithConfig(commandsInterface), nil
+}
+
 // ExecuteConfigCommand executes a command from the config
 func ExecuteConfigCommand(ctx context.Context, config config.Config, name string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
-	shellCommand := ""
-	var shellArgs []string
-	var appendArgs bool
 	if config.Config().Commands == nil || config.Config().Commands[name] == nil {
 		return errors.Errorf("couldn't find command '%s' in devspace config", name)
 	}
 
 	cmd := config.Config().Commands[name]
-	shellCommand = strings.TrimSpace(cmd.Command)
-	shellArgs = cmd.Args
-	appendArgs = cmd.AppendArgs
+	return ExecuteCommand(ctx, cmd, config.Variables(), args, dir, stdout, stderr, stdin)
+}
+
+// ExecuteCommand executes a command from the config
+func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables map[string]interface{}, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
+	shellCommand := strings.TrimSpace(cmd.Command)
+	shellArgs := cmd.Args
+	appendArgs := cmd.AppendArgs
 
 	extraEnv := map[string]string{}
-	for k, v := range config.Variables() {
+	for k, v := range variables {
 		extraEnv[k] = fmt.Sprintf("%v", v)
 	}
 	if shellArgs == nil {
