@@ -16,6 +16,7 @@ type GetImageOptions struct {
 }
 
 func GetImage(ctx *devspacecontext.Context, args []string) error {
+	ctx = ctx.WithLogger(ctx.Log.ErrorStreamOnly())
 	ctx.Log.Debugf("get_image %s", strings.Join(args, " "))
 	options := &GetImageOptions{}
 	args, err := flags.ParseArgs(options, args)

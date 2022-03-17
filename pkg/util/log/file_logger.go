@@ -95,7 +95,11 @@ func OverrideRuntimeErrorHandler(discard bool) {
 
 func (f *fileLogger) logSinks(level logrus.Level, message string) {
 	for _, s := range f.sinks {
-		s.Print(level, message)
+		if level == logrus.PanicLevel || level == logrus.FatalLevel {
+			s.Print(logrus.ErrorLevel, message)
+		} else {
+			s.Print(level, message)
+		}
 	}
 }
 
@@ -362,4 +366,8 @@ func (f *fileLogger) WithPrefix(prefix string) Logger {
 	n.m = &sync.Mutex{}
 	n.prefixes = append(n.prefixes, prefix)
 	return &n
+}
+
+func (f *fileLogger) ErrorStreamOnly() Logger {
+	return f
 }

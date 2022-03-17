@@ -68,6 +68,9 @@ var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline
 	"get_config_value": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.GetConfigValue(devCtx, args)
 	},
+	"select_pod": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.SelectPod(devCtx, args)
+	},
 }
 
 func init() {

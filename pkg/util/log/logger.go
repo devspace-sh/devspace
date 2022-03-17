@@ -51,7 +51,7 @@ type Logger interface {
 
 	// WithLevel creates a new logger with the given level
 	WithLevel(level logrus.Level) Logger
-
+	ErrorStreamOnly() Logger
 	WithPrefix(prefix string) Logger
 	WithSink(sink Logger) Logger
 	AddSink(sink Logger)

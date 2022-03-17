@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devspace/helper/util/port"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -20,7 +21,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/port"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
@@ -92,8 +92,8 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 		}
 
 		for i := 0; i < 20; i++ {
-			unused, err := port.CheckHostPort(cmd.Host, checkPort)
-			if !unused {
+			available, _ := port.IsAvailable(fmt.Sprintf(":%d", checkPort))
+			if !available {
 				if i+1 == 20 {
 					return errors.Wrap(err, "check for open port")
 				}

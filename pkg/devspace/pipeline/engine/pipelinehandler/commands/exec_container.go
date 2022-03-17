@@ -7,7 +7,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"mvdan.cc/sh/v3/interp"
 	"time"
 )
@@ -20,7 +19,6 @@ type ExecContainerOptions struct {
 	Namespace   string `long:"namespace" short:"n" description:"The namespace to use"`
 	DisableWait bool   `long:"disable-wait" description:"If true, will not wait for the container to become ready"`
 	Timeout     int64  `long:"timeout" description:"The timeout to wait. Defaults to 5 minutes"`
-	Verbose     bool   `long:"verbose" description:"If true will print more information"`
 }
 
 func ExecContainer(ctx *devspacecontext.Context, args []string) error {
@@ -39,11 +37,7 @@ func ExecContainer(ctx *devspacecontext.Context, args []string) error {
 		return fmt.Errorf("usage: exec_container [--image-selector|--label-selector] COMMAND")
 	}
 
-	logger := ctx.Log.WithLevel(logrus.WarnLevel)
-	if options.Verbose {
-		logger = ctx.Log
-	}
-
+	logger := ctx.Log.ErrorStreamOnly()
 	selectorOptions := targetselector.NewOptionsFromFlags(options.Container, options.LabelSelector, []string{options.ImageSelector}, options.Namespace, "")
 	if options.Timeout != 0 {
 		selectorOptions = selectorOptions.WithTimeout(options.Timeout)

@@ -61,7 +61,7 @@ type Pipeline interface {
 
 	// WaitDev waits for the dependency dev managers as well current
 	// dev pod manager to be finished
-	WaitDev()
+	WaitDev() error
 
 	// StartNewPipelines starts sub pipelines in this pipeline. It is ensured
 	// that each pipeline can only be run once at the same time and otherwise

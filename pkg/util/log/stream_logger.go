@@ -167,6 +167,16 @@ func (s *StreamLogger) GetFormat() Format {
 	return s.format
 }
 
+func (s *StreamLogger) ErrorStreamOnly() Logger {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	n := *s
+	n.m = &sync.Mutex{}
+	n.stream = s.errorStream
+	return &n
+}
+
 func (s *StreamLogger) WithPrefix(prefix string) Logger {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -241,7 +251,11 @@ func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
 	message = s.writePrefixes(message)
 	for _, s := range s.sinks {
-		s.Print(fnInformation.logLevel, message)
+		if fnInformation.logLevel == logrus.PanicLevel || fnInformation.logLevel == logrus.FatalLevel {
+			s.Print(logrus.ErrorLevel, message)
+		} else {
+			s.Print(fnInformation.logLevel, message)
+		}
 	}
 
 	if s.level >= fnInformation.logLevel {
