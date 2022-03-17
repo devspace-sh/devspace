@@ -118,7 +118,7 @@ var _ = DevSpaceDescribe("portforward", func() {
 		}
 	})
 
-	ginkgo.FIt("should get value from config", func() {
+	ginkgo.It("should get value from config", func() {
 		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/getconfigvalue")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)

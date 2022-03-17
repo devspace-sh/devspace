@@ -123,3 +123,7 @@ func (d *DiscardLogger) AddSink(log Logger) {
 func (d *DiscardLogger) WithPrefix(prefix string) Logger {
 	return d
 }
+
+func (d *DiscardLogger) ErrorStreamOnly() Logger {
+	return d
+}

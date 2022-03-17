@@ -11,6 +11,7 @@ import (
 )
 
 func GetConfigValue(ctx *devspacecontext.Context, args []string) error {
+	ctx = ctx.WithLogger(ctx.Log.ErrorStreamOnly())
 	ctx.Log.Debugf("get_config_value %s", strings.Join(args, " "))
 	if len(args) != 1 {
 		return fmt.Errorf("usage: get_config_value deployments.my-deployment.helm.chart.name")
@@ -21,31 +22,30 @@ func GetConfigValue(ctx *devspacecontext.Context, args []string) error {
 
 	nodePath, err := yamlpath.NewPath(args[0])
 	if err != nil {
-		_, _ = hc.Stderr.Write([]byte(err.Error()))
+		ctx.Log.Debugf("%v", err)
 		return nil
 	}
 
 	out, err := yaml.Marshal(rawConfig)
 	if err != nil {
-		_, _ = hc.Stderr.Write([]byte(err.Error()))
+		ctx.Log.Debugf("%v", err)
 		return nil
 	}
 
 	var doc yaml.Node
 	err = yaml.Unmarshal(out, &doc)
 	if err != nil {
-		_, _ = hc.Stderr.Write([]byte(err.Error()))
+		ctx.Log.Debugf("%v", err)
 		return nil
 	}
 
 	nodes, err := nodePath.Find(&doc)
 	if err != nil {
-		_, _ = hc.Stderr.Write([]byte(err.Error()))
+		ctx.Log.Debugf("%v", err)
 		return nil
 	}
 
 	if len(nodes) < 1 {
-		_, _ = hc.Stderr.Write([]byte("no nodes found"))
 		return nil
 	}
 

@@ -138,3 +138,7 @@ func (d *FakeLogger) AddSink(log log.Logger) {
 func (d *FakeLogger) WithPrefix(prefix string) log.Logger {
 	return d
 }
+
+func (d *FakeLogger) ErrorStreamOnly() log.Logger {
+	return d
+}
