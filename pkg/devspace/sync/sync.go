@@ -108,6 +108,7 @@ func NewSync(ctx context.Context, localPath string, options Options) (*Sync, err
 
 	// We exclude the sync log to prevent an endless loop in upstream
 	options.ExcludePaths = append(options.ExcludePaths, ".devspace/")
+	options.ExcludePaths = append(options.ExcludePaths, ".git/")
 
 	// Create sync structure
 	s := &Sync{

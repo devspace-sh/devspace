@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"io"
 	"os"
+
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -79,15 +80,7 @@ func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command
 #######################################################
 ################### devspace dev ######################
 #######################################################
-Starts your project in development mode:
-1. Builds your Docker images and override entrypoints if specified
-2. Deploys the deployments via helm or kubectl
-3. Forwards container ports to the local computer
-4. Starts the sync client
-5. Streams the logs of deployed containers
-
-Open terminal instead of logs:
-- Use "devspace dev -t" for opening a terminal
+Starts your project in development mode
 #######################################################`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {

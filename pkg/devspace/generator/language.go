@@ -93,13 +93,7 @@ func (cg *LanguageHandler) CopyFile(fileName, targetPath string, overwrite bool)
 	}
 
 	_, err = os.Stat(absTargetPath)
-	if err == nil && !overwrite {
-		// if file exists and shall not be overwritten, make sure it is executable
-		err = os.Chmod(absTargetPath, 0755)
-		if err != nil {
-			return err
-		}
-	} else {
+	if err != nil || overwrite {
 		language, err := cg.GetLanguage()
 		if err != nil {
 			return err
@@ -110,6 +104,13 @@ func (cg *LanguageHandler) CopyFile(fileName, targetPath string, overwrite bool)
 			return err
 		}
 	}
+
+	// Ensure file is executable
+	err = os.Chmod(absTargetPath, 0755)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

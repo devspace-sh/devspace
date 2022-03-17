@@ -33,9 +33,9 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 		skipRegistry          = "Skip Registry"
 		registryDefaultOption = skipRegistry
 		registryUsernameHint  = " => you are logged in as %s"
-		rootLevelDockerfile   = "Based on this existing Dockerfile: " + dockerfile
-		differentDockerfile   = "Based on a different existing Dockerfile (e.g. ./backend/Dockerfile)"
-		subPathDockerfile     = "Based on an existing Dockerfile within in this project (e.g. ./backend/Dockerfile)"
+		rootLevelDockerfile   = "Use this existing Dockerfile: " + dockerfile
+		differentDockerfile   = "Use a different Dockerfile (e.g. ./backend/Dockerfile)"
+		subPathDockerfile     = "Use an existing Dockerfile within in this project"
 		customBuild           = "Use alternative build tool (e.g. jib, bazel)"
 		err                   error
 	)

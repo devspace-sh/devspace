@@ -53,10 +53,9 @@ const (
 	UseExistingDockerfileOption       = "Use the Dockerfile in ./Dockerfile"
 	CreateDockerfileOption            = "Create a Dockerfile for this project"
 	EnterDockerfileOption             = "Enter path to a different Dockerfile"
-	ComponentChartOption              = "helm: Use Component Helm Chart [QUICKSTART] (https://devspace.sh/component-chart/docs)"
-	HelmChartOption                   = "helm: Use my own Helm chart (e.g. local via ./chart/ or any remote chart)"
-	ManifestsOption                   = "kubectl: Use existing Kubernetes manifests (e.g. ./kube/deployment.yaml)"
-	KustomizeOption                   = "kustomize: Use an existing Kustomization (e.g. ./kube/kustomization/)"
+	DeployOptionHelm                  = "helm"
+	DeployOptionKubectl               = "kubectl"
+	DeployOptionKustomize             = "kustomize"
 	NewDevSpaceConfigOption           = "Create a new devspace.yaml from scratch"
 	DockerComposeDevSpaceConfigOption = "Convert existing docker-compose.yml to devspace.yaml"
 )
@@ -113,12 +112,12 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	}
 	configExists := configLoader.Exists()
 	if configExists && !cmd.Reconfigure {
-		optionNo := "no"
+		optionNo := "No"
 		cmd.log.WriteString(cmd.log.GetLevel(), "\n")
 		cmd.log.Warnf("%s already exists in this project", ansi.Color("devspace.yaml", "white+b"))
 		response, err := cmd.log.Question(&survey.QuestionOptions{
 			Question: "Do you want to delete devspace.yaml and recreate it from scratch?",
-			Options:  []string{optionNo, "yes"},
+			Options:  []string{optionNo, "Yes"},
 		})
 		if err != nil {
 			return err
@@ -206,40 +205,83 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		config.Name = projectName
 
 		imageName := "app"
-		imageQuestion := ""
 		selectedDeploymentOption := ""
+		mustAddComponentChart := false
 
 		for {
 			selectedDeploymentOption, err = cmd.log.Question(&survey.QuestionOptions{
-				Question:     "How do you want to deploy this project?",
-				DefaultValue: ComponentChartOption,
+				Question: "How do you want to deploy this project?",
 				Options: []string{
-					ComponentChartOption,
-					HelmChartOption,
-					ManifestsOption,
-					KustomizeOption,
+					DeployOptionHelm,
+					DeployOptionKubectl,
+					DeployOptionKustomize,
 				},
 			})
 			if err != nil {
 				return err
 			}
 
-			if selectedDeploymentOption == HelmChartOption {
-				imageQuestion = "Which image do you want to develop with DevSpace?"
-				err = configureManager.AddHelmDeployment(imageName)
-			} else if selectedDeploymentOption == ManifestsOption || selectedDeploymentOption == KustomizeOption {
-				imageQuestion = "Which image do you want to develop with DevSpace?"
-				err = configureManager.AddKubectlDeployment(imageName, selectedDeploymentOption == KustomizeOption)
+			if selectedDeploymentOption != DeployOptionHelm && strings.HasPrefix(projectName, "devspace-quickstart-") {
+				cmd.log.WriteString(logrus.InfoLevel, "\n")
+				cmd.log.Warn("If this is a DevSpace quickstart project, you should use Helm!")
+
+				useHelm := "Yes"
+				helmAnswer, err := cmd.log.Question(&survey.QuestionOptions{
+					Question: "Do you want to switch to using Helm as suggested?",
+					Options: []string{
+						useHelm,
+						"No",
+					},
+				})
+				if err != nil {
+					return err
+				}
+
+				if helmAnswer == useHelm {
+					selectedDeploymentOption = DeployOptionHelm
+				}
 			}
 
-			if err != nil {
-				if err.Error() != "" {
-					cmd.log.WriteString(logrus.InfoLevel, "\n")
-					cmd.log.Errorf("Error: %s", err.Error())
+			if selectedDeploymentOption == DeployOptionHelm {
+				hasOwnHelmChart := "Yes"
+				helmChartAnswer, err := cmd.log.Question(&survey.QuestionOptions{
+					Question: "Do you already have a Helm chart?",
+					Options: []string{
+						"No",
+						hasOwnHelmChart,
+					},
+				})
+				if err != nil {
+					return err
 				}
-			} else {
-				break
+
+				if helmChartAnswer == hasOwnHelmChart {
+					err = configureManager.AddHelmDeployment(imageName)
+					if err != nil {
+						if err.Error() != "" {
+							cmd.log.WriteString(logrus.InfoLevel, "\n")
+							cmd.log.Errorf("Error: %s", err.Error())
+						}
+
+						// Retry questions on error
+						continue
+					}
+				} else {
+					mustAddComponentChart = true
+				}
+			} else if selectedDeploymentOption == DeployOptionKubectl || selectedDeploymentOption == DeployOptionKustomize {
+				err = configureManager.AddKubectlDeployment(imageName, selectedDeploymentOption == DeployOptionKustomize)
+				if err != nil {
+					if err.Error() != "" {
+						cmd.log.WriteString(logrus.InfoLevel, "\n")
+						cmd.log.Errorf("Error: %s", err.Error())
+					}
+
+					// Retry questions on error
+					continue
+				}
 			}
+			break
 		}
 
 		// Create new dockerfile generator
@@ -250,7 +292,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 
 		image := ""
 		for {
-			if imageQuestion != "" {
+			if !mustAddComponentChart {
 				manifests, err := cmd.render(f, config)
 				if err != nil {
 					return errors.Wrap(err, "error rendering deployment")
@@ -266,7 +308,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 				}
 
 				image, err = cmd.log.Question(&survey.QuestionOptions{
-					Question:     imageQuestion,
+					Question:     "Which image do you want to develop with DevSpace?",
 					DefaultValue: images[0],
 					Options:      images,
 				})
@@ -329,7 +371,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		}
 
 		// Add component deployment if selected
-		if selectedDeploymentOption == ComponentChartOption {
+		if mustAddComponentChart {
 			err = configureManager.AddComponentDeployment(imageName, image, port)
 			if err != nil {
 				return err

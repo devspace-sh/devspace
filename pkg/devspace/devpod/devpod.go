@@ -200,16 +200,17 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 				ctx.Log.Infof("Opening '%s' as soon as application will be started", openConfig.URL)
 				parent.Go(func() error {
 					now := time.Now()
+
+				timedLoop:
 					for time.Since(now) < openMaxWait {
 						select {
-						case <-ctx.Context.Done():
-							return nil
 						case <-time.After(time.Second):
 							resp, _ := http.Get(url)
 							if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
 								time.Sleep(time.Second * 1)
 								_ = open.Start(url)
 								ctx.Log.Donef("Successfully opened %s", url)
+								break timedLoop
 							}
 						}
 					}

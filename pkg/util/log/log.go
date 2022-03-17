@@ -20,14 +20,14 @@ var Discard = &DiscardLogger{}
 func PrintLogo() {
 	logo := `
      %########%      
-     %###########%      .____                 _____                      
+     %###########%       ____                 _____                      
          %#########%    |  _ \   ___ __   __ / ___/  ____    ____   ____ ___ 
          %#########%    | | | | / _ \\ \ / / \___ \ |  _ \  / _  | / __// _ \
      %#############%    | |_| |(  __/ \ V /  ____) )| |_) )( (_| |( (__(  __/
      %#############%    |____/  \___|  \_/   \____/ |  __/  \__,_| \___\\___|
- %###############%                                  | |
+ %###############%                                  |_|
  %###########%`
-	stdout.Write([]byte(ansi.Color(logo+"\r\n\r\n", "cyan+b")))
+	stdout.Write([]byte(ansi.Color("\r\n"+logo+"\r\n\r\n", "cyan+b")))
 }
 
 // StartFileLogging logs the output of the global logger to the file default.log
