@@ -367,3 +367,7 @@ func (f *fileLogger) WithPrefix(prefix string) Logger {
 	n.prefixes = append(n.prefixes, prefix)
 	return &n
 }
+
+func (f *fileLogger) ErrorStreamOnly() Logger {
+	return f
+}

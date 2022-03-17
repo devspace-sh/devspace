@@ -167,6 +167,16 @@ func (s *StreamLogger) GetFormat() Format {
 	return s.format
 }
 
+func (s *StreamLogger) ErrorStreamOnly() Logger {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	n := *s
+	n.m = &sync.Mutex{}
+	n.stream = s.errorStream
+	return &n
+}
+
 func (s *StreamLogger) WithPrefix(prefix string) Logger {
 	s.m.Lock()
 	defer s.m.Unlock()
