@@ -88,14 +88,14 @@ func InjectDevSpaceHelper(ctx context.Context, client kubectl.Client, pod *v1.Po
 		syncBinaryFolder := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, DevSpaceHelperTempFolder, version)
 		if env.GlobalGetEnv("DEVSPACE_INJECT_LOCAL") != "true" {
 			// Install devspacehelper inside container
-			log.Infof("Trying to download devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
+			log.Debugf("Trying to download devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
 			err = installDevSpaceHelperInContainer(ctx, client, pod, container, version, localHelperName)
 			if err == nil {
 				log.Donef("Successfully injected devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
 				return nil
 			}
 
-			log.Warnf("Couldn't download devspacehelper in container, error: %s", err)
+			log.Debugf("Couldn't download devspacehelper in container, error: %s", err)
 		}
 
 		log.Info("Trying to inject devspacehelper from local machine")

@@ -8,6 +8,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bmatcuk/doublestar v1.1.1
 	github.com/compose-spec/compose-go v1.0.1
+	github.com/creack/pty v1.1.15
 	github.com/docker/cli v20.10.0-beta1.0.20201029214301-1d20b15adc38+incompatible
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v20.10.5+incompatible
@@ -15,6 +16,7 @@ require (
 	github.com/evanphx/json-patch v4.12.0+incompatible
 	github.com/evanphx/json-patch/v5 v5.1.0
 	github.com/ghodss/yaml v1.0.0
+	github.com/gliderlabs/ssh v0.3.3
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/websocket v1.4.2
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
@@ -34,6 +36,7 @@ require (
 	github.com/otiai10/copy v0.0.0-20180813030456-0046ee23fdbd
 	github.com/otiai10/mint v1.3.3 // indirect
 	github.com/pkg/errors v0.9.1
+	github.com/pkg/sftp v1.10.1
 	github.com/postfinance/single v0.0.1 // indirect
 	github.com/rhysd/go-github-selfupdate v0.0.0-20180520142321-41c1bbb0804a
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94

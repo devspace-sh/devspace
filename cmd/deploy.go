@@ -325,7 +325,10 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 	ctx.Log.Debugf("Wait for dev to finish")
 
 	// wait for dev
-	pipe.WaitDev()
+	err = pipe.WaitDev()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

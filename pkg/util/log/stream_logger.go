@@ -241,7 +241,11 @@ func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
 	message = s.writePrefixes(message)
 	for _, s := range s.sinks {
-		s.Print(fnInformation.logLevel, message)
+		if fnInformation.logLevel == logrus.PanicLevel || fnInformation.logLevel == logrus.FatalLevel {
+			s.Print(logrus.ErrorLevel, message)
+		} else {
+			s.Print(fnInformation.logLevel, message)
+		}
 	}
 
 	if s.level >= fnInformation.logLevel {

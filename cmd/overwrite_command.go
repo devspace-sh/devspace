@@ -16,16 +16,19 @@ import (
 type OverwriteCmd struct {
 	*flags.GlobalFlags
 
-	Command *latest.CommandConfig
-	Stdout  io.Writer
-	Stderr  io.Writer
+	Command   *latest.CommandConfig
+	Variables map[string]interface{}
+
+	Stdout io.Writer
+	Stderr io.Writer
 }
 
 // NewOverwriteCmd creates a new overwrite command
-func NewOverwriteCmd(f factory.Factory, globalFlags *flags.GlobalFlags, command *latest.CommandConfig) *cobra.Command {
+func NewOverwriteCmd(f factory.Factory, globalFlags *flags.GlobalFlags, command *latest.CommandConfig, variables map[string]interface{}) *cobra.Command {
 	cmd := &OverwriteCmd{
 		GlobalFlags: globalFlags,
 		Command:     command,
+		Variables:   variables,
 		Stdout:      os.Stdout,
 		Stderr:      os.Stderr,
 	}
@@ -63,5 +66,5 @@ func NewOverwriteCmd(f factory.Factory, globalFlags *flags.GlobalFlags, command 
 
 func (cmd *OverwriteCmd) Run(f factory.Factory, args []string) error {
 	devCtx := devspacecontext.NewContext(context.Background(), f.GetLog())
-	return ExecuteCommand(devCtx.Context, cmd.Command, nil, args, devCtx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
+	return ExecuteCommand(devCtx.Context, cmd.Command, cmd.Variables, args, devCtx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
 }

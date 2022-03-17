@@ -44,7 +44,7 @@ type Manager interface {
 	Context() context.Context
 
 	// Wait will wait until all DevPods are stopped
-	Wait()
+	Wait() error
 }
 
 type devPodManager struct {
@@ -144,7 +144,7 @@ func (DevPodAlreadyExists) Error() string {
 	return "dev pod already exists, please make sure to stop the dev pod before rerunning it"
 }
 
-func (d *devPodManager) Wait() {
+func (d *devPodManager) Wait() error {
 	devPods := map[string]*devPod{}
 	d.m.Lock()
 	for k, v := range d.devPods {
@@ -152,9 +152,17 @@ func (d *devPodManager) Wait() {
 	}
 	d.m.Unlock()
 
+	errors := []error{}
 	for _, dp := range devPods {
 		<-dp.Done()
+
+		err := dp.Err()
+		if err != nil {
+			errors = append(errors, err)
+		}
 	}
+
+	return utilerrors.NewAggregate(errors)
 }
 
 func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodConfig *latest.DevPod, options Options) (*devPod, error) {

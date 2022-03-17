@@ -2,6 +2,7 @@ package portforwarding
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/helper/util/port"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
@@ -15,7 +16,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/port"
 	"github.com/pkg/errors"
 )
 
@@ -84,7 +84,7 @@ func startPortForwardingWithHooks(ctx *devspacecontext.Context, name string, por
 	}
 
 	// start port forwarding
-	err := startForwarding(ctx, name, portMappings, selector, parent)
+	err := StartForwarding(ctx, name, portMappings, selector, parent)
 	if err != nil {
 		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"port_forwarding_config": portMappings,
@@ -100,7 +100,7 @@ func startPortForwardingWithHooks(ctx *devspacecontext.Context, name string, por
 	return nil
 }
 
-func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*latest.PortMapping, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func StartForwarding(ctx *devspacecontext.Context, name string, portMappings []*latest.PortMapping, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -127,8 +127,10 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 
 		localPort := mappings[0].Local
 		remotePort := mappings[0].Remote
-		open, _ := port.Check(int(localPort))
-		if !open {
+		available, err := port.IsAvailable(fmt.Sprintf(":%d", int(localPort)))
+		if err != nil {
+			ctx.Log.Debugf("Seems like port %d is already in use: %v", err)
+		} else if !available {
 			ctx.Log.Debugf("Seems like port %d is already in use. Is another application using that port?", localPort)
 		}
 
@@ -159,7 +161,7 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 	case <-ctx.Context.Done():
 		return nil
 	case <-readyChan:
-		ctx.Log.Donef("Port forwarding started on %s (%s/%s)", strings.Join(ports, ", "), pod.Namespace, pod.Name)
+		ctx.Log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
 	case err := <-errorChan:
 		if ctx.IsDone() {
 			return nil
@@ -192,7 +194,7 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 				}, hook.EventsForSingle("restart:portForwarding", name).With("portForwarding.restart")...)
 
 				for {
-					err = startForwarding(ctx.WithLogger(fileLog), name, portMappings, selector, parent)
+					err = StartForwarding(ctx.WithLogger(fileLog), name, portMappings, selector, parent)
 					if err != nil {
 						hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
 							"port_forwarding_config": portMappings,

@@ -721,6 +721,7 @@ type DevContainer struct {
 	Args                 []string         `yaml:"args,omitempty" json:"args,omitempty"`
 	WorkingDir           string           `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
 	Resources            *PodResources    `yaml:"resources,omitempty" json:"resources,omitempty"`
+	SSH                  *SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"`
 	Env                  []EnvVar         `yaml:"env,omitempty" json:"env,omitempty"`
 	RestartHelperPath    string           `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
 	DisableRestartHelper bool             `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
@@ -730,6 +731,16 @@ type DevContainer struct {
 	DevImage             string           `yaml:"devImage,omitempty" json:"devImage,omitempty"`
 	PersistPaths         []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
 	Sync                 []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
+}
+
+type SSH struct {
+	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// Port is the local port to forward from, if empty will be random
+	Port int `yaml:"port,omitempty" json:"port,omitempty"`
+
+	// Address is the address to listen to inside the container
+	Address string `yaml:"address,omitempty" json:"address,omitempty"`
 }
 
 type EnvVar struct {
