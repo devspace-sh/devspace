@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -147,6 +148,11 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 		}
 	} else {
 		data["name"] = options.OverrideName
+	}
+
+	// validate name
+	if encoding.IsUnsafeName(name) {
+		return nil, fmt.Errorf("DevSpace config has an invalid name '%s', must match regex %s", name, encoding.UnsafeNameRegEx.String())
 	}
 
 	// set name to context
@@ -615,7 +621,7 @@ func (l *configLoader) LoadRaw() (map[string]interface{}, error) {
 	if !ok || name == "" {
 		directoryName := filepath.Base(filepath.Dir(l.absConfigPath))
 		if directoryName != "" && len(directoryName) > 2 {
-			name = directoryName
+			name = encoding.Convert(directoryName)
 		} else {
 			name = "devspace"
 		}
