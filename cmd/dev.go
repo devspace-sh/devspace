@@ -11,7 +11,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
-	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
@@ -29,7 +28,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// DevCmd is a struct that defines a command call for "up"
+// DevCmd holds the command options
 type DevCmd struct {
 	*flags.GlobalFlags
 
@@ -53,10 +52,7 @@ type DevCmd struct {
 	WorkingDirectory string
 	Pipeline         string
 
-	DisableUI             bool
-	DisableOpen           bool
-	DisableSync           bool
-	DisablePortForwarding bool
+	DisableUI bool
 
 	configLoader loader.ConfigLoader
 	log          log.Logger
@@ -79,15 +75,7 @@ func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command
 #######################################################
 ################### devspace dev ######################
 #######################################################
-Starts your project in development mode:
-1. Builds your Docker images and override entrypoints if specified
-2. Deploys the deployments via helm or kubectl
-3. Forwards container ports to the local computer
-4. Starts the sync client
-5. Streams the logs of deployed containers
-
-Open terminal instead of logs:
-- Use "devspace dev -t" for opening a terminal
+Starts the dev pipeline of your project.
 #######################################################`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
@@ -112,10 +100,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 	devCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
 
-	devCmd.Flags().BoolVar(&cmd.DisableSync, "disable-sync", false, "Disable code synchronization")
-	devCmd.Flags().BoolVar(&cmd.DisablePortForwarding, "disable-port-forwarding", false, "Disable port forwarding")
 	devCmd.Flags().BoolVar(&cmd.DisableUI, "disable-ui", false, "Disables the ui server")
-	devCmd.Flags().BoolVar(&cmd.DisableOpen, "disable-open", false, "Open defined URLs in the browser, if defined")
 
 	devCmd.Flags().IntVar(&cmd.UIPort, "ui-port", 0, "The port to use when opening the ui server")
 	devCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "", "The pipeline to execute")
@@ -182,11 +167,6 @@ func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, c
 			DependencyOptions: types.DependencyOptions{
 				Exclude: cmd.SkipDependency,
 				Only:    cmd.Dependency,
-			},
-			DevOptions: devpod.Options{
-				DisableSync:           cmd.DisableSync,
-				DisablePortForwarding: cmd.DisablePortForwarding,
-				DisableOpen:           cmd.DisableOpen,
 			},
 		},
 		ConfigOptions: configOptions,
