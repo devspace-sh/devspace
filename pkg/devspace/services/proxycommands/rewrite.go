@@ -2,8 +2,9 @@ package proxycommands
 
 import (
 	"bytes"
-	"golang.org/x/text/transform"
 	"io"
+
+	"golang.org/x/text/transform"
 )
 
 type Mapping struct {
@@ -88,7 +89,7 @@ func (t Transformer) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err
 		return
 	}
 	// skip everything except the trailing len(r.old) - 1
-	// we do this becasue there could be a match straddling
+	// we do this because there could be a match straddling
 	// the boundary
 	if skip := len(src[nSrc:]) - t.oldlen + 1; skip > 0 {
 		n, err = fullcopy(dst[nDst:], src[nSrc:nSrc+skip])
@@ -99,7 +100,7 @@ func (t Transformer) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err
 		}
 	}
 	err = transform.ErrShortSrc
-	return
+	return nDst, nSrc, err
 }
 
 func fullcopy(dst, src []byte) (n int, err error) {

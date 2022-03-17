@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	command2 "github.com/loft-sh/devspace/pkg/util/command"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -15,6 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	command2 "github.com/loft-sh/devspace/pkg/util/command"
 
 	cliconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/docker/api/types"
@@ -132,8 +133,6 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 }
 
 func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker, skipPush bool, log logpkg.Logger) error {
-	environ := os.Environ()
-
 	command := []string{"docker", "buildx"}
 	if len(imageConf.Command) > 0 {
 		command = imageConf.Command
@@ -177,7 +176,6 @@ func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.
 		}
 		defer os.Remove(tempFile)
 
-		environ = append(environ, "KUBECONFIG="+tempFile)
 		args = append(args, "--builder", builder)
 
 		// TODO: find a better solution than this

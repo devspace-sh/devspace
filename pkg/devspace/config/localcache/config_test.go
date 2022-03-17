@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	yaml "gopkg.in/yaml.v3"
 	"gotest.tools/assert"
@@ -73,7 +74,7 @@ func testLoad(testCase loadTestCase, t *testing.T) {
 
 	loader := NewCacheLoader()
 
-	config, err := loader.Load()
+	config, err := loader.Load(constants.DefaultConfigPath)
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -89,8 +90,7 @@ func testLoad(testCase loadTestCase, t *testing.T) {
 }
 
 type saveTestCase struct {
-	name               string
-	devspaceConfigPath string
+	name string
 
 	config *LocalCache
 
@@ -116,8 +116,7 @@ func TestSave(t *testing.T) {
 			},
 		},
 		{
-			name:               "Save config test.yaml",
-			devspaceConfigPath: "test.yaml",
+			name: "Save config test.yaml",
 			config: &LocalCache{
 				Vars: map[string]string{
 					"key": "value",
@@ -152,14 +151,8 @@ func TestSave(t *testing.T) {
 	}()
 
 	for _, testCase := range testCases {
-		var loader Loader
-		if testCase.devspaceConfigPath != "" {
-			loader = NewCacheLoaderFromDevSpacePath(testCase.devspaceConfigPath)
-		} else {
-			loader = NewCacheLoader()
-		}
-
-		err := loader.Save(testCase.config)
+		testCase.config.cachePath = testCase.expectedConfigFileName
+		err := testCase.config.Save()
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

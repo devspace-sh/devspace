@@ -3,10 +3,11 @@ package kubectl
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/constraint"
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/constraint"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"

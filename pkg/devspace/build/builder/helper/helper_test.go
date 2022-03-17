@@ -2,11 +2,14 @@ package helper
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"os/exec"
 	"testing"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
@@ -40,6 +43,7 @@ func (c *fakeDockerAPIClient) ImageList(ctx context.Context, options types.Image
 }
 
 func TestIsImageAvailableLocally(t *testing.T) {
+	ctx := context.Background()
 	helper := &BuildHelper{
 		DockerfilePath:  "Doesn'tExist",
 		ImageConf:       &latest.Image{},
@@ -57,7 +61,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 			},
 		},
 	}
-	exists1, err := helper.IsImageAvailableLocally(devspacecontext.NewContext().WithConfig(config.NewConfig(nil, nil, cache1, nil, "")), client)
+	exists1, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache1, &remotecache.RemoteCache{}, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,7 +75,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 			},
 		},
 	}
-	exists2, err := helper.IsImageAvailableLocally(devspacecontext.NewContext().WithConfig(config.NewConfig(nil, nil, cache2, nil, "")), client)
+	exists2, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache2, &remotecache.RemoteCache{}, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -85,7 +89,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 			},
 		},
 	}
-	exists3, err := helper.IsImageAvailableLocally(devspacecontext.NewContext().WithConfig(config.NewConfig(nil, nil, cache3, nil, "")), client)
+	exists3, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache3, &remotecache.RemoteCache{}, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -99,7 +103,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 			},
 		},
 	}
-	exists4, err := helper.IsImageAvailableLocally(devspacecontext.NewContext().WithConfig(config.NewConfig(nil, nil, cache4, nil, "")), client)
+	exists4, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache4, &remotecache.RemoteCache{}, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}

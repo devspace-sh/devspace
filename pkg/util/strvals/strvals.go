@@ -373,7 +373,7 @@ func (t *parser) valList() ([]interface{}, error) {
 	}
 
 	if r != '{' {
-		t.sc.UnreadRune()
+		_ = t.sc.UnreadRune()
 		return []interface{}{}, ErrNotList
 	}
 
@@ -389,7 +389,7 @@ func (t *parser) valList() ([]interface{}, error) {
 		case last == '}':
 			// If this is followed by ',', consume it.
 			if r, _, e := t.sc.ReadRune(); e == nil && r != ',' {
-				t.sc.UnreadRune()
+				_ = t.sc.UnreadRune()
 			}
 			v, e := t.reader(rs)
 			list = append(list, v)

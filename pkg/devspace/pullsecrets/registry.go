@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"regexp"
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -18,10 +17,6 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-const registryAuthSecretNamePrefix = "devspace-auth-"
-
-var registryNameReplaceRegex = regexp.MustCompile(`[^a-z0-9\\-]`)
 
 // PullSecretOptions has all options necessary to create a pullSecret
 type PullSecretOptions struct {

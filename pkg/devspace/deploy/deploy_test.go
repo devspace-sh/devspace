@@ -1,18 +1,18 @@
 package deploy
 
 import (
+	"context"
 	"testing"
 
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	fakehelm "github.com/loft-sh/devspace/pkg/devspace/helm/testing"
-	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -20,47 +20,54 @@ import (
 type renderTestCase struct {
 	name string
 
-	deployments []*latest.DeploymentConfig
-	options     *Options
-
-	expectedErr string
+	deploymentConfigs map[string]*latest.DeploymentConfig
+	options           *Options
+	deploymentNames   []string
+	expectedErr       string
 }
 
 func TestRender(t *testing.T) {
 	testCases := []renderTestCase{
 		{
 			name: "Skip deployment",
-			deployments: []*latest.DeploymentConfig{
-				{
+			deploymentConfigs: map[string]*latest.DeploymentConfig{
+				"skippedDeployment": {
 					Name: "skippedDeployment",
 				},
 			},
 			options: &Options{
-				Deployments: []string{"unskippedDeployment"},
+				SkipDeploy: true,
+				Render:     true,
 			},
+			deploymentNames: []string{"unskippedDeployment"},
 		},
 		{
 			name: "No deployment method",
-			deployments: []*latest.DeploymentConfig{
-				{
+			deploymentConfigs: map[string]*latest.DeploymentConfig{
+				"noMethod": {
 					Name: "noMethod",
 				},
 			},
+			deploymentNames: []string{"noMethod"},
 			options: &Options{
-				Deployments: []string{"noMethod"},
+				Render: true,
 			},
-			expectedErr: "error render: deployment noMethod has no deployment method",
+			expectedErr: "error deploying: deployment noMethod has no deployment method",
 		},
 		{
 			name: "Render with kubectl",
-			deployments: []*latest.DeploymentConfig{
-				{
+			deploymentConfigs: map[string]*latest.DeploymentConfig{
+				"kubectlRender": {
 					Name: "kubectlRender",
 					Kubectl: &latest.KubectlConfig{
 						Manifests: []string{},
 					},
 				},
 			},
+			options: &Options{
+				Render: true,
+			},
+			deploymentNames: []string{"kubectlRender"},
 		},
 	}
 
@@ -70,15 +77,23 @@ func TestRender(t *testing.T) {
 			Client: kube,
 		}
 		config := &latest.Config{
-			Deployments: testCase.deployments,
+			Deployments: testCase.deploymentConfigs,
 		}
-		controller := NewController(config2.NewConfig(nil, config, nil, nil, constants.DefaultConfigPath), nil, kubeClient)
+		controller := NewController()
 
 		if testCase.options == nil {
 			testCase.options = &Options{}
 		}
 
-		err := controller.Render(testCase.options, nil, log.Discard)
+		conf := config2.NewConfig(map[string]interface{}{},
+			map[string]interface{}{},
+			config,
+			&localcache.LocalCache{},
+			remotecache.NewCache("", "test"),
+			map[string]interface{}{},
+			constants.DefaultConfigPath)
+		devCtx := devspacecontext.NewContext(context.TODO(), log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
+		err := controller.Deploy(devCtx, testCase.deploymentNames, testCase.options)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -91,66 +106,76 @@ func TestRender(t *testing.T) {
 type deployTestCase struct {
 	name string
 
-	cache       *localcache.CacheConfig
-	deployments []*latest.DeploymentConfig
-	options     *Options
-
-	expectedErr string
+	deploymentConfigs map[string]*latest.DeploymentConfig
+	options           *Options
+	deploymentNames   []string
+	expectedErr       string
 }
 
 func TestDeploy(t *testing.T) {
 	testCases := []deployTestCase{
 		{
 			name: "Skip deployment",
-			deployments: []*latest.DeploymentConfig{
-				{
+			deploymentConfigs: map[string]*latest.DeploymentConfig{
+				"skippedDeployment": {
 					Name: "skippedDeployment",
 				},
 			},
 			options: &Options{
-				Deployments: []string{"unskippedDeployment"},
+				SkipDeploy: true,
+				Render:     true,
 			},
+			deploymentNames: []string{"unskippedDeployment"},
 		},
 		{
 			name: "No deployment method",
-			deployments: []*latest.DeploymentConfig{
-				{
+			deploymentConfigs: map[string]*latest.DeploymentConfig{
+				"noMethod": {
 					Name: "noMethod",
 				},
 			},
+			deploymentNames: []string{"noMethod"},
 			options: &Options{
-				Deployments: []string{"noMethod"},
+				Render: true,
 			},
 			expectedErr: "error deploying: deployment noMethod has no deployment method",
 		},
 		{
 			name: "Deploy with kubectl",
-			deployments: []*latest.DeploymentConfig{
-				{
+			deploymentConfigs: map[string]*latest.DeploymentConfig{
+				"kubectlDeploy": {
 					Name: "kubectlDeploy",
 					Kubectl: &latest.KubectlConfig{
 						Manifests: []string{},
 					},
 				},
 			},
-			cache: &localcache.CacheConfig{
-				Deployments: map[string]*localcache.DeploymentCache{},
+			options: &Options{
+				Render: true,
 			},
+			deploymentNames: []string{"kubectlDeploy"},
 		},
 		{
 			name: "Deploy concurrently",
-			deployments: []*latest.DeploymentConfig{
-				{
-					Name: "concurrentDeploy",
+			deploymentConfigs: map[string]*latest.DeploymentConfig{
+				"concurrentDeploy1": {
+					Name: "concurrentDeploy1",
 					Kubectl: &latest.KubectlConfig{
 						Manifests: []string{},
 					},
-					Concurrent: true,
+				},
+				"concurrentDeploy2": {
+					Name: "concurrentDeploy2",
+					Kubectl: &latest.KubectlConfig{
+						Manifests: []string{},
+					},
 				},
 			},
-			cache: &localcache.CacheConfig{
-				Deployments: map[string]*localcache.DeploymentCache{},
+			options: &Options{
+				Render:     true,
+				Sequential: false,
 			},
+			deploymentNames: []string{"concurrentDeploy1", "concurrentDeploy2"},
 		},
 	}
 
@@ -160,21 +185,24 @@ func TestDeploy(t *testing.T) {
 			Client: kube,
 		}
 		config := &latest.Config{
-			Deployments: testCase.deployments,
+			Deployments: testCase.deploymentConfigs,
 		}
-
-		cache := localcache.New()
-		cache.Profiles[""] = testCase.cache
-		controller := &controller{
-			config: config2.NewConfig(nil, config, cache, nil, constants.DefaultConfigPath),
-			client: kubeClient,
-		}
+		controller := NewController()
 
 		if testCase.options == nil {
 			testCase.options = &Options{}
 		}
 
-		err := controller.Deploy(testCase.options, log.Discard)
+		conf := config2.NewConfig(map[string]interface{}{},
+			map[string]interface{}{},
+			config,
+			&localcache.LocalCache{},
+			remotecache.NewCache("", "test"),
+			map[string]interface{}{},
+			constants.DefaultConfigPath)
+		devCtx := devspacecontext.NewContext(context.TODO(), log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
+		err := controller.Deploy(devCtx, testCase.deploymentNames, testCase.options)
+
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
@@ -186,9 +214,8 @@ func TestDeploy(t *testing.T) {
 type purgeTestCase struct {
 	name string
 
-	cache             *localcache.CacheConfig
-	configDeployments []*latest.DeploymentConfig
-	deployments       []string
+	deploymentConfigs map[string]*latest.DeploymentConfig
+	deploymentNames   []string
 
 	expectedErr string
 }
@@ -197,38 +224,33 @@ func TestPurge(t *testing.T) {
 	testCases := []purgeTestCase{
 		{
 			name: "Skip deployment",
-			configDeployments: []*latest.DeploymentConfig{
-				{
+			deploymentConfigs: map[string]*latest.DeploymentConfig{
+				"skippedDeployment": {
 					Name: "skippedDeployment",
 				},
 			},
-			deployments: []string{"unskippedDeployment"},
+			deploymentNames: []string{"unskippedDeployment"},
 		},
 		{
 			name: "No deployment method",
-			configDeployments: []*latest.DeploymentConfig{
-				{
+			deploymentConfigs: map[string]*latest.DeploymentConfig{
+				"noMethod": {
 					Name: "noMethod",
 				},
 			},
-			deployments: []string{},
-			expectedErr: "error purging: deployment noMethod has no deployment method",
+			deploymentNames: []string{"noMethod"},
+			expectedErr:     "error purging: deployment noMethod has no deployment method",
 		},
 		{
-			name: "Purge with kubectl",
-			configDeployments: []*latest.DeploymentConfig{
-				{
-					Name: "kubectlPurge",
+			name: "Deploy with kubectl",
+			deploymentConfigs: map[string]*latest.DeploymentConfig{
+				"kubectlDeploy": {
+					Name: "kubectlDeploy",
 					Kubectl: &latest.KubectlConfig{
 						Manifests: []string{},
 					},
 				},
-			},
-			cache: &localcache.CacheConfig{
-				Deployments: map[string]*localcache.DeploymentCache{
-					"kubectlPurge": {},
-				},
-			},
+			}, deploymentNames: []string{"kubectlDeploy"},
 		},
 	}
 
@@ -238,95 +260,20 @@ func TestPurge(t *testing.T) {
 			Client: kube,
 		}
 		config := &latest.Config{
-			Deployments: testCase.configDeployments,
+			Deployments: testCase.deploymentConfigs,
 		}
 
-		cache := localcache.New()
-		cache.Profiles[""] = testCase.cache
-		controller := &controller{
-			config: config2.NewConfig(nil, config, cache, nil, constants.DefaultConfigPath),
-			client: kubeClient,
-		}
+		controller := NewController()
+		conf := config2.NewConfig(map[string]interface{}{},
+			map[string]interface{}{},
+			config,
+			&localcache.LocalCache{},
+			remotecache.NewCache("", "test"),
+			map[string]interface{}{},
+			constants.DefaultConfigPath)
+		devCtx := devspacecontext.NewContext(context.TODO(), log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
+		err := controller.Purge(devCtx, testCase.deploymentNames, &PurgeOptions{})
 
-		err := controller.Purge(testCase.deployments, log.Discard)
-
-		if testCase.expectedErr == "" {
-			assert.NilError(t, err, "Error in testCase %s", testCase.name)
-		} else {
-			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
-		}
-	}
-}
-
-type getCachedHelmClientTestCase struct {
-	name string
-
-	deployConfig  *latest.DeploymentConfig
-	helmV2Clients map[string]helmtypes.Client
-
-	expectedClient interface{}
-	expectedCache  map[string]interface{}
-	expectedErr    string
-}
-
-func TestGetCachedHelmClient(t *testing.T) {
-	testCases := []getCachedHelmClientTestCase{
-		{
-			name: "Get cached client",
-			deployConfig: &latest.DeploymentConfig{
-				Helm: &latest.HelmConfig{
-					V2:              true,
-					TillerNamespace: "tillerns",
-				},
-			},
-			helmV2Clients: map[string]helmtypes.Client{
-				"tillerns": &fakehelm.Client{
-					Releases: []*helmtypes.Release{
-						{
-							Name: "predefinedRelease",
-						},
-					},
-				},
-			},
-			expectedClient: &fakehelm.Client{
-				Releases: []*helmtypes.Release{
-					{
-						Name: "predefinedRelease",
-					},
-				},
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		if testCase.helmV2Clients == nil {
-			testCase.helmV2Clients = map[string]helmtypes.Client{}
-		}
-		if testCase.expectedCache == nil {
-			testCase.expectedCache = map[string]interface{}{}
-			for key, value := range testCase.helmV2Clients {
-				testCase.expectedCache[key] = value
-			}
-		}
-
-		client, err := GetCachedHelmClient(nil, testCase.deployConfig, &fakekube.Client{}, testCase.helmV2Clients, true, log.Discard)
-
-		if testCase.expectedErr == "" {
-			assert.NilError(t, err, "Error in testCase %s", testCase.name)
-		} else {
-			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
-		}
-
-		clientAsYaml, err := yaml.Marshal(client)
-		assert.NilError(t, err, "Error marshaling client in testCase %s", testCase.name)
-		expectationAsYaml, err := yaml.Marshal(testCase.expectedClient)
-		assert.NilError(t, err, "Error marshaling expected client in testCase %s", testCase.name)
-		assert.Equal(t, string(clientAsYaml), string(expectationAsYaml), "Unexpected client in testCase %s", testCase.name)
-
-		cacheAsYaml, err := yaml.Marshal(testCase.helmV2Clients)
-		assert.NilError(t, err, "Error marshaling cache in testCase %s", testCase.name)
-		expectationAsYaml, err = yaml.Marshal(testCase.expectedCache)
-		assert.NilError(t, err, "Error marshaling expected cache in testCase %s", testCase.name)
-		assert.Equal(t, string(cacheAsYaml), string(expectationAsYaml), "Unexpected cache in testCase %s", testCase.name)
+		assert.NilError(t, err)
 	}
 }

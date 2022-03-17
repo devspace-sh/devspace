@@ -1,15 +1,16 @@
-package proxy_commands
+package proxycommands
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
+
 	"github.com/loft-sh/devspace/helper/types"
 	"github.com/loft-sh/devspace/pkg/util/terminal"
 	"github.com/moby/term"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	"io/ioutil"
-	"os"
 )
 
 // RunCmd holds the ssh cmd flags

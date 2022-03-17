@@ -2,13 +2,13 @@ package env
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	enginetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"mvdan.cc/sh/v3/expand"
-	"os"
-	"strings"
 )
 
 var _ expand.Environ = &envProvider{}
@@ -30,7 +30,7 @@ type envProvider struct {
 	listProvider expand.Environ
 	config       config.Config
 	dependencies []types.Dependency
-	workingDir   string
+	// workingDir   string
 }
 
 func (e *envProvider) Get(name string) expand.Variable {
@@ -63,22 +63,22 @@ func (e *envProvider) getVariable(name string) (expand.Variable, bool) {
 	return expand.Variable{}, false
 }
 
-func (e *envProvider) getRuntimeVariable(name string) (expand.Variable, bool) {
-	replacedName := strings.ReplaceAll(name, enginetypes.DotReplacement, ".")
-	_, val, err := runtime.NewRuntimeVariable(replacedName, e.config, e.dependencies).Load()
-	if err != nil {
-		return expand.Variable{}, false
-	} else if val != nil {
-		return expand.Variable{
-			Exported: true,
-			ReadOnly: true,
-			Kind:     expand.String,
-			Str:      fmt.Sprintf("%v", val),
-		}, true
-	}
+// func (e *envProvider) getRuntimeVariable(name string) (expand.Variable, bool) {
+// 	replacedName := strings.ReplaceAll(name, enginetypes.DotReplacement, ".")
+// 	_, val, err := runtime.NewRuntimeVariable(replacedName, e.config, e.dependencies).Load()
+// 	if err != nil {
+// 		return expand.Variable{}, false
+// 	} else if val != nil {
+// 		return expand.Variable{
+// 			Exported: true,
+// 			ReadOnly: true,
+// 			Kind:     expand.String,
+// 			Str:      fmt.Sprintf("%v", val),
+// 		}, true
+// 	}
 
-	return expand.Variable{}, false
-}
+// 	return expand.Variable{}, false
+// }
 
 func (e *envProvider) Each(visitor func(name string, vr expand.Variable) bool) {
 	// Should we enable this?

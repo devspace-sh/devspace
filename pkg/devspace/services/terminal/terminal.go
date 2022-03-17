@@ -2,9 +2,10 @@ package terminal
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"io"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -251,5 +252,5 @@ func getCommand(devContainer *latest.DevContainer) []string {
 		return []string{"sh", "-c", fmt.Sprintf("cd %s; %s", devContainer.Terminal.WorkDir, command)}
 	}
 
-	return []string{"sh", "-c", fmt.Sprintf("%s", command)}
+	return []string{"sh", "-c", command}
 }

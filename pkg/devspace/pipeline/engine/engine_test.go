@@ -3,14 +3,13 @@ package engine
 import (
 	"bytes"
 	"context"
-	"github.com/pkg/errors"
-	"gotest.tools/assert"
 	"io/ioutil"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gotest.tools/assert"
 )
 
 type testCaseShell struct {
@@ -96,9 +95,7 @@ func TestShellCatEnforce(t *testing.T) {
 			expectedOutput: "123\n",
 		},
 	}
-	lookPathDir = func(cwd string, env expand.Environ, file string) (string, error) {
-		return "", errors.New("not found")
-	}
+
 	for _, testCase := range testCases {
 		stdout := &bytes.Buffer{}
 		err := ExecuteSimpleShellCommand(context.Background(), ".", stdout, nil, nil, nil, testCase.command)
@@ -110,9 +107,6 @@ func TestShellCatEnforce(t *testing.T) {
 }
 
 func TestKubectlDownload(t *testing.T) {
-	lookPathDir = func(cwd string, env expand.Environ, file string) (string, error) {
-		return "", errors.New("not found")
-	}
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	err := ExecuteSimpleShellCommand(context.Background(), ".", stdout, stderr, nil, nil, "kubectl")
@@ -127,9 +121,6 @@ func TestKubectlDownload(t *testing.T) {
 }
 
 func TestHelmDownload(t *testing.T) {
-	lookPathDir = func(cwd string, env expand.Environ, file string) (string, error) {
-		return "", errors.New("not found")
-	}
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	err := ExecuteSimpleShellCommand(context.Background(), ".", stdout, stderr, nil, nil, "helm")

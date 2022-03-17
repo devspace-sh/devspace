@@ -4,6 +4,7 @@
 package sync
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path"
@@ -41,7 +42,7 @@ func initTestDirs(t *testing.T) (string, string, string) {
 }
 
 func createTestSyncClient(testLocalPath string, testCases testCaseList) (*Sync, error) {
-	sync, err := NewSync(testLocalPath, getSyncOptions(testCases))
+	sync, err := NewSync(context.Background(), testLocalPath, getSyncOptions(testCases))
 	if err != nil {
 		return nil, err
 	}

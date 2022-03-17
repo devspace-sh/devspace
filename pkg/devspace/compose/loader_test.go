@@ -1,5 +1,6 @@
 package compose
 
+/*
 import (
 	"io/ioutil"
 	"os"
@@ -208,3 +209,4 @@ func getUploadDoneHookIndex(name string, hooks []*latest.HookConfig) int {
 	}
 	return -1
 }
+*/
