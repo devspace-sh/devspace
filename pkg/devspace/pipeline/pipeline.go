@@ -3,6 +3,7 @@ package pipeline
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"strings"
 	"sync"
 
@@ -70,7 +71,7 @@ func (p *pipeline) Options() types.Options {
 
 // WaitDev waits for the dev pod managers to complete.
 // This essentially waits until all dev pods are closed.
-func (p *pipeline) WaitDev() {
+func (p *pipeline) WaitDev() error {
 	children := []types.Pipeline{}
 	p.m.Lock()
 	for _, v := range p.dependencies {
@@ -79,12 +80,21 @@ func (p *pipeline) WaitDev() {
 	p.m.Unlock()
 
 	// wait for children first
+	errors := []error{}
 	for _, child := range children {
-		child.WaitDev()
+		err := child.WaitDev()
+		if err != nil {
+			errors = append(errors, err)
+		}
 	}
 
 	// wait for dev pods to finish
-	p.devPodManager.Wait()
+	err := p.devPodManager.Wait()
+	if err != nil {
+		errors = append(errors, err)
+	}
+
+	return utilerrors.NewAggregate(errors)
 }
 
 func (p *pipeline) Name() string {

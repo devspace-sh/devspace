@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/attach"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
+	"github.com/loft-sh/devspace/pkg/devspace/services/ssh"
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
@@ -48,6 +49,7 @@ type devPod struct {
 	m syncpkg.Mutex
 
 	done chan struct{}
+	err  error
 
 	cancelCtx context.Context
 	cancel    context.CancelFunc
@@ -88,6 +90,13 @@ func (d *devPod) Start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	return nil
 }
 
+func (d *devPod) Err() error {
+	d.m.Lock()
+	defer d.m.Unlock()
+
+	return d.err
+}
+
 func (d *devPod) Done() <-chan struct{} {
 	return d.done
 }
@@ -112,6 +121,11 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 			close(d.done)
 			return
 		case <-t.Dead():
+			if ctx.IsDone() {
+				close(d.done)
+				return
+			}
+
 			// try restarting the dev pod if it has stopped because of
 			// a lost connection
 			if _, ok := t.Err().(DevPodLostConnection); ok {
@@ -134,6 +148,9 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 					return
 				}
 			} else {
+				d.m.Lock()
+				d.err = t.Err()
+				d.m.Unlock()
 				close(d.done)
 			}
 		}
@@ -222,7 +239,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	}
 
 	// start sync and port forwarding
-	err = d.startSyncAndPortForwarding(ctx, devPodConfig, newTargetSelector(d.selectedPod.Pod.Name, d.selectedPod.Pod.Namespace, d.selectedPod.Container.Name, parent), opts, parent)
+	err = d.startServices(ctx, devPodConfig, newTargetSelector(d.selectedPod.Pod.Name, d.selectedPod.Pod.Namespace, d.selectedPod.Container.Name, parent), opts, parent)
 	if err != nil {
 		return err
 	}
@@ -354,7 +371,7 @@ func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *lates
 	return nil
 }
 
-func (d *devPod) startSyncAndPortForwarding(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, opts Options, parent *tomb.Tomb) error {
+func (d *devPod) startServices(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, opts Options, parent *tomb.Tomb) error {
 	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{}, "devCommand:before:sync", "dev.beforeSync", "devCommand:before:portForwarding", "dev.beforePortForwarding")
 	if pluginErr != nil {
 		return pluginErr
@@ -382,9 +399,15 @@ func (d *devPod) startSyncAndPortForwarding(ctx *devspacecontext.Context, devPod
 		return portforwarding.StartPortForwarding(ctx, devPod, selector, parent)
 	})
 
+	// Start SSH
+	sshDone := parent.NotifyGo(func() error {
+		return ssh.StartSSH(ctx, devPod, selector, parent)
+	})
+
 	// wait for both to finish
 	<-syncDone
 	<-portForwardingDone
+	<-sshDone
 
 	// execute hooks
 	pluginErr = hook.ExecuteHooks(ctx, map[string]interface{}{}, "devCommand:after:sync", "dev.afterSync", "devCommand:after:portForwarding", "dev.afterPortForwarding")

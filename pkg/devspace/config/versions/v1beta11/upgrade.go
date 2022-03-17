@@ -478,11 +478,12 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	for _, command := range c.Commands {
 		commandName := encoding.Convert(command.Name)
 		nextConfig.Commands[commandName] = &next.CommandConfig{
-			Name:        commandName,
-			Command:     command.Command,
-			Args:        command.Args,
-			AppendArgs:  command.AppendArgs,
-			Description: command.Description,
+			Name:           commandName,
+			Command:        command.Command,
+			Args:           command.Args,
+			AppendArgs:     command.AppendArgs,
+			Description:    command.Description,
+			DisableReplace: true,
 		}
 	}
 

@@ -723,6 +723,7 @@ type DevContainer struct {
 	Args                 []string         `yaml:"args,omitempty" json:"args,omitempty"`
 	WorkingDir           string           `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
 	Resources            *PodResources    `yaml:"resources,omitempty" json:"resources,omitempty"`
+	SSH                  *SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"`
 	Env                  []EnvVar         `yaml:"env,omitempty" json:"env,omitempty"`
 	RestartHelperPath    string           `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
 	DisableRestartHelper bool             `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
@@ -731,6 +732,19 @@ type DevContainer struct {
 	Attach               *Attach          `yaml:"attach,omitempty" json:"attach,omitempty"`
 	PersistPaths         []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
 	Sync                 []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
+}
+
+type SSH struct {
+	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// Host is the local ssh host to write to the ~/.ssh/config
+	Host string `yaml:"host,omitempty" json:"host,omitempty"`
+
+	// Port is the local port to forward from, if empty will be random
+	Port int `yaml:"port,omitempty" json:"port,omitempty"`
+
+	// Address is the address to listen to inside the container
+	Address string `yaml:"address,omitempty" json:"address,omitempty"`
 }
 
 type EnvVar struct {
@@ -1065,6 +1079,10 @@ type CommandConfig struct {
 	// Command is the command that should be executed. For example: 'echo 123'
 	Command string `yaml:"command" json:"command"`
 
+	// DisableReplace signals DevSpace to not replace the default command. E.g.
+	// dev does not replace devspace dev.
+	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`
+
 	// Internal commands are not show in list and are usable through run_command
 	Internal bool `yaml:"internal,omitempty" json:"internal,omitempty"`
 
@@ -1078,6 +1096,17 @@ type CommandConfig struct {
 
 	// Description describes what the command is doing and can be seen in `devspace list commands`
 	Description string `yaml:"description" json:"description"`
+}
+
+func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	commandString := ""
+	err := unmarshal(&commandString)
+	if err != nil {
+		return unmarshal(c)
+	}
+
+	c.Command = commandString
+	return nil
 }
 
 // Variable describes the var definition

@@ -3,15 +3,14 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/helper/util/port"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/loft-sh/devspace/pkg/util/port"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const minPort = 2048
@@ -79,8 +78,8 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	// Find open port
 	checkPort := rand.Intn(maxPort-minPort) + minPort
 	for {
-		unused, _ := port.Check(checkPort)
-		if unused {
+		available, _ := port.IsAvailable(fmt.Sprintf(":%d", checkPort))
+		if available {
 			break
 		}
 

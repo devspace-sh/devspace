@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/helper/util/port"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/services/portforwarding"
@@ -31,7 +32,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/loft-sh/devspace/pkg/util/port"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
@@ -298,10 +298,10 @@ func (cmd *OpenCmd) openLocal(ctx *devspacecontext.Context, domain string) error
 		}
 
 		// Check if port is open
-		portOpen, _ := port.Check(localPort)
-		for !portOpen {
+		portOpen, _ := port.IsAvailable(fmt.Sprintf(":%d", localPort))
+		for i := 0; i < 10 && !portOpen; i++ {
 			localPort++
-			portOpen, _ = port.Check(localPort)
+			portOpen, _ = port.IsAvailable(fmt.Sprintf(":%d", localPort))
 		}
 	}
 
