@@ -736,6 +736,9 @@ type DevContainer struct {
 type SSH struct {
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
+	// Host is the local ssh host to write to the ~/.ssh/config
+	Host string `yaml:"host,omitempty" json:"host,omitempty"`
+
 	// Port is the local port to forward from, if empty will be random
 	Port int `yaml:"port,omitempty" json:"port,omitempty"`
 

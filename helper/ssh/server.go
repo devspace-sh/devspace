@@ -40,14 +40,16 @@ func NewServer(addr string, keys []ssh.PublicKey) (*Server, error) {
 						return true
 					}
 				}
+
+				tunnel.LogDebugf("Declined public key")
 				return false
 			},
 			LocalPortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
-				log.Println("Accepted forward", dhost, dport)
+				tunnel.LogDebugf("Accepted forward", dhost, dport)
 				return true
 			},
 			ReversePortForwardingCallback: func(ctx ssh.Context, host string, port uint32) bool {
-				log.Println("attempt to bind", host, port, "granted")
+				tunnel.LogDebugf("attempt to bind", host, port, "granted")
 				return true
 			},
 			ChannelHandlers: map[string]ssh.ChannelHandler{
@@ -278,5 +280,6 @@ func exitCode(err error) int {
 }
 
 func (s *Server) ListenAndServe() error {
+	tunnel.LogInfof("Start ssh server on %s", s.sshServer.Addr)
 	return s.sshServer.ListenAndServe()
 }

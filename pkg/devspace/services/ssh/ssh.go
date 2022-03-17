@@ -14,6 +14,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"io"
 	kubectlExec "k8s.io/client-go/util/exec"
 	"strconv"
 	"strings"
@@ -64,6 +66,12 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 		defer releasePort(port)
 	}
 
+	// configure ssh host
+	sshHost := name + "." + ctx.Config.Config().Name + ".devspace"
+	if sshConfig.Host != "" {
+		sshHost = sshConfig.Host
+	}
+
 	// get remote port
 	defaultRemotePort := helperssh.DefaultPort
 	if sshConfig.Address != "" {
@@ -89,11 +97,17 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 		return errors.Wrap(err, "start ssh port forwarding")
 	}
 
+	// update ssh config
+	err = configureSSHConfig(sshHost, strconv.Itoa(port))
+	if err != nil {
+		return errors.Wrap(err, "update ssh config")
+	}
+
 	// start ssh
-	return startSSHWithRestart(ctx, arch, sshConfig.Address, mapping, selector, parent)
+	return startSSHWithRestart(ctx, arch, sshConfig.Address, sshHost, selector, parent)
 }
 
-func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, mapping string, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, sshHost string, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -113,22 +127,31 @@ func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, mapping strin
 		return err
 	}
 
+	// get public key
+	publicKey, err := getPublicKey()
+	if err != nil {
+		return errors.Wrap(err, "generate key pair")
+	}
+
 	// get command
-	command := []string{inject.DevSpaceHelperContainerPath, "ssh"}
+	command := []string{inject.DevSpaceHelperContainerPath, "ssh", "--authorized-key", publicKey}
 	if addr != "" {
 		command = append(command, "--address", addr)
 	}
 
 	// start ssh server
 	parent.Go(func() error {
+		writer := ctx.Log.Writer(logrus.DebugLevel, false)
+		defer writer.Close()
 		for !ctx.IsDone() {
 			buffer := &bytes.Buffer{}
+			multiWriter := io.MultiWriter(writer, buffer)
 			err = ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
 				Pod:         container.Pod,
 				Container:   container.Container.Name,
 				Command:     command,
-				Stdout:      buffer,
-				Stderr:      buffer,
+				Stdout:      multiWriter,
+				Stderr:      multiWriter,
 				SubResource: kubectl.SubResourceExec,
 			})
 			if err != nil {
@@ -159,6 +182,6 @@ func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, mapping strin
 		return nil
 	})
 
-	ctx.Log.Donef("SSH started on %s", mapping)
+	ctx.Log.Donef("SSH started on host %s. Use 'ssh %s' to connect", sshHost, sshHost)
 	return nil
 }

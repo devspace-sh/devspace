@@ -29,6 +29,10 @@ func LogErrorf(message string, args ...interface{}) {
 	_, _ = fmt.Fprintf(os.Stderr, message+"\n", args...)
 }
 
+func LogInfof(message string, args ...interface{}) {
+	_, _ = fmt.Fprintf(os.Stdout, message+"\n", args...)
+}
+
 func LogDebugf(message string, args ...interface{}) {
 	if debugModeEnabled {
 		_, _ = fmt.Fprintf(os.Stderr, message+"\n", args...)

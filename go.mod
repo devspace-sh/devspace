@@ -25,6 +25,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/juju/ratelimit v1.0.1
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
+	github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd
 	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/mitchellh/go-homedir v1.1.0
@@ -48,6 +49,7 @@ require (
 	github.com/tcnksm/go-gitconfig v0.1.2 // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/net v0.0.0-20210825183410-e898025ed96a
 	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1
