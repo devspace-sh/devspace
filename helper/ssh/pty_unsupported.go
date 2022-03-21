@@ -6,6 +6,7 @@ package ssh
 import (
 	"fmt"
 	"os"
+	"os/exec"
 )
 
 func startPTY(cmd *exec.Cmd) (*os.File, error) {
