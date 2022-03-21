@@ -2,6 +2,7 @@ package reverse_commands
 
 import (
 	"encoding/json"
+	"github.com/loft-sh/devspace/pkg/util/terminal"
 	"github.com/moby/term"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -118,17 +119,22 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 	}
 
 	// check if we should use a pty
-	fileInfo, ok := term.GetFdInfo(os.Stdin)
-	if ok && term.IsTerminal(fileInfo) {
-		winSize, err := term.GetWinsize(fileInfo)
-		if err == nil {
-			err = session.RequestPty("xterm", int(winSize.Height), int(winSize.Width), ssh.TerminalModes{
-				ssh.ECHO:          0,
-				ssh.TTY_OP_ISPEED: 14400,
-				ssh.TTY_OP_OSPEED: 14400,
-			})
-			if err != nil {
-				return errors.Wrap(err, "request pty")
+	tty, t := terminal.SetupTTY(os.Stdin, os.Stdout)
+	if tty {
+		info, ok := term.GetFdInfo(t.In)
+		if ok {
+			winSize, err := term.GetWinsize(info)
+			if err == nil {
+				err = session.RequestPty("xterm", int(winSize.Height), int(winSize.Width), ssh.TerminalModes{
+					ssh.ECHO:          0,
+					ssh.TTY_OP_ISPEED: 14400,
+					ssh.TTY_OP_OSPEED: 14400,
+				})
+				if err != nil {
+					return errors.Wrap(err, "request pty")
+				}
+
+				// TODO: terminal resize
 			}
 		}
 	}
@@ -142,5 +148,23 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 	session.Stdin = os.Stdin
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
-	return session.Run(string(out))
+
+	// run the command with interrupt handlers
+	err = t.Safe(func() error {
+		return session.Run(string(out))
+	})
+	if err != nil {
+		if sshExitError, ok := err.(*ssh.ExitError); ok {
+			if sshExitError.ExitStatus() != 0 {
+				os.Exit(sshExitError.ExitStatus())
+				return nil
+			}
+
+			return nil
+		}
+
+		return err
+	}
+
+	return nil
 }

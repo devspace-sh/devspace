@@ -168,7 +168,7 @@ func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 
 	err = cmd.Wait()
 	if err != nil {
-		return errors.Wrap(err, "wait for command")
+		return err
 	}
 
 	// make sure channels are closed
@@ -216,7 +216,7 @@ func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *e
 
 	err = cmd.Wait()
 	if err != nil {
-		return errors.Wrap(err, "waiting for command")
+		return err
 	}
 
 	select {
@@ -288,16 +288,7 @@ func ExitCode(err error) int {
 		return 1
 	}
 
-	waitStatus, ok := exitErr.Sys().(syscall.WaitStatus)
-	if !ok {
-		if !exitErr.Success() {
-			return 1
-		}
-
-		return 0
-	}
-
-	return waitStatus.ExitStatus()
+	return exitErr.ExitCode()
 }
 
 func (s *Server) ListenAndServe() error {

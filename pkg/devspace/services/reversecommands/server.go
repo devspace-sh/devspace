@@ -11,6 +11,8 @@ import (
 	"github.com/pkg/errors"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -34,12 +36,6 @@ func NewReverseCommandsServer(workingDir string, addr string, keys []ssh.PublicK
 				}
 
 				log.Debugf("Declined public key")
-				return false
-			},
-			LocalPortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
-				return false
-			},
-			ReversePortForwardingCallback: func(ctx ssh.Context, host string, port uint32) bool {
 				return false
 			},
 			ChannelHandlers: map[string]ssh.ChannelHandler{
@@ -122,8 +118,19 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, error) {
 
 	cmd = exec.Command(c, command[1:]...)
 	cmd.Dir = s.workingDir
+
+	// find DEVSPACE_RELATIVE_PATH
+	for _, s := range sess.Environ() {
+		if strings.HasPrefix(s, "DEVSPACE_RELATIVE_PATH=") {
+			relativePath := strings.TrimPrefix(s, "DEVSPACE_RELATIVE_PATH=")
+			cmd.Dir = path.Join(filepath.ToSlash(cmd.Dir), relativePath)
+			continue
+		}
+
+		cmd.Env = append(cmd.Env, s)
+	}
+
 	s.log.Debugf("run command '%s %s' locally", c, strings.Join(command[1:], " "))
-	cmd.Env = append(cmd.Env, sess.Environ()...)
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	return cmd, nil
 }
@@ -131,10 +138,6 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, error) {
 func (s *Server) exitWithError(sess ssh.Session, err error) {
 	if err != nil {
 		s.log.Debugf("%v", err)
-		msg := strings.TrimPrefix(err.Error(), "exec: ")
-		if _, err := sess.Stderr().Write([]byte(msg)); err != nil {
-			s.log.Debugf("failed to write error to session: %v", err)
-		}
 	}
 
 	// always exit session
