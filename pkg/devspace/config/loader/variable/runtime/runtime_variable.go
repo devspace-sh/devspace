@@ -32,6 +32,7 @@ var Locations = []string{
 	"/commands/*",
 	"/commands/*/command",
 	"/functions/**",
+	"/imports/**",
 }
 
 // NewRuntimeVariable creates a new variable that is loaded during runtime

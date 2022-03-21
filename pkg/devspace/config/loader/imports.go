@@ -3,6 +3,7 @@ package loader
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
@@ -25,7 +26,13 @@ var ImportSections = []string{
 	"dependencies",
 }
 
-func ResolveImports(ctx context.Context, basePath string, rawData map[string]interface{}, log log.Logger) (map[string]interface{}, error) {
+func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath string, rawData map[string]interface{}, log log.Logger) (map[string]interface{}, error) {
+	// initially reload variables
+	err := reloadVariables(resolver, rawData, log)
+	if err != nil {
+		return nil, err
+	}
+
 	rawImports, err := versions.GetImports(rawData)
 	if err != nil {
 		return nil, err
@@ -36,6 +43,12 @@ func ResolveImports(ctx context.Context, basePath string, rawData map[string]int
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
 	}
 
+	rawImportsInterface, err := resolver.FillVariablesInclude(ctx, rawImports, []string{"/imports/*/disabled"})
+	if err != nil {
+		return nil, err
+	}
+
+	rawImports = rawImportsInterface.(map[string]interface{})
 	imports, err := versions.Parse(rawImports, log)
 	if err != nil {
 		return nil, err
@@ -54,6 +67,10 @@ func ResolveImports(ctx context.Context, basePath string, rawData map[string]int
 
 	// load imports
 	for _, i := range imports.Imports {
+		if i.Disabled {
+			continue
+		}
+
 		configPath, err := dependencyutil.DownloadDependency(ctx, basePath, &i.SourceConfig, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "resolve import")
@@ -77,15 +94,9 @@ func ResolveImports(ctx context.Context, basePath string, rawData map[string]int
 			return nil, fmt.Errorf("import mismatch %s != %s. Import %s has different version than currently used devspace.yaml, please make sure the versions match between an import and the devspace.yaml using it", version, configVersion, configPath)
 		}
 
-		// resolve the import imports
-		resolvedMap, err := ResolveImports(ctx, filepath.Dir(configPath), importData, log)
-		if err != nil {
-			return nil, err
-		}
-
 		// merge sections
 		for _, section := range ImportSections {
-			sectionMap, ok := resolvedMap[section].(map[string]interface{})
+			sectionMap, ok := importData[section].(map[string]interface{})
 			if !ok {
 				continue
 			}
@@ -103,6 +114,13 @@ func ResolveImports(ctx context.Context, basePath string, rawData map[string]int
 
 				mergedMap[section].(map[string]interface{})[key] = value
 			}
+		}
+
+		// resolve the import imports
+		mergedMap["imports"] = importData["imports"]
+		mergedMap, err = ResolveImports(ctx, resolver, filepath.Dir(configPath), mergedMap, log)
+		if err != nil {
+			return nil, err
 		}
 	}
 

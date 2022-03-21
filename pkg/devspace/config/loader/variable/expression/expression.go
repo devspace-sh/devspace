@@ -21,23 +21,32 @@ func expressionMatchFn(key, value string) bool {
 	return ExpressionMatchRegex.MatchString(value)
 }
 
-func ExcludedPath(path string, excluded []*regexp.Regexp) bool {
+func ExcludedPath(path string, excluded, included []*regexp.Regexp) bool {
 	for _, expr := range excluded {
 		if expr.MatchString(path) {
 			return true
 		}
 	}
+	if len(included) > 0 {
+		for _, expr := range included {
+			if expr.MatchString(path) {
+				return false
+			}
+		}
+
+		return true
+	}
 
 	return false
 }
 
-func ResolveAllExpressions(ctx context.Context, preparedConfig interface{}, dir string, exclude []*regexp.Regexp) (interface{}, error) {
+func ResolveAllExpressions(ctx context.Context, preparedConfig interface{}, dir string, exclude, include []*regexp.Regexp) (interface{}, error) {
 	switch t := preparedConfig.(type) {
 	case string:
 		return ResolveExpressions(ctx, t, dir)
 	case map[string]interface{}:
 		err := walk.Walk(t, expressionMatchFn, func(path, value string) (interface{}, error) {
-			if ExcludedPath(path, exclude) {
+			if ExcludedPath(path, exclude, include) {
 				return value, nil
 			}
 
@@ -51,7 +60,7 @@ func ResolveAllExpressions(ctx context.Context, preparedConfig interface{}, dir 
 	case []interface{}:
 		for i := range t {
 			var err error
-			t[i], err = ResolveAllExpressions(ctx, t[i], dir, exclude)
+			t[i], err = ResolveAllExpressions(ctx, t[i], dir, exclude, include)
 			if err != nil {
 				return nil, err
 			}

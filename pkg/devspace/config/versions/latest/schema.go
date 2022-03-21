@@ -88,6 +88,9 @@ type Config struct {
 // Import specifies the source of the devspace config to merge
 type Import struct {
 	SourceConfig `yaml:",inline" json:",inline"`
+
+	// Disabled specifies if the given import should be disabled
+	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 }
 
 // Pipeline defines what DevSpace should do. A pipeline consists of one or more

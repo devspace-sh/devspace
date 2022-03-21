@@ -94,6 +94,7 @@ func GetImports(data map[string]interface{}) (map[string]interface{}, error) {
 		return map[string]interface{}{
 			"version": retMap["version"],
 			"name":    retMap["name"],
+			"imports": nil,
 		}, nil
 	}
 
