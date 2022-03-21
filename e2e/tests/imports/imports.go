@@ -31,7 +31,7 @@ var _ = DevSpaceDescribe("imports", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.FIt("should import correctly", func() {
+	ginkgo.It("should import correctly", func() {
 		tempDir, err := framework.CopyToTempDir("tests/imports/testdata/local")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -66,6 +66,8 @@ var _ = DevSpaceDescribe("imports", func() {
 		framework.ExpectLocalFileContentsWithoutSpaces("import2.txt", "import2")
 		framework.ExpectLocalFileContentsWithoutSpaces("import2-name.txt", "base")
 		framework.ExpectLocalFileContentsWithoutSpaces("import3.txt", "import3")
+		framework.ExpectLocalFileContentsWithoutSpaces("import4.txt", "import4")
+		framework.ExpectLocalFileContentsWithoutSpaces("import5.txt", "import5")
 		framework.ExpectLocalFileContentsWithoutSpaces("vars.txt", ns+"-"+ns+"-base-import1-import2-import3")
 
 		// make sure temp folder is erased

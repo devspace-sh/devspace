@@ -43,7 +43,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
 	}
 
-	rawImportsInterface, err := resolver.FillVariablesInclude(ctx, rawImports, []string{"/imports/*/disabled"})
+	rawImportsInterface, err := resolver.FillVariablesInclude(ctx, rawImports, []string{"/imports/*/enabled"})
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 
 	// load imports
 	for _, i := range imports.Imports {
-		if i.Disabled {
+		if i.Enabled != nil && *i.Enabled == false {
 			continue
 		}
 
@@ -117,7 +117,13 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		}
 
 		// resolve the import imports
-		mergedMap["imports"] = importData["imports"]
+		if importData["imports"] != nil {
+			mergedMap["imports"] = importData["imports"]
+		} else {
+			delete(mergedMap, "imports")
+		}
+
+		// resolve imports
 		mergedMap, err = ResolveImports(ctx, resolver, filepath.Dir(configPath), mergedMap, log)
 		if err != nil {
 			return nil, err

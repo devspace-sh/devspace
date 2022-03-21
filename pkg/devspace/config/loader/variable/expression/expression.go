@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"mvdan.cc/sh/v3/interp"
 	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -88,15 +90,28 @@ func ResolveExpressions(ctx context.Context, value, dir string) (interface{}, er
 		stderr := &bytes.Buffer{}
 		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, nil, nil, match[1], os.Args[1:]...)
 		if err != nil {
-			return nil, fmt.Errorf("error executing config expression %s: %v (stdout: %s, stderr: %s)", match[1], err, stdout.String(), stderr.String())
-		}
+			if len(strings.TrimSpace(stdout.String())) == 0 && len(strings.TrimSpace(stderr.String())) == 0 {
+				if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {
+					out = "false"
+				} else if status, ok := interp.IsExitStatus(err); ok && status == 1 {
+					out = "false"
+				} else {
+					return nil, fmt.Errorf("error executing config expression %s: %v", match[1], err)
+				}
+			} else {
+				return nil, fmt.Errorf("error executing config expression %s: %v (stdout: %s, stderr: %s)", match[1], err, stdout.String(), stderr.String())
+			}
+		} else {
+			stdOut := stdout.String()
+			if value[1] != '#' {
+				stdOut = strings.TrimSpace(stdOut)
+			}
 
-		stdOut := stdout.String()
-		if value[1] != '#' {
-			stdOut = strings.TrimSpace(stdOut)
+			out = strings.Replace(out, match[0], stdOut, 1)
+			if out == "" {
+				out = "true"
+			}
 		}
-
-		out = strings.Replace(out, match[0], stdOut, 1)
 	}
 
 	// try to convert to an object

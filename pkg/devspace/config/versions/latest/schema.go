@@ -1,6 +1,7 @@
 package latest
 
 import (
+	"encoding/json"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
@@ -89,8 +90,8 @@ type Config struct {
 type Import struct {
 	SourceConfig `yaml:",inline" json:",inline"`
 
-	// Disabled specifies if the given import should be disabled
-	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	// Enabled specifies if the given import should be enabled
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 }
 
 // Pipeline defines what DevSpace should do. A pipeline consists of one or more
@@ -1110,7 +1111,18 @@ func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	commandString := ""
 	err := unmarshal(&commandString)
 	if err != nil {
-		return unmarshal(c)
+		m := map[string]interface{}{}
+		err := unmarshal(m)
+		if err != nil {
+			return err
+		}
+
+		out, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(out, c)
 	}
 
 	c.Command = commandString
@@ -1154,7 +1166,18 @@ func (v *Variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	varString := ""
 	err := unmarshal(&varString)
 	if err != nil {
-		return unmarshal(v)
+		m := map[string]interface{}{}
+		err := unmarshal(m)
+		if err != nil {
+			return err
+		}
+
+		out, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(out, v)
 	}
 	if strings.HasPrefix(varString, "$(") && strings.HasSuffix(varString, ")") {
 		varString = strings.TrimPrefix(strings.TrimSuffix(varString, ")"), "$(")
