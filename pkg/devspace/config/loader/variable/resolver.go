@@ -21,14 +21,25 @@ import (
 var AlwaysResolvePredefinedVars = []string{"devspace.name", "devspace.tempFolder", "devspace.version", "devspace.random", "devspace.profile", "devspace.userHome", "devspace.timestamp", "devspace.context", "devspace.namespace"}
 
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
-func NewResolver(localCache localcache.Cache, predefinedVariableOptions *PredefinedVariableOptions, vars map[string]*latest.Variable, log log.Logger) Resolver {
+func NewResolver(localCache localcache.Cache, predefinedVariableOptions *PredefinedVariableOptions, flags []string, log log.Logger) (Resolver, error) {
+	memoryCache := map[string]interface{}{}
+	for _, cmdVar := range flags {
+		idx := strings.Index(cmdVar, "=")
+		if idx == -1 {
+			return nil, errors.Errorf("wrong --var format: %s, expected 'key=val'", cmdVar)
+		}
+
+		name := strings.TrimSpace(cmdVar[:idx])
+		value := convertStringValue(strings.TrimSpace(cmdVar[idx+1:]))
+		memoryCache[name] = value
+	}
+
 	return &resolver{
-		memoryCache: map[string]interface{}{},
+		memoryCache: memoryCache,
 		localCache:  localCache,
-		vars:        vars,
 		options:     predefinedVariableOptions,
 		log:         log,
-	}
+	}, nil
 }
 
 type resolver struct {
@@ -51,13 +62,13 @@ func (r *resolver) UpdateVars(vars map[string]*latest.Variable) {
 	r.vars = vars
 }
 
-func (r *resolver) fillVariables(ctx context.Context, haystack interface{}, exclude []*regexp.Regexp) (interface{}, error) {
+func (r *resolver) fillVariables(ctx context.Context, haystack interface{}, exclude, include []*regexp.Regexp) (interface{}, error) {
 	switch t := haystack.(type) {
 	case string:
 		return r.replaceString(ctx, t)
 	case map[string]interface{}:
 		err := walk.Walk(t, varMatchFn, func(path, value string) (interface{}, error) {
-			if expression.ExcludedPath(path, exclude) {
+			if expression.ExcludedPath(path, exclude, include) {
 				return value, nil
 			}
 
@@ -67,7 +78,7 @@ func (r *resolver) fillVariables(ctx context.Context, haystack interface{}, excl
 	case []interface{}:
 		for i := range t {
 			var err error
-			t[i], err = r.fillVariables(ctx, t[i], exclude)
+			t[i], err = r.fillVariables(ctx, t[i], exclude, include)
 			if err != nil {
 				return nil, err
 			}
@@ -210,6 +221,36 @@ func (r *resolver) insertVariableGraph(g *graph.Graph, node *latest.Variable) er
 	return nil
 }
 
+func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{}, includedPaths []string) (interface{}, error) {
+	paths := []*regexp.Regexp{}
+	for _, path := range includedPaths {
+		path = strings.Replace(path, "*", "[^/]+", -1)
+		path = strings.Replace(path, "**", ".+", -1)
+		path = "^" + path
+		expr, err := regexp.Compile(path)
+		if err != nil {
+			return nil, err
+		}
+
+		paths = append(paths, expr)
+	}
+
+	// fill variables
+	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, nil, paths)
+	if err != nil {
+		return nil, err
+	}
+
+	// resolve expressions
+	preparedConfigInterface, err = expression.ResolveAllExpressions(ctx, preparedConfigInterface, filepath.Dir(r.options.ConfigPath), nil, paths)
+	if err != nil {
+		return nil, err
+	}
+
+	// fill in variables again
+	return r.findAndFillVariables(ctx, preparedConfigInterface, nil, paths)
+}
+
 func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{}, excludedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range excludedPaths {
@@ -225,26 +266,26 @@ func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{
 	}
 
 	// fill variables
-	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, paths)
+	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, paths, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// resolve expressions
-	preparedConfigInterface, err = expression.ResolveAllExpressions(ctx, preparedConfigInterface, filepath.Dir(r.options.ConfigPath), paths)
+	preparedConfigInterface, err = expression.ResolveAllExpressions(ctx, preparedConfigInterface, filepath.Dir(r.options.ConfigPath), paths, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// fill in variables again
-	return r.findAndFillVariables(ctx, preparedConfigInterface, paths)
+	return r.findAndFillVariables(ctx, preparedConfigInterface, paths, nil)
 }
 
 func (r *resolver) FillVariables(ctx context.Context, haystack interface{}) (interface{}, error) {
 	return r.FillVariablesExclude(ctx, haystack, nil)
 }
 
-func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{}, exclude []*regexp.Regexp) (interface{}, error) {
+func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{}, exclude, include []*regexp.Regexp) (interface{}, error) {
 	varsUsed, err := r.FindVariables(haystack)
 	if err != nil {
 		return nil, err
@@ -267,24 +308,7 @@ func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{
 		}
 	}
 
-	return r.fillVariables(ctx, haystack, exclude)
-}
-
-func (r *resolver) ConvertFlags(flags []string) (map[string]interface{}, error) {
-	retVariables := map[string]interface{}{}
-	for _, cmdVar := range flags {
-		idx := strings.Index(cmdVar, "=")
-		if idx == -1 {
-			return nil, errors.Errorf("wrong --var format: %s, expected 'key=val'", cmdVar)
-		}
-
-		name := strings.TrimSpace(cmdVar[:idx])
-		value := convertStringValue(strings.TrimSpace(cmdVar[idx+1:]))
-		r.memoryCache[name] = value
-		retVariables[name] = value
-	}
-
-	return retVariables, nil
+	return r.fillVariables(ctx, haystack, exclude, include)
 }
 
 func (r *resolver) resolve(ctx context.Context, name string, definition *latest.Variable) (interface{}, error) {

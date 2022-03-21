@@ -101,6 +101,10 @@ func (c *Client) ExecBuffered(ctx context.Context, od *k8sv1.Pod, container stri
 	return []byte{}, []byte{}, nil
 }
 
+func (c *Client) ExecBufferedCombined(ctx context.Context, od *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, error) {
+	return []byte{}, nil
+}
+
 // GenericRequest is a fake implementation of function
 func (c *Client) GenericRequest(ctx context.Context, options *kubectl.GenericRequestOptions) (string, error) {
 	return "", nil

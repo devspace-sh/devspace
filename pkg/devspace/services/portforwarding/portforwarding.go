@@ -59,7 +59,7 @@ func startReversePortForwardingWithHooks(ctx *devspacecontext.Context, name, arc
 	}
 
 	// start reverse port forwarding
-	err := startReversePortForwarding(ctx, name, arch, portMappings, selector, parent)
+	err := StartReversePortForwarding(ctx, name, arch, portMappings, selector, parent)
 	if err != nil {
 		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"reverse_port_forwarding_config": portMappings,

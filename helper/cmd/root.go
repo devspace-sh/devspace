@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/helper/cmd/reverse_commands"
 	"os"
 
 	"github.com/loft-sh/devspace/helper/cmd/sync"
@@ -25,7 +26,7 @@ func Execute() {
 	// execute command
 	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
+		_, _ = fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)
 	}
 }
@@ -39,6 +40,6 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewTunnelCmd())
 	rootCmd.AddCommand(NewSSHCmd())
 	rootCmd.AddCommand(sync.NewSyncCmd())
-
+	rootCmd.AddCommand(reverse_commands.NewReverseCommands())
 	return rootCmd
 }

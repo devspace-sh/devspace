@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/gliderlabs/ssh"
 	helperssh "github.com/loft-sh/devspace/helper/ssh"
-	"github.com/loft-sh/devspace/helper/tunnel"
 	"github.com/loft-sh/devspace/helper/util/port"
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +33,7 @@ func NewSSHCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *SSHCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func (cmd *SSHCmd) Run(_ *cobra.Command, _ []string) error {
 	var keys []ssh.PublicKey
 	if cmd.AuthorizedKeys != "" {
 		keyBytes, err := base64.StdEncoding.DecodeString(cmd.AuthorizedKeys)
@@ -64,7 +64,7 @@ func (cmd *SSHCmd) Run(cobraCmd *cobra.Command, args []string) error {
 			return fmt.Errorf("address %s already in use: %v", cmd.Address, err)
 		}
 
-		tunnel.LogDebugf("address %s already in use", cmd.Address)
+		stderrlog.Debugf("address %s already in use", cmd.Address)
 		return nil
 	}
 

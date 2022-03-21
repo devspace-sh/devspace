@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/loft-sh/devspace/helper/util/pingtimeout"
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -21,22 +22,6 @@ type tunnelServer struct {
 
 	// ping is used to determine if we still have an alive connection
 	ping *pingtimeout.PingTimeout
-}
-
-var debugModeEnabled = os.Getenv("DEVSPACE_HELPER_DEBUG") == "true"
-
-func LogErrorf(message string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stderr, message+"\n", args...)
-}
-
-func LogInfof(message string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stdout, message+"\n", args...)
-}
-
-func LogDebugf(message string, args ...interface{}) {
-	if debugModeEnabled {
-		_, _ = fmt.Fprintf(os.Stderr, message+"\n", args...)
-	}
 }
 
 func StartTunnelServer(reader io.Reader, writer io.Writer, exitOnClose, ping bool) error {
@@ -90,14 +75,14 @@ func SendData(stream remote.Tunnel_InitTunnelServer, sessions <-chan *Session, c
 			}
 			session.Unlock()
 
-			LogDebugf("sending %d bytes to client", len(bytes))
+			stderrlog.Debugf("sending %d bytes to client", len(bytes))
 			err := stream.Send(resp)
 			if err != nil {
-				LogErrorf("failed sending message to tunnel stream: %v", err)
+				stderrlog.Errorf("failed sending message to tunnel stream: %v", err)
 				close(closeChan)
 				return
 			}
-			LogDebugf("sent %d bytes to client", len(bytes))
+			stderrlog.Debugf("sent %d bytes to client", len(bytes))
 		}
 	}
 }
@@ -112,44 +97,44 @@ func ReceiveData(stream remote.Tunnel_InitTunnelServer, closeChan chan struct{})
 		default:
 			message, err := stream.Recv()
 			if err != nil {
-				LogErrorf("failed receiving message from stream, exiting: %v", err)
+				stderrlog.Errorf("failed receiving message from stream, exiting: %v", err)
 				close(closeChan)
 				continue
 			}
 
 			reqID, err := uuid.Parse(message.GetRequestId())
 			if err != nil {
-				LogErrorf(" %s; failed to parse requestId, %v", message.GetRequestId(), err)
+				stderrlog.Errorf(" %s; failed to parse requestId, %v", message.GetRequestId(), err)
 				continue
 			}
 
 			session, ok := GetSession(reqID)
 			if !ok && !message.ShouldClose {
-				LogErrorf("%s; session not found in openRequests", reqID)
+				stderrlog.Errorf("%s; session not found in openRequests", reqID)
 				continue
 			}
 
 			data := message.GetData()
 			br := len(data)
 
-			LogDebugf("received %d bytes from client", len(data))
+			stderrlog.Debugf("received %d bytes from client", len(data))
 
 			// send data if we received any
 			if br > 0 && session.Open {
-				LogDebugf("writing %d bytes to conn", br)
+				stderrlog.Debugf("writing %d bytes to conn", br)
 				_, err := session.Conn.Write(data)
 				if err != nil {
-					LogErrorf("%s; failed writing data to socket", reqID)
+					stderrlog.Errorf("%s; failed writing data to socket", reqID)
 					message.ShouldClose = true
 				} else {
-					LogDebugf("wrote %d bytes to conn", br)
+					stderrlog.Debugf("wrote %d bytes to conn", br)
 				}
 			}
 
 			if message.ShouldClose {
-				LogDebugf("closing session")
+				stderrlog.Debugf("closing session")
 				session.Close()
-				LogDebugf("closed session")
+				stderrlog.Debugf("closed session")
 			}
 		}
 	}
@@ -162,14 +147,14 @@ func readConn(ctx context.Context, session *Session, sessions chan<- *Session) {
 
 		select {
 		case <-ctx.Done():
-			LogDebugf("closing connection")
+			stderrlog.Debugf("closing connection")
 			session.Close()
 			return
 		default:
 			session.Lock()
 			if err != nil {
 				if err != io.EOF {
-					LogErrorf("failed to read from conn: %v", err)
+					stderrlog.Errorf("failed to read from conn: %v", err)
 				}
 
 				// setting Open to false triggers SendData() to
@@ -248,12 +233,12 @@ func (t *tunnelServer) InitTunnel(stream remote.Tunnel_InitTunnelServer) error {
 		if err != nil {
 			return err
 		}
-		LogDebugf("accepted new connection on ::%d", port)
+		stderrlog.Debugf("accepted new connection on ::%d", port)
 
 		// socket -> stream
 		session, err := NewSession(connection)
 		if err != nil {
-			LogErrorf("create new session: %v", err)
+			stderrlog.Errorf("create new session: %v", err)
 			continue
 		}
 

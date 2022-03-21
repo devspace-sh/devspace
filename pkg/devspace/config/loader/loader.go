@@ -292,35 +292,24 @@ func (l *configLoader) parseConfig(
 	options *ConfigOptions,
 	log log.Logger,
 ) (*latest.Config, map[string]interface{}, variable.Resolver, error) {
+	// create a new variable resolver
+	resolver, err := variable.NewResolver(localCache, &variable.PredefinedVariableOptions{
+		ConfigPath: l.absConfigPath,
+		KubeClient: client,
+		Profile:    GetLastProfile(options.Profiles),
+	}, options.Vars, log)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	// copy raw config
-	copiedRawConfig, err := ResolveImports(ctx, filepath.Dir(l.absConfigPath), rawConfig, log)
+	copiedRawConfig, err := ResolveImports(ctx, resolver, filepath.Dir(l.absConfigPath), rawConfig, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	// Delete imports from config
 	delete(copiedRawConfig, "imports")
-
-	// Load defined variables
-	vars, err := versions.ParseVariables(copiedRawConfig, log)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// validate variables
-	err = validateVars(vars)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// create a new variable resolver
-	resolver := l.newVariableResolver(localCache, client, options, vars, log)
-
-	// parse cli --var's, the resolver will cache them for us
-	_, err = resolver.ConvertFlags(options.Vars)
-	if err != nil {
-		return nil, nil, nil, err
-	}
 
 	// prepare profiles
 	copiedRawConfig, err = prepareProfiles(ctx, copiedRawConfig, resolver)
@@ -334,17 +323,8 @@ func (l *configLoader) parseConfig(
 		return nil, nil, nil, err
 	}
 
-	// Load defined variables again (might be changed through profiles)
-	vars, err = versions.ParseVariables(copiedRawConfig, log)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// update the used vars in the resolver
-	resolver.UpdateVars(vars)
-
-	// validate variables
-	err = validateVars(vars)
+	// reload variables to make sure they are loaded correctly
+	err = reloadVariables(resolver, copiedRawConfig, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -371,6 +351,24 @@ func (l *configLoader) parseConfig(
 	}
 
 	return latestConfig, rawBeforeConversion, resolver, nil
+}
+
+func reloadVariables(resolver variable.Resolver, rawConfig map[string]interface{}, log log.Logger) error {
+	// Load defined variables again (might be changed through profiles)
+	loadedVars, err := versions.ParseVariables(rawConfig, log)
+	if err != nil {
+		return err
+	}
+
+	// validate variables
+	err = validateVars(loadedVars)
+	if err != nil {
+		return err
+	}
+
+	// update the used vars in the resolver
+	resolver.UpdateVars(loadedVars)
+	return nil
 }
 
 func validateProfile(profile interface{}) error {
@@ -574,14 +572,6 @@ func (l *configLoader) applyProfiles(ctx context.Context, data map[string]interf
 	}
 
 	return data, nil
-}
-
-func (l *configLoader) newVariableResolver(localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, vars map[string]*latest.Variable, log log.Logger) variable.Resolver {
-	return variable.NewResolver(localCache, &variable.PredefinedVariableOptions{
-		ConfigPath: l.absConfigPath,
-		KubeClient: client,
-		Profile:    GetLastProfile(options.Profiles),
-	}, vars, log)
 }
 
 func GetLastProfile(profiles []string) string {

@@ -23,9 +23,6 @@ type RuntimeResolver interface {
 
 // Resolver defines an interface to resolve defined variables
 type Resolver interface {
-	// ConvertFlags converts several variables from input flags in the form of varname=value
-	ConvertFlags(flags []string) (map[string]interface{}, error)
-
 	// DefinedVars returns the defined variables
 	DefinedVars() map[string]*latest.Variable
 
@@ -40,6 +37,9 @@ type Resolver interface {
 
 	// FillVariablesExclude finds the used variables first and then fills in those that do not match the excluded paths in the haystack
 	FillVariablesExclude(ctx context.Context, haystack interface{}, excluded []string) (interface{}, error)
+
+	// FillVariablesInclude finds the used variables first and then fills in those that match the included paths in the haystack
+	FillVariablesInclude(ctx context.Context, haystack interface{}, included []string) (interface{}, error)
 
 	// ResolvedVariables returns the internal memory cache of the resolver with all resolved variables
 	ResolvedVariables() map[string]interface{}

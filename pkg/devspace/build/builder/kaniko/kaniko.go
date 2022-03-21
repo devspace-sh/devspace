@@ -23,9 +23,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
@@ -57,14 +55,13 @@ type Builder struct {
 	BuildNamespace string
 
 	allowInsecureRegistry bool
-	dockerClient          docker.Client
 }
 
 // Wait timeout is the maximum time to wait for the kaniko init and build container to get ready
 const waitTimeout = 20 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(ctx *devspacecontext.Context, dockerClient docker.Client, imageConfigName string, imageConf *latest.Image, imageTags []string) (builder.Interface, error) {
+func NewBuilder(ctx *devspacecontext.Context, imageConfigName string, imageConf *latest.Image, imageTags []string) (builder.Interface, error) {
 	if imageConf.Kaniko != nil && imageConf.Kaniko.Namespace != "" {
 		err := kubectl.EnsureNamespace(ctx.Context, ctx.KubeClient, imageConf.Kaniko.Namespace, ctx.Log)
 		if err != nil {
@@ -93,17 +90,7 @@ func NewBuilder(ctx *devspacecontext.Context, dockerClient docker.Client, imageC
 		BuildNamespace: buildNamespace,
 
 		allowInsecureRegistry: allowInsecurePush,
-
-		dockerClient: dockerClient,
-		helper:       helper.NewBuildHelper(ctx, EngineName, imageConfigName, imageConf, imageTags),
-	}
-
-	// create pull secret
-	if !imageConf.Kaniko.SkipPullSecretMount {
-		err := b.createPullSecret(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "create pull secret")
-		}
+		helper:                helper.NewBuildHelper(ctx, EngineName, imageConfigName, imageConf, imageTags),
 	}
 
 	return b, nil
@@ -117,41 +104,6 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 // ShouldRebuild determines if an image has to be rebuilt
 func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool) (bool, error) {
 	return b.helper.ShouldRebuild(ctx, forceRebuild)
-}
-
-// Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
-func (b *Builder) createPullSecret(ctx *devspacecontext.Context) error {
-	username, password := "", ""
-	if b.PullSecretName != "" {
-		return nil
-	}
-
-	registryURL, err := pullsecrets.GetRegistryFromImageName(b.FullImageName)
-	if err != nil {
-		return err
-	}
-
-	authConfig, err := b.dockerClient.GetAuthConfig(registryURL, true)
-	if err != nil {
-		return err
-	}
-
-	username = authConfig.Username
-	email := authConfig.Email
-
-	if authConfig.Password != "" {
-		password = authConfig.Password
-	} else {
-		password = authConfig.IdentityToken
-	}
-
-	return pullsecrets.NewClient().CreatePullSecret(ctx, &pullsecrets.PullSecretOptions{
-		Namespace:       b.BuildNamespace,
-		RegistryURL:     registryURL,
-		Username:        username,
-		PasswordOrToken: password,
-		Email:           email,
-	})
 }
 
 // BuildImage builds a dockerimage within a kaniko pod

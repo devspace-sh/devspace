@@ -4,6 +4,7 @@ import (
 	"context"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"os"
@@ -85,7 +86,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	if err != nil {
 		return err
 	}
-	_, err = configLoader.SetDevSpaceRoot(log)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -94,6 +95,21 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
+	}
+
+	// Load generated config if possible
+	if configExists {
+		localCache, err := configLoader.LoadLocalCache()
+		if err != nil {
+			return err
+		}
+
+		// If the current kube context or namespace is different than old,
+		// show warnings and reset kube client if necessary
+		client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, log)
+		if err != nil {
+			return err
+		}
 	}
 
 	// create the context
