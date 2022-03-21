@@ -1,4 +1,4 @@
-package reversecommands
+package proxycommands
 
 import (
 	"encoding/base64"
@@ -18,8 +18,8 @@ import (
 
 var DefaultRemotePort = 10567
 
-// StartReverseCommands starts the reverse commands functionality
-func StartReverseCommands(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
+// StartProxyCommands starts the reverse commands functionality
+func StartProxyCommands(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
 	if ctx == nil || ctx.Config == nil || ctx.Config.Config() == nil {
 		return fmt.Errorf("DevSpace config is nil")
 	}
@@ -27,12 +27,12 @@ func StartReverseCommands(ctx *devspacecontext.Context, devPod *latest.DevPod, s
 	// init done array is used to track when sync was initialized
 	initDoneArray := []chan struct{}{}
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
-		if len(devContainer.ReverseCommands) == 0 {
+		if len(devContainer.ProxyCommands) == 0 {
 			return true
 		}
 
 		initDone := parent.NotifyGo(func() error {
-			return startReverseCommands(ctx, devPod.Name, string(devContainer.Arch), devContainer.ReverseCommands, selector.WithContainer(devContainer.Container), parent)
+			return startProxyCommands(ctx, devPod.Name, string(devContainer.Arch), devContainer.ProxyCommands, selector.WithContainer(devContainer.Container), parent)
 		})
 		initDoneArray = append(initDoneArray, initDone)
 		return true
@@ -45,7 +45,7 @@ func StartReverseCommands(ctx *devspacecontext.Context, devPod *latest.DevPod, s
 	return nil
 }
 
-func startReverseCommands(ctx *devspacecontext.Context, name, arch string, reverseCommands []*latest.ReverseCommand, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func startProxyCommands(ctx *devspacecontext.Context, name, arch string, reverseCommands []*latest.ProxyCommand, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -76,7 +76,7 @@ func startReverseCommands(ctx *devspacecontext.Context, name, arch string, rever
 	return startLocalSSH(ctx, selector, reverseCommands, fmt.Sprintf(":%d", port), parent)
 }
 
-func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetSelector, reverseCommands []*latest.ReverseCommand, addr string, parent *tomb.Tomb) error {
+func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetSelector, reverseCommands []*latest.ProxyCommand, addr string, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -98,11 +98,11 @@ func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetS
 	// gather all commands that should get replaced in the container
 	commandsToReplace := []string{}
 	for _, r := range reverseCommands {
-		if r.Name == "" {
+		if r.Command == "" {
 			continue
 		}
 
-		commandsToReplace = append(commandsToReplace, r.Name)
+		commandsToReplace = append(commandsToReplace, r.Command)
 	}
 
 	// execute configure command in container

@@ -68,8 +68,8 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 
 	// configure ssh host
 	sshHost := name + "." + ctx.Config.Config().Name + ".devspace"
-	if sshConfig.LocalHost != "" {
-		sshHost = sshConfig.LocalHost
+	if sshConfig.LocalHostname != "" {
+		sshHost = sshConfig.LocalHostname
 	}
 
 	// get remote port

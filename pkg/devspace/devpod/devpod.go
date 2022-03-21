@@ -7,7 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/attach"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
-	"github.com/loft-sh/devspace/pkg/devspace/services/reversecommands"
+	"github.com/loft-sh/devspace/pkg/devspace/services/proxycommands"
 	"github.com/loft-sh/devspace/pkg/devspace/services/ssh"
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -404,7 +404,7 @@ func (d *devPod) startServices(ctx *devspacecontext.Context, devPod *latest.DevP
 
 	// Start Reverse Commands
 	reverseCommandsDone := parent.NotifyGo(func() error {
-		return reversecommands.StartReverseCommands(ctx, devPod, selector, parent)
+		return proxycommands.StartProxyCommands(ctx, devPod, selector, parent)
 	})
 
 	// wait for both to finish

@@ -1,4 +1,4 @@
-package reversecommands
+package proxycommands
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-func NewReverseCommandsServer(workingDir string, addr string, keys []ssh.PublicKey, commands []*latest.ReverseCommand, log log.Logger) *Server {
+func NewReverseCommandsServer(workingDir string, addr string, keys []ssh.PublicKey, commands []*latest.ProxyCommand, log log.Logger) *Server {
 	server := &Server{
 		workingDir: workingDir,
 		commands:   commands,
@@ -50,7 +50,7 @@ func NewReverseCommandsServer(workingDir string, addr string, keys []ssh.PublicK
 
 type Server struct {
 	workingDir string
-	commands   []*latest.ReverseCommand
+	commands   []*latest.ProxyCommand
 	log        log.Logger
 	sshServer  ssh.Server
 }
@@ -99,9 +99,9 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, error) {
 		return nil, fmt.Errorf("parse command: %v", err)
 	}
 
-	var reverseCommand *latest.ReverseCommand
+	var reverseCommand *latest.ProxyCommand
 	for _, r := range s.commands {
-		if r.Name == command[0] {
+		if r.Command == command[0] {
 			reverseCommand = r
 			break
 		}
@@ -111,9 +111,9 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, error) {
 		return nil, fmt.Errorf("command not allowed")
 	}
 
-	c := reverseCommand.Name
-	if reverseCommand.Command != "" {
-		c = reverseCommand.Command
+	c := reverseCommand.Command
+	if reverseCommand.LocalCommand != "" {
+		c = reverseCommand.LocalCommand
 	}
 
 	cmd = exec.Command(c, command[1:]...)
