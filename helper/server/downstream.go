@@ -74,7 +74,7 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 		// start watcher if this we should use it
 		watchStop := make(chan struct{})
 		if !options.Polling {
-			stderrlog.Logf("Use inotify as watching method in container")
+			stderrlog.Infof("Use inotify as watching method in container")
 
 			go func() {
 				// set up a watchpoint listening for events within a directory tree rooted at specified directory
@@ -100,7 +100,7 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 				downStream.watch(watchStop)
 			}()
 		} else {
-			stderrlog.Logf("Use polling as watching method in container")
+			stderrlog.Infof("Use polling as watching method in container")
 		}
 
 		done <- s.Serve(lis)

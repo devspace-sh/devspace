@@ -8,10 +8,18 @@ import (
 
 var Writer io.Writer = os.Stderr
 
-func Log(message string) {
-	_, _ = fmt.Fprintln(Writer, message)
+var debugModeEnabled = os.Getenv("DEVSPACE_HELPER_DEBUG") == "true"
+
+func Errorf(message string, args ...interface{}) {
+	_, _ = fmt.Fprintf(Writer, "error: "+message+"\n", args...)
 }
 
-func Logf(format string, args ...interface{}) {
-	_, _ = fmt.Fprintf(Writer, format+"\n", args...)
+func Infof(message string, args ...interface{}) {
+	_, _ = fmt.Fprintf(Writer, message+"\n", args...)
+}
+
+func Debugf(message string, args ...interface{}) {
+	if debugModeEnabled {
+		_, _ = fmt.Fprintf(Writer, message+"\n", args...)
+	}
 }

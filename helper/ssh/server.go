@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
-	"github.com/loft-sh/devspace/helper/tunnel"
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/pkg/errors"
 	"github.com/pkg/sftp"
 	"io"
@@ -13,9 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 	"time"
-	"unsafe"
 )
 
 var DefaultPort = 8022
@@ -42,15 +40,15 @@ func NewServer(addr string, keys []ssh.PublicKey) (*Server, error) {
 					}
 				}
 
-				tunnel.LogDebugf("Declined public key")
+				stderrlog.Debugf("Declined public key")
 				return false
 			},
 			LocalPortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
-				tunnel.LogDebugf("Accepted forward", dhost, dport)
+				stderrlog.Debugf("Accepted forward", dhost, dport)
 				return true
 			},
 			ReversePortForwardingCallback: func(ctx ssh.Context, host string, port uint32) bool {
-				tunnel.LogDebugf("attempt to bind", host, port, "granted")
+				stderrlog.Debugf("attempt to bind", host, port, "granted")
 				return true
 			},
 			ChannelHandlers: map[string]ssh.ChannelHandler{
@@ -74,11 +72,6 @@ func NewServer(addr string, keys []ssh.PublicKey) (*Server, error) {
 type Server struct {
 	shell     string
 	sshServer ssh.Server
-}
-
-func setWinsize(f *os.File, w, h int) {
-	syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TIOCSWINSZ),
-		uintptr(unsafe.Pointer(&struct{ h, w, x, y uint16 }{uint16(h), uint16(w), 0, 0})))
 }
 
 func getShell() (string, error) {
@@ -194,7 +187,7 @@ func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *e
 
 	go func() {
 		for win := range winCh {
-			setWinsize(f, win.Width, win.Height)
+			setWinSize(f, win.Width, win.Height)
 		}
 	}()
 
@@ -242,17 +235,17 @@ func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 
 func exitWithError(s ssh.Session, err error) {
 	if err != nil {
-		tunnel.LogErrorf("%v", err)
+		stderrlog.Errorf("%v", err)
 		msg := strings.TrimPrefix(err.Error(), "exec: ")
 		if _, err := s.Stderr().Write([]byte(msg)); err != nil {
-			tunnel.LogErrorf("failed to write error to session: %v", err)
+			stderrlog.Errorf("failed to write error to session: %v", err)
 		}
 	}
 
 	// always exit session
 	err = s.Exit(ExitCode(err))
 	if err != nil {
-		tunnel.LogErrorf("session failed to exit: %v", err)
+		stderrlog.Errorf("session failed to exit: %v", err)
 	}
 }
 
@@ -292,6 +285,6 @@ func ExitCode(err error) int {
 }
 
 func (s *Server) ListenAndServe() error {
-	tunnel.LogInfof("Start ssh server on %s", s.sshServer.Addr)
+	stderrlog.Infof("Start ssh server on %s", s.sshServer.Addr)
 	return s.sshServer.ListenAndServe()
 }
