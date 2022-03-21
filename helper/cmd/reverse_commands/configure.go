@@ -6,19 +6,20 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"io/ioutil"
+	"os"
 )
 
 var (
 	sshPrivateKeyPath = "/tmp/ssh_private_key"
 	sshPublicKeyPath  = "/tmp/ssh_public_key"
-
-	devSpaceHost = "remote-commands.devspace"
+	workingDirPath    = "/tmp/ssh_working_dir"
 )
 
 // ConfigureCmd holds the ssh cmd flags
 type ConfigureCmd struct {
 	PublicKey  string
 	PrivateKey string
+	WorkingDir string
 
 	Commands []string
 }
@@ -35,6 +36,7 @@ func NewConfigureCmd() *cobra.Command {
 
 	configureCmd.Flags().StringVar(&cmd.PublicKey, "public-key", "", "Public key to use")
 	configureCmd.Flags().StringVar(&cmd.PrivateKey, "private-key", "", "Private key to use")
+	configureCmd.Flags().StringVar(&cmd.WorkingDir, "working-dir", "", "Working dir to use")
 	configureCmd.Flags().StringSliceVar(&cmd.Commands, "commands", []string{}, "Commands to overwrite")
 	return configureCmd
 }
@@ -74,6 +76,20 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return errors.Wrap(err, "write private key")
 		}
+	}
+
+	// now configure working dir
+	workingDir := cmd.WorkingDir
+	if workingDir == "" {
+		var err error
+		workingDir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	}
+	err := ioutil.WriteFile(workingDirPath, []byte(workingDir), 0666)
+	if err != nil {
+		return errors.Wrap(err, "write working dir")
 	}
 
 	return nil

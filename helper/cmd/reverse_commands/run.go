@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -70,7 +71,53 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	// check if we should use an pty
+	// get working dir
+	workingDirBytes, err := ioutil.ReadFile(workingDirPath)
+	if err != nil {
+		return errors.Wrap(err, "read working dir")
+	}
+	workingDir := string(workingDirBytes)
+	if workingDir != "" {
+		currentWorkingDir, err := os.Getwd()
+		if err != nil {
+			return errors.Wrap(err, "get current working dir")
+		}
+		relativePath, err := filepath.Rel(workingDir, currentWorkingDir)
+		if err != nil {
+			return errors.Wrap(err, "transform relative path")
+		}
+		err = session.Setenv("DEVSPACE_RELATIVE_PATH", relativePath)
+		if err != nil {
+			return errors.Wrap(err, "set session env")
+		}
+
+		// rewrite args if necessary
+		if workingDir != "/" {
+			trailingSlashWorkingDir := workingDir
+			if !strings.HasSuffix(trailingSlashWorkingDir, "/") {
+				trailingSlashWorkingDir += "/"
+			}
+
+			for i, a := range args {
+				if strings.HasPrefix(a, trailingSlashWorkingDir) {
+					args[i] = strings.TrimPrefix(a, trailingSlashWorkingDir)
+					continue
+				}
+
+				splitted := strings.Split(a, "=")
+				if len(splitted) < 2 {
+					continue
+				}
+				if strings.HasPrefix(splitted[1], trailingSlashWorkingDir) {
+					splitted[1] = strings.TrimPrefix(splitted[1], trailingSlashWorkingDir)
+					args[i] = strings.Join(splitted, "=")
+					continue
+				}
+			}
+		}
+	}
+
+	// check if we should use a pty
 	fileInfo, ok := term.GetFdInfo(os.Stdin)
 	if ok && term.IsTerminal(fileInfo) {
 		winSize, err := term.GetWinsize(fileInfo)

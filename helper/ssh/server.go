@@ -114,38 +114,47 @@ func (s *Server) handler(sess ssh.Session) {
 	var err error
 	ptyReq, winCh, isPty := sess.Pty()
 	if isPty {
-		err = s.handlePTY(sess, ptyReq, winCh, cmd)
+		err = HandlePTY(sess, ptyReq, winCh, cmd)
 	} else {
-		err = s.handleNonPTY(sess, cmd)
+		err = HandleNonPTY(sess, cmd)
 	}
 
 	// exit session
 	exitWithError(sess, err)
 }
 
-func (s *Server) handleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
-	stdoutReader, stdoutWriter := io.Pipe()
-	stdinReader, stdinWriter := io.Pipe()
-	stderrReader, stderrWriter := io.Pipe()
-	defer stdoutWriter.Close()
-	defer stdinReader.Close()
-	defer stderrReader.Close()
+func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
+	// init pipes
+	stdinWriter, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	stdoutReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderrReader, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
 
-	cmd.Stdin = stdinReader
-	cmd.Stdout = stdoutWriter
-	cmd.Stderr = stderrWriter
+	// start the command
 	err = cmd.Start()
 	if err != nil {
 		return errors.Wrap(err, "start command")
 	}
 
+	stdoutDone := make(chan struct{})
 	go func() {
+		defer close(stdoutDone)
 		defer stdoutReader.Close()
 
 		_, _ = io.Copy(sess, stdoutReader)
 	}()
 
+	stderrDone := make(chan struct{})
 	go func() {
+		defer close(stderrDone)
 		defer stderrReader.Close()
 
 		_, _ = io.Copy(sess.Stderr(), stderrReader)
@@ -162,10 +171,20 @@ func (s *Server) handleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 		return errors.Wrap(err, "wait for command")
 	}
 
+	// make sure channels are closed
+	select {
+	case <-stdoutDone:
+		select {
+		case <-stderrDone:
+		case <-time.After(time.Second):
+		}
+	case <-time.After(time.Second):
+	}
+
 	return nil
 }
 
-func (s *Server) handlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *exec.Cmd) (err error) {
+func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *exec.Cmd) (err error) {
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
 	f, err := pty.Start(cmd)
 	if err != nil {
@@ -179,10 +198,8 @@ func (s *Server) handlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Wi
 		}
 	}()
 
-	stdinDoneChan := make(chan struct{})
 	go func() {
 		defer f.Close()
-		defer close(stdinDoneChan)
 
 		// copy stdin
 		_, _ = io.Copy(f, sess)
@@ -203,7 +220,6 @@ func (s *Server) handlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Wi
 	}
 
 	select {
-	case <-stdinDoneChan:
 	case <-stdoutDoneChan:
 	case <-time.After(time.Second):
 	}
@@ -234,7 +250,7 @@ func exitWithError(s ssh.Session, err error) {
 	}
 
 	// always exit session
-	err = s.Exit(exitCode(err))
+	err = s.Exit(ExitCode(err))
 	if err != nil {
 		tunnel.LogErrorf("session failed to exit: %v", err)
 	}
@@ -261,7 +277,7 @@ func SftpHandler(sess ssh.Session) {
 	}
 }
 
-func exitCode(err error) int {
+func ExitCode(err error) int {
 	err = errors.Cause(err)
 	if err == nil {
 		return 0

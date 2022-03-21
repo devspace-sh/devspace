@@ -45,7 +45,7 @@ func StartReverseCommands(ctx *devspacecontext.Context, devPod *latest.DevPod, s
 	return nil
 }
 
-func startReverseCommands(ctx *devspacecontext.Context, name, arch string, reverseCommands map[string]*latest.ReverseCommand, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func startReverseCommands(ctx *devspacecontext.Context, name, arch string, reverseCommands []*latest.ReverseCommand, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -76,7 +76,7 @@ func startReverseCommands(ctx *devspacecontext.Context, name, arch string, rever
 	return startLocalSSH(ctx, selector, reverseCommands, fmt.Sprintf(":%d", port), parent)
 }
 
-func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetSelector, reverseCommands map[string]*latest.ReverseCommand, addr string, parent *tomb.Tomb) error {
+func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetSelector, reverseCommands []*latest.ReverseCommand, addr string, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -97,8 +97,12 @@ func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetS
 
 	// gather all commands that should get replaced in the container
 	commandsToReplace := []string{}
-	for k := range reverseCommands {
-		commandsToReplace = append(commandsToReplace, k)
+	for _, r := range reverseCommands {
+		if r.Name == "" {
+			continue
+		}
+
+		commandsToReplace = append(commandsToReplace, r.Name)
 	}
 
 	// execute configure command in container
@@ -122,7 +126,7 @@ func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetS
 	}
 
 	// start local ssh server
-	sshServer := NewReverseCommandsServer(addr, keys, reverseCommands, ctx.Log)
+	sshServer := NewReverseCommandsServer(ctx.WorkingDir, addr, keys, reverseCommands, ctx.Log)
 	parent.Go(func() error {
 		return sshServer.ListenAndServe(ctx.Context)
 	})
