@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/pkg/errors"
@@ -179,7 +178,7 @@ func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 
 func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *exec.Cmd) (err error) {
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
-	f, err := pty.Start(cmd)
+	f, err := startPTY(cmd)
 	if err != nil {
 		return errors.Wrap(err, "start pty")
 	}
