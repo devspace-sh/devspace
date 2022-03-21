@@ -41,8 +41,6 @@ import (
 // SpaceNameValidationRegEx is the sapace name validation regex
 var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30}[a-zA-Z0-9]$")
 
-var gitFolderIgnoreRegex = regexp.MustCompile(`/?\.git/?`)
-
 const gitIgnoreFile = ".gitignore"
 const startScriptName = "devspace_start.sh"
 
@@ -84,7 +82,7 @@ func NewInitCmd(f factory.Factory) *cobra.Command {
 #################### devspace init ####################
 #######################################################
 Initializes a new devspace project within the current
-folder. Creates a devspace.yaml with all configuration.
+folder. Creates a devspace.yaml as a starting point.
 #######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -151,85 +149,119 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 
 	// Create config
 	localCache, err := localcache.NewCacheLoader().Load(constants.DefaultConfigPath)
-	generateFromDockerCompose := false
-	// TODO: Enable again
-	dockerComposePath := "" // compose.GetDockerComposePath()
-	if dockerComposePath != "" {
-		selectedDockerComposeOption, err := cmd.log.Question(&survey.QuestionOptions{
-			Question:     "Docker Compose configuration detected. Do you want to create a DevSpace configuration based on Docker Compose?",
-			DefaultValue: DockerComposeDevSpaceConfigOption,
+	/*
+		    generateFromDockerCompose := false
+			// TODO: Enable again
+			dockerComposePath := "" // compose.GetDockerComposePath()
+			if dockerComposePath != "" {
+				selectedDockerComposeOption, err := cmd.log.Question(&survey.QuestionOptions{
+					Question:     "Docker Compose configuration detected. Do you want to create a DevSpace configuration based on Docker Compose?",
+					DefaultValue: DockerComposeDevSpaceConfigOption,
+					Options: []string{
+						DockerComposeDevSpaceConfigOption,
+						NewDevSpaceConfigOption,
+					},
+				})
+				if err != nil {
+					return err
+				}
+
+				generateFromDockerCompose = selectedDockerComposeOption == DockerComposeDevSpaceConfigOption
+			}
+
+			if generateFromDockerCompose {
+				composeLoader := compose.NewDockerComposeLoader(dockerComposePath)
+				if err != nil {
+					return err
+				}
+
+				// Load config
+				config, err := composeLoader.Load(cmd.log)
+				if err != nil {
+					return err
+				}
+
+				// Save config
+				err = composeLoader.Save(config)
+				if err != nil {
+					return err
+				}
+			} else {*/
+	config := latest.New().(*latest.Config)
+	if err != nil {
+		return err
+	}
+
+	// Create ConfigureManager
+	configureManager := f.NewConfigureManager(config, localCache, cmd.log)
+
+	// Determine name for this devspace project
+	projectName, projectNamespace, err := getProjectName()
+	if err != nil {
+		return err
+	}
+
+	config.Name = projectName
+
+	imageName := "app"
+	selectedDeploymentOption := ""
+	mustAddComponentChart := false
+
+	for {
+		selectedDeploymentOption, err = cmd.log.Question(&survey.QuestionOptions{
+			Question: "How do you want to deploy this project?",
 			Options: []string{
-				DockerComposeDevSpaceConfigOption,
-				NewDevSpaceConfigOption,
+				DeployOptionHelm,
+				DeployOptionKubectl,
+				DeployOptionKustomize,
 			},
 		})
 		if err != nil {
 			return err
 		}
 
-		generateFromDockerCompose = selectedDockerComposeOption == DockerComposeDevSpaceConfigOption
-	}
+		isQuickstart := strings.HasPrefix(projectName, "devspace-quickstart-")
 
-	if generateFromDockerCompose {
-		/*composeLoader := compose.NewDockerComposeLoader(dockerComposePath)
-		if err != nil {
-			return err
-		}
+		if selectedDeploymentOption != DeployOptionHelm && isQuickstart {
+			cmd.log.WriteString(logrus.InfoLevel, "\n")
+			cmd.log.Warn("If this is a DevSpace quickstart project, you should use Helm!")
 
-		// Load config
-		config, err := composeLoader.Load(cmd.log)
-		if err != nil {
-			return err
-		}
-
-		// Save config
-		err = composeLoader.Save(config)
-		if err != nil {
-			return err
-		}*/
-	} else {
-		config := latest.New().(*latest.Config)
-		if err != nil {
-			return err
-		}
-
-		// Create ConfigureManager
-		configureManager := f.NewConfigureManager(config, localCache, cmd.log)
-
-		// Determine name for this devspace project
-		projectName, projectNamespace, err := getProjectName()
-		if err != nil {
-			return err
-		}
-
-		config.Name = projectName
-
-		imageName := "app"
-		selectedDeploymentOption := ""
-		mustAddComponentChart := false
-
-		for {
-			selectedDeploymentOption, err = cmd.log.Question(&survey.QuestionOptions{
-				Question: "How do you want to deploy this project?",
+			useHelm := "Yes"
+			helmAnswer, err := cmd.log.Question(&survey.QuestionOptions{
+				Question: "Do you want to switch to using Helm as suggested?",
 				Options: []string{
-					DeployOptionHelm,
-					DeployOptionKubectl,
-					DeployOptionKustomize,
+					useHelm,
+					"No",
 				},
 			})
 			if err != nil {
 				return err
 			}
 
-			if selectedDeploymentOption != DeployOptionHelm && strings.HasPrefix(projectName, "devspace-quickstart-") {
-				cmd.log.WriteString(logrus.InfoLevel, "\n")
-				cmd.log.Warn("If this is a DevSpace quickstart project, you should use Helm!")
+			if helmAnswer == useHelm {
+				selectedDeploymentOption = DeployOptionHelm
+			}
+		}
 
-				useHelm := "Yes"
-				helmAnswer, err := cmd.log.Question(&survey.QuestionOptions{
-					Question: "Do you want to switch to using Helm as suggested?",
+		if selectedDeploymentOption == DeployOptionHelm {
+			hasOwnHelmChart := "Yes"
+			helmChartAnswer, err := cmd.log.Question(&survey.QuestionOptions{
+				Question: "Do you already have a Helm chart for this project?",
+				Options: []string{
+					"No",
+					hasOwnHelmChart,
+				},
+			})
+			if err != nil {
+				return err
+			}
+
+			if isQuickstart {
+				quickstartYes := "Yes"
+				quickstartAnswer, err := cmd.log.Question(&survey.QuestionOptions{
+					Question: "Is this a DevSpace Quickstart project?",
 					Options: []string{
-						useHelm,
+						quickstartYes,
 						"No",
 					},
 				})
@@ -237,40 +269,13 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 					return err
 				}
 
-				if helmAnswer == useHelm {
-					selectedDeploymentOption = DeployOptionHelm
+				if quickstartAnswer == quickstartYes {
+					mustAddComponentChart = true
 				}
 			}
 
-			if selectedDeploymentOption == DeployOptionHelm {
-				hasOwnHelmChart := "Yes"
-				helmChartAnswer, err := cmd.log.Question(&survey.QuestionOptions{
-					Question: "Do you already have a Helm chart?",
-					Options: []string{
-						"No",
-						hasOwnHelmChart,
-					},
-				})
-				if err != nil {
-					return err
-				}
-
-				if helmChartAnswer == hasOwnHelmChart {
-					err = configureManager.AddHelmDeployment(imageName)
-					if err != nil {
-						if err.Error() != "" {
-							cmd.log.WriteString(logrus.InfoLevel, "\n")
-							cmd.log.Errorf("Error: %s", err.Error())
-						}
-
-						// Retry questions on error
-						continue
-					}
-				} else {
-					mustAddComponentChart = true
-				}
-			} else if selectedDeploymentOption == DeployOptionKubectl || selectedDeploymentOption == DeployOptionKustomize {
-				err = configureManager.AddKubectlDeployment(imageName, selectedDeploymentOption == DeployOptionKustomize)
+			if helmChartAnswer == hasOwnHelmChart && !mustAddComponentChart {
+				err = configureManager.AddHelmDeployment(imageName)
 				if err != nil {
 					if err.Error() != "" {
 						cmd.log.WriteString(logrus.InfoLevel, "\n")
@@ -280,128 +285,153 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 					// Retry questions on error
 					continue
 				}
+			} else {
+				mustAddComponentChart = true
 			}
-			break
-		}
-
-		// Create new dockerfile generator
-		languageHandler, err := generator.NewLanguageHandler("", "", cmd.log)
-		if err != nil {
-			return err
-		}
-
-		image := ""
-		for {
-			if !mustAddComponentChart {
-				manifests, err := cmd.render(f, config)
-				if err != nil {
-					return errors.Wrap(err, "error rendering deployment")
-				}
-
-				images, err := parseImages(manifests)
-				if err != nil {
-					return errors.Wrap(err, "error parsing images")
-				}
-
-				if len(images) == 0 {
-					return fmt.Errorf("no images found for the selected deployments")
-				}
-
-				image, err = cmd.log.Question(&survey.QuestionOptions{
-					Question:     "Which image do you want to develop with DevSpace?",
-					DefaultValue: images[0],
-					Options:      images,
-				})
-				if err != nil {
-					return err
-				}
-			}
-
-			err = configureManager.AddImage(imageName, image, projectNamespace+"/"+projectName, cmd.Dockerfile, languageHandler)
+		} else if selectedDeploymentOption == DeployOptionKubectl || selectedDeploymentOption == DeployOptionKustomize {
+			err = configureManager.AddKubectlDeployment(imageName, selectedDeploymentOption == DeployOptionKustomize)
 			if err != nil {
 				if err.Error() != "" {
+					cmd.log.WriteString(logrus.InfoLevel, "\n")
 					cmd.log.Errorf("Error: %s", err.Error())
 				}
-			} else {
-				break
+
+				// Retry questions on error
+				continue
 			}
 		}
+		break
+	}
 
-		image = config.Images[imageName].Image
+	// Create new dockerfile generator
+	languageHandler, err := generator.NewLanguageHandler("", "", cmd.log)
+	if err != nil {
+		return err
+	}
 
-		// Determine app port
-		portString := ""
-
-		// Try to get ports from dockerfile
-		ports, err := dockerfile.GetPorts(config.Images[imageName].Dockerfile)
-		if err == nil {
-			if len(ports) == 1 {
-				portString = strconv.Itoa(ports[0])
-			} else if len(ports) > 1 {
-				portString, err = cmd.log.Question(&survey.QuestionOptions{
-					Question:     "Which port is your application listening on?",
-					DefaultValue: strconv.Itoa(ports[0]),
-				})
-				if err != nil {
-					return err
-				}
-
-				if portString == "" {
-					portString = strconv.Itoa(ports[0])
-				}
+	image := ""
+	for {
+		if !mustAddComponentChart {
+			manifests, err := cmd.render(f, config)
+			if err != nil {
+				return errors.Wrap(err, "error rendering deployment")
 			}
-		}
 
-		if portString == "" {
-			portString, err = cmd.log.Question(&survey.QuestionOptions{
-				Question:               "Which port is your application listening on? (Enter to skip)",
-				ValidationRegexPattern: "[0-9]*",
+			images, err := parseImages(manifests)
+			if err != nil {
+				return errors.Wrap(err, "error parsing images")
+			}
+
+			if len(images) == 0 {
+				return fmt.Errorf("no images found for the selected deployments")
+			}
+
+			image, err = cmd.log.Question(&survey.QuestionOptions{
+				Question:     "Which image do you want to develop with DevSpace?",
+				DefaultValue: images[0],
+				Options:      images,
 			})
 			if err != nil {
 				return err
 			}
 		}
 
-		port := 0
-		if portString != "" {
-			port, err = strconv.Atoi(portString)
-			if err != nil {
-				return errors.Wrap(err, "error parsing port")
+		err = configureManager.AddImage(imageName, image, projectNamespace+"/"+projectName, cmd.Dockerfile, languageHandler)
+		if err != nil {
+			if err.Error() != "" {
+				cmd.log.Errorf("Error: %s", err.Error())
 			}
+		} else {
+			break
 		}
+	}
 
-		// Add component deployment if selected
-		if mustAddComponentChart {
-			err = configureManager.AddComponentDeployment(imageName, image, port)
+	image = config.Images[imageName].Image
+
+	// Determine app port
+	portString := ""
+
+	// Try to get ports from dockerfile
+	ports, err := dockerfile.GetPorts(config.Images[imageName].Dockerfile)
+	if err == nil {
+		if len(ports) == 1 {
+			portString = strconv.Itoa(ports[0])
+		} else if len(ports) > 1 {
+			portString, err = cmd.log.Question(&survey.QuestionOptions{
+				Question:     "Which port is your application listening on?",
+				DefaultValue: strconv.Itoa(ports[0]),
+			})
 			if err != nil {
 				return err
 			}
-		}
 
-		// Add the development configuration
-		err = cmd.addDevConfig(config, imageName, image, port, languageHandler)
-		if err != nil {
-			return err
+			if portString == "" {
+				portString = strconv.Itoa(ports[0])
+			}
 		}
+	}
 
-		// Add pipeline: dev
-		config.Pipelines = map[string]*latest.Pipeline{
-			"dev": {
-				Run: `create_deployments --all
-start_dev ` + imageName + ` --set terminal.command=./` + startScriptName,
-			},
-			"deploy": {
-				Run: `build_images --all
-create_deployments --all --set updateImageTags=true`,
-			},
-		}
-
-		// Save config
-		err = loader.Save(constants.DefaultConfigPath, config)
+	if portString == "" {
+		portString, err = cmd.log.Question(&survey.QuestionOptions{
+			Question:               "Which port is your application listening on? (Enter to skip)",
+			ValidationRegexPattern: "[0-9]*",
+		})
 		if err != nil {
 			return err
 		}
 	}
+
+	port := 0
+	if portString != "" {
+		port, err = strconv.Atoi(portString)
+		if err != nil {
+			return errors.Wrap(err, "error parsing port")
+		}
+	}
+
+	// Add component deployment if selected
+	if mustAddComponentChart {
+		err = configureManager.AddComponentDeployment(imageName, image, port)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add the development configuration
+	err = cmd.addDevConfig(config, imageName, image, port, languageHandler)
+	if err != nil {
+		return err
+	}
+
+	config.Commands = map[string]*latest.CommandConfig{
+		"migrate-db": {
+			Command: `echo 'This is a cross-platform, shared command that can be used to codify any kind of dev task.'
+echo 'Anyone using this project can invoke it via "devspace run migrate-db"'`,
+		},
+	}
+
+	// Add pipeline: dev
+	config.Pipelines = map[string]*latest.Pipeline{
+		"dev": {
+			Run: `run_dependency_pipelines --all    # 1. Deploy any projects this project needs (see "dependencies")
+create_deployments --all          # 2. Deploy Helm charts and manifests specfied as "deployments"
+start_dev ` + imageName + `                     # 3. Start dev mode "` + imageName + `" (see "dev" section)`,
+		},
+		"deploy": {
+			Run: `run_dependency_pipelines --all                    # 1. Deploy any projects this project needs (see "dependencies")
+build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
+create_deployments --all \                        # 3. Deploy Helm charts and manifests specfied as "deployments"
+  --set updateImageTags=true                      #    + make sure to update all image tags to the one from step 2`,
+		},
+	}
+
+	// Save config
+	err = loader.Save(constants.DefaultConfigPath, config)
+	if err != nil {
+		return err
+	}
+
+	/*}*/
 
 	// Save generated
 	err = localCache.Save()
@@ -424,7 +454,6 @@ create_deployments --all --set updateImageTags=true`,
 	configAnnotations := map[string]string{
 		"(?m)^(vars:)":                               "\n# `vars` specifies variables which may be used as $${VAR_NAME} in devspace.yaml\n$1",
 		"(?m)^(images:)":                             "\n# `images` specifies all images that may need to be built for this project\n$1",
-		"(?m)^(  app:)":                              "$1 # This image is called `app` (you can have more than one image)",
 		"(?m)^(deployments:)":                        "\n# `deployments` tells DevSpace how to deploy this project\n$1",
 		"(?m)^(  helm:)":                             "  # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations\n$1",
 		"(?m)^(    )(componentChart:)":               "$1# We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs\n$1$2",
@@ -580,6 +609,10 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		{
 			Path: "./",
 		},
+	}
+
+	devConfig.Terminal = &latest.Terminal{
+		Command: "./" + startScriptName,
 	}
 
 	// Determine language

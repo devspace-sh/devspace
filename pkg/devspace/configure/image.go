@@ -22,7 +22,6 @@ import (
 )
 
 const dockerHubHostname = "hub.docker.com"
-const githubContainerRegistry = "ghcr.io"
 
 // AddImage adds an image to the provided config
 func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string, languageHandler *generator.LanguageHandler) error {
@@ -37,6 +36,7 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 		differentDockerfile   = "Use a different Dockerfile (e.g. ./backend/Dockerfile)"
 		subPathDockerfile     = "Use an existing Dockerfile within in this project"
 		customBuild           = "Use alternative build tool (e.g. jib, bazel)"
+		skip                  = "Skip / I don't know"
 		err                   error
 	)
 
@@ -55,7 +55,7 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 	buildMethod, err := m.log.Question(&survey.QuestionOptions{
 		Question:     "How should DevSpace build the container image for this project?",
 		DefaultValue: buildMethods[0],
-		Options:      append(buildMethods, customBuild),
+		Options:      append(buildMethods, customBuild, skip),
 	})
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 			Command: buildCommand + " --tag=$(get_image --only=tag " + imageName + ")",
 		}
 	} else {
-		if buildMethod != rootLevelDockerfile {
+		if buildMethod != skip && buildMethod != rootLevelDockerfile {
 			imageConfig.Dockerfile, err = m.log.Question(&survey.QuestionOptions{
 				Question: "Please enter the path to this Dockerfile",
 				ValidationFunc: func(value string) error {
@@ -128,7 +128,7 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 
 		// Check if user is logged into GitHub
 		isLoggedIntoGitHub := false
-		authConfig, err = dockerClient.GetAuthConfig(githubContainerRegistry, true)
+		authConfig, err = dockerClient.GetAuthConfig(generator.GithubContainerRegistry, true)
 		if err == nil && authConfig.Username != "" {
 			useGithubRegistry = useGithubRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
 			isLoggedIntoGitHub = true
@@ -160,7 +160,7 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 			if selectedRegistry == useDockerHub {
 				registryHostname = dockerHubHostname
 			} else if selectedRegistry == useGithubRegistry {
-				registryHostname = githubContainerRegistry
+				registryHostname = generator.GithubContainerRegistry
 			} else {
 				registryHostname, err = m.log.Question(&survey.QuestionOptions{
 					Question:     "Please provide the registry hostname without the image path (e.g. gcr.io, ghcr.io, ecr.io)",

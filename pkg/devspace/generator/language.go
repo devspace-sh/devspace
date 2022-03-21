@@ -21,11 +21,12 @@ import (
 	enry "gopkg.in/src-d/enry.v1"
 )
 
-// DockerfileRepoURL is the default repository url
-const DockerfileRepoURL = "https://github.com/loft-sh/devtools-containers.git"
+// DevSpaceContainerRepo is the default repository url
+const DevSpaceContainerRepo = "loft-sh/devspace-containers"
+const GithubContainerRegistry = "ghcr.io"
 
 // devContainersRepoPath is the path relative to the user folder where the docker file repo is stored
-const devContainersRepoPath = ".devspace/devtools-containers"
+const devContainersRepoPath = ".devspace/devspace-containers"
 
 const langCSharpDotNet = "c# (dotnet)"
 const langFallback = "alpine"
@@ -43,7 +44,7 @@ type LanguageHandler struct {
 
 // NewLanguageHandler creates a new dockerfile generator
 func NewLanguageHandler(localPath, templateRepoURL string, log log.Logger) (*LanguageHandler, error) {
-	repoURL := DockerfileRepoURL
+	repoURL := fmt.Sprintf("https://github.com/%s.git", DevSpaceContainerRepo)
 	if templateRepoURL != "" {
 		repoURL = templateRepoURL
 	}
@@ -83,7 +84,7 @@ func (cg *LanguageHandler) GetDevImage() (string, error) {
 		}
 	}
 
-	return fmt.Sprintf("loftsh/%s:%s", language, tag), nil
+	return fmt.Sprintf("%s/%s/%s:%s", GithubContainerRegistry, DevSpaceContainerRepo, language, tag), nil
 }
 
 func (cg *LanguageHandler) CopyFile(fileName, targetPath string, overwrite bool) error {

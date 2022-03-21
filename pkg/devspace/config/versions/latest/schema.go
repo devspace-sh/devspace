@@ -70,13 +70,13 @@ type Config struct {
 	PullSecrets map[string]*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
 
 	// Commands are custom commands that can be executed via 'devspace run COMMAND'
-	Commands map[string]*CommandConfig `yaml:"commands" json:"commands" patchStrategy:"merge" patchMergeKey:"name"`
+	Commands map[string]*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// Require defines what DevSpace, plugins and command versions are needed to use this config
 	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
 
 	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
-	Dependencies map[string]*DependencyConfig `yaml:"dependencies" json:"dependencies" patchStrategy:"merge" patchMergeKey:"name"`
+	Dependencies map[string]*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// Profiles can be used to change the current configuration and change the behavior of devspace
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
@@ -699,16 +699,16 @@ type DevPod struct {
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
-	// Open holds the open config for urls
-	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
+	// Container Options
+	DevContainer `yaml:",inline" json:",inline"`
+	Containers   map[string]*DevContainer `yaml:"containers,omitempty" json:"containers,omitempty"`
 
 	Ports              []*PortMapping      `yaml:"ports,omitempty" json:"ports,omitempty"`
 	Patches            []*PatchConfig      `yaml:"patches,omitempty" json:"patches,omitempty"`
 	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
 
-	// Container Options
-	DevContainer `yaml:",inline" json:",inline"`
-	Containers   map[string]*DevContainer `yaml:"containers,omitempty" json:"containers,omitempty"`
+	// Open holds the open config for urls
+	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
 }
 
 type DevContainer struct {
@@ -1074,7 +1074,7 @@ type HookContainer struct {
 // CommandConfig defines the command specification
 type CommandConfig struct {
 	// Name is the name of a command that is used via `devspace run NAME`
-	Name string `yaml:"name" json:"name"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// Command is the command that should be executed. For example: 'echo 123'
 	Command string `yaml:"command" json:"command"`
@@ -1095,7 +1095,7 @@ type CommandConfig struct {
 	AppendArgs bool `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
 
 	// Description describes what the command is doing and can be seen in `devspace list commands`
-	Description string `yaml:"description" json:"description"`
+	Description string `yaml:"description,omitempty" json:"description,omitempty"`
 }
 
 func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
