@@ -1,34 +1,28 @@
-package ssh
+package reversecommands
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
-	"github.com/loft-sh/devspace/helper/tunnel"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"github.com/pkg/sftp"
 	"io"
-	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
 	"unsafe"
 )
 
-var DefaultPort = 8022
-
-func NewServer(addr string, keys []ssh.PublicKey) (*Server, error) {
-	shell, err := getShell()
-	if err != nil {
-		return nil, err
-	}
-
-	forwardHandler := &ssh.ForwardedTCPHandler{}
+func NewReverseCommandsServer(addr string, keys []ssh.PublicKey, commands map[string]*latest.ReverseCommand, log log.Logger) *Server {
 	server := &Server{
-		shell: shell,
+		commands: commands,
+		log:      log,
 		sshServer: ssh.Server{
 			Addr: addr,
 			PublicKeyHandler: func(ctx ssh.Context, key ssh.PublicKey) bool {
@@ -42,37 +36,28 @@ func NewServer(addr string, keys []ssh.PublicKey) (*Server, error) {
 					}
 				}
 
-				tunnel.LogDebugf("Declined public key")
+				log.Debugf("Declined public key")
 				return false
 			},
 			LocalPortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
-				tunnel.LogDebugf("Accepted forward", dhost, dport)
-				return true
+				return false
 			},
 			ReversePortForwardingCallback: func(ctx ssh.Context, host string, port uint32) bool {
-				tunnel.LogDebugf("attempt to bind", host, port, "granted")
-				return true
+				return false
 			},
 			ChannelHandlers: map[string]ssh.ChannelHandler{
-				"direct-tcpip": ssh.DirectTCPIPHandler,
-				"session":      ssh.DefaultSessionHandler,
-			},
-			RequestHandlers: map[string]ssh.RequestHandler{
-				"tcpip-forward":        forwardHandler.HandleSSHRequest,
-				"cancel-tcpip-forward": forwardHandler.HandleSSHRequest,
-			},
-			SubsystemHandlers: map[string]ssh.SubsystemHandler{
-				"sftp": SftpHandler,
+				"session": ssh.DefaultSessionHandler,
 			},
 		},
 	}
 
 	server.sshServer.Handler = server.handler
-	return server, nil
+	return server
 }
 
 type Server struct {
-	shell     string
+	commands  map[string]*latest.ReverseCommand
+	log       log.Logger
 	sshServer ssh.Server
 }
 
@@ -81,27 +66,17 @@ func setWinsize(f *os.File, w, h int) {
 		uintptr(unsafe.Pointer(&struct{ h, w, x, y uint16 }{uint16(h), uint16(w), 0, 0})))
 }
 
-func getShell() (string, error) {
-	// try to get a shell
-	_, err := exec.LookPath("bash")
+func (s *Server) handler(sess ssh.Session) {
+	cmd, err := s.getCommand(sess)
 	if err != nil {
-		_, err := exec.LookPath("sh")
-		if err != nil {
-			return "", fmt.Errorf("neither 'bash' nor 'sh' found in container. Please make sure at least one is available in the container $PATH")
-		}
-
-		return "sh", nil
+		s.exitWithError(sess, errors.Wrap(err, "construct command"))
+		return
 	}
 
-	return "bash", nil
-}
-
-func (s *Server) handler(sess ssh.Session) {
-	cmd := s.getCommand(sess)
 	if ssh.AgentRequested(sess) {
 		l, err := ssh.NewAgentListener()
 		if err != nil {
-			exitWithError(sess, errors.Wrap(err, "start agent"))
+			s.exitWithError(sess, errors.Wrap(err, "start agent"))
 			return
 		}
 
@@ -111,16 +86,15 @@ func (s *Server) handler(sess ssh.Session) {
 	}
 
 	// start shell session
-	var err error
 	ptyReq, winCh, isPty := sess.Pty()
-	if isPty {
+	if isPty && runtime.GOOS != "windows" {
 		err = s.handlePTY(sess, ptyReq, winCh, cmd)
 	} else {
 		err = s.handleNonPTY(sess, cmd)
 	}
 
 	// exit session
-	exitWithError(sess, err)
+	s.exitWithError(sess, err)
 }
 
 func (s *Server) handleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
@@ -156,6 +130,14 @@ func (s *Server) handleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 
 		_, _ = io.Copy(stdinWriter, sess)
 	}()
+
+	ctx := sess.Context()
+	if done := ctx.Done(); done != nil {
+		go func() {
+			<-done
+			_ = cmd.Process.Signal(os.Kill)
+		}()
+	}
 
 	err = cmd.Wait()
 	if err != nil {
@@ -197,6 +179,14 @@ func (s *Server) handlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Wi
 		_, _ = io.Copy(sess, f)
 	}()
 
+	ctx := sess.Context()
+	if done := ctx.Done(); done != nil {
+		go func() {
+			<-done
+			_ = cmd.Process.Signal(os.Kill)
+		}()
+	}
+
 	err = cmd.Wait()
 	if err != nil {
 		return errors.Wrap(err, "waiting for command")
@@ -210,54 +200,44 @@ func (s *Server) handlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Wi
 	return nil
 }
 
-func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
+func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, error) {
 	var cmd *exec.Cmd
-	if len(sess.RawCommand()) == 0 {
-		cmd = exec.Command(s.shell)
-	} else {
-		args := []string{"-c", sess.RawCommand()}
-		cmd = exec.Command(s.shell, args...)
+	rawCommand := sess.RawCommand()
+	if len(rawCommand) == 0 {
+		return nil, fmt.Errorf("command required")
 	}
 
-	cmd.Env = append(cmd.Env, os.Environ()...)
+	command := []string{}
+	err := json.Unmarshal([]byte(rawCommand), &command)
+	if err != nil {
+		return nil, fmt.Errorf("parse command: %v", err)
+	}
+
+	if s.commands[command[0]] == nil {
+		return nil, fmt.Errorf("command not allowed")
+	}
+
+	c := s.commands[command[0]]
+	cmd = exec.Command(c.Command, command[1:]...)
+	s.log.Debugf("run command '%s %s' locally", c.Command, strings.Join(command[1:], " "))
 	cmd.Env = append(cmd.Env, sess.Environ()...)
-	return cmd
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	return cmd, nil
 }
 
-func exitWithError(s ssh.Session, err error) {
+func (s *Server) exitWithError(sess ssh.Session, err error) {
 	if err != nil {
-		tunnel.LogErrorf("%v", err)
+		s.log.Debugf("%v", err)
 		msg := strings.TrimPrefix(err.Error(), "exec: ")
-		if _, err := s.Stderr().Write([]byte(msg)); err != nil {
-			tunnel.LogErrorf("failed to write error to session: %v", err)
+		if _, err := sess.Stderr().Write([]byte(msg)); err != nil {
+			s.log.Debugf("failed to write error to session: %v", err)
 		}
 	}
 
 	// always exit session
-	err = s.Exit(exitCode(err))
+	err = sess.Exit(exitCode(err))
 	if err != nil {
-		tunnel.LogErrorf("session failed to exit: %v", err)
-	}
-}
-
-func SftpHandler(sess ssh.Session) {
-	debugStream := ioutil.Discard
-	serverOptions := []sftp.ServerOption{
-		sftp.WithDebug(debugStream),
-	}
-	server, err := sftp.NewServer(
-		sess,
-		serverOptions...,
-	)
-	if err != nil {
-		log.Printf("sftp server init error: %s\n", err)
-		return
-	}
-	if err := server.Serve(); err == io.EOF {
-		server.Close()
-		fmt.Println("sftp client exited session.")
-	} else if err != nil {
-		fmt.Println("sftp server completed with error:", err)
+		s.log.Debugf("session failed to exit: %v", err)
 	}
 }
 
@@ -284,7 +264,11 @@ func exitCode(err error) int {
 	return waitStatus.ExitStatus()
 }
 
-func (s *Server) ListenAndServe() error {
-	tunnel.LogInfof("Start ssh server on %s", s.sshServer.Addr)
+func (s *Server) ListenAndServe(ctx context.Context) error {
+	go func() {
+		<-ctx.Done()
+		_ = s.sshServer.Close()
+	}()
+
 	return s.sshServer.ListenAndServe()
 }

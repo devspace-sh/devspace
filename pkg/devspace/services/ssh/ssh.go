@@ -55,29 +55,29 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 	}
 
 	// get a local port
-	port := sshConfig.Port
+	port := sshConfig.LocalPort
 	var err error
 	if port == 0 {
-		port, err = lockPort()
+		port, err = LockPort()
 		if err != nil {
 			return errors.Wrap(err, "find port")
 		}
 
-		defer releasePort(port)
+		defer ReleasePort(port)
 	}
 
 	// configure ssh host
 	sshHost := name + "." + ctx.Config.Config().Name + ".devspace"
-	if sshConfig.Host != "" {
-		sshHost = sshConfig.Host
+	if sshConfig.LocalHost != "" {
+		sshHost = sshConfig.LocalHost
 	}
 
 	// get remote port
 	defaultRemotePort := helperssh.DefaultPort
-	if sshConfig.Address != "" {
-		splitted := strings.Split(sshConfig.Address, ":")
+	if sshConfig.RemoteAddress != "" {
+		splitted := strings.Split(sshConfig.RemoteAddress, ":")
 		if len(splitted) != 2 {
-			return fmt.Errorf("invalid ssh address %s, must contain host:port", sshConfig.Address)
+			return fmt.Errorf("invalid ssh address %s, must contain host:port", sshConfig.RemoteAddress)
 		}
 
 		defaultRemotePort, err = strconv.Atoi(splitted[1])
@@ -104,7 +104,7 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 	}
 
 	// start ssh
-	return startSSHWithRestart(ctx, arch, sshConfig.Address, sshHost, selector, parent)
+	return startSSHWithRestart(ctx, arch, sshConfig.RemoteAddress, sshHost, selector, parent)
 }
 
 func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, sshHost string, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
