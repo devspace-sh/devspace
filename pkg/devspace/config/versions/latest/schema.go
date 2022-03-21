@@ -720,34 +720,34 @@ type DevContainer struct {
 	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
 	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
 
-	ReversePorts         []*PortMapping    `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty"`
-	Command              []string          `yaml:"command,omitempty" json:"command,omitempty"`
-	Args                 []string          `yaml:"args,omitempty" json:"args,omitempty"`
-	WorkingDir           string            `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
-	Resources            *PodResources     `yaml:"resources,omitempty" json:"resources,omitempty"`
-	SSH                  *SSH              `yaml:"ssh,omitempty" json:"ssh,omitempty"`
-	ReverseCommands      []*ReverseCommand `yaml:"reverseCommands,omitempty" json:"reverseCommands,omitempty"`
-	Env                  []EnvVar          `yaml:"env,omitempty" json:"env,omitempty"`
-	RestartHelperPath    string            `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
-	DisableRestartHelper bool              `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
-	Terminal             *Terminal         `yaml:"terminal,omitempty" json:"terminal,omitempty"`
-	Logs                 *Logs             `yaml:"logs,omitempty" json:"logs,omitempty"`
-	Attach               *Attach           `yaml:"attach,omitempty" json:"attach,omitempty"`
-	DevImage             string            `yaml:"devImage,omitempty" json:"devImage,omitempty"`
-	PersistPaths         []PersistentPath  `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
-	Sync                 []*SyncConfig     `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
+	ReversePorts         []*PortMapping   `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty"`
+	Command              []string         `yaml:"command,omitempty" json:"command,omitempty"`
+	Args                 []string         `yaml:"args,omitempty" json:"args,omitempty"`
+	WorkingDir           string           `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
+	Resources            *PodResources    `yaml:"resources,omitempty" json:"resources,omitempty"`
+	SSH                  *SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"`
+	ProxyCommands        []*ProxyCommand  `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
+	Env                  []EnvVar         `yaml:"env,omitempty" json:"env,omitempty"`
+	RestartHelperPath    string           `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
+	DisableRestartHelper bool             `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
+	Terminal             *Terminal        `yaml:"terminal,omitempty" json:"terminal,omitempty"`
+	Logs                 *Logs            `yaml:"logs,omitempty" json:"logs,omitempty"`
+	Attach               *Attach          `yaml:"attach,omitempty" json:"attach,omitempty"`
+	DevImage             string           `yaml:"devImage,omitempty" json:"devImage,omitempty"`
+	PersistPaths         []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
+	Sync                 []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
 }
 
-type ReverseCommand struct {
-	Name    string `yaml:"name,omitempty" json:"name,omitempty"`
-	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+type ProxyCommand struct {
+	Command      string `yaml:"command,omitempty" json:"command,omitempty"`
+	LocalCommand string `yaml:"localCommand,omitempty" json:"localCommand,omitempty"`
 }
 
 type SSH struct {
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
-	// LocalHost is the local ssh host to write to the ~/.ssh/config
-	LocalHost string `yaml:"localHost,omitempty" json:"localHost,omitempty"`
+	// LocalHostname is the local ssh host to write to the ~/.ssh/config
+	LocalHostname string `yaml:"localHostname,omitempty" json:"localHostname,omitempty"`
 
 	// LocalPort is the local port to forward from, if empty will be random
 	LocalPort int `yaml:"localPort,omitempty" json:"localPort,omitempty"`
