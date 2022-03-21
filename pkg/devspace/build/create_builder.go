@@ -29,11 +29,6 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
 	} else if imageConf.Docker == nil && imageConf.Kaniko != nil {
-		dockerClient, err := dockerclient.NewClient(ctx.Log)
-		if err != nil {
-			return nil, errors.Errorf("Error creating docker client: %v", err)
-		}
-
 		if ctx.KubeClient == nil {
 			// Create kubectl client if not specified
 			kubeClient, err := kubectl.NewDefaultClient()
@@ -44,7 +39,7 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 			ctx = ctx.WithKubeClient(kubeClient)
 		}
 
-		bldr, err = kaniko.NewBuilder(ctx, dockerClient, imageConfigName, imageConf, imageTags)
+		bldr, err = kaniko.NewBuilder(ctx, imageConfigName, imageConf, imageTags)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
@@ -96,6 +91,13 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 
 		dockerClient, err := dockerclient.NewClient(ctx.Log)
 		if err == nil {
+			if imageConf.Kaniko != nil && imageConf.Kaniko.Namespace != "" && ctx.KubeClient.Namespace() != imageConf.Kaniko.Namespace {
+				err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, imageConf.Kaniko.Namespace, registryURL)
+				if err != nil {
+					ctx.Log.Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
+				}
+			}
+
 			err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, ctx.KubeClient.Namespace(), registryURL)
 			if err != nil {
 				ctx.Log.Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)

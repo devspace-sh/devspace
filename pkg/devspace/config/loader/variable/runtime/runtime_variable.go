@@ -29,7 +29,8 @@ var Locations = []string{
 	"/dev/replacePods/*/replaceImage",
 	"/dev/terminal/imageSelector",
 	"/pipelines/**",
-	"/commands/**",
+	"/commands/*",
+	"/commands/*/command",
 	"/functions/**",
 }
 
