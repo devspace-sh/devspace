@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
+	"strings"
 )
 
 // ValidInitialSyncStrategy checks if strategy is valid
@@ -304,6 +305,7 @@ func validateImages(config *latest.Config) error {
 
 func validateDev(config *latest.Config) error {
 	for devPodName, devPod := range config.Dev {
+		devPodName = strings.TrimSpace(devPodName)
 		if devPodName == "" {
 			return errors.Errorf("dev[%s] is required", devPodName)
 		}

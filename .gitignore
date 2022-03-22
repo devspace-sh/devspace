@@ -18,6 +18,7 @@
 /__debug*
 .DS_STORE
 .idea
+.devspace/
 
 # VS Code
 .vscode/ipch
