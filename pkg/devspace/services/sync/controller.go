@@ -46,6 +46,8 @@ type Options struct {
 	Arch       string
 	Selector   targetselector.TargetSelector
 
+	Starter sync.DelayedContainerStarter
+
 	RestartOnError bool
 	SyncLog        logpkg.Logger
 
@@ -262,7 +264,7 @@ func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, o
 	}
 
 	ctx.Log.Info("Starting sync...")
-	syncClient, err := c.initClient(ctx, container.Pod, options.Arch, container.Container.Name, syncConfig, options.Verbose, options.SyncLog)
+	syncClient, err := c.initClient(ctx, container.Pod, options.Arch, container.Container.Name, syncConfig, options.Starter, options.Verbose, options.SyncLog)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "start sync")
 	}
@@ -304,7 +306,7 @@ func ParseSyncPath(path string) (localPath string, remotePath string, err error)
 	return splitted[0], splitted[1], nil
 }
 
-func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch, container string, syncConfig *latest.SyncConfig, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
+func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch, container string, syncConfig *latest.SyncConfig, starter sync.DelayedContainerStarter, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
 	localPath, containerPath, err := ParseSyncPath(syncConfig.Path)
 	if err != nil {
 		return nil, err
@@ -346,6 +348,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 		DownstreamDisabled:   downstreamDisabled,
 		Log:                  customLog,
 		Polling:              syncConfig.Polling,
+		Starter:              starter,
 		ResolveCommand: func(command string, args []string) (string, []string, error) {
 			return hook.ResolveCommand(ctx.Context, command, args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
 		},
@@ -408,6 +411,9 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 	}
 
 	// check if we should restart the container on upload
+	if syncConfig.StartContainer {
+		options.StartContainer = true
+	}
 	if syncConfig.OnUpload != nil && syncConfig.OnUpload.RestartContainer {
 		options.RestartContainer = true
 	}

@@ -817,6 +817,7 @@ type OpenConfig struct {
 type SyncConfig struct {
 	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty"`
 
+	StartContainer       bool                 `yaml:"startContainer,omitempty" json:"startContainer,omitempty"`
 	Path                 string               `yaml:"path,omitempty" json:"path,omitempty"`
 	ExcludePaths         []string             `yaml:"excludePaths,omitempty" json:"excludePaths,omitempty"`
 	ExcludeFile          string               `yaml:"excludeFile,omitempty" json:"excludeFile,omitempty"`

@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/devspace/sync"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/sirupsen/logrus"
@@ -67,7 +68,16 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 
 	// init done array is used to track when sync was initialized
 	initDoneArray := []chan struct{}{}
+	starter := sync.NewDelayedContainerStarter()
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		// make sure we add all the sync paths that need to wait for initial start
+		for _, syncConfig := range devContainer.Sync {
+			if syncConfig.StartContainer || (syncConfig.OnUpload != nil && syncConfig.OnUpload.RestartContainer) {
+				starter.Inc()
+			}
+		}
+
+		// now start the sync paths
 		for _, syncConfig := range devContainer.Sync {
 			// start a new go routine in the tomb
 			s := syncConfig
@@ -83,7 +93,7 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 					defer cancel()
 				}
 
-				return startSync(ctx, devPod.Name, string(devContainer.Arch), s, selector.WithContainer(devContainer.Container), parent)
+				return startSync(ctx, devPod.Name, string(devContainer.Arch), s, selector.WithContainer(devContainer.Container), starter, parent)
 			})
 			initDoneArray = append(initDoneArray, initDone)
 
@@ -104,13 +114,14 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 	return nil
 }
 
-func startSync(ctx *devspacecontext.Context, name, arch string, syncConfig *latest.SyncConfig, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func startSync(ctx *devspacecontext.Context, name, arch string, syncConfig *latest.SyncConfig, selector targetselector.TargetSelector, starter sync.DelayedContainerStarter, parent *tomb.Tomb) error {
 	// set options
 	options := &Options{
 		Name:       name,
 		Selector:   selector,
 		SyncConfig: syncConfig,
 		Arch:       arch,
+		Starter:    starter,
 
 		RestartOnError: true,
 		Verbose:        ctx.Log.GetLevel() == logrus.DebugLevel,

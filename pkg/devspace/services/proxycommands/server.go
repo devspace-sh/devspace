@@ -101,7 +101,7 @@ func (s *Server) handler(sess ssh.Session) {
 	ptyReq, winCh, isPty := sess.Pty()
 	if isPty && runtime.GOOS != "windows" {
 		err = sshhelper.HandlePTY(sess, ptyReq, winCh, cmd, func(reader io.Reader) io.Reader {
-			return NewRewriter(reader, s.rewriteMappings)
+			return reader
 		})
 	} else {
 		err = sshhelper.HandleNonPTY(sess, cmd, func(reader io.Reader) io.Reader {
