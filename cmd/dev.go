@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"io"
 	"os"
+
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -75,7 +76,7 @@ func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command
 #######################################################
 ################### devspace dev ######################
 #######################################################
-Starts the dev pipeline of your project.
+Starts your project in development mode
 #######################################################`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {

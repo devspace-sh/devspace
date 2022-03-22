@@ -3,6 +3,11 @@ package devpod
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	syncpkg "sync"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/attach"
@@ -15,10 +20,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/skratchdot/open-golang/open"
 	"gopkg.in/yaml.v3"
-	"io"
-	"net/http"
-	"os"
-	syncpkg "sync"
+
+	"time"
 
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -29,7 +32,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/pkg/errors"
-	"time"
 )
 
 var (
@@ -216,16 +218,17 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 				ctx.Log.Infof("Opening '%s' as soon as application will be started", openConfig.URL)
 				parent.Go(func() error {
 					now := time.Now()
+
+				timedLoop:
 					for time.Since(now) < openMaxWait {
 						select {
-						case <-ctx.Context.Done():
-							return nil
 						case <-time.After(time.Second):
 							resp, _ := http.Get(url)
 							if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
 								time.Sleep(time.Second * 1)
 								_ = open.Start(url)
 								ctx.Log.Donef("Successfully opened %s", url)
+								break timedLoop
 							}
 						}
 					}

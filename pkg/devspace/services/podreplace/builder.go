@@ -3,8 +3,9 @@ package podreplace
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
