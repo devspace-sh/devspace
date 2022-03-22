@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 
@@ -10,14 +11,18 @@ import (
 
 // Save writes the data of a config to its yaml file
 func Save(path string, config *latest.Config) error {
-	// Convert to string
-	configYaml, err := yaml.Marshal(config)
+	var buffer bytes.Buffer
+
+	yamlEncoder := yaml.NewEncoder(&buffer)
+	yamlEncoder.SetIndent(2)
+
+	err := yamlEncoder.Encode(config)
 	if err != nil {
 		return err
 	}
 
 	// Path to save the configuration to
-	err = ioutil.WriteFile(path, configYaml, os.ModePerm)
+	err = ioutil.WriteFile(path, buffer.Bytes(), os.ModePerm)
 	if err != nil {
 		return err
 	}

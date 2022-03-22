@@ -1,11 +1,13 @@
 package latest
 
 import (
+	"strings"
+
 	"encoding/json"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
-	"strings"
 )
 
 // Version is the current api version
@@ -44,24 +46,14 @@ type Config struct {
 	// Name specifies the name of the DevSpace project
 	Name string `yaml:"name" json:"name"`
 
-	// Pipelines are the pipelines to execute
-	Pipelines map[string]*Pipeline `yaml:"pipelines,omitempty" json:"pipelines,omitempty"`
-
 	// Imports merges specified config files into this one
 	Imports []Import `yaml:"imports,omitempty" json:"imports,omitempty"`
 
+	// Pipelines are the pipelines to execute
+	Pipelines map[string]*Pipeline `yaml:"pipelines,omitempty" json:"pipelines,omitempty"`
+
 	// Functions are bash functions that can be used within pipelines
 	Functions map[string]string `yaml:"functions,omitempty" json:"functions,omitempty"`
-
-	// Require defines what DevSpace, plugins and command versions are needed to use this config
-	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
-
-	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
-	Vars map[string]*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-
-	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
-	// during devspace dev or devspace deploy
-	PullSecrets map[string]*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
 
 	// Images holds configuration of how devspace should build images
 	Images map[string]*Image `yaml:"images,omitempty" json:"images,omitempty"`
@@ -72,18 +64,28 @@ type Config struct {
 	// Dev holds development configuration for the 'devspace dev' command.
 	Dev map[string]*DevPod `yaml:"dev,omitempty" json:"dev,omitempty"`
 
+	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
+	Vars map[string]*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
+	// during devspace dev or devspace deploy
+	PullSecrets map[string]*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+
 	// Commands are custom commands that can be executed via 'devspace run COMMAND'
 	Commands map[string]*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
-	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
-	// in the order they are specified.
-	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+	// Require defines what DevSpace, plugins and command versions are needed to use this config
+	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
+
+	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
+	Dependencies map[string]*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// Profiles can be used to change the current configuration and change the behavior of devspace
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 
-	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
-	Dependencies map[string]*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
+	// in the order they are specified.
+	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
 }
 
 // Import specifies the source of the devspace config to merge
@@ -477,7 +479,7 @@ type CustomConfigCommand struct {
 
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
-	Name            string         `yaml:"name" json:"name"`
+	Name            string         `yaml:"name,omitempty" json:"name,omitempty"`
 	Namespace       string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 	UpdateImageTags bool           `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
 	Helm            *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
@@ -702,20 +704,22 @@ type DevPod struct {
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
+	Ports []*PortMapping `yaml:"ports,omitempty" json:"ports,omitempty"`
+
 	// Open holds the open config for urls
 	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
-
-	Ports              []*PortMapping      `yaml:"ports,omitempty" json:"ports,omitempty"`
-	Patches            []*PatchConfig      `yaml:"patches,omitempty" json:"patches,omitempty"`
-	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
 
 	// Container Options
 	DevContainer `yaml:",inline" json:",inline"`
 	Containers   map[string]*DevContainer `yaml:"containers,omitempty" json:"containers,omitempty"`
+
+	Patches            []*PatchConfig      `yaml:"patches,omitempty" json:"patches,omitempty"`
+	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
 }
 
 type DevContainer struct {
 	Container string `yaml:"container,omitempty" json:"container,omitempty"`
+	DevImage  string `yaml:"devImage,omitempty" json:"devImage,omitempty"`
 
 	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
 	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
@@ -725,17 +729,16 @@ type DevContainer struct {
 	Args                 []string         `yaml:"args,omitempty" json:"args,omitempty"`
 	WorkingDir           string           `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
 	Resources            *PodResources    `yaml:"resources,omitempty" json:"resources,omitempty"`
-	SSH                  *SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"`
-	ProxyCommands        []*ProxyCommand  `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
 	Env                  []EnvVar         `yaml:"env,omitempty" json:"env,omitempty"`
 	RestartHelperPath    string           `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
 	DisableRestartHelper bool             `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
 	Terminal             *Terminal        `yaml:"terminal,omitempty" json:"terminal,omitempty"`
 	Logs                 *Logs            `yaml:"logs,omitempty" json:"logs,omitempty"`
 	Attach               *Attach          `yaml:"attach,omitempty" json:"attach,omitempty"`
-	DevImage             string           `yaml:"devImage,omitempty" json:"devImage,omitempty"`
 	PersistPaths         []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
 	Sync                 []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
+	SSH                  *SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"`
+	ProxyCommands        []*ProxyCommand  `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
 }
 
 type ProxyCommand struct {
@@ -1084,7 +1087,7 @@ type HookContainer struct {
 // CommandConfig defines the command specification
 type CommandConfig struct {
 	// Name is the name of a command that is used via `devspace run NAME`
-	Name string `yaml:"name" json:"name"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// Command is the command that should be executed. For example: 'echo 123'
 	Command string `yaml:"command" json:"command"`
@@ -1105,7 +1108,7 @@ type CommandConfig struct {
 	AppendArgs bool `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
 
 	// Description describes what the command is doing and can be seen in `devspace list commands`
-	Description string `yaml:"description" json:"description"`
+	Description string `yaml:"description,omitempty" json:"description,omitempty"`
 }
 
 func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -1265,8 +1268,9 @@ type PullSecretConfig struct {
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// The registry to create the image pull secret for.
+	// Empty string == docker hub
 	// e.g. gcr.io
-	Registry string `yaml:"registry" json:"registry"`
+	Registry string `yaml:"registry,omitempty" json:"registry"`
 
 	// The username of the registry. If this is empty, devspace will try
 	// to receive the auth data from the local docker
