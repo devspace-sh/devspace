@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -14,7 +15,7 @@ import (
 
 var configLock sync.Mutex
 
-func configureSSHConfig(host, port string) error {
+func configureSSHConfig(host, port string, log log.Logger) error {
 	configLock.Lock()
 	defer configLock.Unlock()
 
@@ -27,6 +28,11 @@ func configureSSHConfig(host, port string) error {
 	newFile, err := replaceHost(sshConfigPath, host, port)
 	if err != nil {
 		return errors.Wrap(err, "parse ssh config")
+	}
+
+	err = os.MkdirAll(filepath.Dir(sshConfigPath), 0755)
+	if err != nil {
+		log.Debugf("error creating ssh directory: %v", err)
 	}
 
 	err = ioutil.WriteFile(sshConfigPath, []byte(newFile), 0600)
