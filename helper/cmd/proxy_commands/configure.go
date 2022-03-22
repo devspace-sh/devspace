@@ -1,18 +1,20 @@
-package reverse_commands
+package proxy_commands
 
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 var (
 	sshPrivateKeyPath = "/tmp/ssh_private_key"
 	sshPublicKeyPath  = "/tmp/ssh_public_key"
-	workingDirPath    = "/tmp/ssh_working_dir"
+	proxyCommandsPath = "/tmp/proxy_commands"
 )
 
 // ConfigureCmd holds the ssh cmd flags
@@ -43,14 +45,40 @@ func NewConfigureCmd() *cobra.Command {
 
 // Run runs the command logic
 func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
+	// try to load the old commands
+	oldCommands := []string{}
+	out, err := ioutil.ReadFile(proxyCommandsPath)
+	if err == nil {
+		oldCommands = strings.Split(string(out), ",")
+	}
+
 	// first configure the commands
 	for _, c := range cmd.Commands {
 		filePath := "/usr/local/bin/" + c
-		executeCommand := fmt.Sprintf("/tmp/devspacehelper reverse-commands run %s $@", c)
+		executeCommand := fmt.Sprintf("/tmp/devspacehelper proxy-commands run %s $@", c)
 		err := ioutil.WriteFile(filePath, []byte(executeCommand), 0777)
 		if err != nil {
 			return fmt.Errorf("error writing command '%s': %v", filePath, err)
 		}
+	}
+
+	// remove commands that are not there anymore
+	for _, oldCommand := range oldCommands {
+		found := false
+		for _, c := range cmd.Commands {
+			if oldCommand == c {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			_ = os.Remove("/usr/local/bin/" + oldCommand)
+		}
+	}
+	err = ioutil.WriteFile(proxyCommandsPath, []byte(strings.Join(cmd.Commands, ",")), 0644)
+	if err != nil {
+		stderrlog.Errorf("error writing %s: %v", proxyCommandsPath, err)
 	}
 
 	// now configure the ssh config
@@ -87,10 +115,8 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 			return err
 		}
 	}
-	err := ioutil.WriteFile(workingDirPath, []byte(workingDir), 0666)
-	if err != nil {
-		return errors.Wrap(err, "write working dir")
-	}
 
+	// print working dir to stdout
+	fmt.Print(workingDir)
 	return nil
 }

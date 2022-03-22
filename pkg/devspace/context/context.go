@@ -42,7 +42,7 @@ func RealWorkDir() (string, error) {
 		}
 		return os.Getwd()
 	}
-	return ".", nil
+	return "", nil
 }
 
 type Context struct {
@@ -112,7 +112,12 @@ func (c *Context) ResolvePath(relPath string) string {
 		return path.Clean(relPath)
 	}
 
-	return path.Join(filepath.ToSlash(c.WorkingDir), relPath)
+	outPath := path.Join(filepath.ToSlash(c.WorkingDir), relPath)
+	if !filepath.IsAbs(outPath) {
+		return c.WorkingDir
+	}
+
+	return outPath
 }
 
 func (c *Context) WithKubeClient(client kubectl.Client) *Context {
