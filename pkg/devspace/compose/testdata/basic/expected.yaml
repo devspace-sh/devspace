@@ -3,18 +3,12 @@ name: docker-compose
 deployments:
   db:
     helm:
-      chart:
-        name: component-chart
-        repo: https://charts.devspace.sh
       values:
         containers:
           - name: db-container
             image: mysql/mysql-server:8.0.19
   backend-1-2:
     helm:
-      chart:
-        name: component-chart
-        repo: https://charts.devspace.sh
       values:
         containers:
           - name: backend-1-2-container

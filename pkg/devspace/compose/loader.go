@@ -15,9 +15,8 @@ import (
 	composetypes "github.com/compose-spec/compose-go/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -81,7 +80,6 @@ func (cl *configLoader) Load(log log.Logger) (*latest.Config, error) {
 		return nil, err
 	}
 
-	// var hooks []*latest.HookConfig
 	var images map[string]*latest.Image
 	var deployments map[string]*latest.DeploymentConfig
 	var dev map[string]*latest.DevPod
@@ -129,25 +127,6 @@ func (cl *configLoader) Load(log log.Logger) (*latest.Config, error) {
 			}
 			dev[service.Name] = devConfig
 		}
-
-		// 	bindVolumeHooks := []*latest.HookConfig{}
-		// 	for _, volume := range service.Volumes {
-		// 		if volume.Type == composetypes.VolumeTypeBind {
-		// 			bindVolumeHook := createUploadVolumeHook(service, volume)
-		// 			bindVolumeHooks = append(bindVolumeHooks, bindVolumeHook)
-		// 		}
-		// 	}
-
-		// 	if len(bindVolumeHooks) > 0 {
-		// 		hooks = append(hooks, bindVolumeHooks...)
-		// 		hooks = append(hooks, createUploadDoneHook(service))
-		// 	}
-
-		// 	_, isDependency := dependentsMap[service.Name]
-		// 	if isDependency {
-		// 		waitHook := createWaitHook(service)
-		// 		hooks = append(hooks, waitHook)
-		// 	}
 
 		return nil
 	})
@@ -198,80 +177,64 @@ func addDevConfig(service composetypes.ServiceConfig, baseDir string, log log.Lo
 	var dev *latest.DevPod
 
 	devPorts := []*latest.PortMapping{}
+	for _, port := range service.Ports {
+		portMapping := &latest.PortMapping{}
 
-	if len(service.Ports) > 0 {
-		if dev == nil {
-			dev = &latest.DevPod{
-				LabelSelector: labelSelector(service.Name),
-				Ports:         []*latest.PortMapping{},
-			}
+		if port.Published == 0 {
+			log.Warnf("Unassigned port ranges are not supported: %s", port.Target)
+			continue
 		}
-		for _, port := range service.Ports {
-			portMapping := &latest.PortMapping{}
 
-			if port.Published == 0 {
-				log.Warnf("Unassigned port ranges are not supported: %s", port.Target)
-				continue
+		if port.Published != port.Target {
+			portMapping.Port = fmt.Sprint(port.Published) + ":" + fmt.Sprint(port.Target)
+		} else {
+			portMapping.Port = fmt.Sprint(port.Published)
+		}
+
+		if port.HostIP != "" {
+			portMapping.BindAddress = port.HostIP
+		}
+
+		devPorts = append(devPorts, portMapping)
+	}
+
+	for _, expose := range service.Expose {
+		devPorts = append(devPorts, &latest.PortMapping{
+			Port: expose,
+		})
+	}
+
+	syncConfigs := []*latest.SyncConfig{}
+	for _, volume := range service.Volumes {
+		if volume.Type == composetypes.VolumeTypeBind {
+			sync := &latest.SyncConfig{
+				Path:           strings.Join([]string{resolveLocalPath(volume), volume.Target}, ":"),
+				StartContainer: true,
 			}
 
-			if port.Published != port.Target {
-				portMapping.Port = fmt.Sprint(port.Published) + ":" + fmt.Sprint(port.Target)
-			} else {
-				portMapping.Port = fmt.Sprint(port.Published)
+			_, err := os.Stat(filepath.Join(baseDir, volume.Source, DockerIgnorePath))
+			if err == nil {
+				sync.ExcludeFile = DockerIgnorePath
 			}
 
-			if port.HostIP != "" {
-				portMapping.BindAddress = port.HostIP
-			}
-
-			devPorts = append(devPorts, portMapping)
+			syncConfigs = append(syncConfigs, sync)
 		}
 	}
 
-	if len(service.Expose) > 0 {
-		if dev == nil {
-			dev = &latest.DevPod{
-				LabelSelector: labelSelector(service.Name),
-			}
-		}
-
-		for _, expose := range service.Expose {
-			devPorts = append(devPorts, &latest.PortMapping{
-				Port: expose,
-			})
+	if len(devPorts) > 0 || len(syncConfigs) > 0 {
+		dev = &latest.DevPod{
+			LabelSelector: labelSelector(service.Name),
 		}
 	}
-
-	// 	devSync := dev.Sync
-	// 	if devSync == nil {
-	// 		devSync = []*latest.SyncConfig{}
-	// 	}
-
-	// 	for _, volume := range service.Volumes {
-	// 		if volume.Type == composetypes.VolumeTypeBind {
-	// 			sync := &latest.SyncConfig{
-	// 				LabelSelector: labelSelector(service.Name),
-	// 				ContainerName: resolveContainerName(service),
-	// 				LocalSubPath:  resolveLocalPath(volume),
-	// 				ContainerPath: volume.Target,
-	// 			}
-
-	// 			_, err := os.Stat(filepath.Join(baseDir, volume.Source, DockerIgnorePath))
-	// 			if err == nil {
-	// 				sync.ExcludeFile = DockerIgnorePath
-	// 			}
-
-	// 			devSync = append(devSync, sync)
-	// 		}
-	// 	}
 
 	if len(devPorts) > 0 {
 		dev.Ports = devPorts
 	}
 
-	// 	if len(devSync) > 0 {
-	// 		dev.Sync = devSync
-	// 	}
+	if len(syncConfigs) > 0 {
+		dev.Sync = syncConfigs
+		dev.Command = service.Entrypoint
+	}
 
 	return dev, nil
 }
@@ -356,10 +319,6 @@ func (cl *configLoader) deploymentConfig(service composetypes.ServiceConfig, com
 		values["volumes"] = volumes
 	}
 
-	// if hasLocalSync(service) {
-	// 	values["initContainers"] = []interface{}{initContainerConfig(service, bindVolumeMounts)}
-	// }
-
 	container, err := containerConfig(service, volumeMounts)
 	if err != nil {
 		return nil, err
@@ -443,10 +402,6 @@ func (cl *configLoader) deploymentConfig(service composetypes.ServiceConfig, com
 
 	return &latest.DeploymentConfig{
 		Helm: &latest.HelmConfig{
-			Chart: &latest.ChartConfig{
-				Name:    helm.DevSpaceChartConfig.Name,
-				RepoURL: helm.DevSpaceChartConfig.RepoURL,
-			},
 			Values: values,
 		},
 	}, nil
@@ -491,7 +446,7 @@ func volumesConfig(
 			volumeMap[volumeName] = volume
 		}
 
-		volumeMount := createServiceVolumeMount(volumeName, volumeVolume)
+		volumeMount := createSharedVolumeMount(volumeName, volumeVolume)
 		volumeMounts = append(volumeMounts, volumeMount)
 	}
 
@@ -662,6 +617,22 @@ func createSecretVolumeMount(secret composetypes.ServiceSecretConfig) interface{
 	}
 }
 
+func createSharedVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
+	volumeConfig := map[string]interface{}{
+		"name":   volumeName,
+		"shared": true,
+	}
+
+	if volume.ReadOnly {
+		volumeConfig["readOnly"] = true
+	}
+
+	return map[string]interface{}{
+		"containerPath": volume.Target,
+		"volume":        volumeConfig,
+	}
+}
+
 func createServiceVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
 	return map[string]interface{}{
 		"containerPath": volume.Target,
@@ -693,19 +664,6 @@ func formatName(name string) string {
 	return regexp.MustCompile(`[\._]`).ReplaceAllString(name, "-")
 }
 
-// func initContainerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) map[string]interface{} {
-// 	return map[string]interface{}{
-// 		"name":    UploadVolumesContainerName,
-// 		"image":   "alpine",
-// 		"command": []interface{}{"sh"},
-// 		"args": []interface{}{
-// 			"-c",
-// 			"while [ ! -f /tmp/done ]; do sleep 2; done",
-// 		},
-// 		"volumeMounts": volumeMounts,
-// 	}
-// }
-
 func resolveContainerName(service composetypes.ServiceConfig) string {
 	if service.ContainerName != "" {
 		return formatName(service.ContainerName)
@@ -721,14 +679,14 @@ func resolveImage(service composetypes.ServiceConfig) string {
 	return image
 }
 
-// func resolveLocalPath(volume composetypes.ServiceVolumeConfig) string {
-// 	localSubPath := volume.Source
+func resolveLocalPath(volume composetypes.ServiceVolumeConfig) string {
+	localSubPath := volume.Source
 
-// 	if strings.HasPrefix(localSubPath, "~") {
-// 		localSubPath = fmt.Sprintf(`$!(echo "$HOME/%s")`, strings.TrimLeft(localSubPath, "~/"))
-// 	}
-// 	return localSubPath
-// }
+	if strings.HasPrefix(localSubPath, "~") {
+		localSubPath = fmt.Sprintf(`${devspace.userHome}/%s`, strings.TrimLeft(localSubPath, "~/"))
+	}
+	return localSubPath
+}
 
 func resolveServiceVolumeName(service composetypes.ServiceConfig, volume composetypes.ServiceVolumeConfig, idx int) string {
 	volumeName := volume.Source
@@ -737,48 +695,6 @@ func resolveServiceVolumeName(service composetypes.ServiceConfig, volume compose
 	}
 	return volumeName
 }
-
-// func createWaitHook(service composetypes.ServiceConfig) *latest.HookConfig {
-// 	serviceName := formatName(service.Name)
-// 	return &latest.HookConfig{
-// 		Events: []string{fmt.Sprintf("after:deploy:%s", serviceName)},
-// 		Container: &latest.HookContainer{
-// 			LabelSelector: labelSelector(serviceName),
-// 			ContainerName: resolveContainerName(service),
-// 		},
-// 		Wait: &latest.HookWaitConfig{
-// 			Running:            true,
-// 			TerminatedWithCode: ptr.Int32(0),
-// 		},
-// 	}
-// }
-
-// func createUploadVolumeHook(service composetypes.ServiceConfig, volume composetypes.ServiceVolumeConfig) *latest.HookConfig {
-// 	serviceName := formatName(service.Name)
-// 	return &latest.HookConfig{
-// 		Events: []string{"after:deploy:" + serviceName},
-// 		Upload: &latest.HookSyncConfig{
-// 			LocalPath:     resolveLocalPath(volume),
-// 			ContainerPath: volume.Target,
-// 		},
-// 		Container: &latest.HookContainer{
-// 			LabelSelector: labelSelector(service.Name),
-// 			ContainerName: UploadVolumesContainerName,
-// 		},
-// 	}
-// }
-
-// func createUploadDoneHook(service composetypes.ServiceConfig) *latest.HookConfig {
-// 	serviceName := formatName(service.Name)
-// 	return &latest.HookConfig{
-// 		Events:  []string{"after:deploy:" + serviceName},
-// 		Command: "touch /tmp/done",
-// 		Container: &latest.HookContainer{
-// 			LabelSelector: labelSelector(service.Name),
-// 			ContainerName: UploadVolumesContainerName,
-// 		},
-// 	}
-// }
 
 // func calculateDependentsMap(dockerCompose *composetypes.Project) (map[string][]string, error) {
 // 	tree := map[string][]string{}
@@ -808,12 +724,3 @@ func labelSelector(serviceName string) map[string]string {
 func hasBuild(service composetypes.ServiceConfig) bool {
 	return service.Build != nil
 }
-
-// func hasLocalSync(service composetypes.ServiceConfig) bool {
-// 	for _, volume := range service.Volumes {
-// 		if volume.Type == composetypes.VolumeTypeBind {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }

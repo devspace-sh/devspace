@@ -1,7 +1,7 @@
 services:
   db:
-    image: loft.sh/mysql-server:8.0.19
-    build: db
+    image: alpine
+    entrypoint: sh -c 'cat /tmp/cache/hi && tail -f /dev/null'
     volumes:
       # Just specify a path and let the Engine create a volume
       - /var/lib/mydata

@@ -9,9 +9,6 @@ images:
 deployments:
   foo:
     helm:
-      chart:
-        name: component-chart
-        repo: https://charts.devspace.sh
       values:
         containers:
         - name: foo-container

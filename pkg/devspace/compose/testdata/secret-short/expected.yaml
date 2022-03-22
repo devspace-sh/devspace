@@ -4,9 +4,6 @@ name: docker-compose
 deployments:
   db:
     helm:
-      chart:
-        name: component-chart
-        repo: https://charts.devspace.sh
       values:
         containers:
         - name: db-container

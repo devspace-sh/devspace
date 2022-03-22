@@ -52,7 +52,7 @@ var FilterNonRunningContainers = func(p *corev1.Pod, c *corev1.Container) bool {
 		return true
 	}
 	for _, cs := range p.Status.InitContainerStatuses {
-		if cs.Name == c.Name && cs.Ready && cs.State.Running != nil {
+		if cs.Name == c.Name && cs.State.Running != nil {
 			return false
 		}
 	}

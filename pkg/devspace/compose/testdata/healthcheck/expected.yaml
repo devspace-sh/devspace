@@ -5,9 +5,6 @@ name: docker-compose
 deployments:
   cmd:
     helm:
-      chart:
-        name: component-chart
-        repo: https://charts.devspace.sh
       values:
         containers:
         - name: cmd-container
@@ -25,9 +22,6 @@ deployments:
             periodSeconds: 3
   cmd-shell:
     helm:
-      chart:
-        name: component-chart
-        repo: https://charts.devspace.sh
       values:
         containers:
         - name: cmd-shell-container
@@ -43,9 +37,6 @@ deployments:
             periodSeconds: 3
   none:
     helm:
-      chart:
-        name: component-chart
-        repo: https://charts.devspace.sh
       values:
         containers:
         - name: none-container
