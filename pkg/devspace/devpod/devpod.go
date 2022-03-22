@@ -2,7 +2,6 @@ package devpod
 
 import (
 	"context"
-	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/attach"
@@ -381,11 +380,7 @@ func (d *devPod) startServices(ctx *devspacecontext.Context, devPod *latest.DevP
 			return nil
 		}
 
-		err := sync.StartSync(ctx, devPod, selector, parent)
-		if err != nil {
-			fmt.Println(err)
-		}
-		return err
+		return sync.StartSync(ctx, devPod, selector, parent)
 	})
 
 	// Start Port Forwarding
@@ -463,7 +458,7 @@ func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
 	}
 	if !devContainer.DisableRestartHelper {
 		for _, s := range devContainer.Sync {
-			if s.OnUpload != nil && s.OnUpload.RestartContainer {
+			if s.StartContainer || (s.OnUpload != nil && s.OnUpload.RestartContainer) {
 				return true
 			}
 		}

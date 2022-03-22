@@ -261,12 +261,13 @@ func (u *upstream) execCommandsAfterInitialSync() (err error) {
 
 	// make sure the touch file is there
 	defer func() {
-		if err == nil && u.sync.Options.RestartContainer && u.initialSyncCompleted {
+		if err == nil && u.initialSyncCompleted && (u.sync.Options.RestartContainer || u.sync.Options.StartContainer) {
 			u.initialSyncTouchOnce.Do(func() {
-				_, err = u.client.Execute(u.sync.ctx, &remote.Command{
-					Cmd:  "touch",
-					Args: []string{restart.TouchPath},
-				})
+				if u.sync.Options.Starter != nil {
+					err = u.sync.Options.Starter.Done(u.startContainer)
+				} else {
+					err = u.startContainer()
+				}
 			})
 		}
 	}()
@@ -278,6 +279,14 @@ func (u *upstream) execCommandsAfterInitialSync() (err error) {
 	changedFiles := u.initialSyncChanges
 	u.initialSyncChanges = nil
 	return u.execCommands(changedFiles)
+}
+
+func (u *upstream) startContainer() error {
+	_, err := u.client.Execute(u.sync.ctx, &remote.Command{
+		Cmd:  "touch",
+		Args: []string{restart.TouchPath},
+	})
+	return err
 }
 
 func (u *upstream) execCommandsAfterApply(changedFiles []string) error {
