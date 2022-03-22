@@ -87,6 +87,20 @@ func (cg *LanguageHandler) GetDevImage() (string, error) {
 	return fmt.Sprintf("%s/%s/%s:%s", GithubContainerRegistry, DevSpaceContainerRepo, language, tag), nil
 }
 
+func (cg *LanguageHandler) CopyTemplates(targetPath string, overwrite bool) error {
+	language, err := cg.GetLanguage()
+	if err != nil {
+		return err
+	}
+
+	absTargetPath, err := filepath.Abs(targetPath)
+	if err != nil {
+		return err
+	}
+
+	return fsutil.Copy(filepath.Join(cg.gitRepo.LocalPath, language, "template"), absTargetPath, overwrite)
+}
+
 func (cg *LanguageHandler) CopyFile(fileName, targetPath string, overwrite bool) error {
 	absTargetPath, err := filepath.Abs(targetPath)
 	if err != nil {
@@ -100,7 +114,7 @@ func (cg *LanguageHandler) CopyFile(fileName, targetPath string, overwrite bool)
 			return err
 		}
 
-		err = fsutil.Copy(filepath.Join(cg.gitRepo.LocalPath, language, fileName), absTargetPath, overwrite)
+		err = fsutil.Copy(filepath.Join(cg.gitRepo.LocalPath, language, "template", fileName), absTargetPath, overwrite)
 		if err != nil {
 			return err
 		}
@@ -158,15 +172,19 @@ func (cg *LanguageHandler) GetLanguage() (string, error) {
 }
 
 // IsSupportedLanguage returns true if the given language is supported by the LanguageHandler
-func (cg *LanguageHandler) IsSupportedLanguage(language string) bool {
+func (cg *LanguageHandler) IsSupportedLanguage(language string) (bool, string) {
 	supportedLanguages, _ := cg.GetSupportedLanguages()
 
+	if language == "c#" {
+		return true, langCSharpDotNet
+	}
+
 	for _, supportedLanguage := range supportedLanguages {
-		if language == supportedLanguage {
-			return true
+		if language == supportedLanguage || strings.HasPrefix(supportedLanguage, language+"-") {
+			return true, supportedLanguage
 		}
 	}
-	return false
+	return false, ""
 }
 
 // GetSupportedLanguages returns all languages that are available in the local Template Rempository
@@ -306,11 +324,7 @@ func (cg *LanguageHandler) detectLanguage() (string, error) {
 		language = strings.ToLower(language)
 
 		if bytes > currentMaxBytes {
-			isSupported := cg.IsSupportedLanguage(language)
-			if language == "c#" {
-				isSupported = true
-				language = langCSharpDotNet
-			}
+			isSupported, language := cg.IsSupportedLanguage(language)
 
 			if isSupported {
 				detectedLanguage = language
@@ -319,9 +333,12 @@ func (cg *LanguageHandler) detectLanguage() (string, error) {
 		}
 	}
 
-	if cg.IsSupportedLanguage(detectedLanguage) {
-		cg.Language = detectedLanguage
+	isSupported, language := cg.IsSupportedLanguage(detectedLanguage)
+	if !isSupported {
+		return "", fmt.Errorf("language %s not supported", detectedLanguage)
 	}
+
+	cg.Language = language
 
 	return cg.Language, nil
 }

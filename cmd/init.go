@@ -147,8 +147,6 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	// Print DevSpace logo
 	log.PrintLogo()
 
-	// Create config
-	localCache, err := localcache.NewCacheLoader().Load(constants.DefaultConfigPath)
 	/*
 		    generateFromDockerCompose := false
 			// TODO: Enable again
@@ -187,9 +185,54 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 					return err
 				}
 			} else {*/
-	config := latest.New().(*latest.Config)
+
+	// Create new dockerfile generator
+	languageHandler, err := generator.NewLanguageHandler("", "", cmd.log)
 	if err != nil {
 		return err
+	}
+
+	err = languageHandler.CopyTemplates(".", false)
+	if err != nil {
+		return err
+	}
+
+	startScriptAbsPath, err := filepath.Abs(startScriptName)
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stat(startScriptAbsPath)
+	if err == nil {
+		// Ensure file is executable
+		err = os.Chmod(startScriptAbsPath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	var config *latest.Config
+
+	// create kubectl client
+	client, err := f.NewKubeClientFromContext(globalFlags.KubeContext, globalFlags.Namespace)
+	if err == nil {
+		configInterface, err := configLoader.Load(context.TODO(), client, &loader.ConfigOptions{}, cmd.log)
+		if err == nil {
+			config = configInterface.Config()
+		}
+	}
+
+	localCache, err := localcache.NewCacheLoader().Load(constants.DefaultConfigPath)
+	if err != nil {
+		return err
+	}
+
+	if config == nil {
+		// Create config
+		config = latest.New().(*latest.Config)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Create ConfigureManager
@@ -303,12 +346,6 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		break
 	}
 
-	// Create new dockerfile generator
-	languageHandler, err := generator.NewLanguageHandler("", "", cmd.log)
-	if err != nil {
-		return err
-	}
-
 	image := ""
 	for {
 		if !mustAddComponentChart {
@@ -403,26 +440,32 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		return err
 	}
 
-	config.Commands = map[string]*latest.CommandConfig{
-		"migrate-db": {
+	if config.Commands == nil {
+		config.Commands = map[string]*latest.CommandConfig{}
+
+		config.Commands["migrate-db"] = &latest.CommandConfig{
 			Command: `echo 'This is a cross-platform, shared command that can be used to codify any kind of dev task.'
-echo 'Anyone using this project can invoke it via "devspace run migrate-db"'`,
-		},
+	echo 'Anyone using this project can invoke it via "devspace run migrate-db"'`,
+		}
+	}
+
+	if config.Pipelines == nil {
+		config.Pipelines = map[string]*latest.Pipeline{}
 	}
 
 	// Add pipeline: dev
-	config.Pipelines = map[string]*latest.Pipeline{
-		"dev": {
-			Run: `run_dependency_pipelines --all    # 1. Deploy any projects this project needs (see "dependencies")
+	config.Pipelines["dev"] = &latest.Pipeline{
+		Run: `run_dependency_pipelines --all    # 1. Deploy any projects this project needs (see "dependencies")
 create_deployments --all          # 2. Deploy Helm charts and manifests specfied as "deployments"
 start_dev ` + imageName + `                     # 3. Start dev mode "` + imageName + `" (see "dev" section)`,
-		},
-		"deploy": {
-			Run: `run_dependency_pipelines --all                    # 1. Deploy any projects this project needs (see "dependencies")
+	}
+
+	// Add pipeline: dev
+	config.Pipelines["deploy"] = &latest.Pipeline{
+		Run: `run_dependency_pipelines --all                    # 1. Deploy any projects this project needs (see "dependencies")
 build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
 create_deployments --all \                        # 3. Deploy Helm charts and manifests specfied as "deployments"
   --set updateImageTags=true                      #    + make sure to update all image tags to the one from step 2`,
-		},
 	}
 
 	// Save config
@@ -451,38 +494,45 @@ create_deployments --all \                        # 3. Deploy Helm charts and ma
 		panic(err)
 	}
 
+	annotatedConfig = regexp.MustCompile("(?m)(\n\\s{2,6}name:.*)").ReplaceAll(annotatedConfig, []byte(""))
+	annotatedConfig = regexp.MustCompile("(?s)(\n  deploy:.*)(\n  dev:.*)(\nimages:)").ReplaceAll(annotatedConfig, []byte("$2$1$3"))
+	annotatedConfig = regexp.MustCompile("(?s)(\n    imageSelector:.*?)(\n.*)(\n    devImage:.*?)(\n)").ReplaceAll(annotatedConfig, []byte("$1$3$2$4"))
+
 	configAnnotations := map[string]string{
-		"(?m)^(vars:)":                               "\n# `vars` specifies variables which may be used as $${VAR_NAME} in devspace.yaml\n$1",
-		"(?m)^(images:)":                             "\n# `images` specifies all images that may need to be built for this project\n$1",
-		"(?m)^(deployments:)":                        "\n# `deployments` tells DevSpace how to deploy this project\n$1",
-		"(?m)^(  helm:)":                             "  # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations\n$1",
-		"(?m)^(    )(componentChart:)":               "$1# We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs\n$1$2",
-		"(?m)^(    )(chart:)":                        "$1# We are deploying this project with the Helm chart you provided\n$1$2",
-		"(?m)^(    )(values:)":                       "$1# Under `values` we can define the values for this Helm chart used during `helm install/upgrade`\n$1# You may also use `valuesFiles` to load values from files, e.g. valuesFiles: [\"values.yaml\"]\n$1$2",
-		"(?m)^(    )  someChartValue:.*":             "$1# image: $${IMAGE}\n$1# ingress:\n$1#   enabled: true",
-		"(image: \\$\\{IMAGE\\})":                    "$1 # Use the value of our `$${IMAGE}` variable here (see vars above)",
-		"(?m)^(  kubectl:)":                          "  # This deployment uses `kubectl` but you can also define `helm` deployments\n$1",
-		"(?m)^(dev:)":                                "\n# `dev` only applies when you run `devspace dev`\n$1",
-		"(?m)^(  ports:)":                            "  # `dev.ports` specifies all ports that should be forwarded while `devspace dev` is running\n  # Port-forwarding lets you access your application via localhost on your local machine\n$1",
-		"(?m)^(  open:)":                             "\n  # `dev.open` tells DevSpace to open certain URLs as soon as they return HTTP status 200\n  # Since we configured port-forwarding, we can use a localhost address here to access our application\n$1",
-		"(?m)^(  - url:.+)":                          "$1\n",
-		"(?m)^(  sync:)":                             "  # `dev.sync` configures a file sync between our Pods in k8s and your local project files\n$1",
-		"(?m)^(  (-| ) excludePaths:)":               "    # `excludePaths` option expects an array of strings with paths that should not be synchronized between the\n    # local filesystem and the remote container filesystem. It uses the same syntax as `.gitignore`.\n$1",
-		"(?m)^(  terminal:)":                         "\n  # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`\n$1",
-		"(?m)^(    command:)":                        "    # With this optional `command` we can tell DevSpace to run a script when opening the terminal\n    # This is often useful to display help info for new users or perform initial tasks (e.g. installing dependencies)\n    # DevSpace has generated an example ./devspace_start.sh file in your local project - Feel free to customize it!\n$1",
-		"(?m)^(  replacePods:)":                      "\n  # Since our Helm charts and manifests deployments are often optimized for production,\n  # DevSpace let's you swap out Pods dynamically to get a better dev environment\n$1",
-		"(?m)^(    replaceImage:)":                   "    # Since the `$${IMAGE}` used to start our main application pod may be distroless or not have any dev tooling, let's replace it with a dev-optimized image\n    # DevSpace provides a sample image here but you can use any image for your specific needs\n$1",
-		"(?m)^(    patches:)":                        "    # Besides replacing the container image, let's also apply some patches to the `spec` of our Pod\n    # We are overwriting `command` + `args` for the first container in our selected Pod, so it starts with `sleep 9999999`\n    # Using `sleep 9999999` as PID 1 (instead of the regular ENTRYPOINT), allows you to start the application manually\n$1",
-		"(?m)^(  (-| ) imageSelector:\\s?([^\\s]+))": "$1 # Select the Pod that runs our `$3`",
-		"(?m)^(profiles:)":                           "\n# `profiles` lets you modify the config above for different environments (e.g. dev vs production)\n$1",
-		"(?m)^(- name: production)":                  "  # This profile is called `production` and you can use it for example using: devspace deploy -p production\n  # We generally recommend using the base config without any profiles as optimized for development (e.g. image build+push is disabled)\n$1",
-		"(?m)^(  patches:)":                          "# This profile applies patches to the config above.\n  # In this case, it enables image building for example by removing the `disabled: true` statement for the image `app`\n$1",
-		"(?m)^(  merge:)":                            "# This profile adds our image to the config so that DevSpace will build, tag and push our image before the deployment\n$1",
+		"(?m)^(pipelines:)":           "\n# This is a list of `pipelines` that DevSpace can execute (you can define your own)\n$1",
+		"(?m)^(  )(deploy:)":          "$1# You can run this pipeline via `devspace deploy` (or `devspace run-pipeline deploy`)\n$1$2",
+		"(?m)^(  )(dev:)":             "$1# This is the pipeline for the main command: `devspace dev` (or `devspace run-pipeline dev`)\n$1$2",
+		"(?m)^(images:)":              "\n# This is a list of `images` that DevSpace can build for this project\n# We recommend to skip image building during development (devspace dev) as much as possible\n$1",
+		"(?m)^(deployments:)":         "\n# This is a list of `deployments` that DevSpace can create for this project\n$1",
+		"(?m)^(    )(helm:)":          "$1# This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations\n$1$2",
+		"(?m)^(      )(chart:)":       "$1# We are deploying this project with the Helm chart you provided\n$1$2",
+		"(?m)^(      )(values:)":      "$1# Under `values` we can define the values for this Helm chart used during `helm install/upgrade`\n$1# You may also use `valuesFiles` to load values from files, e.g. valuesFiles: [\"values.yaml\"]\n$1$2",
+		"(?m)^(    )(kubectl:)":       "$1# This deployment uses `kubectl` but you can also define `helm` deployments\n$1$2",
+		"(?m)^(dev:)":                 "\n# This is a list of `dev` containers that are based on the containers created by your deployments\n$1",
+		"(?m)^(    )(imageSelector:)": "$1# Search for the container that runs this image\n$1$2",
+		"(?m)^(    )(devImage:)":      "$1# Replace the container image with this dev-optimized image (allows to skip image building during development)\n$1$2",
+		"(?m)^(    )(sync:)":          "$1# Sync files between the local filesystem and the development container\n$1$2",
+		"(?m)^(    )(ports:)":         "$1# Forward the following ports to be able access your application via localhost\n$1$2",
+		"(?m)^(    )(open:)":          "$1# Open the following URLs once they return an HTTP status code other than 502 or 503\n$1$2",
+		"(?m)^(    )(terminal:)":      "$1# Open a terminal and use the following command to start it\n$1$2",
+		"(?m)^(    )(ssh:)":           "$1# Inject a lightweight SSH server into the container (so your IDE can connect to the remote dev env)\n$1$2",
+		"(?m)^(    )(proxyCommands:)": "$1# Make the following commands from my local machine available inside the dev container\n$1$2",
+		"(?m)^(commands:)":            "\n# Use the `commands` section to define repeatable dev workflows for this project \n$1",
 	}
 
 	for expr, replacement := range configAnnotations {
 		annotatedConfig = regexp.MustCompile(expr).ReplaceAll(annotatedConfig, []byte(replacement))
 	}
+
+	annotatedConfig = append(annotatedConfig, []byte(`
+# Define dependencies to other projects with a devspace.yaml
+# dependencies:
+#   api:
+#     git: https://...  # Git-based dependencies
+#     tag: v1.0.0
+#   ui:
+#     path: ./ui        # Path-based dependencies (for monorepos)
+`)...)
 
 	err = ioutil.WriteFile(configPath, annotatedConfig, os.ModePerm)
 	if err != nil {
@@ -529,7 +579,7 @@ func getProjectName() (string, string, error) {
 	gitRemote, err := command.Output(context.TODO(), "", "git", "config", "--get", "remote.origin.url")
 	if err == nil {
 		sep := "/"
-		projectParts := strings.Split(string(regexp.MustCompile("^.*://github.com/(.*?)(.?git)?").ReplaceAll(gitRemote, []byte("$1"))), sep)
+		projectParts := strings.Split(string(regexp.MustCompile("^.*?://[^/]+?/([^.]+)(\\.git)?").ReplaceAll(gitRemote, []byte("$1"))), sep)
 		partsLen := len(projectParts)
 		if partsLen > 1 {
 			projectNamespace = strings.Join(projectParts[0:partsLen-1], sep)
@@ -562,9 +612,13 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		config.Dev = map[string]*latest.DevPod{}
 	}
 
-	devConfig := &latest.DevPod{
-		ImageSelector: image,
+	devConfig, ok := config.Dev[imageName]
+	if !ok {
+		devConfig = &latest.DevPod{}
+		config.Dev[imageName] = devConfig
 	}
+
+	devConfig.ImageSelector = image
 
 	if port > 0 {
 		localPort := port
@@ -592,24 +646,30 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		}
 		if port != localPort {
 			portMapping = latest.PortMapping{
-				Port: fmt.Sprintf("%d:%d", &localPort, &port),
+				Port: fmt.Sprintf("%d:%d", localPort, port),
 			}
 		}
-		devConfig.Ports = []*latest.PortMapping{&portMapping}
 
-		// Add dev.open config
-		devConfig.Open = []*latest.OpenConfig{
-			{
-				URL: "http://localhost:" + strconv.Itoa(localPort),
-			},
+		if devConfig.Ports == nil {
+			devConfig.Ports = []*latest.PortMapping{}
 		}
+		devConfig.Ports = append(devConfig.Ports, &portMapping)
+
+		if devConfig.Open == nil {
+			devConfig.Open = []*latest.OpenConfig{}
+		}
+		devConfig.Open = append(devConfig.Open, &latest.OpenConfig{
+			URL: "http://localhost:" + strconv.Itoa(localPort),
+		})
 	}
 
-	devConfig.Sync = []*latest.SyncConfig{
-		{
-			Path: "./",
-		},
+	if devConfig.Sync == nil {
+		devConfig.Sync = []*latest.SyncConfig{}
 	}
+
+	devConfig.Sync = append(devConfig.Sync, &latest.SyncConfig{
+		Path: "./",
+	})
 
 	devConfig.Terminal = &latest.Terminal{
 		Command: "./" + startScriptName,
@@ -630,11 +690,6 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		}
 	}
 
-	err = languageHandler.CopyFile(startScriptName, startScriptName, false)
-	if err != nil {
-		return err
-	}
-
 	devImage, err := languageHandler.GetDevImage()
 	if err != nil {
 		return err
@@ -642,8 +697,28 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 
 	devConfig.DevImage = devImage
 
-	// Add dev section to config
-	config.Dev[imageName] = devConfig
+	devConfig.SSH = &latest.SSH{
+		Enabled: true,
+	}
+
+	if devConfig.ProxyCommands == nil {
+		devConfig.ProxyCommands = []*latest.ProxyCommand{}
+	}
+
+	devConfig.ProxyCommands = append(devConfig.ProxyCommands, []*latest.ProxyCommand{
+		{
+			Command: "devspace",
+		},
+		{
+			Command: "kubectl",
+		},
+		{
+			Command: "helm",
+		},
+		{
+			Command: "git",
+		},
+	}...)
 
 	return nil
 }

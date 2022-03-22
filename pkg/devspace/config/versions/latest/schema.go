@@ -704,16 +704,17 @@ type DevPod struct {
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
+	Ports []*PortMapping `yaml:"ports,omitempty" json:"ports,omitempty"`
+
+	// Open holds the open config for urls
+	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
+
 	// Container Options
 	DevContainer `yaml:",inline" json:",inline"`
 	Containers   map[string]*DevContainer `yaml:"containers,omitempty" json:"containers,omitempty"`
 
-	Ports              []*PortMapping      `yaml:"ports,omitempty" json:"ports,omitempty"`
 	Patches            []*PatchConfig      `yaml:"patches,omitempty" json:"patches,omitempty"`
 	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
-
-	// Open holds the open config for urls
-	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
 }
 
 type DevContainer struct {
@@ -728,8 +729,6 @@ type DevContainer struct {
 	Args                 []string         `yaml:"args,omitempty" json:"args,omitempty"`
 	WorkingDir           string           `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
 	Resources            *PodResources    `yaml:"resources,omitempty" json:"resources,omitempty"`
-	SSH                  *SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"`
-	ProxyCommands        []*ProxyCommand  `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
 	Env                  []EnvVar         `yaml:"env,omitempty" json:"env,omitempty"`
 	RestartHelperPath    string           `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
 	DisableRestartHelper bool             `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
@@ -738,6 +737,8 @@ type DevContainer struct {
 	Attach               *Attach          `yaml:"attach,omitempty" json:"attach,omitempty"`
 	PersistPaths         []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
 	Sync                 []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
+	SSH                  *SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"`
+	ProxyCommands        []*ProxyCommand  `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
 }
 
 type ProxyCommand struct {
