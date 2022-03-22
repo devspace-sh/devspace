@@ -32,7 +32,7 @@ func StartProxyCommands(ctx *devspacecontext.Context, devPod *latest.DevPod, sel
 		}
 
 		initDone := parent.NotifyGo(func() error {
-			return startProxyCommands(ctx, devPod.Name, string(devContainer.Arch), devContainer.ProxyCommands, selector.WithContainer(devContainer.Container), parent)
+			return startProxyCommands(ctx, devContainer, devPod.Name, string(devContainer.Arch), devContainer.ProxyCommands, selector.WithContainer(devContainer.Container), parent)
 		})
 		initDoneArray = append(initDoneArray, initDone)
 		return true
@@ -45,7 +45,7 @@ func StartProxyCommands(ctx *devspacecontext.Context, devPod *latest.DevPod, sel
 	return nil
 }
 
-func startProxyCommands(ctx *devspacecontext.Context, name, arch string, reverseCommands []*latest.ProxyCommand, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func startProxyCommands(ctx *devspacecontext.Context, devContainer *latest.DevContainer, name, arch string, reverseCommands []*latest.ProxyCommand, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -73,10 +73,10 @@ func startProxyCommands(ctx *devspacecontext.Context, name, arch string, reverse
 	}
 
 	// start ssh
-	return startLocalSSH(ctx, selector, reverseCommands, fmt.Sprintf(":%d", port), parent)
+	return startLocalSSH(ctx, selector, devContainer, reverseCommands, fmt.Sprintf(":%d", port), parent)
 }
 
-func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetSelector, reverseCommands []*latest.ProxyCommand, addr string, parent *tomb.Tomb) error {
+func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetSelector, devContainer *latest.DevContainer, reverseCommands []*latest.ProxyCommand, addr string, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -106,10 +106,14 @@ func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetS
 	}
 
 	// execute configure command in container
-	command := []string{inject.DevSpaceHelperContainerPath, "reverse-commands", "configure", "--public-key", base64.StdEncoding.EncodeToString([]byte(publicKey)), "--private-key", base64.StdEncoding.EncodeToString([]byte(privateKey)), "--commands", strings.Join(commandsToReplace, ",")}
-	stdout, err := ctx.KubeClient.ExecBufferedCombined(ctx.Context, container.Pod, container.Container.Name, command, nil)
+	command := []string{inject.DevSpaceHelperContainerPath, "proxy-commands", "configure", "--public-key", base64.StdEncoding.EncodeToString([]byte(publicKey)), "--private-key", base64.StdEncoding.EncodeToString([]byte(privateKey)), "--commands", strings.Join(commandsToReplace, ",")}
+	stdout, stderr, err := ctx.KubeClient.ExecBuffered(ctx.Context, container.Pod, container.Container.Name, command, nil)
 	if err != nil {
-		return fmt.Errorf("error setting up reverse commands in container: %s %v", string(stdout), err)
+		return fmt.Errorf("error setting up proxy commands in container: %s %s %v", string(stdout), string(stderr), err)
+	}
+	containerWorkingDir := strings.TrimSpace(string(stdout))
+	if containerWorkingDir == "" {
+		return fmt.Errorf("couldn't retrieve container working dir")
 	}
 
 	// parse key
@@ -126,7 +130,7 @@ func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetS
 	}
 
 	// start local ssh server
-	sshServer := NewReverseCommandsServer(ctx.WorkingDir, addr, keys, reverseCommands, ctx.Log)
+	sshServer := NewReverseCommandsServer(ctx.WorkingDir, containerWorkingDir, addr, keys, reverseCommands, ctx.Log)
 	parent.Go(func() error {
 		return sshServer.ListenAndServe(ctx.Context)
 	})

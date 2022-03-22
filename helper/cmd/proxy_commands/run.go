@@ -1,7 +1,8 @@
-package reverse_commands
+package proxy_commands
 
 import (
 	"encoding/json"
+	"github.com/loft-sh/devspace/helper/types"
 	"github.com/loft-sh/devspace/pkg/util/terminal"
 	"github.com/moby/term"
 	"github.com/pkg/errors"
@@ -9,7 +10,6 @@ import (
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -72,52 +72,6 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	// get working dir
-	workingDirBytes, err := ioutil.ReadFile(workingDirPath)
-	if err != nil {
-		return errors.Wrap(err, "read working dir")
-	}
-	workingDir := string(workingDirBytes)
-	if workingDir != "" {
-		currentWorkingDir, err := os.Getwd()
-		if err != nil {
-			return errors.Wrap(err, "get current working dir")
-		}
-		relativePath, err := filepath.Rel(workingDir, currentWorkingDir)
-		if err != nil {
-			return errors.Wrap(err, "transform relative path")
-		}
-		err = session.Setenv("DEVSPACE_RELATIVE_PATH", relativePath)
-		if err != nil {
-			return errors.Wrap(err, "set session env")
-		}
-
-		// rewrite args if necessary
-		if workingDir != "/" {
-			trailingSlashWorkingDir := workingDir
-			if !strings.HasSuffix(trailingSlashWorkingDir, "/") {
-				trailingSlashWorkingDir += "/"
-			}
-
-			for i, a := range args {
-				if strings.HasPrefix(a, trailingSlashWorkingDir) {
-					args[i] = strings.TrimPrefix(a, trailingSlashWorkingDir)
-					continue
-				}
-
-				splitted := strings.Split(a, "=")
-				if len(splitted) < 2 {
-					continue
-				}
-				if strings.HasPrefix(splitted[1], trailingSlashWorkingDir) {
-					splitted[1] = strings.TrimPrefix(splitted[1], trailingSlashWorkingDir)
-					args[i] = strings.Join(splitted, "=")
-					continue
-				}
-			}
-		}
-	}
-
 	// check if we should use a pty
 	tty, t := terminal.SetupTTY(os.Stdin, os.Stdout)
 	if tty {
@@ -139,8 +93,18 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 		}
 	}
 
+	// get current working directory
+	currentWorkingDir, err := os.Getwd()
+	if err != nil {
+		return errors.Wrap(err, "get current working dir")
+	}
+
 	// marshal command and execute command
-	out, err := json.Marshal(args)
+	proxyCommand := &types.ProxyCommand{
+		Args:       args,
+		WorkingDir: currentWorkingDir,
+	}
+	out, err := json.Marshal(proxyCommand)
 	if err != nil {
 		return errors.Wrap(err, "marshal command")
 	}

@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/helper/cmd/reverse_commands"
+	"github.com/loft-sh/devspace/helper/cmd/proxy_commands"
 	"os"
 
 	"github.com/loft-sh/devspace/helper/cmd/sync"
@@ -40,6 +40,6 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewTunnelCmd())
 	rootCmd.AddCommand(NewSSHCmd())
 	rootCmd.AddCommand(sync.NewSyncCmd())
-	rootCmd.AddCommand(reverse_commands.NewReverseCommands())
+	rootCmd.AddCommand(proxy_commands.NewProxyCommands())
 	return rootCmd
 }

@@ -106,16 +106,16 @@ func (s *Server) handler(sess ssh.Session) {
 	var err error
 	ptyReq, winCh, isPty := sess.Pty()
 	if isPty {
-		err = HandlePTY(sess, ptyReq, winCh, cmd)
+		err = HandlePTY(sess, ptyReq, winCh, cmd, nil)
 	} else {
-		err = HandleNonPTY(sess, cmd)
+		err = HandleNonPTY(sess, cmd, nil)
 	}
 
 	// exit session
 	exitWithError(sess, err)
 }
 
-func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
+func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd, decorateReader func(reader io.Reader) io.Reader) (err error) {
 	// init pipes
 	stdinWriter, err := cmd.StdinPipe()
 	if err != nil {
@@ -141,7 +141,12 @@ func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 		defer close(stdoutDone)
 		defer stdoutReader.Close()
 
-		_, _ = io.Copy(sess, stdoutReader)
+		var reader io.Reader = stdoutReader
+		if decorateReader != nil {
+			reader = decorateReader(stdoutReader)
+		}
+
+		_, _ = io.Copy(sess, reader)
 	}()
 
 	stderrDone := make(chan struct{})
@@ -149,7 +154,12 @@ func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 		defer close(stderrDone)
 		defer stderrReader.Close()
 
-		_, _ = io.Copy(sess.Stderr(), stderrReader)
+		var reader io.Reader = stderrReader
+		if decorateReader != nil {
+			reader = decorateReader(stderrReader)
+		}
+
+		_, _ = io.Copy(sess.Stderr(), reader)
 	}()
 
 	go func() {
@@ -176,7 +186,7 @@ func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 	return nil
 }
 
-func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *exec.Cmd) (err error) {
+func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *exec.Cmd, decorateReader func(reader io.Reader) io.Reader) (err error) {
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
 	f, err := startPTY(cmd)
 	if err != nil {
@@ -202,8 +212,13 @@ func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *e
 		defer f.Close()
 		defer close(stdoutDoneChan)
 
+		var reader io.Reader = f
+		if decorateReader != nil {
+			reader = decorateReader(f)
+		}
+
 		// copy stdout
-		_, _ = io.Copy(sess, f)
+		_, _ = io.Copy(sess, reader)
 	}()
 
 	err = cmd.Wait()

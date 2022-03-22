@@ -255,7 +255,6 @@ github.com/k0kubun/go-ansi
 # github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 github.com/kballard/go-shellquote
 # github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd
-## explicit
 github.com/kevinburke/ssh_config
 # github.com/kr/fs v0.1.0
 github.com/kr/fs
@@ -362,8 +361,6 @@ github.com/pkg/errors
 # github.com/pkg/sftp v1.10.1
 ## explicit
 github.com/pkg/sftp
-# github.com/postfinance/single v0.0.1
-## explicit
 # github.com/prometheus/client_golang v1.11.0
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
@@ -496,6 +493,7 @@ golang.org/x/sys/windows
 # golang.org/x/term v0.0.0-20210916214954-140adaaadfaf
 golang.org/x/term
 # golang.org/x/text v0.3.7
+## explicit
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
@@ -682,7 +680,6 @@ gopkg.in/toqueteos/substring.v1
 # gopkg.in/warnings.v0 v0.1.2
 gopkg.in/warnings.v0
 # gopkg.in/yaml.v2 v2.4.0
-## explicit
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 ## explicit
