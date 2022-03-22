@@ -3,6 +3,8 @@ package latest
 import (
 	"strings"
 
+	"encoding/json"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
@@ -89,6 +91,9 @@ type Config struct {
 // Import specifies the source of the devspace config to merge
 type Import struct {
 	SourceConfig `yaml:",inline" json:",inline"`
+
+	// Enabled specifies if the given import should be enabled
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 }
 
 // Pipeline defines what DevSpace should do. A pipeline consists of one or more
@@ -724,6 +729,7 @@ type DevContainer struct {
 	WorkingDir           string           `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
 	Resources            *PodResources    `yaml:"resources,omitempty" json:"resources,omitempty"`
 	SSH                  *SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"`
+	ProxyCommands        []*ProxyCommand  `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
 	Env                  []EnvVar         `yaml:"env,omitempty" json:"env,omitempty"`
 	RestartHelperPath    string           `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
 	DisableRestartHelper bool             `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
@@ -734,17 +740,22 @@ type DevContainer struct {
 	Sync                 []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
 }
 
+type ProxyCommand struct {
+	Command      string `yaml:"command,omitempty" json:"command,omitempty"`
+	LocalCommand string `yaml:"localCommand,omitempty" json:"localCommand,omitempty"`
+}
+
 type SSH struct {
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
-	// Host is the local ssh host to write to the ~/.ssh/config
-	Host string `yaml:"host,omitempty" json:"host,omitempty"`
+	// LocalHostname is the local ssh host to write to the ~/.ssh/config
+	LocalHostname string `yaml:"localHostname,omitempty" json:"localHostname,omitempty"`
 
-	// Port is the local port to forward from, if empty will be random
-	Port int `yaml:"port,omitempty" json:"port,omitempty"`
+	// LocalPort is the local port to forward from, if empty will be random
+	LocalPort int `yaml:"localPort,omitempty" json:"localPort,omitempty"`
 
-	// Address is the address to listen to inside the container
-	Address string `yaml:"address,omitempty" json:"address,omitempty"`
+	// RemoteAddress is the address to listen to inside the container
+	RemoteAddress string `yaml:"remoteAddress,omitempty" json:"remoteAddress,omitempty"`
 }
 
 type EnvVar struct {
@@ -1102,7 +1113,18 @@ func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	commandString := ""
 	err := unmarshal(&commandString)
 	if err != nil {
-		return unmarshal(c)
+		m := map[string]interface{}{}
+		err := unmarshal(m)
+		if err != nil {
+			return err
+		}
+
+		out, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(out, c)
 	}
 
 	c.Command = commandString
@@ -1146,7 +1168,18 @@ func (v *Variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	varString := ""
 	err := unmarshal(&varString)
 	if err != nil {
-		return unmarshal(v)
+		m := map[string]interface{}{}
+		err := unmarshal(m)
+		if err != nil {
+			return err
+		}
+
+		out, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(out, v)
 	}
 	if strings.HasPrefix(varString, "$(") && strings.HasSuffix(varString, ")") {
 		varString = strings.TrimPrefix(strings.TrimSuffix(varString, ")"), "$(")

@@ -1,0 +1,157 @@
+package proxycommands
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/gliderlabs/ssh"
+	sshhelper "github.com/loft-sh/devspace/helper/ssh"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/pkg/errors"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+)
+
+func NewReverseCommandsServer(workingDir string, addr string, keys []ssh.PublicKey, commands []*latest.ProxyCommand, log log.Logger) *Server {
+	server := &Server{
+		workingDir: workingDir,
+		commands:   commands,
+		log:        log,
+		sshServer: ssh.Server{
+			Addr: addr,
+			PublicKeyHandler: func(ctx ssh.Context, key ssh.PublicKey) bool {
+				if len(keys) == 0 {
+					return true
+				}
+
+				for _, k := range keys {
+					if ssh.KeysEqual(k, key) {
+						return true
+					}
+				}
+
+				log.Debugf("Declined public key")
+				return false
+			},
+			ChannelHandlers: map[string]ssh.ChannelHandler{
+				"session": ssh.DefaultSessionHandler,
+			},
+		},
+	}
+
+	server.sshServer.Handler = server.handler
+	return server
+}
+
+type Server struct {
+	workingDir string
+	commands   []*latest.ProxyCommand
+	log        log.Logger
+	sshServer  ssh.Server
+}
+
+func (s *Server) handler(sess ssh.Session) {
+	cmd, err := s.getCommand(sess)
+	if err != nil {
+		s.exitWithError(sess, errors.Wrap(err, "construct command"))
+		return
+	}
+
+	if ssh.AgentRequested(sess) {
+		l, err := ssh.NewAgentListener()
+		if err != nil {
+			s.exitWithError(sess, errors.Wrap(err, "start agent"))
+			return
+		}
+
+		defer l.Close()
+		go ssh.ForwardAgentConnections(l, sess)
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "SSH_AUTH_SOCK", l.Addr().String()))
+	}
+
+	// start shell session
+	ptyReq, winCh, isPty := sess.Pty()
+	if isPty && runtime.GOOS != "windows" {
+		err = sshhelper.HandlePTY(sess, ptyReq, winCh, cmd)
+	} else {
+		err = sshhelper.HandleNonPTY(sess, cmd)
+	}
+
+	// exit session
+	s.exitWithError(sess, err)
+}
+
+func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, error) {
+	var cmd *exec.Cmd
+	rawCommand := sess.RawCommand()
+	if len(rawCommand) == 0 {
+		return nil, fmt.Errorf("command required")
+	}
+
+	command := []string{}
+	err := json.Unmarshal([]byte(rawCommand), &command)
+	if err != nil {
+		return nil, fmt.Errorf("parse command: %v", err)
+	}
+
+	var reverseCommand *latest.ProxyCommand
+	for _, r := range s.commands {
+		if r.Command == command[0] {
+			reverseCommand = r
+			break
+		}
+
+	}
+	if reverseCommand == nil {
+		return nil, fmt.Errorf("command not allowed")
+	}
+
+	c := reverseCommand.Command
+	if reverseCommand.LocalCommand != "" {
+		c = reverseCommand.LocalCommand
+	}
+
+	cmd = exec.Command(c, command[1:]...)
+	cmd.Dir = s.workingDir
+
+	// find DEVSPACE_RELATIVE_PATH
+	for _, s := range sess.Environ() {
+		if strings.HasPrefix(s, "DEVSPACE_RELATIVE_PATH=") {
+			relativePath := strings.TrimPrefix(s, "DEVSPACE_RELATIVE_PATH=")
+			cmd.Dir = path.Join(filepath.ToSlash(cmd.Dir), relativePath)
+			continue
+		}
+
+		cmd.Env = append(cmd.Env, s)
+	}
+
+	s.log.Debugf("run command '%s %s' locally", c, strings.Join(command[1:], " "))
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	return cmd, nil
+}
+
+func (s *Server) exitWithError(sess ssh.Session, err error) {
+	if err != nil {
+		s.log.Debugf("%v", err)
+	}
+
+	// always exit session
+	err = sess.Exit(sshhelper.ExitCode(err))
+	if err != nil {
+		s.log.Debugf("session failed to exit: %v", err)
+	}
+}
+
+func (s *Server) ListenAndServe(ctx context.Context) error {
+	go func() {
+		<-ctx.Done()
+		_ = s.sshServer.Close()
+	}()
+
+	return s.sshServer.ListenAndServe()
+}

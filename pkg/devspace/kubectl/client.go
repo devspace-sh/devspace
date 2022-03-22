@@ -61,6 +61,9 @@ type Client interface {
 	// ExecBuffered starts a new exec request, waits for it to finish and returns the stdout and stderr to the caller
 	ExecBuffered(ctx context.Context, pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error)
 
+	// ExecBufferedCombined starts a new exec request, waits for it to finish and returns the output to the caller
+	ExecBufferedCombined(ctx context.Context, pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, error)
+
 	// GenericRequest executes a generic kubernetes api request and returns the response as a string
 	GenericRequest(ctx context.Context, options *GenericRequestOptions) (string, error)
 

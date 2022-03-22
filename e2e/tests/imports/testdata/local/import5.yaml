@@ -1,0 +1,10 @@
+version: v2beta1
+name: import5
+
+vars:
+  IMPORT5: $(echo import5)
+
+pipelines:
+  import5:
+    run: |-
+      echo ${IMPORT5}

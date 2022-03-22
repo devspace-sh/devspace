@@ -86,7 +86,7 @@ func InjectDevSpaceHelper(ctx context.Context, client kubectl.Client, pod *v1.Po
 		}
 
 		syncBinaryFolder := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, DevSpaceHelperTempFolder, version)
-		if env.GlobalGetEnv("DEVSPACE_INJECT_LOCAL") != "true" {
+		if env.GlobalGetEnv("DEVSPACE_INJECT_REMOTE") == "true" {
 			// Install devspacehelper inside container
 			log.Debugf("Trying to download devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
 			err = installDevSpaceHelperInContainer(ctx, client, pod, container, version, localHelperName)

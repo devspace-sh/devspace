@@ -43,9 +43,8 @@ import (
 )
 
 const (
-	openLocalHostOption           = "via localhost (provides private access only on your computer via port-forwarding)"
-	openDomainOption              = "via domain (makes your application publicly available via ingress)"
-	allowedIngressHostsAnnotation = "devspace.cloud/allowed-hosts"
+	openLocalHostOption = "via localhost (provides private access only on your computer via port-forwarding)"
+	openDomainOption    = "via domain (makes your application publicly available via ingress)"
 )
 
 // OpenCmd holds the open cmd flags

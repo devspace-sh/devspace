@@ -14,7 +14,7 @@ var (
 	portMutex      sync.Mutex
 )
 
-func lockPort() (int, error) {
+func LockPort() (int, error) {
 	portMutex.Lock()
 	defer portMutex.Unlock()
 
@@ -39,7 +39,7 @@ func lockPort() (int, error) {
 	return 0, fmt.Errorf("couldn't find an open port: %v", err)
 }
 
-func releasePort(p int) {
+func ReleasePort(p int) {
 	portMutex.Lock()
 	defer portMutex.Unlock()
 

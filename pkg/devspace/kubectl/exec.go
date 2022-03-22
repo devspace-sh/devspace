@@ -164,3 +164,23 @@ func (client *client) ExecBuffered(ctx context.Context, pod *corev1.Pod, contain
 
 	return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), kubeExecError
 }
+
+// ExecBufferedCombined starts a new exec request, waits for it to finish and returns the output to the caller
+func (client *client) ExecBufferedCombined(ctx context.Context, pod *corev1.Pod, container string, command []string, stdin io.Reader) ([]byte, error) {
+	stdoutBuffer := &bytes.Buffer{}
+	kubeExecError := client.ExecStream(ctx, &ExecStreamOptions{
+		Pod:       pod,
+		Container: container,
+		Command:   command,
+		Stdin:     stdin,
+		Stdout:    stdoutBuffer,
+		Stderr:    stdoutBuffer,
+	})
+	if kubeExecError != nil {
+		if _, ok := kubeExecError.(kubectlExec.CodeExitError); !ok {
+			return nil, kubeExecError
+		}
+	}
+
+	return stdoutBuffer.Bytes(), kubeExecError
+}

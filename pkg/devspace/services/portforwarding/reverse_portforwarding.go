@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func startReversePortForwarding(ctx *devspacecontext.Context, name, arch string, portForwarding []*latest.PortMapping, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func StartReversePortForwarding(ctx *devspacecontext.Context, name, arch string, portForwarding []*latest.PortMapping, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -81,7 +81,7 @@ func startReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 				}, hook.EventsForSingle("restart:reversePortForwarding", name).With("reversePortForwarding.restart")...)
 
 				for {
-					err = startReversePortForwarding(ctx.WithLogger(fileLog), name, arch, portForwarding, selector, parent)
+					err = StartReversePortForwarding(ctx.WithLogger(fileLog), name, arch, portForwarding, selector, parent)
 					if err != nil {
 						hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
 							"reverse_port_forwarding_config": portForwarding,

@@ -1,0 +1,15 @@
+version: v2beta1
+name: import4
+
+imports:
+  - path: import5.yaml
+    enabled: $(is_equal ${IMPORT4} "import4")
+
+vars:
+  IMPORT4:
+    command: echo import4
+
+pipelines:
+  import4:
+    run: |-
+      echo ${IMPORT4}

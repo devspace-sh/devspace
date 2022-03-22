@@ -154,7 +154,7 @@ func (u *Upstream) Checksums(ctx context.Context, paths *remote.TouchPaths) (*re
 					t := time.Unix(path.MtimeUnix, 0)
 					err := os.Chtimes(absolutePath, t, t)
 					if err != nil && !os.IsNotExist(err) {
-						stderrlog.Logf("Error touching %s: %v", path, err)
+						stderrlog.Infof("Error touching %s: %v", path, err)
 					}
 				}
 
@@ -162,7 +162,7 @@ func (u *Upstream) Checksums(ctx context.Context, paths *remote.TouchPaths) (*re
 				if path.Mode > 0 {
 					err := os.Chmod(absolutePath, os.FileMode(path.Mode))
 					if err != nil && !os.IsNotExist(err) {
-						stderrlog.Logf("Error chmod %s: %v", path, err)
+						stderrlog.Infof("Error chmod %s: %v", path, err)
 					}
 				}
 			}
@@ -180,7 +180,7 @@ func (u *Upstream) Checksums(ctx context.Context, paths *remote.TouchPaths) (*re
 			absolutePath := filepath.Join(u.options.UploadPath, path.Path)
 			checksum, err := crc32.Checksum(absolutePath)
 			if err != nil && !os.IsNotExist(err) {
-				stderrlog.Logf("Error checksum %s: %v", path, err)
+				stderrlog.Infof("Error checksum %s: %v", path, err)
 			}
 
 			checksums = append(checksums, checksum)

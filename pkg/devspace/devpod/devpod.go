@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/attach"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
+	"github.com/loft-sh/devspace/pkg/devspace/services/proxycommands"
 	"github.com/loft-sh/devspace/pkg/devspace/services/ssh"
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -404,10 +405,16 @@ func (d *devPod) startServices(ctx *devspacecontext.Context, devPod *latest.DevP
 		return ssh.StartSSH(ctx, devPod, selector, parent)
 	})
 
+	// Start Reverse Commands
+	reverseCommandsDone := parent.NotifyGo(func() error {
+		return proxycommands.StartProxyCommands(ctx, devPod, selector, parent)
+	})
+
 	// wait for both to finish
 	<-syncDone
 	<-portForwardingDone
 	<-sshDone
+	<-reverseCommandsDone
 
 	// execute hooks
 	pluginErr = hook.ExecuteHooks(ctx, map[string]interface{}{}, "devCommand:after:sync", "dev.afterSync", "devCommand:after:portForwarding", "dev.afterPortForwarding")

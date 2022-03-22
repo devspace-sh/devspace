@@ -2,9 +2,8 @@ package ssh
 
 import (
 	"fmt"
-	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
-	"github.com/loft-sh/devspace/helper/tunnel"
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/pkg/errors"
 	"github.com/pkg/sftp"
 	"io"
@@ -13,8 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
-	"unsafe"
+	"time"
 )
 
 var DefaultPort = 8022
@@ -41,15 +39,15 @@ func NewServer(addr string, keys []ssh.PublicKey) (*Server, error) {
 					}
 				}
 
-				tunnel.LogDebugf("Declined public key")
+				stderrlog.Debugf("Declined public key")
 				return false
 			},
 			LocalPortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
-				tunnel.LogDebugf("Accepted forward", dhost, dport)
+				stderrlog.Debugf("Accepted forward", dhost, dport)
 				return true
 			},
 			ReversePortForwardingCallback: func(ctx ssh.Context, host string, port uint32) bool {
-				tunnel.LogDebugf("attempt to bind", host, port, "granted")
+				stderrlog.Debugf("attempt to bind", host, port, "granted")
 				return true
 			},
 			ChannelHandlers: map[string]ssh.ChannelHandler{
@@ -73,11 +71,6 @@ func NewServer(addr string, keys []ssh.PublicKey) (*Server, error) {
 type Server struct {
 	shell     string
 	sshServer ssh.Server
-}
-
-func setWinsize(f *os.File, w, h int) {
-	syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TIOCSWINSZ),
-		uintptr(unsafe.Pointer(&struct{ h, w, x, y uint16 }{uint16(h), uint16(w), 0, 0})))
 }
 
 func getShell() (string, error) {
@@ -113,38 +106,47 @@ func (s *Server) handler(sess ssh.Session) {
 	var err error
 	ptyReq, winCh, isPty := sess.Pty()
 	if isPty {
-		err = s.handlePTY(sess, ptyReq, winCh, cmd)
+		err = HandlePTY(sess, ptyReq, winCh, cmd)
 	} else {
-		err = s.handleNonPTY(sess, cmd)
+		err = HandleNonPTY(sess, cmd)
 	}
 
 	// exit session
 	exitWithError(sess, err)
 }
 
-func (s *Server) handleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
-	stdoutReader, stdoutWriter := io.Pipe()
-	stdinReader, stdinWriter := io.Pipe()
-	stderrReader, stderrWriter := io.Pipe()
-	defer stdoutWriter.Close()
-	defer stdinReader.Close()
-	defer stderrReader.Close()
+func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
+	// init pipes
+	stdinWriter, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	stdoutReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderrReader, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
 
-	cmd.Stdin = stdinReader
-	cmd.Stdout = stdoutWriter
-	cmd.Stderr = stderrWriter
+	// start the command
 	err = cmd.Start()
 	if err != nil {
 		return errors.Wrap(err, "start command")
 	}
 
+	stdoutDone := make(chan struct{})
 	go func() {
+		defer close(stdoutDone)
 		defer stdoutReader.Close()
 
 		_, _ = io.Copy(sess, stdoutReader)
 	}()
 
+	stderrDone := make(chan struct{})
 	go func() {
+		defer close(stderrDone)
 		defer stderrReader.Close()
 
 		_, _ = io.Copy(sess.Stderr(), stderrReader)
@@ -158,29 +160,38 @@ func (s *Server) handleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 
 	err = cmd.Wait()
 	if err != nil {
-		return errors.Wrap(err, "wait for command")
+		return err
+	}
+
+	// make sure channels are closed
+	select {
+	case <-stdoutDone:
+		select {
+		case <-stderrDone:
+		case <-time.After(time.Second):
+		}
+	case <-time.After(time.Second):
 	}
 
 	return nil
 }
 
-func (s *Server) handlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *exec.Cmd) (err error) {
+func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *exec.Cmd) (err error) {
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
-	f, err := pty.Start(cmd)
+	f, err := startPTY(cmd)
 	if err != nil {
 		return errors.Wrap(err, "start pty")
 	}
+	defer f.Close()
 
 	go func() {
 		for win := range winCh {
-			setWinsize(f, win.Width, win.Height)
+			setWinSize(f, win.Width, win.Height)
 		}
 	}()
 
-	stdinDoneChan := make(chan struct{})
 	go func() {
 		defer f.Close()
-		defer close(stdinDoneChan)
 
 		// copy stdin
 		_, _ = io.Copy(f, sess)
@@ -197,11 +208,13 @@ func (s *Server) handlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Wi
 
 	err = cmd.Wait()
 	if err != nil {
-		return errors.Wrap(err, "waiting for command")
+		return err
 	}
 
-	<-stdinDoneChan
-	<-stdoutDoneChan
+	select {
+	case <-stdoutDoneChan:
+	case <-time.After(time.Second):
+	}
 	return nil
 }
 
@@ -221,17 +234,17 @@ func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 
 func exitWithError(s ssh.Session, err error) {
 	if err != nil {
-		tunnel.LogErrorf("%v", err)
+		stderrlog.Errorf("%v", err)
 		msg := strings.TrimPrefix(err.Error(), "exec: ")
 		if _, err := s.Stderr().Write([]byte(msg)); err != nil {
-			tunnel.LogErrorf("failed to write error to session: %v", err)
+			stderrlog.Errorf("failed to write error to session: %v", err)
 		}
 	}
 
 	// always exit session
-	err = s.Exit(exitCode(err))
+	err = s.Exit(ExitCode(err))
 	if err != nil {
-		tunnel.LogErrorf("session failed to exit: %v", err)
+		stderrlog.Errorf("session failed to exit: %v", err)
 	}
 }
 
@@ -256,7 +269,7 @@ func SftpHandler(sess ssh.Session) {
 	}
 }
 
-func exitCode(err error) int {
+func ExitCode(err error) int {
 	err = errors.Cause(err)
 	if err == nil {
 		return 0
@@ -267,19 +280,10 @@ func exitCode(err error) int {
 		return 1
 	}
 
-	waitStatus, ok := exitErr.Sys().(syscall.WaitStatus)
-	if !ok {
-		if !exitErr.Success() {
-			return 1
-		}
-
-		return 0
-	}
-
-	return waitStatus.ExitStatus()
+	return exitErr.ExitCode()
 }
 
 func (s *Server) ListenAndServe() error {
-	tunnel.LogInfof("Start ssh server on %s", s.sshServer.Addr)
+	stderrlog.Infof("Start ssh server on %s", s.sshServer.Addr)
 	return s.sshServer.ListenAndServe()
 }

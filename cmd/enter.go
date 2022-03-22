@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
 	"io"
@@ -65,7 +66,7 @@ devspace enter bash --image-selector "${runtime.images.app.image}:${runtime.imag
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			plugin.SetPluginCommand(cobraCmd, args)
-			return cmd.Run(f, cobraCmd, args)
+			return cmd.Run(f, args)
 		},
 	}
 
@@ -83,7 +84,7 @@ devspace enter bash --image-selector "${runtime.images.app.image}:${runtime.imag
 }
 
 // Run executes the command logic
-func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *EnterCmd) Run(f factory.Factory, args []string) error {
 	// Set config root
 	logger := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
@@ -91,7 +92,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	if err != nil {
 		return err
 	}
-	_, err = configLoader.SetDevSpaceRoot(logger)
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -100,6 +101,21 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
+	}
+
+	// Load generated config if possible
+	if configExists {
+		localCache, err := configLoader.LoadLocalCache()
+		if err != nil {
+			return err
+		}
+
+		// If the current kube context or namespace is different than old,
+		// show warnings and reset kube client if necessary
+		client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, logger)
+		if err != nil {
+			return err
+		}
 	}
 
 	// create the context

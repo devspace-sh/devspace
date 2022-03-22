@@ -3,11 +3,12 @@ package log
 import (
 	"errors"
 	"fmt"
-	"github.com/acarl005/stripansi"
 	"io"
 	"io/ioutil"
 	"strings"
 	"sync"
+
+	"github.com/acarl005/stripansi"
 
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
@@ -33,7 +34,7 @@ type fileLogger struct {
 }
 
 func GetDevPodFileLogger(devPodName string) Logger {
-	return GetFileLogger("devpod-" + strings.TrimSpace(devPodName))
+	return GetFileLogger("dev." + strings.TrimSpace(devPodName))
 }
 
 // GetFileLogger returns a logger instance for the specified filename
