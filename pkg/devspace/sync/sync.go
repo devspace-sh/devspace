@@ -36,6 +36,7 @@ type Options struct {
 	UploadExcludePaths   []string
 
 	RestartContainer bool
+	StartContainer   bool
 
 	UploadBatchCmd  string
 	UploadBatchArgs []string
@@ -49,6 +50,8 @@ type Options struct {
 
 	InitialSyncCompareBy latest.InitialSyncCompareBy
 	InitialSync          latest.InitialSyncStrategy
+
+	Starter DelayedContainerStarter
 
 	Log log.Logger
 }

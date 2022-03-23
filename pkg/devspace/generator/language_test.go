@@ -10,56 +10,7 @@ import (
 	"gotest.tools/assert"
 )
 
-func TestContainerizeApplication(t *testing.T) {
-	//Create TmpFolder
-	dir := t.TempDir()
-
-	wdBackup, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Error getting current working directory: %v", err)
-	}
-	err = os.Chdir(dir)
-	if err != nil {
-		t.Fatalf("Error changing working directory: %v", err)
-	}
-
-	// Cleanup temp folder
-	defer func() {
-		err = os.Chdir(wdBackup)
-		if err != nil {
-			t.Fatalf("Error changing dir back: %v", err)
-		}
-	}()
-
-	err = fsutil.WriteToFile([]byte(`var express = require('express');
-var app = express();
-
-app.get('/', function (req, res) {
-  res.send('Hello World!');
-});
-
-app.listen(3000, function () {
-  console.log('Example app listening on port 3000!');
-});`), "index.js")
-	if err != nil {
-		t.Fatalf("Error creating javascript file: %v", err)
-	}
-
-	fakeLogger := fakelogger.NewFakeLogger()
-	fakeLogger.Survey.SetNextAnswer("javascript")
-
-	generator, err := NewDockerfileGenerator("", "", fakeLogger)
-	if err != nil {
-		t.Fatalf("Error containerizing application: %v", err)
-	}
-
-	err = generator.ContainerizeApplication("")
-	if err != nil {
-		t.Fatalf("Error containerizing application: %v", err)
-	}
-}
-
-func TestDockerfileGenerator(t *testing.T) {
+func TestLanguageHandler(t *testing.T) {
 	//Create TmpFolder
 	dir := t.TempDir()
 
@@ -81,25 +32,25 @@ func TestDockerfileGenerator(t *testing.T) {
 	}()
 
 	//Test factory method
-	dockerfileGenerator, err := NewDockerfileGenerator("", "", fakelogger.NewFakeLogger())
+	languageHandler, err := NewLanguageHandler("", "", fakelogger.NewFakeLogger())
 	if err != nil {
-		t.Fatalf("Error creating a dockerfileGenerator: %v", err)
+		t.Fatalf("Error creating a languageHandler: %v", err)
 	}
 
-	t.Log(dockerfileGenerator.gitRepo.LocalPath)
+	t.Log(languageHandler.gitRepo.LocalPath)
 
 	//Test IsLanguageSupported with unsupported Language
-	supported := dockerfileGenerator.IsSupportedLanguage("unsupportedLanguage")
+	supported := languageHandler.IsSupportedLanguage("unsupportedLanguage")
 	assert.Equal(t, false, supported, "Unsupported language is declared supported.")
 
 	//Test CreateDockerFile
-	err = dockerfileGenerator.CreateDockerfile("javascript")
+	err = languageHandler.CreateDockerfile("javascript")
 	if err != nil {
-		t.Fatalf("Error creating Dockerfile from dockerfileGenerator: %v", err)
+		t.Fatalf("Error creating Dockerfile from languageHandler: %v", err)
 	}
 	content, err := fsutil.ReadFile("Dockerfile", -1)
 	if err != nil {
-		t.Fatalf("Error reading Dockerfile. Maybe dockerfileGenerator.CreateDockerfile didn't create it? : %v", err)
+		t.Fatalf("Error reading Dockerfile. Maybe languageHandler.CreateDockerfile didn't create it? : %v", err)
 	}
 	fmt.Println(string(content))
 	assert.Equal(t, string(content), `FROM node:13.14-alpine
@@ -131,9 +82,9 @@ CMD ["npm", "start"]
 `, "Created Dockerfile has wrong content")
 
 	//Test CreateDockerFile with unavailable language
-	err = dockerfileGenerator.CreateDockerfile("unavailableLanguage")
+	err = languageHandler.CreateDockerfile("unavailableLanguage")
 	if err == nil {
-		t.Fatalf("No Error creating Dockerfile from dockerfileGenerator with unavailable Language: %v", err)
+		t.Fatalf("No Error creating Dockerfile from languageHandler with unavailable Language: %v", err)
 	}
 
 }

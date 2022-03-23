@@ -2,6 +2,9 @@ package terminal
 
 import (
 	"fmt"
+	"io"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -11,10 +14,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
-	"io"
 	kubectlExec "k8s.io/client-go/util/exec"
 	"k8s.io/kubectl/pkg/util/term"
-	"time"
 )
 
 // StartTerminalFromCMD opens a new terminal

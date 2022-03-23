@@ -3,8 +3,9 @@ package podreplace
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
@@ -246,7 +247,7 @@ func replaceCommand(devPod *latest.DevPod, devContainer *latest.DevContainer, po
 	injectRestartHelper := false
 	if !devContainer.DisableRestartHelper {
 		for _, s := range devContainer.Sync {
-			if s.OnUpload != nil && s.OnUpload.RestartContainer {
+			if s.StartContainer || (s.OnUpload != nil && s.OnUpload.RestartContainer) {
 				injectRestartHelper = true
 			}
 		}

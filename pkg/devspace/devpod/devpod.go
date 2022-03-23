@@ -3,6 +3,11 @@ package devpod
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	syncpkg "sync"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/attach"
@@ -15,10 +20,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/skratchdot/open-golang/open"
 	"gopkg.in/yaml.v3"
-	"io"
-	"net/http"
-	"os"
-	syncpkg "sync"
+
+	"time"
 
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -29,7 +32,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/pkg/errors"
-	"time"
 )
 
 var (

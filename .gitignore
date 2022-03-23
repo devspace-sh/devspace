@@ -30,3 +30,7 @@
 coverage.txt
 ./main
 profile.out
+
+
+# Ignore DevSpace cache and log folder
+.devspace/
