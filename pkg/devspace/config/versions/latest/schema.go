@@ -2,10 +2,11 @@ package latest
 
 import (
 	"encoding/json"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
-	"strings"
 )
 
 // Version is the current api version

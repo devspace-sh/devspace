@@ -1,0 +1,47 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/invopop/jsonschema"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+)
+
+// Run executes the command logic
+func main() {
+	r := new(jsonschema.Reflector)
+	r.AllowAdditionalProperties = true
+	r.PreferYAMLSchema = true
+	r.RequiredFromJSONSchemaTags = false
+	r.YAMLEmbeddedStructs = false
+	r.ExpandedStruct = true
+
+	err := r.AddGoComments("github.com/loft-sh/devspace", "./pkg/devspace/config/versions/latest")
+	if err != nil {
+		panic(err)
+	}
+
+	schema := r.Reflect(&latest.Config{})
+
+	schemaJSON, err := json.MarshalIndent(schema, "      ", "  ")
+	if err != nil {
+		panic(err)
+	}
+
+	schemaString := strings.ReplaceAll(string(schemaJSON), "#/$defs/", "#/definitions/Config/$defs/")
+
+	fmt.Printf(`{
+	"swagger": "2.0",
+	"info": {
+		"version": "%s",
+		"title": "devspace.yaml"
+	},
+	"paths": {},
+	"definitions": {
+		"Config": %s
+	}
+}
+`, latest.Version, schemaString)
+}

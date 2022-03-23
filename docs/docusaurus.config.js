@@ -122,6 +122,29 @@ module.exports = {
         },
       },
     ],
+    [
+      'redocusaurus',
+      {
+          specs: [
+              {
+                  spec: 'config-schema.json',
+              },
+          ],
+          theme: {
+              primaryColor: '#00bdff',
+              redocOptions: {
+                  hideDownloadButton: false,
+                  disableSearch: true,
+                  colors: {
+                      border: {
+                          dark: '#00bdff',
+                          light: '#00bdff',
+                      }
+                  }
+              },
+          },
+      },
+    ],
   ],
   themes: [
       '@saucelabs/theme-github-codeblock'
@@ -138,5 +161,3 @@ module.exports = {
   ],
   clientModules: resolveGlob.sync(['./src/js/**/*.js']),
 };
-
-console.log(resolveGlob.sync(['./src/css/**/*.scss']))

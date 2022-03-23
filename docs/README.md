@@ -16,10 +16,16 @@ yarn start
 ```
 This command starts a local development server and open up a browser window. Most changes are reflected live without having to restart the server.
 
+### Generate Config Reference (devspace.yaml)
+```bash
+cd ../ # main project directory
+go run ./hack/docs/config/reference.go >docs/config-schema.json
+```
+
 ### Generate CLI Reference
 ```bash
 cd ../ # main project directory
-go run -mod=vendor ./hack/gen-docs.go
+go run ./hack/gen-docs.go
 ```
 
 ### Create Version
