@@ -1,0 +1,43 @@
+.medium-zoom-overlay {
+  z-index: 5000;
+  background: rgb(36 36 36 / 54%) !important;
+}
+
+.medium-zoom-image.medium-zoom-image--opened {
+  z-index: 5001;
+}
+
+.markdown figure {
+  margin: 1em 0 2em;
+}
+
+.markdown figure:last-child {
+  margin-bottom: 1.2em;
+}
+
+.markdown figure.stretch,
+.markdown figure.stretch img {
+  width: 100%;
+}
+
+.markdown figure.frame img,
+.markdown figure.frame video {
+  width: 100%;
+  box-shadow: 0 0 7px 5px #00000009;
+  border: 1.5px solid #c6cbd1;
+  border-radius: 4px;
+}
+
+.markdown figcaption {
+  position: relative;
+  left: 0;
+  width: 100%;
+  top: 0;
+  margin-top: 5px;
+  outline: 0;
+  text-align: center;
+  z-index: 300;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0;
+}

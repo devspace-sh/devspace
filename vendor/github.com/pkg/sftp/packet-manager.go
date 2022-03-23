@@ -18,6 +18,8 @@ type packetManager struct {
 	sender      packetSender // connection object
 	working     *sync.WaitGroup
 	packetCount uint32
+	// it is not nil if the allocator is enabled
+	alloc *allocator
 }
 
 type packetSender interface {
@@ -39,9 +41,17 @@ func newPktMgr(sender packetSender) *packetManager {
 }
 
 //// packet ordering
-func (s *packetManager) newOrderId() uint32 {
+func (s *packetManager) newOrderID() uint32 {
 	s.packetCount++
 	return s.packetCount
+}
+
+// returns the next orderID without incrementing it.
+// This is used before receiving a new packet, with the allocator enabled, to associate
+// the slice allocated for the received packet with the orderID that will be used to mark
+// the allocated slices for reuse once the request is served
+func (s *packetManager) getNextOrderID() uint32 {
+	return s.packetCount + 1
 }
 
 type orderedRequest struct {
@@ -50,10 +60,10 @@ type orderedRequest struct {
 }
 
 func (s *packetManager) newOrderedRequest(p requestPacket) orderedRequest {
-	return orderedRequest{requestPacket: p, orderid: s.newOrderId()}
+	return orderedRequest{requestPacket: p, orderid: s.newOrderID()}
 }
-func (p orderedRequest) orderId() uint32       { return p.orderid }
-func (p orderedRequest) setOrderId(oid uint32) { p.orderid = oid }
+func (p orderedRequest) orderID() uint32       { return p.orderid }
+func (p orderedRequest) setOrderID(oid uint32) { p.orderid = oid }
 
 type orderedResponse struct {
 	responsePacket
@@ -64,18 +74,18 @@ func (s *packetManager) newOrderedResponse(p responsePacket, id uint32,
 ) orderedResponse {
 	return orderedResponse{responsePacket: p, orderid: id}
 }
-func (p orderedResponse) orderId() uint32       { return p.orderid }
-func (p orderedResponse) setOrderId(oid uint32) { p.orderid = oid }
+func (p orderedResponse) orderID() uint32       { return p.orderid }
+func (p orderedResponse) setOrderID(oid uint32) { p.orderid = oid }
 
 type orderedPacket interface {
 	id() uint32
-	orderId() uint32
+	orderID() uint32
 }
 type orderedPackets []orderedPacket
 
 func (o orderedPackets) Sort() {
 	sort.Slice(o, func(i, j int) bool {
-		return o[i].orderId() < o[j].orderId()
+		return o[i].orderID() < o[j].orderID()
 	})
 }
 
@@ -104,7 +114,6 @@ func (s *packetManager) close() {
 // maximizing throughput of file transfers.
 func (s *packetManager) workerChan(runWorker func(chan orderedRequest),
 ) chan orderedRequest {
-
 	// multiple workers for faster read/writes
 	rwChan := make(chan orderedRequest, SftpServerWorkerCount)
 	for i := 0; i < SftpServerWorkerCount; i++ {
@@ -145,11 +154,11 @@ func (s *packetManager) controller() {
 	for {
 		select {
 		case pkt := <-s.requests:
-			debug("incoming id (oid): %v (%v)", pkt.id(), pkt.orderId())
+			debug("incoming id (oid): %v (%v)", pkt.id(), pkt.orderID())
 			s.incoming = append(s.incoming, pkt)
 			s.incoming.Sort()
 		case pkt := <-s.responses:
-			debug("outgoing id (oid): %v (%v)", pkt.id(), pkt.orderId())
+			debug("outgoing id (oid): %v (%v)", pkt.id(), pkt.orderID())
 			s.outgoing = append(s.outgoing, pkt)
 			s.outgoing.Sort()
 		case <-s.fini:
@@ -171,9 +180,13 @@ func (s *packetManager) maybeSendPackets() {
 		in := s.incoming[0]
 		// debug("incoming: %v", ids(s.incoming))
 		// debug("outgoing: %v", ids(s.outgoing))
-		if in.orderId() == out.orderId() {
+		if in.orderID() == out.orderID() {
 			debug("Sending packet: %v", out.id())
 			s.sender.sendPacket(out.(encoding.BinaryMarshaler))
+			if s.alloc != nil {
+				// mark for reuse the slices allocated for this request
+				s.alloc.ReleasePages(in.orderID())
+			}
 			// pop off heads
 			copy(s.incoming, s.incoming[1:])            // shift left
 			s.incoming[len(s.incoming)-1] = nil         // clear last
