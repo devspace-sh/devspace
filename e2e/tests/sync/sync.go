@@ -170,8 +170,6 @@ var _ = DevSpaceDescribe("sync", func() {
 	})
 
 	ginkgo.It("should sync to a pod and detect changes", func() {
-		// TODO: test exclude / downloadExclude paths & file / folder deletion
-
 		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/dev-simple")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -259,6 +257,99 @@ var _ = DevSpaceDescribe("sync", func() {
 			}
 
 			return string(out) == "Hello World", nil
+		})
+		framework.ExpectNoError(err)
+
+		// stop command
+		cancel()
+
+		// wait for the command to finish
+		waitGroup.Wait()
+	})
+
+	ginkgo.It("should sync to a pod and detect symlinked changes", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/dev-symlink")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// interrupt chan for the dev command
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// create a new dev command
+		devCmd := &cmd.DevCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "project1/devspace.yaml",
+				NoWarn:     true,
+				Namespace:  ns,
+			},
+			Ctx: cancelCtx,
+		}
+
+		// start the command
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+			err = devCmd.Run(f)
+			framework.ExpectNoError(err)
+		}()
+
+		// wait until files were synced
+		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/file1.txt"})
+			if err != nil {
+				return false, nil
+			}
+
+			return out == "Hello World", nil
+		})
+		framework.ExpectNoError(err)
+
+		// check if sub file was synced
+		out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/folder1/file2.txt"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "Hello World 2")
+
+		// check if excluded file was synced
+		_, err = kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/ignore.txt"})
+		framework.ExpectError(err)
+
+		// write a file and check that it got synced
+		payload1 := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "/project1/app/file3.txt"), []byte(payload1), 0666)
+		framework.ExpectNoError(err)
+
+		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/file3.txt"})
+			if err != nil {
+				return false, nil
+			}
+
+			return out == payload1, nil
+		})
+		framework.ExpectNoError(err)
+
+		// write a file to symlink path and check that it got synced
+		payload2 := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "/project2/file4.txt"), []byte(payload2), 0666)
+		framework.ExpectNoError(err)
+
+		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/file4.txt"})
+			if err != nil {
+				return false, nil
+			}
+
+			return out == payload2, nil
 		})
 		framework.ExpectNoError(err)
 

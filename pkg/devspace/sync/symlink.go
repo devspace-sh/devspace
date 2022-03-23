@@ -3,10 +3,8 @@ package sync
 import (
 	"os"
 	"path/filepath"
-	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/watch"
-	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/notify"
 )
 
@@ -32,51 +30,45 @@ type Symlink struct {
 
 	IsDir bool
 
-	watcher  watch.Watcher
+	events   chan notify.EventInfo
+	watcher  notify.Tree
 	upstream *upstream
 }
 
 // NewSymlink creates a new symlink object
-func NewSymlink(upstream *upstream, symlinkPath, targetPath string, isDir bool) (*Symlink, error) {
+func NewSymlink(upstream *upstream, symlinkPath, targetPath string, isDir bool, ignoreMatcher ignoreparser.IgnoreParser) (*Symlink, error) {
 	symlink := &Symlink{
 		SymlinkPath: symlinkPath,
 		TargetPath:  targetPath,
 		IsDir:       isDir,
+		events:      make(chan notify.EventInfo, 1000),
 		upstream:    upstream,
 	}
 
-	watchPath := filepath.ToSlash(targetPath)
-	if isDir {
-		watchPath += "/**"
-	}
+	symlink.watcher = notify.NewTree()
+	symlink.watcher.Watch(targetPath, symlink.events, func(path string) bool {
+		if ignoreMatcher == nil || ignoreMatcher.RequireFullScan() {
+			return false
+		}
 
-	watcher, err := watch.New([]string{watchPath}, []string{}, time.Second*4, symlink.handleChange, log.Discard)
-	if err != nil {
-		return nil, err
-	}
+		stat, err := os.Stat(path)
+		if err != nil {
+			return false
+		}
 
-	symlink.watcher = watcher
-	symlink.watcher.Start()
+		return ignoreMatcher.Matches(path[len(symlink.SymlinkPath):], stat.IsDir())
+	}, notify.All)
+
+	go func() {
+		for event := range symlink.events {
+			symlink.upstream.events <- &symlinkEvent{
+				path:  symlink.rewritePath(event.Path()),
+				event: event.Event(),
+			}
+		}
+	}()
 
 	return symlink, nil
-}
-
-func (s *Symlink) handleChange(changed []string, deleted []string) error {
-	for _, path := range changed {
-		s.upstream.events <- &symlinkEvent{
-			path:  s.rewritePath(path),
-			event: notify.Create,
-		}
-	}
-
-	for _, path := range deleted {
-		s.upstream.events <- &symlinkEvent{
-			path:  s.rewritePath(path),
-			event: notify.Remove,
-		}
-	}
-
-	return nil
 }
 
 func (s *Symlink) rewritePath(path string) string {
@@ -101,5 +93,5 @@ func (s *Symlink) Crawl() error {
 
 // Stop stops watching on the watching path
 func (s *Symlink) Stop() {
-	s.watcher.Stop()
+	s.watcher.Stop(s.events)
 }
