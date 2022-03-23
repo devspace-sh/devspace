@@ -3,6 +3,11 @@ package ssh
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"strconv"
+	"strings"
+	"time"
+
 	helperssh "github.com/loft-sh/devspace/helper/ssh"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -15,11 +20,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
 	kubectlExec "k8s.io/client-go/util/exec"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // StartSSH starts the ssh functionality

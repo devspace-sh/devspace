@@ -6,9 +6,6 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,6 +14,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 
 	"github.com/bmatcuk/doublestar"
 	"github.com/juju/ratelimit"
@@ -602,7 +603,7 @@ func (u *upstream) AddSymlink(relativePath, absPath string) (os.FileInfo, error)
 		}
 	}
 
-	symlink, err := NewSymlink(u, absPath, targetPath, stat.IsDir())
+	symlink, err := NewSymlink(u, absPath, targetPath, stat.IsDir(), u.sync.ignoreMatcher)
 	if err != nil {
 		return nil, errors.Errorf("Cannot create symlink object for %s: %v", absPath, err)
 	}

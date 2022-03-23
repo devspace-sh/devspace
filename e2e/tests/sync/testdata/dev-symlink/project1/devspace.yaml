@@ -1,0 +1,28 @@
+version: v1beta10
+vars:
+  - name: IMAGE
+    value: node:13.14-alpine
+deployments:
+  - name: test
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: ${IMAGE}
+            command: ["sleep"]
+            args: ["999999999999"]
+dev:
+  sync:
+    - name: test
+      imageSelector: ${IMAGE}
+      containerPath: "/watch"
+      excludePaths:
+      - ignore.txt
+hooks:
+  - command: mkdir -p /watch
+    where:
+      container:
+        imageSelector: ${IMAGE}
+    when:
+      before:
+        initialSync: test
