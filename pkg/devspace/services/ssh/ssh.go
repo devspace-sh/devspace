@@ -98,7 +98,7 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 	}
 
 	// update ssh config
-	err = configureSSHConfig(sshHost, strconv.Itoa(port))
+	err = configureSSHConfig(sshHost, strconv.Itoa(port), ctx.Log)
 	if err != nil {
 		return errors.Wrap(err, "update ssh config")
 	}

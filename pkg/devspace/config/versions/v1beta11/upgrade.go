@@ -64,6 +64,12 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		}
 	}
 
+	// add env file
+	if nextConfig.Vars == nil {
+		nextConfig.Vars = map[string]*next.Variable{}
+	}
+	nextConfig.Vars["DEVSPACE_ENV_FILE"] = &next.Variable{Value: ".env"}
+
 	deployPipeline := ""
 	buildPipeline := ""
 	purgePipeline := ""
