@@ -796,7 +796,10 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 
 func getMatchingDevContainer(devPod *next.DevPod, containerName string) *next.DevContainer {
 	for key, container := range devPod.Containers {
-		if container.Container == containerName {
+		if container.Container == containerName || container.Container == "" {
+			devPod.Containers[key].Container = containerName
+			return devPod.Containers[key]
+		} else if containerName == "" {
 			return devPod.Containers[key]
 		}
 	}

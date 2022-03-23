@@ -42,6 +42,20 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 	})
 
+	ginkgo.It("should convert correctly", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/convert")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// reload it
+		config, _, err := framework.LoadConfigWithOptions(f, kubeClient.Client(), "devspace.yaml", &loader.ConfigOptions{})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Dev), 1)
+		framework.ExpectEqual(config.Config().Dev["sync-0"].Container, "test")
+		framework.ExpectEqual(config.Config().Dev["sync-0"].Terminal.Command, "test")
+	})
+
 	ginkgo.It("should resolve runtime environment variables correctly", func() {
 		tempDir, err := framework.CopyToTempDir("tests/config/testdata/runtime-variables")
 		framework.ExpectNoError(err)
@@ -207,7 +221,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(latestConfig.Deployments["test2"].Name, "test2")
 	})
 
-	ginkgo.FIt("should load profile cached and uncached", func() {
+	ginkgo.It("should load profile cached and uncached", func() {
 		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
