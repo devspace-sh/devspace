@@ -37,7 +37,7 @@
           "description": "If false, will not try to use the minikube docker daemon to build the image"
         },
         "inCluster": {
-          "$ref": "#/definitions/Config/$defs/BuildKitInClusterConfig",
+          "$ref": "#/$defs/BuildKitInClusterConfig",
           "description": "If specified, DevSpace will use BuildKit to build the image within the cluster"
         },
         "args": {
@@ -209,7 +209,7 @@
         },
         "commands": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/CustomConfigCommand"
+            "$ref": "#/$defs/CustomConfigCommand"
           },
           "type": "array",
           "description": "Depreacted do not use anymore"
@@ -334,10 +334,10 @@
           "type": "boolean"
         },
         "helm": {
-          "$ref": "#/definitions/Config/$defs/HelmConfig"
+          "$ref": "#/$defs/HelmConfig"
         },
         "kubectl": {
-          "$ref": "#/definitions/Config/$defs/KubectlConfig"
+          "$ref": "#/$defs/KubectlConfig"
         }
       },
       "type": "object",
@@ -357,7 +357,7 @@
         },
         "reversePorts": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/PortMapping"
+            "$ref": "#/$defs/PortMapping"
           },
           "type": "array"
         },
@@ -377,20 +377,20 @@
           "type": "string"
         },
         "resources": {
-          "$ref": "#/definitions/Config/$defs/PodResources"
+          "$ref": "#/$defs/PodResources"
         },
         "ssh": {
-          "$ref": "#/definitions/Config/$defs/SSH"
+          "$ref": "#/$defs/SSH"
         },
         "proxyCommands": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/ProxyCommand"
+            "$ref": "#/$defs/ProxyCommand"
           },
           "type": "array"
         },
         "env": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/EnvVar"
+            "$ref": "#/$defs/EnvVar"
           },
           "type": "array"
         },
@@ -401,26 +401,26 @@
           "type": "boolean"
         },
         "terminal": {
-          "$ref": "#/definitions/Config/$defs/Terminal"
+          "$ref": "#/$defs/Terminal"
         },
         "logs": {
-          "$ref": "#/definitions/Config/$defs/Logs"
+          "$ref": "#/$defs/Logs"
         },
         "attach": {
-          "$ref": "#/definitions/Config/$defs/Attach"
+          "$ref": "#/$defs/Attach"
         },
         "devImage": {
           "type": "string"
         },
         "persistPaths": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/PersistentPath"
+            "$ref": "#/$defs/PersistentPath"
           },
           "type": "array"
         },
         "sync": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/SyncConfig"
+            "$ref": "#/$defs/SyncConfig"
           },
           "type": "array"
         }
@@ -448,25 +448,25 @@
         },
         "open": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/OpenConfig"
+            "$ref": "#/$defs/OpenConfig"
           },
           "type": "array",
           "description": "Open holds the open config for urls"
         },
         "ports": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/PortMapping"
+            "$ref": "#/$defs/PortMapping"
           },
           "type": "array"
         },
         "patches": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/PatchConfig"
+            "$ref": "#/$defs/PatchConfig"
           },
           "type": "array"
         },
         "persistenceOptions": {
-          "$ref": "#/definitions/Config/$defs/PersistenceOptions"
+          "$ref": "#/$defs/PersistenceOptions"
         },
         "container": {
           "type": "string"
@@ -477,7 +477,7 @@
         },
         "reversePorts": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/PortMapping"
+            "$ref": "#/$defs/PortMapping"
           },
           "type": "array"
         },
@@ -497,20 +497,20 @@
           "type": "string"
         },
         "resources": {
-          "$ref": "#/definitions/Config/$defs/PodResources"
+          "$ref": "#/$defs/PodResources"
         },
         "ssh": {
-          "$ref": "#/definitions/Config/$defs/SSH"
+          "$ref": "#/$defs/SSH"
         },
         "proxyCommands": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/ProxyCommand"
+            "$ref": "#/$defs/ProxyCommand"
           },
           "type": "array"
         },
         "env": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/EnvVar"
+            "$ref": "#/$defs/EnvVar"
           },
           "type": "array"
         },
@@ -521,33 +521,33 @@
           "type": "boolean"
         },
         "terminal": {
-          "$ref": "#/definitions/Config/$defs/Terminal"
+          "$ref": "#/$defs/Terminal"
         },
         "logs": {
-          "$ref": "#/definitions/Config/$defs/Logs"
+          "$ref": "#/$defs/Logs"
         },
         "attach": {
-          "$ref": "#/definitions/Config/$defs/Attach"
+          "$ref": "#/$defs/Attach"
         },
         "devImage": {
           "type": "string"
         },
         "persistPaths": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/PersistentPath"
+            "$ref": "#/$defs/PersistentPath"
           },
           "type": "array"
         },
         "sync": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/SyncConfig"
+            "$ref": "#/$defs/SyncConfig"
           },
           "type": "array"
         },
         "containers": {
           "patternProperties": {
             ".*": {
-              "$ref": "#/definitions/Config/$defs/DevContainer"
+              "$ref": "#/$defs/DevContainer"
             }
           },
           "type": "object"
@@ -598,7 +598,7 @@
     "HelmConfig": {
       "properties": {
         "chart": {
-          "$ref": "#/definitions/Config/$defs/ChartConfig"
+          "$ref": "#/$defs/ChartConfig"
         },
         "values": {
           "type": "object"
@@ -667,19 +667,19 @@
           "description": "If an operating system is defined, the hook will only be executed for the given os.\nAll supported golang OS types are supported and multiple can be combined with ','."
         },
         "upload": {
-          "$ref": "#/definitions/Config/$defs/HookSyncConfig",
+          "$ref": "#/$defs/HookSyncConfig",
           "description": "If Upload is specified, DevSpace will upload certain local files or folders into a\nremote container."
         },
         "download": {
-          "$ref": "#/definitions/Config/$defs/HookSyncConfig",
+          "$ref": "#/$defs/HookSyncConfig",
           "description": "Same as Upload, but with this option DevSpace will download files or folders from\na remote container."
         },
         "logs": {
-          "$ref": "#/definitions/Config/$defs/HookLogsConfig",
+          "$ref": "#/$defs/HookLogsConfig",
           "description": "If logs is defined will print the logs of the target container. This is useful for containers\nthat should finish like init containers or job pods. Otherwise this hook will never terminate."
         },
         "wait": {
-          "$ref": "#/definitions/Config/$defs/HookWaitConfig",
+          "$ref": "#/$defs/HookWaitConfig",
           "description": "If wait is defined the hook will wait until the matched pod or container is running or is terminated\nwith a certain exit code."
         },
         "background": {
@@ -691,7 +691,7 @@
           "description": "If true, the hook will not output anything to the standard out of DevSpace except\nfor the case when the hook fails, where DevSpace will show the error including\nthe captured output streams of the hook."
         },
         "container": {
-          "$ref": "#/definitions/Config/$defs/HookContainer",
+          "$ref": "#/$defs/HookContainer",
           "description": "Container specifies where the hook should be run. If this is omitted DevSpace expects a\nlocal command hook."
         }
       },
@@ -856,19 +856,19 @@
           "description": "SkipPush will not push the image to a registry if enabled. Only works if docker or buildkit is chosen as\nas build method"
         },
         "docker": {
-          "$ref": "#/definitions/Config/$defs/DockerConfig",
+          "$ref": "#/$defs/DockerConfig",
           "description": "If docker is specified, DevSpace will build the image using the local docker daemon"
         },
         "kaniko": {
-          "$ref": "#/definitions/Config/$defs/KanikoConfig",
+          "$ref": "#/$defs/KanikoConfig",
           "description": "If kaniko is specified, DevSpace will build the image in-cluster with kaniko"
         },
         "buildKit": {
-          "$ref": "#/definitions/Config/$defs/BuildKitConfig",
+          "$ref": "#/$defs/BuildKitConfig",
           "description": "If buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit"
         },
         "custom": {
-          "$ref": "#/definitions/Config/$defs/CustomConfig",
+          "$ref": "#/$defs/CustomConfig",
           "description": "If custom is specified, DevSpace will build the image with the help of\na custom script."
         }
       },
@@ -921,11 +921,11 @@
     "KanikoAdditionalMount": {
       "properties": {
         "secret": {
-          "$ref": "#/definitions/Config/$defs/KanikoAdditionalMountSecret",
+          "$ref": "#/$defs/KanikoAdditionalMountSecret",
           "description": "The secret that should be mounted"
         },
         "configMap": {
-          "$ref": "#/definitions/Config/$defs/KanikoAdditionalMountConfigMap",
+          "$ref": "#/$defs/KanikoAdditionalMountConfigMap",
           "description": "The configMap that should be mounted"
         },
         "readOnly": {
@@ -952,7 +952,7 @@
         },
         "items": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/KanikoAdditionalMountKeyToPath"
+            "$ref": "#/$defs/KanikoAdditionalMountKeyToPath"
           },
           "type": "array",
           "description": "If unspecified, each key-value pair in the Data field of the referenced\nConfigMap will be projected into the volume as a file whose name is the\nkey and content is the value. If specified, the listed keys will be\nprojected into the specified paths, and unlisted keys will not be\npresent. If a key is specified which is not present in the ConfigMap,\nthe volume setup will error unless it is marked optional. Paths must be\nrelative and may not contain the '..' path or start with '..'.\n+optional"
@@ -993,7 +993,7 @@
         },
         "items": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/KanikoAdditionalMountKeyToPath"
+            "$ref": "#/$defs/KanikoAdditionalMountKeyToPath"
           },
           "type": "array",
           "description": "If unspecified, each key-value pair in the Data field of the referenced\nSecret will be projected into the volume as a file whose name is the\nkey and content is the value. If specified, the listed keys will be\nprojected into the specified paths, and unlisted keys will not be\npresent. If a key is specified which is not present in the Secret,\nthe volume setup will error unless it is marked optional. Paths must be\nrelative and may not contain the '..' path or start with '..'.\n+optional"
@@ -1067,7 +1067,7 @@
         },
         "tolerations": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/Toleration"
+            "$ref": "#/$defs/Toleration"
           },
           "type": "array",
           "description": "tolerations list to use for the kaniko pod"
@@ -1123,13 +1123,13 @@
         },
         "additionalMounts": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/KanikoAdditionalMount"
+            "$ref": "#/$defs/KanikoAdditionalMount"
           },
           "type": "array",
           "description": "additional mounts that will be added to the build pod"
         },
         "resources": {
-          "$ref": "#/definitions/Config/$defs/PodResources",
+          "$ref": "#/$defs/PodResources",
           "description": "the resources that should be set on the kaniko pod"
         }
       },
@@ -1255,7 +1255,7 @@
           "type": "boolean"
         },
         "initContainer": {
-          "$ref": "#/definitions/Config/$defs/PersistentPathInitContainer"
+          "$ref": "#/$defs/PersistentPathInitContainer"
         }
       },
       "type": "object"
@@ -1263,7 +1263,7 @@
     "PersistentPathInitContainer": {
       "properties": {
         "resources": {
-          "$ref": "#/definitions/Config/$defs/PodResources"
+          "$ref": "#/$defs/PodResources"
         }
       },
       "type": "object"
@@ -1362,28 +1362,28 @@
         },
         "parents": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/ProfileParent"
+            "$ref": "#/$defs/ProfileParent"
           },
           "type": "array"
         },
         "patches": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/PatchConfig"
+            "$ref": "#/$defs/PatchConfig"
           },
           "type": "array"
         },
         "replace": {
-          "$ref": "#/definitions/Config/$defs/ProfileConfigStructure"
+          "$ref": "#/$defs/ProfileConfigStructure"
         },
         "merge": {
-          "$ref": "#/definitions/Config/$defs/ProfileConfigStructure"
+          "$ref": "#/$defs/ProfileConfigStructure"
         },
         "strategicMerge": {
-          "$ref": "#/definitions/Config/$defs/ProfileConfigStructure"
+          "$ref": "#/$defs/ProfileConfigStructure"
         },
         "activation": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/ProfileActivation"
+            "$ref": "#/$defs/ProfileActivation"
           },
           "type": "array"
         }
@@ -1433,7 +1433,7 @@
     "ProfileParent": {
       "properties": {
         "source": {
-          "$ref": "#/definitions/Config/$defs/SourceConfig"
+          "$ref": "#/$defs/SourceConfig"
         },
         "profile": {
           "type": "string"
@@ -1531,14 +1531,14 @@
         },
         "commands": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/RequireCommand"
+            "$ref": "#/$defs/RequireCommand"
           },
           "type": "array",
           "description": "Commands specifies an array of commands that need to be installed locally to use this config"
         },
         "plugins": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/RequirePlugin"
+            "$ref": "#/$defs/RequirePlugin"
           },
           "type": "array",
           "description": "Plugins specifies an array of plugins that need to be installed locally"
@@ -1691,10 +1691,10 @@
           "type": "boolean"
         },
         "bandwidthLimits": {
-          "$ref": "#/definitions/Config/$defs/BandwidthLimits"
+          "$ref": "#/$defs/BandwidthLimits"
         },
         "onUpload": {
-          "$ref": "#/definitions/Config/$defs/SyncOnUpload"
+          "$ref": "#/$defs/SyncOnUpload"
         }
       },
       "type": "object",
@@ -1741,15 +1741,15 @@
           "type": "array"
         },
         "onFileChange": {
-          "$ref": "#/definitions/Config/$defs/SyncCommand",
+          "$ref": "#/$defs/SyncCommand",
           "description": "OnFileChange is invoked after every file change. DevSpace will wait for the command to successfully finish\nand then will continue to upload files \u0026 create folders"
         },
         "onDirCreate": {
-          "$ref": "#/definitions/Config/$defs/SyncCommand",
+          "$ref": "#/$defs/SyncCommand",
           "description": "OnDirCreate is invoked after every directory that is created. DevSpace will wait for the command to successfully finish\nand then will continue to upload files \u0026 create folders"
         },
         "onBatch": {
-          "$ref": "#/definitions/Config/$defs/SyncCommand",
+          "$ref": "#/$defs/SyncCommand",
           "description": "OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish\nand then will continue execution. This is useful for commands\nthat shouldn't be executed after every single change that may take a little bit longer like recompiling etc."
         }
       },
@@ -1764,13 +1764,13 @@
         },
         "exec": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/SyncExec"
+            "$ref": "#/$defs/SyncExec"
           },
           "type": "array",
           "description": "Exec will execute the given commands in order after a sync operation"
         },
         "execRemote": {
-          "$ref": "#/definitions/Config/$defs/SyncExecCommand",
+          "$ref": "#/$defs/SyncExecCommand",
           "description": "Defines what commands should be executed on the container side if a change is uploaded and applied in the target\ncontainer"
         }
       },
@@ -1879,7 +1879,7 @@
         },
         "commands": {
           "items": {
-            "$ref": "#/definitions/Config/$defs/VariableCommand"
+            "$ref": "#/$defs/VariableCommand"
           },
           "type": "array",
           "description": "Commands are additional commands that can be used to run a different command on a different operating\nsystem."
@@ -1921,7 +1921,7 @@
     "pipelines": {
       "patternProperties": {
         ".*": {
-          "$ref": "#/definitions/Config/$defs/Pipeline"
+          "$ref": "#/$defs/Pipeline"
         }
       },
       "type": "object",
@@ -1929,7 +1929,7 @@
     },
     "imports": {
       "items": {
-        "$ref": "#/definitions/Config/$defs/Import"
+        "$ref": "#/$defs/Import"
       },
       "type": "array",
       "description": "Imports merges specified config files into this one"
@@ -1944,13 +1944,13 @@
       "description": "Functions are bash functions that can be used within pipelines"
     },
     "require": {
-      "$ref": "#/definitions/Config/$defs/RequireConfig",
+      "$ref": "#/$defs/RequireConfig",
       "description": "Require defines what DevSpace, plugins and command versions are needed to use this config"
     },
     "vars": {
       "patternProperties": {
         ".*": {
-          "$ref": "#/definitions/Config/$defs/Variable"
+          "$ref": "#/$defs/Variable"
         }
       },
       "type": "object",
@@ -1959,7 +1959,7 @@
     "pullSecrets": {
       "patternProperties": {
         ".*": {
-          "$ref": "#/definitions/Config/$defs/PullSecretConfig"
+          "$ref": "#/$defs/PullSecretConfig"
         }
       },
       "type": "object",
@@ -1968,7 +1968,7 @@
     "images": {
       "patternProperties": {
         ".*": {
-          "$ref": "#/definitions/Config/$defs/Image"
+          "$ref": "#/$defs/Image"
         }
       },
       "type": "object",
@@ -1977,7 +1977,7 @@
     "deployments": {
       "patternProperties": {
         ".*": {
-          "$ref": "#/definitions/Config/$defs/DeploymentConfig"
+          "$ref": "#/$defs/DeploymentConfig"
         }
       },
       "type": "object",
@@ -1986,7 +1986,7 @@
     "dev": {
       "patternProperties": {
         ".*": {
-          "$ref": "#/definitions/Config/$defs/DevPod"
+          "$ref": "#/$defs/DevPod"
         }
       },
       "type": "object",
@@ -1995,7 +1995,7 @@
     "commands": {
       "patternProperties": {
         ".*": {
-          "$ref": "#/definitions/Config/$defs/CommandConfig"
+          "$ref": "#/$defs/CommandConfig"
         }
       },
       "type": "object",
@@ -2003,14 +2003,14 @@
     },
     "hooks": {
       "items": {
-        "$ref": "#/definitions/Config/$defs/HookConfig"
+        "$ref": "#/$defs/HookConfig"
       },
       "type": "array",
       "description": "Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed\nin the order they are specified."
     },
     "profiles": {
       "items": {
-        "$ref": "#/definitions/Config/$defs/ProfileConfig"
+        "$ref": "#/$defs/ProfileConfig"
       },
       "type": "array",
       "description": "Profiles can be used to change the current configuration and change the behavior of devspace"
@@ -2018,7 +2018,7 @@
     "dependencies": {
       "patternProperties": {
         ".*": {
-          "$ref": "#/definitions/Config/$defs/DependencyConfig"
+          "$ref": "#/$defs/DependencyConfig"
         }
       },
       "type": "object",

@@ -37,9 +37,11 @@ func main() {
 		panic(err)
 	}
 
-	schemaString := strings.ReplaceAll(string(schemaJSON), "#/$defs/", "#/definitions/Config/$defs/")
+	schemaString := string(schemaJSON)
 
 	if mustGenerateOpenAPISpec {
+		schemaString = strings.ReplaceAll(schemaString, "#/$defs/", "#/definitions/Config/$defs/")
+
 		fmt.Printf(`{
 	"swagger": "2.0",
 	"info": {
