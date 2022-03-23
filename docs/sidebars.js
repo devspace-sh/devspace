@@ -8,10 +8,6 @@
 module.exports = {
   adminSidebar: [
     {
-      type: 'doc',
-      id: 'introduction',
-    },
-    {
       type: 'category',
       label: 'Getting Started',
       collapsed: false,
@@ -36,10 +32,10 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Configuration',
-      collapsed: false,
+      label: 'devspace.yaml',
+      className: 'code-style',
+      link: { type: 'doc', id: 'configuration/reference' },
       items: [
-        'configuration/reference',
         {
           type: 'category',
           label: 'images',
@@ -139,65 +135,9 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Guides & Best Practices',
-      items: [
-        'guides/basics',
-        'guides/localhost-ui',
-        'guides/networking-domains',
-        'guides/file-synchronization',
-        'guides/ci-cd-integration',
-        'guides/dev-staging-production',
-        'guides/image-building',
-        'guides/plugins',
-        'guides/remote-debugging',
-        'guides/community-projects',
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Tutorials',
-      items: [
-        {
-          type: 'link',
-          label: 'Ruby on Rails',
-          href: 'https://devspace.cloud/blog/2019/10/21/deploy-ruby-on-rails-to-kubernetes',
-        },
-        {
-          type: 'link',
-          label: 'Python Django',
-          href: 'https://devspace.cloud/blog/2019/10/18/deploy-django-to-kubernetes',
-        },
-        {
-          type: 'link',
-          label: 'PHP Laravel',
-          href: 'https://devspace.cloud/blog/2019/10/16/deploy-laravel-to-kubernetes',
-        },
-        {
-          type: 'category',
-          label: 'Node / JavaScript',
-          items: [
-            {
-              type: 'link',
-              label: 'Express.js',
-              href: 'https://devspace.cloud/blog/2019/10/15/deploy-express.js-server-to-kubernetes',
-            },
-            {
-              type: 'link',
-              label: 'React.js',
-              href: 'https://devspace.cloud/blog/2019/03/07/deploy-react-js-to-kubernetes',
-            },
-            {
-              type: 'link',
-              label: 'Vue.js',
-              href: 'https://devspace.cloud/blog/2019/09/30/deploy-vue-js-to-kubernetes',
-            },
-          ]
-        },
-      ],
-    },
-    {
-      type: 'category',
-      label: 'CLI Commands',
+      label: 'devspace --help',
+      className: 'code-style',
+      link: { type: 'doc', id: 'commands/devspace' },
       items: [
         {
           type: "category",
@@ -284,11 +224,6 @@ module.exports = {
       type: 'link',
       label: '↗️ Component Chart',
       href: 'https://devspace.sh/component-chart/docs',
-    },
-    {
-      type: 'link',
-      label: '↗️ Open-Source by Loft Labs',
-      href: 'https://loft.sh/',
     },
   ],
 };

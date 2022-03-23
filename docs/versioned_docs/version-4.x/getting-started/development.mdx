@@ -1,0 +1,118 @@
+---
+title: Development with DevSpace
+sidebar_label: 4. Build & Develop
+---
+
+import FragmentWarningMultipleDev from '../fragments/warning-multiple-dev.mdx';
+
+DevSpace allows you to develop applications directly inside a Kubernetes cluster.
+
+The biggest advantages of developing directly inside Kubernetes is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
+
+## Start Development Mode
+Run the following command to start your application in development mode:
+```bash
+devspace dev
+```
+
+<figure class="frame">
+  <video controls loop autoplay="true">
+    <source src={require('@site/static/img/devspace-dev-ide.mp4').default} type="video/mp4" />
+  </video>
+  <figcaption>DevSpace CLI - Development Mode</figcaption>
+</figure>
+
+
+When running `devspace dev`, the `dev` section in `devspace.yaml` becomes important:
+```yaml
+dev:
+  ports:                              # Port Forwarding Configuration
+  - imageName: app                    # Select pod & container by image name (reference to images section)
+    forward:                          # List of ports to forward
+    - port: 8080
+  open:                               # Open Browser (after deployment)
+  - url: http://localhost:8080
+  sync:                               # File Sync Configuration
+  - imageName: app                    # Select pod & container by image name (reference to images section)
+    uploadExcludePaths:               # Never upload these files from local filesystem to the container
+    - Dockerfile
+    - .git
+    - devspace.yaml
+    onUpload:                         # Commands to execute after uploading files
+      restartContainer: true          # Restart the container (uses the restart helper)
+```
+
+Running `devspace dev` will do the following:
+
+1. **Build and deploy** your application
+2. **Stream the logs** of all containers deployed during the deployment process
+3. **Forward all ports** specified in the [`dev.ports` section in the `devspace.yaml`](../configuration/development/port-forwarding.mdx)
+4. **Sync all file changes** according to the [sync config in `dev.sync`](../configuration/development/file-synchronization.mdx), so you can restart your application inside the running container without having to rebuild images or redeploy anything
+
+<br/>
+
+<figure>
+  <img src={require('@site/static/img/deployment-process-devspace.svg').default} alt="Deployment Workflow" />
+  <figcaption>DevSpace CLI - Deployment Workflow</figcaption>
+</figure>
+
+
+<br/>
+
+## Workflows
+
+### 1. Edit Files & Restart
+While `devspace dev` is running, your source code files will be synchronized between your local project folder and your containers running inside Kubernetes. This allows you to code with your favorite IDE or text editor without having to rebuild your images or redeploy your containers.
+
+**Try it and just edit a file!**
+
+You will see that the logs show how DevSpace restarts your application inside the container:
+```logs
+[app] ############### Restart container ###############
+```
+
+
+### 2. Open UI (in the browser)
+When running `devspace dev`, DevSpace starts a client-only UI for Kubernetes. You can see that in the output of `devspace dev` which should contain a log line similar to this one:
+```bash
+#########################################################
+[info]   DevSpace UI available at: http://localhost:8090
+#########################################################
+```
+
+By default, DevSpace starts the development UI on port `8090` but if the port is already in use, it will use a different port. If `devspace dev` is running, you can open the link shown in the `devspace dev` logs, e.g. [http://localhost:8090](http://localhost:8090)
+
+You can also start the UI without running `devspace dev` using this command:
+```bash
+devspace ui
+```
+
+[Follow this guide to learn more about the functionalities of the DevSpace UI for Kubernetes development.](../guides/localhost-ui.mdx)
+
+<figure class="frame">
+  <video controls loop autoplay="true">
+    <source src={require('@site/static/img/devspace-ui.mp4').default} type="video/mp4" />
+  </video>
+  <figcaption>DevSpace CLI - Development UI</figcaption>
+</figure>
+
+:::info Runs on Localhost
+The UI of DevSpace is open-source just like the rest of the CLI and it runs entirely on localhost.
+:::
+
+
+### 3. Use Port Forwarding
+While `devspace dev` is running, you can access your application via `localhost:[PORT]` because DevSpace starts port forwarding for all ports specified in the `dev.ports` section of your project's `devspace.yaml`.
+
+Port forwarding also allows you to attach to remote debuggers if you package them into your development Docker image. This allows you to set breakpoints in your IDE and the code execution will break inside the remote container while you can debug in your IDE.
+
+:::info Port Detection
+When running `devspace init`, DevSpace detects all ports within your Dockerfile (i.e. `EXPOSE [PORT]` lines) and automatically configures forwarding for them when creating the `devspace.yaml`.
+:::
+
+Learn more about how to [configure port forwarding](../configuration/development/port-forwarding.mdx).
+
+
+## Notes
+
+<FragmentWarningMultipleDev/>
