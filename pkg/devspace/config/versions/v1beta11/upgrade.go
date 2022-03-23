@@ -558,7 +558,6 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 				Operation: p.Operation,
 				Path:      p.Path,
 				Value:     p.Value,
-				From:      p.From,
 			})
 		}
 		if replacePod.PersistenceOptions != nil {
