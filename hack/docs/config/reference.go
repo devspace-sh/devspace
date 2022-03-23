@@ -12,6 +12,12 @@ import (
 
 // Run executes the command logic
 func main() {
+	mustGenerateOpenAPISpec := len(os.Args) > 1 && os.Args[1] == "true"
+	prefix := ""
+	if mustGenerateOpenAPISpec {
+		prefix = "      "
+	}
+
 	r := new(jsonschema.Reflector)
 	r.AllowAdditionalProperties = true
 	r.PreferYAMLSchema = true
@@ -26,14 +32,14 @@ func main() {
 
 	schema := r.Reflect(&latest.Config{})
 
-	schemaJSON, err := json.MarshalIndent(schema, "      ", "  ")
+	schemaJSON, err := json.MarshalIndent(schema, prefix, "  ")
 	if err != nil {
 		panic(err)
 	}
 
 	schemaString := strings.ReplaceAll(string(schemaJSON), "#/$defs/", "#/definitions/Config/$defs/")
 
-	if len(os.Args) > 1 && os.Args[1] == "true" {
+	if mustGenerateOpenAPISpec {
 		fmt.Printf(`{
 	"swagger": "2.0",
 	"info": {
