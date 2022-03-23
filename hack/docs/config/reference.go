@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/invopop/jsonschema"
@@ -32,7 +33,8 @@ func main() {
 
 	schemaString := strings.ReplaceAll(string(schemaJSON), "#/$defs/", "#/definitions/Config/$defs/")
 
-	fmt.Printf(`{
+	if len(os.Args) > 1 && os.Args[1] == "true" {
+		fmt.Printf(`{
 	"swagger": "2.0",
 	"info": {
 		"version": "%s",
@@ -44,4 +46,7 @@ func main() {
 	}
 }
 `, latest.Version, schemaString)
+	} else {
+		fmt.Printf(`%s`, schemaString)
+	}
 }

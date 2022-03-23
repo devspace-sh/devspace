@@ -19,7 +19,12 @@ This command starts a local development server and open up a browser window. Mos
 ### Generate Config Reference (devspace.yaml)
 ```bash
 cd ../ # main project directory
-go run ./hack/docs/config/reference.go >docs/config-schema.json
+
+# JSON Schema:
+go run ./hack/docs/config/reference.go >docs/schemas/config-jsonschema.json
+
+# Open API Spec:
+go run ./hack/docs/config/reference.go true >docs/schemas/config-openapi.json
 ```
 
 ### Generate CLI Reference

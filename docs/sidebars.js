@@ -39,8 +39,8 @@ module.exports = {
         {
           type: 'category',
           label: 'images',
+          link: { type: 'doc', id: 'configuration/images/basics' },
           items: [
-            'configuration/images/basics',
             'configuration/images/image-tagging',
             'configuration/images/dockerfile-context',
             'configuration/images/entrypoint-cmd',

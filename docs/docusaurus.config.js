@@ -127,7 +127,7 @@ module.exports = {
       {
           specs: [
               {
-                  spec: 'config-schema.json',
+                  spec: 'schemas/config-openapi.json',
               },
           ],
           theme: {
