@@ -10,65 +10,84 @@ import (
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/patch"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	"github.com/pkg/errors"
 	"github.com/vmware-labs/yaml-jsonpath/pkg/yamlpath"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
-// ApplyStrategicMerge applies the strategic merge patches
-func ApplyStrategicMerge(config map[string]interface{}, profile map[string]interface{}) (map[string]interface{}, error) {
-	if profile == nil || profile["strategicMerge"] == nil {
+// ApplyMerge applies the merge patches
+func ApplyMerge(config map[string]interface{}, profile *latest.ProfileConfig) (map[string]interface{}, error) {
+	if profile == nil || profile.Merge == nil {
 		return config, nil
 	}
 
-	mergeMap, ok := profile["strategicMerge"].(map[string]interface{})
-	if !ok {
-		return nil, errors.Errorf("profiles.%v.strategicMerge is not an object", profile["name"])
-	}
-
-	mergeBytes, err := json.Marshal(mergeMap)
+	config, err := applyMerge(config, "hooks", profile.Merge.Hooks)
 	if err != nil {
-		return nil, errors.Wrap(err, "marshal merge")
+		return nil, err
 	}
-
-	originalBytes, err := json.Marshal(config)
+	config, err = applyMerge(config, "images", profile.Merge.Images)
 	if err != nil {
-		return nil, errors.Wrap(err, "marshal merge")
+		return nil, err
 	}
-
-	schema, err := strategicpatch.NewPatchMetaFromStruct(&latest.Config{})
+	config, err = applyMerge(config, "dev", profile.Merge.Dev)
+	if err != nil {
+		return nil, err
+	}
+	config, err = applyMerge(config, "deployments", profile.Merge.Deployments)
+	if err != nil {
+		return nil, err
+	}
+	config, err = applyMerge(config, "deployments", profile.Merge.OldDeployments)
+	if err != nil {
+		return nil, err
+	}
+	config, err = applyMerge(config, "vars", profile.Merge.Vars)
+	if err != nil {
+		return nil, err
+	}
+	config, err = applyMerge(config, "vars", profile.Merge.OldVars)
+	if err != nil {
+		return nil, err
+	}
+	config, err = applyMerge(config, "dependencies", profile.Merge.Dependencies)
+	if err != nil {
+		return nil, err
+	}
+	config, err = applyMerge(config, "dependencies", profile.Merge.OldDependencies)
+	if err != nil {
+		return nil, err
+	}
+	config, err = applyMerge(config, "pullSecrets", profile.Merge.PullSecrets)
+	if err != nil {
+		return nil, err
+	}
+	config, err = applyMerge(config, "pullSecrets", profile.Merge.OldPullSecrets)
+	if err != nil {
+		return nil, err
+	}
+	config, err = applyMerge(config, "commands", profile.Merge.Commands)
+	if err != nil {
+		return nil, err
+	}
+	config, err = applyMerge(config, "commands", profile.Merge.Commands)
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := strategicpatch.StrategicMergePatchUsingLookupPatchMeta(originalBytes, mergeBytes, PatchMetaFromStruct{PatchMetaFromStruct: schema})
-	if err != nil {
-		return nil, errors.Wrap(err, "create strategic merge patch")
-	}
-
-	strMap := map[string]interface{}{}
-	err = json.Unmarshal(out, &strMap)
-	if err != nil {
-		return nil, err
-	}
-
-	return strMap, nil
+	return config, nil
 }
 
-// ApplyMerge applies the merge patches
-func ApplyMerge(config map[string]interface{}, profile map[string]interface{}) (map[string]interface{}, error) {
-	if profile == nil || profile["merge"] == nil {
+func applyMerge(config map[string]interface{}, key string, value interface{}) (map[string]interface{}, error) {
+	if value == nil {
 		return config, nil
 	}
 
-	mergeMap, ok := profile["merge"].(map[string]interface{})
-	if !ok {
-		return nil, errors.Errorf("profiles.%v.merge is not an object", profile["name"])
+	mergeObj := map[string]interface{}{
+		key: value,
 	}
 
-	mergeBytes, err := json.Marshal(mergeMap)
+	mergeBytes, err := json.Marshal(mergeObj)
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal merge")
 	}
@@ -93,44 +112,40 @@ func ApplyMerge(config map[string]interface{}, profile map[string]interface{}) (
 }
 
 // ApplyReplace applies the replaces
-func ApplyReplace(config map[string]interface{}, profile map[string]interface{}) error {
-	if profile == nil || profile["replace"] == nil {
+func ApplyReplace(config map[string]interface{}, profile *latest.ProfileConfig) error {
+	if profile == nil || profile.Replace == nil {
 		return nil
 	}
 
-	replaceMap, ok := profile["replace"].(map[string]interface{})
-	if !ok {
-		return errors.Errorf("profiles.%v.replace is not an object", profile["name"])
-	}
-
-	for k, v := range replaceMap {
-		config[k] = v
-	}
-
+	setKey(config, "commands", profile.Replace.Commands)
+	setKey(config, "commands", profile.Replace.OldCommands)
+	setKey(config, "deployments", profile.Replace.Deployments)
+	setKey(config, "deployments", profile.Replace.OldDeployments)
+	setKey(config, "vars", profile.Replace.Vars)
+	setKey(config, "vars", profile.Replace.OldVars)
+	setKey(config, "images", profile.Replace.Images)
+	setKey(config, "dependencies", profile.Replace.Dependencies)
+	setKey(config, "dependencies", profile.Replace.OldDependencies)
+	setKey(config, "dev", profile.Replace.Dev)
+	setKey(config, "hooks", profile.Replace.Hooks)
+	setKey(config, "pullSecrets", profile.Replace.PullSecrets)
+	setKey(config, "pullSecrets", profile.Replace.OldPullSecrets)
 	return nil
 }
 
+func setKey(m map[string]interface{}, key string, value interface{}) {
+	if value != nil {
+		m[key] = value
+	}
+}
+
 // ApplyPatches applies the patches to the config if defined
-func ApplyPatches(data map[string]interface{}, profile map[string]interface{}) (map[string]interface{}, error) {
-	patchesRaw, ok := profile["patches"]
-	if !ok {
+func ApplyPatches(data map[string]interface{}, profile *latest.ProfileConfig) (map[string]interface{}, error) {
+	if profile == nil || len(profile.Patches) == 0 {
 		return data, nil
 	}
 
-	patchesArr, ok := patchesRaw.([]interface{})
-	if !ok {
-		return nil, errors.Errorf("profile.%v.patches is not an array", profile["name"])
-	} else if len(patchesArr) == 0 {
-		return data, nil
-	}
-
-	configPatches := []*latest.PatchConfig{}
-	err := util.Convert(patchesArr, &configPatches)
-	if err != nil {
-		return nil, errors.Wrap(err, "convert patches")
-	}
-
-	return ApplyPatchesOnObject(data, configPatches)
+	return ApplyPatchesOnObject(data, profile.Patches)
 }
 
 func ApplyPatchesOnObject(data map[string]interface{}, configPatches []*latest.PatchConfig) (map[string]interface{}, error) {

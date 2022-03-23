@@ -40,51 +40,81 @@ func (c *Config) Clone() *Config {
 
 // Config defines the configuration
 type Config struct {
-	// Version holds the config version
+	// Version holds the config version. DevSpace will always convert older configs to the current latest
+	// config version, which makes it possible to use the newest DevSpace version also with older config
+	// versions.
 	Version string `yaml:"version" json:"version"`
 
-	// Name specifies the name of the DevSpace project
+	// Name specifies the name of the DevSpace project and uniquely identifies a project.
+	// DevSpace will not allow multiple active projects with the same name in the same Kubernetes namespace.
 	Name string `yaml:"name" json:"name"`
 
-	// Imports merges specified config files into this one
+	// Imports merges specified config files into this one. This is very useful to split up your DevSpace configuration
+	// into multiple files and reuse those through git, a remote url or common local path.
 	Imports []Import `yaml:"imports,omitempty" json:"imports,omitempty"`
 
-	// Pipelines are the pipelines to execute
+	// Pipelines are the work blocks that DevSpace should execute when devspace dev, devspace build, devspace deploy or devspace purge
+	// is called. Pipelines are defined through a special POSIX script that allows you to use special commands
+	// such as create_deployments, start_dev, build_images etc. to signal DevSpace you want to execute
+	// a specific functionality. The pipelines dev, build, deploy and purge are special and will override
+	// the default functionality of the respective command if defined. All other pipelines can be either run
+	// via the devspace run-pipeline command or used within another pipeline through run_pipelines.
 	Pipelines map[string]*Pipeline `yaml:"pipelines,omitempty" json:"pipelines,omitempty"`
 
-	// Functions are bash functions that can be used within pipelines
+	// Functions are POSIX functions that can be used within pipelines. Those functions can also be imported by
+	// imports.
 	Functions map[string]string `yaml:"functions,omitempty" json:"functions,omitempty"`
 
-	// Images holds configuration of how devspace should build images
+	// Images holds configuration of how DevSpace should build images. By default, DevSpace will build all defined images.
+	// If you are using a custom pipeline, you can dynamically define which image is built at which time during the
+	// execution.
 	Images map[string]*Image `yaml:"images,omitempty" json:"images,omitempty"`
 
-	// Deployments is an ordered list of deployments to deploy via helm, kustomize or kubectl.
+	// Deployments holds configuration of how DevSpace should deploy resources to Kubernetes. By default, DevSpace will deploy all defined deployments.
+	// If you are using a custom pipeline, you can dynamically define which deployment is deployed at which time during the
+	// execution.
 	Deployments map[string]*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty"`
 
-	// Dev holds development configuration for the 'devspace dev' command.
+	// Dev holds development configuration. Each dev configuration targets a single pod and enables certain dev services on that pod
+	// or even rewrites it if certain changes are requested, such as adding an environment variable or changing the entrypoint.
+	// Dev allows you to:
+	// - sync local folders to the Kubernetes pod
+	// - port forward remote ports to your local computer
+	// - forward local ports into the Kubernetes pod
+	// - configure an ssh tunnel to the Kubernetes pod
+	// - proxy local commands to the container
+	// - restart the container on file changes
 	Dev map[string]*DevPod `yaml:"dev,omitempty" json:"dev,omitempty"`
 
 	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
-	Vars map[string]*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Vars map[string]*Variable `yaml:"vars,omitempty" json:"vars,omitempty"`
 
 	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
-	// during devspace dev or devspace deploy
-	PullSecrets map[string]*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+	// during devspace dev or devspace deploy. DevSpace will merge all defined pull secrets into a single
+	// one or the one specified.
+	PullSecrets map[string]*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
 
-	// Commands are custom commands that can be executed via 'devspace run COMMAND'
-	Commands map[string]*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// Commands are custom commands that can be executed via 'devspace run COMMAND'. These commands are run within a pseudo bash
+	// that also allows executing special commands such as run_watch or is_equal.
+	Commands map[string]*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty"`
 
-	// Require defines what DevSpace, plugins and command versions are needed to use this config
+	// Require defines what DevSpace, plugins and command versions are required to use this config and if a condition is not
+	// fullfilled, DevSpace will fail.
 	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
 
-	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
-	Dependencies map[string]*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// Dependencies are sub devspace projects that lie in a local folder or remote git repository that can be executed
+	// from within the pipeline. In contrast to imports, these projects pose as separate fully functional DevSpace projects
+	// that typically lie including source code in a different folder and can be used to compose a full microservice
+	// application that will be deployed by DevSpace. Each dependency name can only be used once and if you want to use
+	// the same project multiple times, make sure to use a different name for each of those instances.
+	Dependencies map[string]*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 
-	// Profiles can be used to change the current configuration and change the behavior of devspace
+	// Profiles can be used to change the current configuration and change the behavior of devspace. They are deprecated and
+	// imports should be used instead.
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 
 	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
-	// in the order they are specified.
+	// in the order they are specified. They are deprecated and pipelines should be used instead.
 	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
 }
 
@@ -925,75 +955,98 @@ const (
 
 // BandwidthLimits defines the struct for specifying the sync bandwidth limits
 type BandwidthLimits struct {
+	// Download is the download limit in kilo bytes per second
 	Download *int64 `yaml:"download,omitempty" json:"download,omitempty"`
-	Upload   *int64 `yaml:"upload,omitempty" json:"upload,omitempty"`
-}
 
-// AutoReloadConfig defines the struct for auto reloading devspace with additional paths
-type AutoReloadConfig struct {
-	Paths       []string `yaml:"paths,omitempty" json:"paths,omitempty"`
-	Deployments []string `yaml:"deployments,omitempty" json:"deployments,omitempty"`
-	Images      []string `yaml:"images,omitempty" json:"images,omitempty"`
-}
-
-// InteractiveImageConfig describes the interactive mode options for an image
-type InteractiveImageConfig struct {
-	Name       string   `yaml:"name,omitempty" json:"name,omitempty"`
-	Entrypoint []string `yaml:"entrypoint,omitempty" json:"entrypoint,omitempty"`
-	Cmd        []string `yaml:"cmd,omitempty" json:"cmd,omitempty"`
+	// Upload is the upload limit in kilo bytes per second
+	Upload *int64 `yaml:"upload,omitempty" json:"upload,omitempty"`
 }
 
 // Terminal describes the terminal options
 type Terminal struct {
+	// Command is the command that should be executed on terminal start.
+	// This command is executed within a shell.
 	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+
+	// WorkDir is the working directory that is used to execute the command in.
 	WorkDir string `yaml:"workDir,omitempty" json:"workDir,omitempty"`
 
-	// If enabled is true, DevSpace will not use the terminal
+	// If enabled is true, DevSpace will use the terminal. Can be also
+	// used to disable the terminal if set to false. DevSpace makes sure
+	// that within a pipeline only one dev configuration can open a terminal
+	// at a time and subsequent dev terminals will fail.
 	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
-	// Needed to turn pod replace off
+	// DisableReplace tells DevSpace to not replace the pod or adjust its settings
+	// to make sure the pod is sleeping when opening a terminal
 	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`
-	DisableScreen  bool `yaml:"disableScreen,omitempty" json:"disableScreen,omitempty"`
-}
 
-// PodPatch will patch a pod's owning ReplicaSet, Deployment or StatefulSet with the givens patches or image
-type PodPatch struct {
-	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-
-	// If image is specified, DevSpace will replace the target image
-	Image string `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
-
-	// Regular JSON patches that will be applied to the target Deployment, StatefulSet or ReplicaSet
-	Patches []*PatchConfig `yaml:"patches,omitempty" json:"patches,omitempty"`
+	// DisableScreen will disable screen which is used by DevSpace by default to preserve
+	// sessions if connections interrupt or the session is lost.
+	DisableScreen bool `yaml:"disableScreen,omitempty" json:"disableScreen,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	Source                   *SourceConfig     `yaml:",inline" json:",inline"`
-	Name                     string            `yaml:"name" json:"name"`
-	Pipeline                 string            `yaml:"pipeline,omitempty" json:"pipeline,omitempty"`
-	Profiles                 []string          `yaml:"profiles,omitempty" json:"profiles,omitempty"`
-	DisableProfileActivation bool              `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
-	Vars                     map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
-	OverwriteVars            bool              `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
-	IgnoreDependencies       bool              `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
-	Namespace                string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	// Source holds the dependency project
+	Source *SourceConfig `yaml:",inline" json:",inline"`
+
+	// Name is used internally
+	Name string `yaml:"name" json:"name"`
+
+	// Pipeline is the pipeline to deploy by default. Defaults to 'deploy'
+	Pipeline string `yaml:"pipeline,omitempty" json:"pipeline,omitempty"`
+
+	// Profiles specifies which profiles should be applied while loading the dependency
+	Profiles []string `yaml:"profiles,omitempty" json:"profiles,omitempty"`
+
+	// DisableProfileActivation disabled automatic profile activation of dependency profiles
+	DisableProfileActivation bool `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
+
+	// Vars are variables that should be passed to the dependency
+	Vars map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
+
+	// OverwriteVars specifies if DevSpace should pass the parent variables to the dependency
+	OverwriteVars bool `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
+
+	// IgnoreDependencies defines if dependencies of the dependency should be excluded
+	IgnoreDependencies bool `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
+
+	// Namespace specifies the namespace this dependency should be deployed to
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 }
 
-// SourceConfig defines the dependency source
+// SourceConfig defines an artifact source
 type SourceConfig struct {
-	Git            string   `yaml:"git,omitempty" json:"git,omitempty"`
-	CloneArgs      []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty"`
-	DisableShallow bool     `yaml:"disableShallow,omitempty" json:"disableShallow,omitempty"`
-	DisablePull    bool     `yaml:"disablePull,omitempty" json:"disablePull,omitempty"`
-	SubPath        string   `yaml:"subPath,omitempty" json:"subPath,omitempty"`
-	Branch         string   `yaml:"branch,omitempty" json:"branch,omitempty"`
-	Tag            string   `yaml:"tag,omitempty" json:"tag,omitempty"`
-	Revision       string   `yaml:"revision,omitempty" json:"revision,omitempty"`
+	// Git is the remote repository to download the artifact from. You can either use
+	// https projects or ssh projects here, but need to make sure git can pull the project.
+	// This option is mutually exclusive with the path option.
+	Git string `yaml:"git,omitempty" json:"git,omitempty"`
 
+	// CloneArgs are additional arguments that should be supplied to the git CLI
+	CloneArgs []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty"`
+
+	// DisableShallow can be used to turn off shallow clones as these are the default used
+	// by devspace
+	DisableShallow bool `yaml:"disableShallow,omitempty" json:"disableShallow,omitempty"`
+
+	// DisablePull will disable pulling every time DevSpace is reevaluating this source
+	DisablePull bool `yaml:"disablePull,omitempty" json:"disablePull,omitempty"`
+
+	// SubPath is a path within the git repository where the artifact lies in
+	SubPath string `yaml:"subPath,omitempty" json:"subPath,omitempty"`
+
+	// Branch is the git branch to pull
+	Branch string `yaml:"branch,omitempty" json:"branch,omitempty"`
+
+	// Tag is the tag to pull
+	Tag string `yaml:"tag,omitempty" json:"tag,omitempty"`
+
+	// Revision is the git revision to pull
+	Revision string `yaml:"revision,omitempty" json:"revision,omitempty"`
+
+	// Path is the local path where DevSpace can find the artifact.
+	// This option is mutually exclusive with the path option.
 	Path string `yaml:"path,omitempty" json:"path,omitempty"`
 }
 
@@ -1002,7 +1055,7 @@ type HookConfig struct {
 	// Name is the name of the hook
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
-	// If true, the hook is disabled and not executed
+	// Disabled can be used to disable the hook
 	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 
 	// Events are the events when the hook should be executed
@@ -1013,6 +1066,7 @@ type HookConfig struct {
 	// together with where.container, DevSpace will until the target container is running and
 	// only then execute the command. If the container does not start in time, DevSpace will fail.
 	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+
 	// Args are additional arguments passed together with the command to execute.
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
 
@@ -1073,15 +1127,29 @@ type HookSyncConfig struct {
 
 // HookContainer defines how to select one or more containers to execute a hook in
 type HookContainer struct {
+	// LabelSelector to select a container
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	Pod           string            `yaml:"pod,omitempty" json:"pod,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 
-	Wait    *bool `yaml:"wait,omitempty" json:"wait,omitempty"`
+	// Pod name to use
+	Pod string `yaml:"pod,omitempty" json:"pod,omitempty"`
+
+	// Namespace to use
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+
+	// ImageSelector to select a container
+	ImageSelector string `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
+
+	// ContainerName to use
+	ContainerName string `yaml:"containerName,omitempty" json:"containerName,omitempty"`
+
+	// Wait can be used to disable waiting
+	Wait *bool `yaml:"wait,omitempty" json:"wait,omitempty"`
+
+	// Timeout how long to wait
 	Timeout int64 `yaml:"timeout,omitempty" json:"timeout,omitempty"`
-	Once    *bool `yaml:"once,omitempty" json:"once,omitempty"`
+
+	// Once only executes an hook once in the container until it is restarted
+	Once *bool `yaml:"once,omitempty" json:"once,omitempty"`
 }
 
 // CommandConfig defines the command specification
@@ -1135,14 +1203,29 @@ func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // Variable describes the var definition
 type Variable struct {
-	Name              string   `yaml:"name" json:"name"`
-	Question          string   `yaml:"question,omitempty" json:"question,omitempty"`
-	Options           []string `yaml:"options,omitempty" json:"options,omitempty"`
-	Password          bool     `yaml:"password,omitempty" json:"password,omitempty"`
-	ValidationPattern string   `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty"`
-	ValidationMessage string   `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
-	NoCache           bool     `yaml:"noCache,omitempty" json:"noCache,omitempty"`
-	AlwaysResolve     bool     `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
+	// Name is the name of the variable
+	Name string `yaml:"name" json:"name"`
+
+	// Question can be used to define a custom question if the variable was not yet used
+	Question string `yaml:"question,omitempty" json:"question,omitempty"`
+
+	// Options are options that can be selected when the variable question is asked
+	Options []string `yaml:"options,omitempty" json:"options,omitempty"`
+
+	// Password signals that this variable should not be visible if entered
+	Password bool `yaml:"password,omitempty" json:"password,omitempty"`
+
+	// ValidationPattern can be used to verify the user input
+	ValidationPattern string `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty"`
+
+	// ValidationMessage can be used to tell the user the format of the variable value
+	ValidationMessage string `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
+
+	// NoCache can be used to prompt the user on every run for this variable
+	NoCache bool `yaml:"noCache,omitempty" json:"noCache,omitempty"`
+
+	// AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere
+	AlwaysResolve bool `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
 
 	// Value is a shortcut for using source: none and default: my-value
 	Value interface{} `yaml:"value,omitempty" json:"value,omitempty"`
@@ -1194,9 +1277,16 @@ func (v *Variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type VariableCommand struct {
-	Command         string   `yaml:"command,omitempty" json:"command,omitempty"`
-	Args            []string `yaml:"args,omitempty" json:"args,omitempty"`
-	OperatingSystem string   `yaml:"os,omitempty" json:"os,omitempty"`
+	// Command is the command to use to retrieve the value for this variable. If no
+	// args are specified the command is run within a pseudo shell.
+	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+
+	// Args are optional arguments for the command
+	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
+
+	// OperatingSystem is optional and defines the operating system this
+	// command should be executed on
+	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
 }
 
 // VariableSource is type of a variable source
@@ -1214,27 +1304,33 @@ const (
 
 // ProfileConfig defines a profile config
 type ProfileConfig struct {
-	Name           string                  `yaml:"name" json:"name"`
-	Description    string                  `yaml:"description,omitempty" json:"description,omitempty"`
-	Parent         string                  `yaml:"parent,omitempty" json:"parent,omitempty"`
-	Parents        []*ProfileParent        `yaml:"parents,omitempty" json:"parents,omitempty"`
-	Patches        []*PatchConfig          `yaml:"patches,omitempty" json:"patches,omitempty"`
-	Replace        *ProfileConfigStructure `yaml:"replace,omitempty" json:"replace,omitempty"`
-	Merge          *ProfileConfigStructure `yaml:"merge,omitempty" json:"merge,omitempty"`
-	StrategicMerge *ProfileConfigStructure `yaml:"strategicMerge,omitempty" json:"strategicMerge,omitempty"`
-	Activation     []*ProfileActivation    `yaml:"activation,omitempty" json:"activation,omitempty"`
+	Name        string                  `yaml:"name" json:"name"`
+	Description string                  `yaml:"description,omitempty" json:"description,omitempty"`
+	Parent      string                  `yaml:"parent,omitempty" json:"parent,omitempty"`
+	Parents     []*ProfileParent        `yaml:"parents,omitempty" json:"parents,omitempty"`
+	Patches     []*PatchConfig          `yaml:"patches,omitempty" json:"patches,omitempty"`
+	Replace     *ProfileConfigStructure `yaml:"replace,omitempty" json:"replace,omitempty"`
+	Merge       *ProfileConfigStructure `yaml:"merge,omitempty" json:"merge,omitempty"`
+	Activation  []*ProfileActivation    `yaml:"activation,omitempty" json:"activation,omitempty"`
 }
 
 // ProfileConfigStructure is the base structure used to validate profiles
 type ProfileConfigStructure struct {
-	Vars         []interface{}          `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	PullSecrets  []interface{}          `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+	// Vars references variables
+	Vars         map[string]interface{} `yaml:"vars,omitempty" json:"vars,omitempty"`
+	PullSecrets  map[string]interface{} `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
 	Images       map[string]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments  []interface{}          `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Deployments  map[string]interface{} `yaml:"deployments,omitempty" json:"deployments,omitempty"`
 	Dev          map[string]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Commands     map[string]interface{} `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Dependencies map[string]interface{} `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 	Hooks        []interface{}          `yaml:"hooks,omitempty" json:"hooks,omitempty"`
-	Commands     []interface{}          `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Dependencies []interface{}          `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	OldDeployments  []interface{} `yaml:"oldDeployments,omitempty" json:"oldDeployments,omitempty"`
+	OldDependencies []interface{} `yaml:"oldDependencies,omitempty" json:"oldDependencies,omitempty"`
+	OldCommands     []interface{} `yaml:"oldCommands,omitempty" json:"oldCommands,omitempty"`
+	OldPullSecrets  []interface{} `yaml:"oldPullSecrets,omitempty" json:"oldPullSecrets,omitempty"`
+	OldVars         []interface{} `yaml:"oldVars,omitempty" json:"oldVars,omitempty"`
 }
 
 // ProfileParent defines where to load the profile from
