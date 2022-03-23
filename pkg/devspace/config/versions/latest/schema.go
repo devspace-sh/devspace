@@ -1317,20 +1317,20 @@ type ProfileConfig struct {
 // ProfileConfigStructure is the base structure used to validate profiles
 type ProfileConfigStructure struct {
 	// Vars references variables
-	Vars         map[string]interface{} `yaml:"vars,omitempty" json:"vars,omitempty"`
-	PullSecrets  map[string]interface{} `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
-	Images       map[string]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments  map[string]interface{} `yaml:"deployments,omitempty" json:"deployments,omitempty"`
-	Dev          map[string]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
-	Commands     map[string]interface{} `yaml:"commands,omitempty" json:"commands,omitempty"`
-	Dependencies map[string]interface{} `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
-	Hooks        []interface{}          `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+	Vars         *map[string]interface{} `yaml:"vars,omitempty" json:"vars,omitempty"`
+	PullSecrets  *map[string]interface{} `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
+	Images       *map[string]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
+	Deployments  *map[string]interface{} `yaml:"deployments,omitempty" json:"deployments,omitempty"`
+	Dev          *map[string]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Commands     *map[string]interface{} `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Dependencies *map[string]interface{} `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
+	Hooks        *[]interface{}          `yaml:"hooks,omitempty" json:"hooks,omitempty"`
 
-	OldDeployments  []interface{} `yaml:"oldDeployments,omitempty" json:"oldDeployments,omitempty"`
-	OldDependencies []interface{} `yaml:"oldDependencies,omitempty" json:"oldDependencies,omitempty"`
-	OldCommands     []interface{} `yaml:"oldCommands,omitempty" json:"oldCommands,omitempty"`
-	OldPullSecrets  []interface{} `yaml:"oldPullSecrets,omitempty" json:"oldPullSecrets,omitempty"`
-	OldVars         []interface{} `yaml:"oldVars,omitempty" json:"oldVars,omitempty"`
+	OldDeployments  *[]interface{} `yaml:"oldDeployments,omitempty" json:"oldDeployments,omitempty"`
+	OldDependencies *[]interface{} `yaml:"oldDependencies,omitempty" json:"oldDependencies,omitempty"`
+	OldCommands     *[]interface{} `yaml:"oldCommands,omitempty" json:"oldCommands,omitempty"`
+	OldPullSecrets  *[]interface{} `yaml:"oldPullSecrets,omitempty" json:"oldPullSecrets,omitempty"`
+	OldVars         *[]interface{} `yaml:"oldVars,omitempty" json:"oldVars,omitempty"`
 }
 
 // ProfileParent defines where to load the profile from

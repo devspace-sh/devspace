@@ -60,7 +60,7 @@ func ParseProfile(ctx context.Context, basePath string, data map[string]interfac
 	activatedProfiles := []string{}
 	if !disableProfileActivation {
 		var err error
-		activatedProfiles, err = getActivatedProfiles(data, resolver)
+		activatedProfiles, err = getActivatedProfiles(data, resolver, log)
 		if err != nil {
 			return nil, err
 		}
@@ -305,7 +305,7 @@ func getProfiles(ctx context.Context, basePath string, data map[string]interface
 	return errors.Errorf("Couldn't find profile '%s'", profile)
 }
 
-func getActivatedProfiles(data map[string]interface{}, resolver variable.Resolver) ([]string, error) {
+func getActivatedProfiles(data map[string]interface{}, resolver variable.Resolver, log log.Logger) ([]string, error) {
 	activatedProfiles := []string{}
 
 	// Check if there are profiles
@@ -313,28 +313,18 @@ func getActivatedProfiles(data map[string]interface{}, resolver variable.Resolve
 		return activatedProfiles, nil
 	}
 
-	// Convert to array
-	profiles, ok := data["profiles"].([]interface{})
-	if !ok {
-		return activatedProfiles, errors.Errorf("Couldn't load profiles: no profiles found")
+	// get the profiles and parse them
+	profilesData, err := Get(data, "profiles")
+	if err != nil {
+		return nil, err
+	}
+	profiles, err := Parse(profilesData, log)
+	if err != nil {
+		return nil, err
 	}
 
 	// Select which profiles are activated
-	for i, profileMap := range profiles {
-		profileConfig := &latest.ProfileConfig{}
-
-		o, err := yaml.Marshal(profileMap)
-		if err != nil {
-			return activatedProfiles, err
-		}
-
-		decoder := yaml.NewDecoder(bytes.NewReader(o))
-		decoder.KnownFields(true)
-		err = decoder.Decode(profileConfig)
-		if err != nil {
-			return activatedProfiles, fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
-		}
-
+	for _, profileConfig := range profiles.Profiles {
 		for _, activation := range profileConfig.Activation {
 			activatedByEnv, err := matchEnvironment(activation.Environment)
 			if err != nil {

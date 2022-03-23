@@ -207,7 +207,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(latestConfig.Deployments["test2"].Name, "test2")
 	})
 
-	ginkgo.It("should load profile cached and uncached", func() {
+	ginkgo.FIt("should load profile cached and uncached", func() {
 		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -251,6 +251,18 @@ var _ = DevSpaceDescribe("config", func() {
 		// check profile was loaded
 		framework.ExpectEqual(len(config.Config().Images), 1)
 		framework.ExpectEqual(len(config.Config().Deployments), 2)
+
+		// reload it with different profile
+		config, _, err = framework.LoadConfigWithOptions(f, kubeClient.Client(), "devspace.yaml", &loader.ConfigOptions{Profiles: []string{"merge-deployments"}})
+		framework.ExpectNoError(err)
+
+		// check profile was loaded
+		framework.ExpectEqual(len(config.Config().Images), 1)
+		framework.ExpectEqual(len(config.Config().Deployments), 1)
+		framework.ExpectEqual(config.Config().Deployments["test456"].Name, "test456")
+		framework.ExpectEqual(len(config.Config().Deployments["test456"].Kubectl.Manifests), 2)
+		framework.ExpectEqual(config.Config().Deployments["test456"].Kubectl.Manifests[0], "test")
+		framework.ExpectEqual(config.Config().Deployments["test456"].Kubectl.Manifests[1], "test.yaml")
 	})
 
 	ginkgo.It("should auto activate profile using single environment variable", func() {

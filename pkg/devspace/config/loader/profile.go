@@ -22,57 +22,84 @@ func ApplyMerge(config map[string]interface{}, profile *latest.ProfileConfig) (m
 		return config, nil
 	}
 
-	config, err := applyMerge(config, "hooks", profile.Merge.Hooks)
-	if err != nil {
-		return nil, err
+	var err error
+	if profile.Merge.Hooks != nil {
+		config, err = applyMerge(config, "hooks", *profile.Merge.Hooks)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "images", profile.Merge.Images)
-	if err != nil {
-		return nil, err
+	if profile.Merge.Images != nil {
+		config, err = applyMerge(config, "images", *profile.Merge.Images)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "dev", profile.Merge.Dev)
-	if err != nil {
-		return nil, err
+	if profile.Merge.Dev != nil {
+		config, err = applyMerge(config, "dev", *profile.Merge.Dev)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "deployments", profile.Merge.Deployments)
-	if err != nil {
-		return nil, err
+	if profile.Merge.Deployments != nil {
+		config, err = applyMerge(config, "deployments", *profile.Merge.Deployments)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "deployments", profile.Merge.OldDeployments)
-	if err != nil {
-		return nil, err
+	if profile.Merge.OldDeployments != nil {
+		config, err = applyMerge(config, "deployments", *profile.Merge.OldDeployments)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "vars", profile.Merge.Vars)
-	if err != nil {
-		return nil, err
+	if profile.Merge.Vars != nil {
+		config, err = applyMerge(config, "vars", *profile.Merge.Vars)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "vars", profile.Merge.OldVars)
-	if err != nil {
-		return nil, err
+	if profile.Merge.OldVars != nil {
+		config, err = applyMerge(config, "vars", *profile.Merge.OldVars)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "dependencies", profile.Merge.Dependencies)
-	if err != nil {
-		return nil, err
+	if profile.Merge.Dependencies != nil {
+		config, err = applyMerge(config, "dependencies", *profile.Merge.Dependencies)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "dependencies", profile.Merge.OldDependencies)
-	if err != nil {
-		return nil, err
+	if profile.Merge.OldDependencies != nil {
+		config, err = applyMerge(config, "dependencies", *profile.Merge.OldDependencies)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "pullSecrets", profile.Merge.PullSecrets)
-	if err != nil {
-		return nil, err
+	if profile.Merge.PullSecrets != nil {
+		config, err = applyMerge(config, "pullSecrets", *profile.Merge.PullSecrets)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "pullSecrets", profile.Merge.OldPullSecrets)
-	if err != nil {
-		return nil, err
+	if profile.Merge.OldPullSecrets != nil {
+		config, err = applyMerge(config, "pullSecrets", *profile.Merge.OldPullSecrets)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "commands", profile.Merge.Commands)
-	if err != nil {
-		return nil, err
+	if profile.Merge.Commands != nil {
+		config, err = applyMerge(config, "commands", *profile.Merge.Commands)
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err = applyMerge(config, "commands", profile.Merge.Commands)
-	if err != nil {
-		return nil, err
+	if profile.Merge.OldCommands != nil {
+		config, err = applyMerge(config, "commands", *profile.Merge.OldCommands)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return config, nil
@@ -81,6 +108,16 @@ func ApplyMerge(config map[string]interface{}, profile *latest.ProfileConfig) (m
 func applyMerge(config map[string]interface{}, key string, value interface{}) (map[string]interface{}, error) {
 	if value == nil {
 		return config, nil
+	}
+	switch t := value.(type) {
+	case []interface{}:
+		if t == nil {
+			return config, nil
+		}
+	case map[string]interface{}:
+		if t == nil {
+			return config, nil
+		}
 	}
 
 	mergeObj := map[string]interface{}{
@@ -117,24 +154,61 @@ func ApplyReplace(config map[string]interface{}, profile *latest.ProfileConfig) 
 		return nil
 	}
 
-	setKey(config, "commands", profile.Replace.Commands)
-	setKey(config, "commands", profile.Replace.OldCommands)
-	setKey(config, "deployments", profile.Replace.Deployments)
-	setKey(config, "deployments", profile.Replace.OldDeployments)
-	setKey(config, "vars", profile.Replace.Vars)
-	setKey(config, "vars", profile.Replace.OldVars)
-	setKey(config, "images", profile.Replace.Images)
-	setKey(config, "dependencies", profile.Replace.Dependencies)
-	setKey(config, "dependencies", profile.Replace.OldDependencies)
-	setKey(config, "dev", profile.Replace.Dev)
-	setKey(config, "hooks", profile.Replace.Hooks)
-	setKey(config, "pullSecrets", profile.Replace.PullSecrets)
-	setKey(config, "pullSecrets", profile.Replace.OldPullSecrets)
+	if profile.Replace.Commands != nil {
+		setKey(config, "commands", *profile.Replace.Commands)
+	}
+	if profile.Replace.OldCommands != nil {
+		setKey(config, "commands", *profile.Replace.OldCommands)
+	}
+	if profile.Replace.Deployments != nil {
+		setKey(config, "deployments", *profile.Replace.Deployments)
+	}
+	if profile.Replace.OldDeployments != nil {
+		setKey(config, "deployments", *profile.Replace.OldDeployments)
+	}
+	if profile.Replace.Vars != nil {
+		setKey(config, "vars", *profile.Replace.Vars)
+	}
+	if profile.Replace.OldVars != nil {
+		setKey(config, "vars", *profile.Replace.OldVars)
+	}
+	if profile.Replace.Images != nil {
+		setKey(config, "images", *profile.Replace.Images)
+	}
+	if profile.Replace.Dependencies != nil {
+		setKey(config, "dependencies", *profile.Replace.Dependencies)
+	}
+	if profile.Replace.OldDependencies != nil {
+		setKey(config, "dependencies", *profile.Replace.OldDependencies)
+	}
+	if profile.Replace.Dev != nil {
+		setKey(config, "dev", *profile.Replace.Dev)
+	}
+	if profile.Replace.Hooks != nil {
+		setKey(config, "hooks", *profile.Replace.Hooks)
+	}
+	if profile.Replace.PullSecrets != nil {
+		setKey(config, "pullSecrets", *profile.Replace.PullSecrets)
+	}
+	if profile.Replace.OldPullSecrets != nil {
+		setKey(config, "pullSecrets", *profile.Replace.OldPullSecrets)
+	}
 	return nil
 }
 
 func setKey(m map[string]interface{}, key string, value interface{}) {
 	if value != nil {
+		switch t := value.(type) {
+		case []interface{}:
+			if t == nil {
+				return
+			}
+		case map[string]interface{}:
+			if t == nil {
+				return
+			}
+		}
+
 		m[key] = value
 	}
 }

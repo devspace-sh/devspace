@@ -1029,14 +1029,14 @@ type ProfileConfig struct {
 
 // ProfileConfigStructure is the base structure used to validate profiles
 type ProfileConfigStructure struct {
-	Images       map[string]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments  []interface{}          `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Dev          map[string]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
-	Dependencies []interface{}          `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Hooks        []interface{}          `yaml:"hooks,omitempty" json:"hooks,omitempty"`
-	PullSecrets  []interface{}          `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
-	Commands     []interface{}          `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Vars         []interface{}          `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Images       *map[string]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
+	Deployments  *[]interface{}          `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Dev          *map[string]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Dependencies *[]interface{}          `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Hooks        *[]interface{}          `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+	PullSecrets  *[]interface{}          `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+	Commands     *[]interface{}          `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Vars         *[]interface{}          `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // ProfileParent defines where to load the profile from
