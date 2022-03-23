@@ -277,6 +277,52 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(len(config.Config().Deployments["test456"].Kubectl.Manifests), 2)
 		framework.ExpectEqual(config.Config().Deployments["test456"].Kubectl.Manifests[0], "test")
 		framework.ExpectEqual(config.Config().Deployments["test456"].Kubectl.Manifests[1], "test.yaml")
+
+		// load new config
+		config, _, err = framework.LoadConfigWithOptions(f, kubeClient.Client(), "devspace_new.yaml", &loader.ConfigOptions{Profiles: []string{"merge-deployments"}})
+		framework.ExpectNoError(err)
+
+		// check profile was loaded
+		framework.ExpectEqual(len(config.Config().Images), 1)
+		framework.ExpectEqual(len(config.Config().Deployments), 2)
+
+		framework.ExpectEqual(config.Config().Deployments["test"].Name, "test")
+		framework.ExpectEqual(len(config.Config().Deployments["test"].Kubectl.Manifests), 1)
+		framework.ExpectEqual(config.Config().Deployments["test"].Kubectl.Manifests[0], "test")
+
+		framework.ExpectEqual(config.Config().Deployments["test456"].Name, "test456")
+		framework.ExpectEqual(len(config.Config().Deployments["test456"].Kubectl.Manifests), 2)
+		framework.ExpectEqual(config.Config().Deployments["test456"].Kubectl.Manifests[0], "test")
+		framework.ExpectEqual(config.Config().Deployments["test456"].Kubectl.Manifests[1], "test.yaml")
+
+		// load new config
+		config, _, err = framework.LoadConfigWithOptions(f, kubeClient.Client(), "devspace_new.yaml", &loader.ConfigOptions{Profiles: []string{"add-deployment"}})
+		framework.ExpectNoError(err)
+
+		// check profile was loaded
+		framework.ExpectEqual(len(config.Config().Images), 1)
+		framework.ExpectEqual(len(config.Config().Deployments), 2)
+
+		framework.ExpectEqual(config.Config().Deployments["test"].Name, "test")
+		framework.ExpectEqual(len(config.Config().Deployments["test"].Kubectl.Manifests), 1)
+		framework.ExpectEqual(config.Config().Deployments["test"].Kubectl.Manifests[0], "test")
+
+		framework.ExpectEqual(config.Config().Deployments["test678"].Name, "test678")
+		framework.ExpectEqual(len(config.Config().Deployments["test678"].Kubectl.Manifests), 1)
+		framework.ExpectEqual(config.Config().Deployments["test678"].Kubectl.Manifests[0], "test")
+
+		// load new config
+		config, _, err = framework.LoadConfigWithOptions(f, kubeClient.Client(), "devspace_new.yaml", &loader.ConfigOptions{Profiles: []string{"replace-manifests"}})
+		framework.ExpectNoError(err)
+
+		// check profile was loaded
+		framework.ExpectEqual(len(config.Config().Images), 1)
+		framework.ExpectEqual(len(config.Config().Deployments), 1)
+
+		framework.ExpectEqual(config.Config().Deployments["test123"].Name, "test123")
+		framework.ExpectEqual(len(config.Config().Deployments["test123"].Kubectl.Manifests), 2)
+		framework.ExpectEqual(config.Config().Deployments["test123"].Kubectl.Manifests[0], "test123.yaml")
+		framework.ExpectEqual(config.Config().Deployments["test123"].Kubectl.Manifests[1], "test")
 	})
 
 	ginkgo.It("should auto activate profile using single environment variable", func() {
