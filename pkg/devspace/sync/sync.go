@@ -92,16 +92,19 @@ func NewSync(ctx context.Context, localPath string, options Options) (*Sync, err
 	// we have to resolve the real local path, because the watcher gives us the real path always
 	realLocalPath, err := filepath.EvalSymlinks(localPath)
 	if err != nil {
+		cancel()
 		return nil, errors.Wrap(err, "eval symlinks")
 	}
 
 	absoluteLocalPath, err := filepath.Abs(realLocalPath)
 	if err != nil {
+		cancel()
 		return nil, errors.Wrap(err, "absolute path")
 	}
 
 	absoluteRealLocalPath, err := filepath.EvalSymlinks(absoluteLocalPath)
 	if err != nil {
+		cancel()
 		return nil, errors.Wrap(err, "eval symlinks")
 	}
 
