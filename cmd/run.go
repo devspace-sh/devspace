@@ -184,14 +184,14 @@ func findCommand(config config.Config, name string) (*latest.CommandConfig, erro
 	return config.Config().Commands[name], nil
 }
 
-func executeCommandWithAfter(ctx context.Context, command *latest.CommandConfig, args []string, variables map[string]interface{}, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, log log.Logger) (err error) {
-	err = interrupt.Global.Run(func() error {
+func executeCommandWithAfter(ctx context.Context, command *latest.CommandConfig, args []string, variables map[string]interface{}, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, log log.Logger) error {
+	originalErr := interrupt.Global.Run(func() error {
 		return ExecuteCommand(ctx, command, variables, args, dir, stdout, stderr, stdin)
 	}, func() {
 		if command.After != "" {
 			vars := variables
 			vars["COMMAND_INTERRUPT"] = "true"
-			err = executeShellCommand(ctx, command.After, vars, args, dir, stdout, stderr, stdin)
+			err := executeShellCommand(ctx, command.After, vars, args, dir, stdout, stderr, stdin)
 			if err != nil {
 				log.Errorf("error executing after command: %v", err)
 			}
@@ -199,17 +199,16 @@ func executeCommandWithAfter(ctx context.Context, command *latest.CommandConfig,
 	})
 	if command.After != "" {
 		vars := variables
-		if err != nil {
-			vars["COMMAND_ERROR"] = err.Error()
-			log.Error(err)
+		if originalErr != nil {
+			vars["COMMAND_ERROR"] = originalErr.Error()
 		}
-		err = executeShellCommand(ctx, command.After, vars, args, dir, stdout, stderr, stdin)
+		err := executeShellCommand(ctx, command.After, vars, args, dir, stdout, stderr, stdin)
 		if err != nil {
 			return errors.Wrap(err, "error executing after command")
 		}
-		return nil
 	}
-	return err
+
+	return originalErr
 }
 
 func ParseArgs(cobraCmd *cobra.Command, globalFlags *flags.GlobalFlags, log log.Logger) ([]string, error) {
