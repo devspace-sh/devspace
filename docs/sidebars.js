@@ -77,7 +77,6 @@ module.exports = {
             'configuration/development/terminal',
             'configuration/development/log-streaming',
             'configuration/development/replace-pods',
-            'configuration/development/auto-reloading',
           ],
         },
         {
