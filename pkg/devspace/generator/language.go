@@ -152,14 +152,23 @@ func (cg *LanguageHandler) GetLanguage() (string, error) {
 	if len(supportedLanguages) == 0 {
 		language = langFallback
 	} else {
+		otherOption := "other"
+		if language == langFallback {
+			language = otherOption
+		}
+
 		// Let the user select the language
 		language, err = cg.log.Question(&survey.QuestionOptions{
 			Question:     "Select the programming language of this project",
 			DefaultValue: language,
-			Options:      supportedLanguages,
+			Options:      append(supportedLanguages, otherOption),
 		})
 		if err != nil {
 			return "", err
+		}
+
+		if language == otherOption {
+			language = langFallback
 		}
 	}
 
