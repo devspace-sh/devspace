@@ -30,13 +30,13 @@ type Client interface {
 
 	ImagePush(ctx context.Context, ref string, options dockertypes.ImagePushOptions) (io.ReadCloser, error)
 
-	Login(registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockertypes.AuthConfig, error)
-	GetAuthConfig(registryURL string, checkCredentialsStore bool) (*dockertypes.AuthConfig, error)
+	Login(ctx context.Context, registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockertypes.AuthConfig, error)
+	GetAuthConfig(ctx context.Context, registryURL string, checkCredentialsStore bool) (*dockertypes.AuthConfig, error)
 
 	ParseProxyConfig(buildArgs map[string]*string) map[string]*string
 
-	DeleteImageByName(imageName string, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
-	DeleteImageByFilter(filter filters.Args, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
+	DeleteImageByName(ctx context.Context, imageName string, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
+	DeleteImageByFilter(ctx context.Context, filter filters.Args, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
 	DockerAPIClient() dockerclient.CommonAPIClient
 }
 
@@ -48,17 +48,17 @@ type client struct {
 }
 
 // NewClient retrieves a new docker client
-func NewClient(log log.Logger) (Client, error) {
-	return NewClientWithMinikube("", false, log)
+func NewClient(ctx context.Context, log log.Logger) (Client, error) {
+	return NewClientWithMinikube(ctx, "", false, log)
 }
 
 // NewClientWithMinikube creates a new docker client with optionally from the minikube vm
-func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (Client, error) {
+func NewClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (Client, error) {
 	var cli Client
 	var err error
 
 	if preferMinikube {
-		cli, err = newDockerClientFromMinikube(currentKubeContext)
+		cli, err = newDockerClientFromMinikube(ctx, currentKubeContext)
 		if err != nil && err != errNotMinikube {
 			log.Warnf("Error creating minikube docker client: %v", err)
 		}
@@ -76,7 +76,7 @@ func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log l
 		}
 	}
 
-	cli.NegotiateAPIVersion(context.Background())
+	cli.NegotiateAPIVersion(ctx)
 	return cli, nil
 }
 
@@ -104,12 +104,12 @@ func newDockerClientFromEnvironment() (Client, error) {
 	}, nil
 }
 
-func newDockerClientFromMinikube(currentKubeContext string) (Client, error) {
+func newDockerClientFromMinikube(ctx context.Context, currentKubeContext string) (Client, error) {
 	if currentKubeContext != "minikube" {
 		return nil, errNotMinikube
 	}
 
-	env, err := GetMinikubeEnvironment()
+	env, err := GetMinikubeEnvironment(ctx)
 	if err != nil {
 		return nil, errors.Errorf("can't retrieve minikube docker environment due to error: %v", err)
 	}
@@ -151,8 +151,8 @@ func newDockerClientFromMinikube(currentKubeContext string) (Client, error) {
 	}, nil
 }
 
-func GetMinikubeEnvironment() (map[string]string, error) {
-	out, err := command.Output(context.TODO(), "", "minikube", "docker-env", "--shell", "none")
+func GetMinikubeEnvironment(ctx context.Context) (map[string]string, error) {
+	out, err := command.Output(ctx, "", "minikube", "docker-env", "--shell", "none")
 
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {

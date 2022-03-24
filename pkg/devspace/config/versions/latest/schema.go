@@ -1328,7 +1328,7 @@ type CommandConfig struct {
 	// the command was interrupted which will set the env variable COMMAND_INTERRUPT
 	// to true as well as when the command errored which will set the error string to
 	// COMMAND_ERROR.
-	After string `yaml:"after" json:"after"`
+	After string `yaml:"after,omitempty" json:"after,omitempty"`
 
 	// DisableReplace signals DevSpace to not replace the default command. E.g.
 	// dev does not replace devspace dev.

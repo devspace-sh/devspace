@@ -52,7 +52,7 @@ func (u *untilNewestRunning) SelectPod(ctx context.Context, client kubectl.Clien
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
 	} else if len(pods) == 0 {
-		u.podInfoPrinter.PrintNotFoundWarning(client, namespace, log)
+		u.podInfoPrinter.PrintNotFoundWarning(ctx, client, namespace, log)
 		return false, nil, nil
 	}
 
@@ -63,7 +63,7 @@ func (u *untilNewestRunning) SelectPod(ctx context.Context, client kubectl.Clien
 		u.podInfoPrinter.PrintPodWarning(pods[0], log)
 		return false, nil, nil
 	} else if kubectl.GetPodStatus(pods[0]) != "Running" {
-		u.podInfoPrinter.PrintPodInfo(client, pods[0], log)
+		u.podInfoPrinter.PrintPodInfo(ctx, client, pods[0], log)
 		return false, nil, nil
 	}
 
@@ -75,7 +75,7 @@ func (u *untilNewestRunning) SelectContainer(ctx context.Context, client kubectl
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
 	} else if len(containers) == 0 {
-		u.podInfoPrinter.PrintNotFoundWarning(client, namespace, log)
+		u.podInfoPrinter.PrintNotFoundWarning(ctx, client, namespace, log)
 		return false, nil, nil
 	}
 
@@ -86,7 +86,7 @@ func (u *untilNewestRunning) SelectContainer(ctx context.Context, client kubectl
 		u.podInfoPrinter.PrintPodWarning(containers[0].Pod, log)
 		return false, nil, nil
 	} else if !IsContainerRunning(containers[0]) {
-		u.podInfoPrinter.PrintPodInfo(client, containers[0].Pod, log)
+		u.podInfoPrinter.PrintPodInfo(ctx, client, containers[0].Pod, log)
 		return false, nil, nil
 	}
 
@@ -101,7 +101,7 @@ type PodInfoPrinter struct {
 	printedInitContainers []string
 }
 
-func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log log.Logger) {
+func (u *PodInfoPrinter) PrintPodInfo(ctx context.Context, client kubectl.Client, pod *v1.Pod, log log.Logger) {
 	u.lastMutex.Lock()
 	defer u.lastMutex.Unlock()
 
@@ -112,7 +112,7 @@ func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log lo
 				if !stringutil.Contains(u.printedInitContainers, initContainer.Name) && initContainer.State.Running != nil {
 					// show logs of this currently running init container
 					log.Debugf("Printing init container logs of pod %s", pod.Name)
-					reader, err := client.Logs(context.TODO(), pod.Namespace, pod.Name, initContainer.Name, false, nil, true)
+					reader, err := client.Logs(ctx, pod.Namespace, pod.Name, initContainer.Name, false, nil, true)
 					if err != nil {
 						log.Warnf("Error reading init container logs: %v", err)
 					} else {
@@ -129,7 +129,7 @@ func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log lo
 		}
 
 		status := kubectl.GetPodStatus(pod)
-		u.shownEvents = displayWarnings(relevantObjectsFromPod(pod), pod.Namespace, client, u.shownEvents, log)
+		u.shownEvents = displayWarnings(ctx, relevantObjectsFromPod(pod), pod.Namespace, client, u.shownEvents, log)
 		if status != "Running" {
 			log.Warnf("DevSpace is waiting, because Pod %s has status: %s", pod.Name, status)
 		}
@@ -137,12 +137,12 @@ func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log lo
 	}
 }
 
-func (u *PodInfoPrinter) PrintNotFoundWarning(client kubectl.Client, namespace string, log log.Logger) {
+func (u *PodInfoPrinter) PrintNotFoundWarning(ctx context.Context, client kubectl.Client, namespace string, log log.Logger) {
 	u.lastMutex.Lock()
 	defer u.lastMutex.Unlock()
 
 	if time.Since(u.LastWarning) > time.Second*10 {
-		u.shownEvents = displayWarnings([]relevantObject{
+		u.shownEvents = displayWarnings(ctx, []relevantObject{
 			{
 				Kind: "StatefulSet",
 			},
@@ -178,8 +178,8 @@ type relevantObject struct {
 	UID  string
 }
 
-func displayWarnings(relevantObjects []relevantObject, namespace string, client kubectl.Client, filter []string, log log.Logger) []string {
-	events, err := client.KubeClient().CoreV1().Events(namespace).List(context.TODO(), metav1.ListOptions{})
+func displayWarnings(ctx context.Context, relevantObjects []relevantObject, namespace string, client kubectl.Client, filter []string, log log.Logger) []string {
+	events, err := client.KubeClient().CoreV1().Events(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Debugf("Error retrieving pod events: %v", err)
 		return nil

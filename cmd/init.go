@@ -375,7 +375,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 			}
 		}
 
-		err = configureManager.AddImage(imageName, image, projectNamespace+"/"+projectName, cmd.Dockerfile, languageHandler)
+		err = configureManager.AddImage(imageName, image, projectNamespace+"/"+projectName, cmd.Dockerfile)
 		if err != nil {
 			if err.Error() != "" {
 				cmd.log.Errorf("Error: %s", err.Error())

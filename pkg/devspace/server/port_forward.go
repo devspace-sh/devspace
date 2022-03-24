@@ -92,7 +92,6 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	ports := []string{strconv.Itoa(checkPort) + ":" + targetPort[0]}
 
 	pf, err := kubectl.NewPortForwarder(client, pod, ports, []string{"127.0.0.1"}, stopChan, readyChan, nil)
-
 	if err != nil {
 		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

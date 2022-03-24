@@ -69,14 +69,14 @@ func StartTerminalFromCMD(
 				// 130 - Script terminated by Control-C
 				if restart && IsUnexpectedExitCode(exitError.Code) {
 					ctx.Log.WriteString(logrus.InfoLevel, "\n")
-					ctx.Log.Infof("Restarting terminal because: %s", err)
+					ctx.Log.Infof("Restarting because: %s", err)
 					return StartTerminalFromCMD(ctx, selector, command, wait, restart, stdout, stderr, stdin)
 				}
 
 				return exitError.Code, nil
 			} else if restart {
 				ctx.Log.WriteString(logrus.InfoLevel, "\n")
-				ctx.Log.Infof("Restarting terminal because: %s", err)
+				ctx.Log.Infof("Restarting because: %s", err)
 				return StartTerminalFromCMD(ctx, selector, command, wait, restart, stdout, stderr, stdin)
 			}
 
@@ -104,12 +104,17 @@ func StartTerminal(
 				return
 			}
 
-			ctx.Log.WriteString(logrus.InfoLevel, "\n")
-			ctx.Log.Infof("Restarting terminal because: %s", err)
-			time.Sleep(time.Second * 3)
+			ctx.Log.Infof("Restarting because: %s", err)
+			select {
+			case <-ctx.Context.Done():
+				return
+			case <-time.After(time.Second * 3):
+			}
 			err = StartTerminal(ctx, devContainer, selector, stdout, stderr, stdin, parent)
 			return
 		}
+
+		ctx.Log.Debugf("Stopped terminal")
 	}()
 
 	command := getCommand(devContainer)
@@ -118,7 +123,7 @@ func StartTerminal(
 		return err
 	}
 
-	ctx.Log.Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
+	ctx.Log.Infof("Opening shell to %s:%s (pod:container)", ansi.Color(container.Container.Name, "white+b"), ansi.Color(container.Pod.Name, "white+b"))
 	errChan := make(chan error)
 	parent.Go(func() error {
 		interruptpkg.Global.Stop()
