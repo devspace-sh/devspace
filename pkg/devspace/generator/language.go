@@ -335,7 +335,7 @@ func (cg *LanguageHandler) detectLanguage() (string, error) {
 
 	isSupported, language := cg.IsSupportedLanguage(detectedLanguage)
 	if !isSupported {
-		return "", fmt.Errorf("language %s not supported", detectedLanguage)
+		language = langFallback
 	}
 
 	cg.Language = language
