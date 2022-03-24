@@ -73,7 +73,6 @@ func StartAttach(
 				return
 			}
 
-			ctx.Log.WriteString(logrus.InfoLevel, "\n")
 			ctx.Log.Infof("Restarting because: %s", err)
 			select {
 			case <-ctx.Context.Done():
@@ -83,6 +82,8 @@ func StartAttach(
 			err = StartAttach(ctx, devContainer, selector, stdout, stderr, stdin, parent)
 			return
 		}
+
+		ctx.Log.Debugf("Stopped attach")
 	}()
 
 	before := log.GetBaseInstance().GetLevel()

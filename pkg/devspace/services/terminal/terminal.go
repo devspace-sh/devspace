@@ -104,7 +104,6 @@ func StartTerminal(
 				return
 			}
 
-			ctx.Log.WriteString(logrus.InfoLevel, "\n")
 			ctx.Log.Infof("Restarting because: %s", err)
 			select {
 			case <-ctx.Context.Done():
@@ -114,6 +113,8 @@ func StartTerminal(
 			err = StartTerminal(ctx, devContainer, selector, stdout, stderr, stdin, parent)
 			return
 		}
+
+		ctx.Log.Debugf("Stopped terminal")
 	}()
 
 	command := getCommand(devContainer)

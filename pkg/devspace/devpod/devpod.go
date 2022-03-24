@@ -128,6 +128,7 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 
 		if ctx.IsDone() {
 			<-t.Dead()
+			ctx.Log.Debugf("Stopped dev %s", devPodConfig.Name)
 			close(d.done)
 			return
 		}
@@ -145,6 +146,7 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 				pod, err := ctx.KubeClient.KubeClient().CoreV1().Pods(selectedPod.Pod.Namespace).Get(ctx.Context, selectedPod.Pod.Name, metav1.GetOptions{})
 				if err != nil {
 					if kerrors.IsNotFound(err) {
+						ctx.Log.Debugf("Restart dev %s because pod isn't found anymore", devPodConfig.Name)
 						d.restart(ctx, devPodConfig, options)
 						return true, nil
 					}
@@ -153,6 +155,7 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 					ctx.Log.Debugf("error trying to retrieve pod: %v", err)
 					return false, nil
 				} else if pod.DeletionTimestamp != nil {
+					ctx.Log.Debugf("Restart dev %s because pod is terminating", devPodConfig.Name)
 					d.restart(ctx, devPodConfig, options)
 					return true, nil
 				}
@@ -168,6 +171,7 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 			}
 		}
 
+		ctx.Log.Debugf("Stopped dev %s", devPodConfig.Name)
 		d.m.Lock()
 		d.err = t.Err()
 		d.m.Unlock()
@@ -272,6 +276,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 								time.Sleep(time.Second * 1)
 								_ = open.Start(url)
 								ctx.Log.Donef("Successfully opened %s", url)
+								return nil
 							}
 						}
 					}
