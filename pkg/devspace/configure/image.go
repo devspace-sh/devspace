@@ -24,7 +24,7 @@ import (
 const dockerHubHostname = "hub.docker.com"
 
 // AddImage adds an image to the provided config
-func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string) error {
+func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string, languageHandler *generator.LanguageHandler) error {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
 		useGithubRegistry     = "Use GitHub image registry"
@@ -231,12 +231,13 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 
 	registryUsername := ""
 	registryPassword := ""
+	retry := false
 
 	m.log.WriteString(logrus.WarnLevel, "\n")
 
 	for {
 		m.log.Info("Checking registry authentication for " + registryHostnamePrintable + "...")
-		authConfig, err := dockerClient.Login(context.TODO(), registryHostname, registryUsername, registryPassword, true, false, false)
+		authConfig, err := dockerClient.Login(context.TODO(), registryHostname, registryUsername, registryPassword, true, retry, retry)
 		if err == nil && (authConfig.Username != "" || authConfig.Password != "") {
 			registryUsername = authConfig.Username
 
@@ -272,22 +273,9 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 		// Check if docker is running
 		_, runErr := command.Output(context.TODO(), "", "docker", "version")
 
-		retry := true
-
 		// If Docker is available, ask if we should retry registry login
-		if runErr == nil {
-			retryNo := "no"
-			retryAnswer, err := m.log.Question(&survey.QuestionOptions{
-				Question: "Do you want to retry logging into this registry?",
-				Options:  []string{"yes", retryNo},
-			})
-			if err != nil {
-				return "", err
-			}
-
-			if retryAnswer == retryNo {
-				retry = false
-			}
+		if runErr == nil && registryUsername != "" {
+			retry = true
 		}
 
 		if !retry {
