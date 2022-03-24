@@ -24,7 +24,7 @@ import (
 const dockerHubHostname = "hub.docker.com"
 
 // AddImage adds an image to the provided config
-func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string, languageHandler *generator.LanguageHandler) error {
+func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string) error {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
 		useGithubRegistry     = "Use GitHub image registry"

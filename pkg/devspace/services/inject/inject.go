@@ -80,6 +80,7 @@ func InjectDevSpaceHelper(ctx context.Context, client kubectl.Client, pod *v1.Po
 	localHelperName := "devspacehelper" + arch
 	stdout, _, err := client.ExecBuffered(ctx, pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil || version != string(stdout) {
+		log.Info("Inject devspacehelper...")
 		homedir, err := homedir.Dir()
 		if err != nil {
 			return err
@@ -97,8 +98,6 @@ func InjectDevSpaceHelper(ctx context.Context, client kubectl.Client, pod *v1.Po
 
 			log.Debugf("Couldn't download devspacehelper in container, error: %s", err)
 		}
-
-		log.Info("Trying to inject devspacehelper from local machine")
 
 		// check if we can find it in the assets
 		helperBytes, err := assets.Asset("release/" + localHelperName)

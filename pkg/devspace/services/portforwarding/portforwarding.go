@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
+	"github.com/mgutz/ansi"
 	"strings"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
-	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -114,6 +114,7 @@ func StartForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 	}
 
 	ports := make([]string, len(portMappings))
+	portsFormatted := make([]string, len(portMappings))
 	addresses := make([]string, len(portMappings))
 	for index, value := range portMappings {
 		if value.Port == "" {
@@ -135,6 +136,7 @@ func StartForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 		}
 
 		ports[index] = fmt.Sprintf("%d:%d", int(localPort), int(remotePort))
+		portsFormatted[index] = ansi.Color(fmt.Sprintf("%d -> %d", int(localPort), int(remotePort)), "white+b")
 		if value.BindAddress == "" {
 			addresses[index] = "localhost"
 		} else {
@@ -161,7 +163,7 @@ func StartForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 	case <-ctx.Context.Done():
 		return nil
 	case <-readyChan:
-		ctx.Log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
+		ctx.Log.Donef("Port forwarding started on: %s", strings.Join(portsFormatted, ", "))
 	case err := <-errorChan:
 		if ctx.IsDone() {
 			return nil
@@ -173,41 +175,44 @@ func StartForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 	}
 
 	parent.Go(func() error {
-		fileLog := logpkg.GetDevPodFileLogger(name)
 		select {
 		case <-ctx.Context.Done():
 			pf.Close()
-			stopPortForwarding(ctx, name, portMappings, fileLog, parent)
+			stopPortForwarding(ctx, name, portMappings, parent)
 		case err := <-errorChan:
 			if ctx.IsDone() {
 				pf.Close()
-				stopPortForwarding(ctx, name, portMappings, fileLog, parent)
+				stopPortForwarding(ctx, name, portMappings, parent)
 				return nil
 			}
 			if err != nil {
-				fileLog.Errorf("Portforwarding restarting, because: %v", err)
-				sync.PrintPodError(ctx.Context, ctx.KubeClient, pod, fileLog)
+				ctx.Log.Errorf("Restarting because: %v", err)
+				shouldExit := sync.PrintPodError(ctx.Context, ctx.KubeClient, pod, ctx.Log)
 				pf.Close()
-				hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
+				hook.LogExecuteHooks(ctx, map[string]interface{}{
 					"port_forwarding_config": portMappings,
 					"error":                  err,
 				}, hook.EventsForSingle("restart:portForwarding", name).With("portForwarding.restart")...)
+				if shouldExit {
+					stopPortForwarding(ctx, name, portMappings, parent)
+					return nil
+				}
 
 				for {
-					err = StartForwarding(ctx.WithLogger(fileLog), name, portMappings, selector, parent)
+					err = StartForwarding(ctx, name, portMappings, selector, parent)
 					if err != nil {
-						hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
+						hook.LogExecuteHooks(ctx, map[string]interface{}{
 							"port_forwarding_config": portMappings,
 							"error":                  err,
 						}, hook.EventsForSingle("restart:portForwarding", name).With("portForwarding.restart")...)
-						fileLog.Errorf("Error restarting port-forwarding: %v", err)
-						fileLog.Errorf("Will try again in 15 seconds")
+						ctx.Log.Errorf("Error restarting port-forwarding: %v", err)
+						ctx.Log.Errorf("Will try again in 15 seconds")
 
 						select {
 						case <-time.After(time.Second * 15):
 							continue
 						case <-ctx.Context.Done():
-							stopPortForwarding(ctx, name, portMappings, fileLog, parent)
+							stopPortForwarding(ctx, name, portMappings, parent)
 							return nil
 						}
 					}
@@ -222,10 +227,12 @@ func StartForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 	return nil
 }
 
-func stopPortForwarding(ctx *devspacecontext.Context, name string, portMappings []*latest.PortMapping, fileLog logpkg.Logger, parent *tomb.Tomb) {
-	hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
+func stopPortForwarding(ctx *devspacecontext.Context, name string, portMappings []*latest.PortMapping, parent *tomb.Tomb) {
+	hook.LogExecuteHooks(ctx, map[string]interface{}{
 		"port_forwarding_config": portMappings,
 	}, hook.EventsForSingle("stop:portForwarding", name).With("portForwarding.stop")...)
 	parent.Kill(nil)
-	fileLog.Done("Stopped port forwarding")
+	for _, m := range portMappings {
+		ctx.Log.Debugf("Stopped port forwarding %v", m.Port)
+	}
 }

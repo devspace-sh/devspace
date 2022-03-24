@@ -74,8 +74,12 @@ func StartAttach(
 			}
 
 			ctx.Log.WriteString(logrus.InfoLevel, "\n")
-			ctx.Log.Infof("Restarting attach because: %s", err)
-			time.Sleep(time.Second * 3)
+			ctx.Log.Infof("Restarting because: %s", err)
+			select {
+			case <-ctx.Context.Done():
+				return
+			case <-time.After(time.Second * 3):
+			}
 			err = StartAttach(ctx, devContainer, selector, stdout, stderr, stdin, parent)
 			return
 		}

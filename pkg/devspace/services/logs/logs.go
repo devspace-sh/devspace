@@ -45,7 +45,7 @@ func StartLogs(
 			}
 
 			ctx.Log.WriteString(logrus.InfoLevel, "\n")
-			ctx.Log.Infof("Restarting logs because: %s", err)
+			ctx.Log.Infof("Restarting because: %s", err)
 			time.Sleep(time.Second * 3)
 			err = StartLogs(ctx, devContainer, selector)
 			return
