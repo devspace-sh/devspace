@@ -1,18 +1,21 @@
-version: v1beta10
+version: v2beta1
+name: test
+
 vars:
-  - name: NAME
-    value: name
-  - name: NAME_2
-    value: name2
-  - name: MANIFEST
+  NAME: name
+  NAME_2: name2
+  MANIFEST: {}
+
 images:
   test:
     image: test
+
 deployments:
-  - name: ${NAME}
+  test:
     kubectl:
       manifests:
         - ${MANIFEST}
+
 profiles:
   - name: remove-image
     replace:
@@ -20,7 +23,7 @@ profiles:
   - name: merge-deployments
     merge:
       deployments:
-        - name: test456
+        test456:
           kubectl:
             manifests:
               - ${MANIFEST}
@@ -28,17 +31,16 @@ profiles:
   - name: replace-manifests
     replace:
       deployments:
-        - name: test123
+        test123:
           kubectl:
             manifests:
               - test123.yaml
               - ${MANIFEST}
   - name: add-deployment
-    patches: 
+    patches:
       - op: add
-        path: deployments
+        path: deployments.test678
         value:
-          name: ${NAME_2}
           kubectl:
             manifests:
               - ${MANIFEST}

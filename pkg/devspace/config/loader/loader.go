@@ -558,12 +558,6 @@ func (l *configLoader) applyProfiles(ctx context.Context, data map[string]interf
 			return nil, err
 		}
 
-		// Apply strategic merge
-		data, err = ApplyStrategicMerge(data, profiles[i])
-		if err != nil {
-			return nil, err
-		}
-
 		// Apply patches
 		data, err = ApplyPatches(data, profiles[i])
 		if err != nil {

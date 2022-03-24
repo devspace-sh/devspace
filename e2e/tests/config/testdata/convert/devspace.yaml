@@ -1,0 +1,10 @@
+version: v1beta11
+dev:
+  sync:
+    - labelSelector:
+        app.kubernetes.io/name: test
+  terminal:
+    labelSelector:
+      app.kubernetes.io/name: test
+    containerName: test
+    command: ["test"]
