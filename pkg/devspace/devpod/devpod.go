@@ -141,13 +141,13 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 
 		// check if we need to restart
 		if selectedPod != nil {
-			shouldTerminate := false
+			shouldRestart := false
 			err := wait.PollImmediateUntil(time.Second, func() (bool, error) {
 				pod, err := ctx.KubeClient.KubeClient().CoreV1().Pods(selectedPod.Pod.Namespace).Get(ctx.Context, selectedPod.Pod.Name, metav1.GetOptions{})
 				if err != nil {
 					if kerrors.IsNotFound(err) {
 						ctx.Log.Debugf("Restart dev %s because pod isn't found anymore", devPodConfig.Name)
-						d.restart(ctx, devPodConfig, options)
+						shouldRestart = true
 						return true, nil
 					}
 
@@ -156,17 +156,16 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 					return false, nil
 				} else if pod.DeletionTimestamp != nil {
 					ctx.Log.Debugf("Restart dev %s because pod is terminating", devPodConfig.Name)
-					d.restart(ctx, devPodConfig, options)
+					shouldRestart = true
 					return true, nil
 				}
 
-				shouldTerminate = true
 				return true, nil
 			}, ctx.Context.Done())
-			if err != nil && err != context.Canceled {
+			if err != nil {
 				ctx.Log.Errorf("error restarting dev: %v", err)
-			}
-			if !shouldTerminate {
+			} else if shouldRestart {
+				d.restart(ctx, devPodConfig, options)
 				return
 			}
 		}
