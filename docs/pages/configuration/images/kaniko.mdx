@@ -125,10 +125,64 @@ images:
 The image `backend` would be built using kaniko and the flags `--cache-dir=/tmp --verbosity=debug` would be set when running the build command within the kaniko pod used for image building.
 
 
+### `command`
+The `command` option expects an array of strings that will replace the starting command for the kaniko build container
+
+#### Default Value For `command`
+```yaml
+command: []
+```
+
+#### Example: Replacing the command for the kaniko build container
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    kaniko:
+      command:
+      - kaniko-custom
+```
+
 
 <br />
 
 ## Build Pod Configuration
+
+### `annotations`
+The `annotations` option expects a key/value map of extra annotations that will be added to the build pod
+
+#### Default value for `annotations`
+```yaml
+annotations: {}
+```
+
+#### Example: Add annotations to kaniko build pods
+```yaml
+images:
+  backend:
+    image: 123.456.789.0:5000/john/appbackend
+    kaniko:
+      annotations:
+        app: kaniko
+```
+
+### `labels`
+The `labels` option expects a key/value map of extra labels that will be added to the build pod
+
+#### Default value for `labels`
+```yaml
+labels: {}
+```
+
+#### Example: Add labels to kaniko build pods
+```yaml
+images:
+  backend:
+    image: 123.456.789.0:5000/john/appbackend
+    kaniko:
+      labels:
+        app: kaniko
+```
 
 ### `image`
 The `image` option expects a string stating the image that should be used for the kaniko container within the build pod.
@@ -147,8 +201,66 @@ images:
       image: gcr.io/kaniko-project/executor:v0.19.0
 ```
 
+### `env`
+The `env` option provides extra environment variables that will be added to the build kaniko container.
+
+#### Default Value For `env`
+```yaml
+env: {}
+```
+
+#### Example: Specify environment variables for the kaniko container
+```yaml
+images:
+  backend:
+    image: 123.456.789.0:5000/john/appbackend
+    kaniko:
+      env:
+        AZURE_CLIENT_ID: XXXXXXXX
+```
+
+### `envFrom`
+The `envFrom` option provides extra environment variables from configmap or secret that will be added to the build kaniko container.
+
+#### Default Value For `envFrom`
+```yaml
+envFrom: {}
+```
+
+#### Example: Specify environment variables for the kaniko container using a secret
+```yaml
+images:
+  backend:
+    image: 123.456.789.0:5000/john/appbackend
+    kaniko:
+      envFrom:
+        AZURE_CLIENT_ID: 
+          secretMapKeyRef:
+            name: azure-creds
+            key: AZURE_CLIENT_ID
+```
+
 ### `initImage`
 The `initImage` option expects a string stating the image that should be used for the init kaniko container within the build pod. (default is `alpine`)
+
+### `initEnv`
+The `initEnv` option provides extra environment variables that will be added to the build init container.
+
+#### Default Value For `initEnv`
+```yaml
+initEnv: {}
+```
+
+#### Example: Specify environment variables for the kaniko container
+```yaml
+images:
+  backend:
+    image: 123.456.789.0:5000/john/appbackend
+    kaniko:
+      initImage: alpine
+      initEnv:
+        AZURE_CLIENT_ID: XXXXXXXX
+```
 
 ### `pullSecret`
 The `pullSecret` option expects a string with the name of a Kubernetes secret which is used by kaniko as pull/push secret (e.g. for pulling the base image defined in the `FROM` statement of the Dockerfile and for pushing the newly built image after the kaniko build process).
@@ -201,6 +313,14 @@ data:
 ```
 If you define `pullSecret: custom-pull-secret` as shown in the example above, DevSpace will automatically mount this secret into the kaniko container and kaniko will be able to pull from and push to ECR.
 :::
+
+### `skipPullSecretMount`
+The `skipPullSecretMount` option expects a boolean and if true will skip mounting the pull secret to the kaniko build container.
+
+#### Default Value For `skipPullSecretMount`
+```yaml
+skipPullSecretMount: false
+```
 
 
 ### `additionalMounts`
