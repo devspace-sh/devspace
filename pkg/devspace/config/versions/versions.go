@@ -60,7 +60,7 @@ func ParseProfile(ctx context.Context, basePath string, data map[string]interfac
 	activatedProfiles := []string{}
 	if !disableProfileActivation {
 		var err error
-		activatedProfiles, err = getActivatedProfiles(data, resolver, log)
+		activatedProfiles, err = getActivatedProfiles(ctx, data, resolver, log)
 		if err != nil {
 			return nil, err
 		}
@@ -305,7 +305,7 @@ func getProfiles(ctx context.Context, basePath string, data map[string]interface
 	return errors.Errorf("Couldn't find profile '%s'", profile)
 }
 
-func getActivatedProfiles(data map[string]interface{}, resolver variable.Resolver, log log.Logger) ([]string, error) {
+func getActivatedProfiles(ctx context.Context, data map[string]interface{}, resolver variable.Resolver, log log.Logger) ([]string, error) {
 	activatedProfiles := []string{}
 
 	// Check if there are profiles
@@ -331,7 +331,7 @@ func getActivatedProfiles(data map[string]interface{}, resolver variable.Resolve
 				return activatedProfiles, errors.Wrap(err, "error activating profile with env")
 			}
 
-			activatedByVars, err := matchVars(activation.Vars, resolver)
+			activatedByVars, err := matchVars(ctx, activation.Vars, resolver)
 			if err != nil {
 				return activatedProfiles, errors.Wrap(err, "error activating profile with vars")
 			}
@@ -360,9 +360,9 @@ func matchEnvironment(env map[string]string) (bool, error) {
 	return true, nil
 }
 
-func matchVars(activationVars map[string]string, resolver variable.Resolver) (bool, error) {
+func matchVars(ctx context.Context, activationVars map[string]string, resolver variable.Resolver) (bool, error) {
 	for k, v := range activationVars {
-		value, err := resolveVariableValue(k, resolver)
+		value, err := resolveVariableValue(ctx, k, resolver)
 		if err != nil {
 			return false, err
 		}
@@ -393,8 +393,8 @@ func sanitizeMatchExpression(expression string) string {
 	return exp
 }
 
-func resolveVariableValue(name string, resolver variable.Resolver) (string, error) {
-	val, err := resolver.FillVariables(context.TODO(), "${"+name+"}")
+func resolveVariableValue(ctx context.Context, name string, resolver variable.Resolver) (string, error) {
+	val, err := resolver.FillVariables(ctx, "${"+name+"}")
 	if err != nil {
 		return "", err
 	}

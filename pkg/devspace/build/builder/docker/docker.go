@@ -112,7 +112,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 	// Authenticate
 	if !b.skipPush && !b.helper.ImageConf.SkipPush {
 		ctx.Log.Info("Authenticating (" + displayRegistryURL + ")...")
-		_, err = b.Authenticate()
+		_, err = b.Authenticate(ctx.Context)
 		if err != nil {
 			return errors.Errorf("Error during image registry authentication: %v", err)
 		}
@@ -173,7 +173,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 	// Check if we skip push
 	if !b.skipPush && !b.helper.ImageConf.SkipPush {
 		for _, tag := range buildOptions.Tags {
-			err = b.pushImage(writer, tag)
+			err = b.pushImage(ctx.Context, writer, tag)
 			if err != nil {
 				return errors.Errorf("error during image push: %v", err)
 			}
@@ -188,13 +188,13 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 }
 
 // Authenticate authenticates the client with a remote registry
-func (b *Builder) Authenticate() (*types.AuthConfig, error) {
+func (b *Builder) Authenticate(ctx context.Context) (*types.AuthConfig, error) {
 	registryURL, err := pullsecrets.GetRegistryFromImageName(b.helper.ImageName + ":" + b.helper.ImageTags[0])
 	if err != nil {
 		return nil, err
 	}
 
-	b.authConfig, err = b.client.Login(registryURL, "", "", true, false, false)
+	b.authConfig, err = b.client.Login(ctx, registryURL, "", "", true, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 }
 
 // pushImage pushes an image to the specified registry
-func (b *Builder) pushImage(writer io.Writer, imageName string) error {
+func (b *Builder) pushImage(ctx context.Context, writer io.Writer, imageName string) error {
 	ref, err := reference.ParseNormalizedNamed(imageName)
 	if err != nil {
 		return err
@@ -214,7 +214,7 @@ func (b *Builder) pushImage(writer io.Writer, imageName string) error {
 		return err
 	}
 
-	out, err := b.client.ImagePush(context.Background(), reference.FamiliarString(ref), types.ImagePushOptions{
+	out, err := b.client.ImagePush(ctx, reference.FamiliarString(ref), types.ImagePushOptions{
 		RegistryAuth: encodedAuth,
 	})
 	if err != nil {

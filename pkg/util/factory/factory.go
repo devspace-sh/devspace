@@ -1,6 +1,7 @@
 package factory
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -39,8 +40,8 @@ type Factory interface {
 	NewDependencyManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager
 
 	// NewDockerClient creates a new docker API client
-	NewDockerClient(log log.Logger) (docker.Client, error)
-	NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
+	NewDockerClient(ctx context.Context, log log.Logger) (docker.Client, error)
+	NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
 
 	// NewBuildController & NewDeployController
 	NewBuildController() build.Controller
@@ -113,13 +114,13 @@ func (f *DefaultFactoryImpl) NewConfigureManager(config *latest.Config, generate
 }
 
 // NewDockerClient implements interface
-func (f *DefaultFactoryImpl) NewDockerClient(log log.Logger) (docker.Client, error) {
-	return docker.NewClient(log)
+func (f *DefaultFactoryImpl) NewDockerClient(ctx context.Context, log log.Logger) (docker.Client, error) {
+	return docker.NewClient(ctx, log)
 }
 
 // NewDockerClientWithMinikube implements interface
-func (f *DefaultFactoryImpl) NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
-	return docker.NewClientWithMinikube(currentKubeContext, preferMinikube, log)
+func (f *DefaultFactoryImpl) NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
+	return docker.NewClientWithMinikube(ctx, currentKubeContext, preferMinikube, log)
 }
 
 // NewKubeDefaultClient implements interface
