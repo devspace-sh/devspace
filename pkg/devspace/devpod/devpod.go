@@ -271,11 +271,8 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 						case <-ctx.Context.Done():
 							return nil
 						case <-time.After(time.Second):
-							resp, _ := http.Get(url)
-							if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
-								time.Sleep(time.Second * 1)
-								_ = open.Start(url)
-								ctx.Log.Donef("Successfully opened %s", url)
+							err := tryOpen(ctx.Context, url, ctx.Log)
+							if err == nil {
 								return nil
 							}
 						}
@@ -306,6 +303,34 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	}
 
 	return d.startLogs(ctx, devPodConfig, selectedPod, parent)
+}
+
+func tryOpen(ctx context.Context, url string, log logpkg.Logger) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(timeoutCtx, "GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(time.Second):
+		}
+		_ = open.Start(url)
+		log.Donef("Successfully opened %s", url)
+		return nil
+	}
+
+	return fmt.Errorf("not reachable")
 }
 
 func (d *devPod) startLogs(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, selectedPod *selector.SelectedPodContainer, parent *tomb.Tomb) error {
