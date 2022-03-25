@@ -1,0 +1,21 @@
+version: v2beta1
+vars:
+  IMAGE: alpine
+deployments:
+  test:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+          - image: ${IMAGE}
+            command: ["sleep"]
+            args: ["999999999999"]
+dev:
+  test:
+    imageSelector: ${IMAGE}
+    ssh:
+      enabled: true
+      localHostname: test.ssh-simple.devspace
+      localPort: 10022
