@@ -203,7 +203,7 @@ fi`,
 		}
 	}
 	if useScreen {
-		newCommand := []string{"screen", "-dRSqL", screenSession}
+		newCommand := []string{"screen", "-dRSqL", screenSession, "--"}
 		newCommand = append(newCommand, command...)
 		command = newCommand
 	}
@@ -212,9 +212,7 @@ fi`,
 
 	before := log.GetBaseInstance().GetLevel()
 	log.GetBaseInstance().SetLevel(logrus.PanicLevel)
-	defer log.GetBaseInstance().SetLevel(before)
-
-	return ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+	err := ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
 		Pod:         container.Pod,
 		Container:   container.Container.Name,
 		Command:     command,
@@ -224,6 +222,12 @@ fi`,
 		Stderr:      stderr,
 		SubResource: kubectl.SubResourceExec,
 	})
+	log.GetBaseInstance().SetLevel(before)
+	if err != nil {
+		ctx.Log.Debugf("error executing stream: %v", err)
+	}
+
+	return err
 }
 
 func IsUnexpectedExitCode(code int) bool {

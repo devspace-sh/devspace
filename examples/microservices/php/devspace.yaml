@@ -1,27 +1,26 @@
 version: v2beta1
-name: kaniko
+name: php
 
 vars:
-  IMAGE: myuser/myimage
+  IMAGE: myuser/php
 
 images:
-  my-image:
+  php:
     image: ${IMAGE}
-    kaniko: {}
 
 deployments:
-  my-deployment:
+  php:
     updateImageTags: true
     helm:
+      chart:
+        name: chart
       values:
         containers:
-          - image: ${IMAGE}
+          php:
+            image: ${IMAGE}
 
 dev:
-  my-dev:
+  php:
     imageSelector: ${IMAGE}
-    terminal: {}
-    ports:
-    - port: 8080
     sync:
-    - path: ./
+      - path: .
