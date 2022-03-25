@@ -10,6 +10,7 @@ import (
 	helmclient "github.com/loft-sh/devspace/pkg/devspace/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	kubectlclient "github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"io"
 	"sort"
@@ -249,7 +250,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 	}
 
 	if wasDeployed {
-		ctx.Log.Donef("Successfully deployed %s with %s", deployConfig.Name, method)
+		ctx.Log.Donef("Successfully deployed %s with %s", ansi.Color(deployConfig.Name, "white+b"), ansi.Color(method, "white+b"))
 		// Execute after deployment deploy hook
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{
 			"DEPLOY_NAME":   deployConfig.Name,

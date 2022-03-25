@@ -191,6 +191,7 @@ func downloadSyncHelper(ctx context.Context, helperName, syncBinaryFolder, versi
 	if err == nil {
 		// make sure the sha is correct, but skip for latest because that is development
 		if version == "latest" {
+			log.Debugf("Use development devspacehelper found at %s", filepath)
 			return nil
 		}
 
@@ -221,6 +222,7 @@ func downloadSyncHelper(ctx context.Context, helperName, syncBinaryFolder, versi
 
 		// the file is correct we skip downloading
 		if fileHash == strings.Split(string(shaHash), " ")[0] {
+			log.Debugf("Use local devspacehelper found at %s", filepath)
 			return nil
 		}
 

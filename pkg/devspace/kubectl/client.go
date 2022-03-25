@@ -2,16 +2,15 @@ package kubectl
 
 import (
 	"context"
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"io"
 	"net"
 	"net/url"
 	"os"
 	"sort"
-	"time"
-
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
-	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -176,7 +175,7 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubecon
 	}
 }
 
-// Returns the underlying kube client config
+// ClientConfig returns the underlying kube client config
 func (client *client) ClientConfig() clientcmd.ClientConfig {
 	return client.clientConfig
 }
@@ -273,12 +272,25 @@ func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, aut
 		}
 
 		// Warn if using default namespace unless previous deployment was also to default namespace
-		if log.GetLevel() >= logrus.InfoLevel && currentConfigContext.Namespace == metav1.NamespaceDefault &&
-			(lastConfigContext == nil ||
-				lastConfigContext.Namespace != metav1.NamespaceDefault) {
-			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted\n")
-			log.Info("Will continue in 5 seconds...")
-			time.Sleep(5 * time.Second)
+		if isTerminalIn &&
+			log.GetLevel() >= logrus.InfoLevel &&
+			currentConfigContext.Namespace == metav1.NamespaceDefault &&
+			(lastConfigContext == nil || lastConfigContext.Namespace != metav1.NamespaceDefault) {
+			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted")
+			log.Warn("Please use 'devspace use namespace my-namespace' to select a different one\n")
+			useDefault, err := log.Question(&survey.QuestionOptions{
+				Question:     "Are you sure you want to use the 'default' namespace?",
+				DefaultValue: "No",
+				Options: []string{
+					"No",
+					"Yes",
+				},
+			})
+			if err != nil {
+				return client, err
+			} else if useDefault == "No" {
+				return nil, fmt.Errorf("please run 'devspace use namespace my-namespace' to select a different namespace before rerunning")
+			}
 		}
 	}
 
