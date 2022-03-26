@@ -1,6 +1,27 @@
 ---
-title: Function is_equal
-sidebar_label: is_equal
+title: Function is_os
+sidebar_label: is_os
 ---
 
-\#TODO: only load a repeatable fragment here
+The `is_os` function checks whether the linux OS is being used. If linux is not being used, an error is thrown.
+
+```
+package commands
+
+import (
+	"mvdan.cc/sh/v3/interp"
+	"runtime"
+)
+
+func IsOS(args []string) error {
+	if len(args) != 1 {
+		return interp.NewExitStatus(1)
+	}
+
+	if args[0] == runtime.GOOS {
+		return interp.NewExitStatus(0)
+	}
+
+	return interp.NewExitStatus(1)
+}
+```
