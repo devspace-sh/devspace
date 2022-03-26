@@ -3,4 +3,24 @@ title: Function is_equal
 sidebar_label: is_equal
 ---
 
-\#TODO: only load a repeatable fragment here
+The `is_equal` function checks whether two similar arguments are used in a command. If similar, an error is thrown.
+
+```
+package commands
+
+import (
+	"mvdan.cc/sh/v3/interp"
+)
+
+func IsEqual(args []string) error {
+	if len(args) != 2 {
+		return interp.NewExitStatus(1)
+	}
+
+	if args[0] == args[1] {
+		return interp.NewExitStatus(0)
+	}
+
+	return interp.NewExitStatus(1)
+}
+```
