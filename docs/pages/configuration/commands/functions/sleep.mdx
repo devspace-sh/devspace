@@ -3,4 +3,23 @@ title: Function sleep
 sidebar_label: sleep
 ---
 
-\#TODO: only load a repeatable fragment here
+The `sleep` function puts your pipeline into "sleep" mode, causing the pipeline to be paused until resumed later.
+
+```
+func Sleep(ctx context.Context, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: sleep seconds")
+	}
+
+	duration, err := strconv.ParseInt(args[0], 10, 64)
+	if err != nil {
+		return fmt.Errorf("usage: sleep seconds")
+	}
+
+	select {
+	case <-ctx.Done():
+	case <-time.After(time.Duration(duration) * time.Second):
+	}
+	return nil
+}
+```
