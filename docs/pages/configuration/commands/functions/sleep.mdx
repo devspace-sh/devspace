@@ -6,6 +6,15 @@ sidebar_label: sleep
 The `sleep` function puts your pipeline into "sleep" mode, causing the pipeline to be paused until resumed later.
 
 ```
+package commands
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"time"
+)
+
 func Sleep(ctx context.Context, args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: sleep seconds")
@@ -22,4 +31,5 @@ func Sleep(ctx context.Context, args []string) error {
 	}
 	return nil
 }
+
 ```
