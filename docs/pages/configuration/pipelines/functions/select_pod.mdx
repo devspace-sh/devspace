@@ -3,14 +3,34 @@ title: Function select_pod
 sidebar_label: select_pod
 ---
 
-This function is used to select the container (pod) to be used in the pipeline when it is run.
+This function is used to select the object (a single instance of a running process in your cluster)
 
 
 ## Args
 
+### `--image-selector`
 
+The image selector to use when selecting a container.
 
+### `--label-selector`
 
+The lable selector to use when selecting a container.
+
+### `--container`
+
+The container to be used.
+
+### `--namespace`
+
+The namespace to be used for the container.
+
+### `--disable-wait`
+
+If enabled, the pod will not wait for the container to be ready.
+
+### `--timeout`
+
+The amount of time the pod should wait. The default is 5 minutes.
 
 
 
@@ -31,20 +51,3 @@ This function is used to select the container (pod) to be used in the pipeline w
 ### `--skip-push`
 
 ### `--skip-push-on-local-kubernetes`
-
-
-## Config Overwrite Flags
-
-\#TODO: This needs to be a reusable section
-
-### `--image-selector`
-
-### `--label-selector`
-
-### `--container`
-
-### `--namespace`
-
-### `--disable-wait`
-
-### `--timeout`
