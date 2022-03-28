@@ -3,30 +3,30 @@ title: Function create_deployments
 sidebar_label: create_deployments
 ---
 
-Description of function needed here
+## Description
 
+This function creates a new deployment.
 
-## Args
+## Arguments
 
 
 ## Flags
 
-### `--all`
+### `--skip-deploy`
 
-### `--tag / -t`
+If set to "true", the deployment will be skipped.
 
-### `--force-rebuild`
+### `--force-deploy`
 
-### `--max-concurrent`
+Forces the deployment to be run.
 
 ### `--sequential`
 
-### `--skip`
+Sequentially deploys the deployments.
 
-### `--skip-push`
+### `--render`
 
-### `--skip-push-on-local-kubernetes`
-
+If set to "true", prints the rendered manifests to the console (stdout) instead of deploying them.
 
 ## Config Overwrite Flags
 
