@@ -1,0 +1,10 @@
+---
+title: DevSpace Helper Architecture
+sidebar_label: arch
+---
+
+`arch` specifies which DevSpace helper architecture that should be used for the container. The DevSpace helper is a small binary that is injected by DevSpace to accomplish certain tasks, such as ssh, syncing or reverse port-forwarding. Currently valid values are either no value, `amd64` or `arm64`. Depending on this value, DevSpace will inject the DevSpace helper binary with the corresponding architecture suffix.
+
+:::note
+If no arch is specified, DevSpace will try to find out what arch the node has where the container is running and inject the correct binary. If DevSpace has no permissions to retrieve node information, it will inject the `amd64` binary.
+:::
