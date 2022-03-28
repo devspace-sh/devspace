@@ -5,54 +5,52 @@ sidebar_label: start_dev
 
 This function starts all existing dev configurations.
 
-## Args
+## Arguments
 
+### Set
 
+Sets the configuration.
 
+### SetString
+
+Sets the configuration as a string.
+
+### From
+
+Reuses an existing configuration.
+
+### FromFile
+
+Reuses an existing configuration from a file.
+
+### All
+
+Starts all dev configurations.
 
 ## Flags
 
+By default, these flasg are set to disabled. If any of these flags are enabled, the following actions will be taken.
+
 ### `--continue-on-terminal-exit`
 
-
+The dev start process will continue, even on a terminal exit.
 
 ### `--disable-sync`
 
-
+No sync configuraitons will be started.
 
 ### `--disable-port-forwarding`
 
-
+No port forwarding configurations will be started.
 
 ### `--disable-pod-replace`
 
-
+No pods will be replaced.
 
 ### `--disable-open`
 
-
+No pods will be opened.
 
 ### `--kill-application`
 
-
-
-
-## Config Overwrite Flags
-
-\#TODO: This needs to be a reusable section
-
-### `--set`
-
-This flag sets the configuration.
-
-### `--set-string`
-
-This flag sets the configuration as a string.
-
-### `--from`
-
-This flag enables an existing configuration to be reused.
-
-### `--from-file`
-
-This flag enables an existing configuration from a file to be reused.
+Terminates the pipeline, including all dev pods.
