@@ -1324,6 +1324,12 @@ type CommandConfig struct {
 	// Command is the command that should be executed. For example: 'echo 123'
 	Command string `yaml:"command" json:"command"`
 
+	// After is executed after the command was run. It is executed also when
+	// the command was interrupted which will set the env variable COMMAND_INTERRUPT
+	// to true as well as when the command errored which will set the error string to
+	// COMMAND_ERROR.
+	After string `yaml:"after,omitempty" json:"after,omitempty"`
+
 	// DisableReplace signals DevSpace to not replace the default command. E.g.
 	// dev does not replace devspace dev.
 	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`

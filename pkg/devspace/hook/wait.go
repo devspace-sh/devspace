@@ -51,7 +51,7 @@ func (r *waitHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig
 		}
 	}
 
-	err = r.execute(hook, ctx.KubeClient, imageSelectors, ctx.Log)
+	err = r.execute(ctx.Context, hook, ctx.KubeClient, imageSelectors, ctx.Log)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (r *waitHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig
 	return nil
 }
 
-func (r *waitHook) execute(hook *latest.HookConfig, client kubectl.Client, imageSelector []imageselector.ImageSelector, log logpkg.Logger) error {
+func (r *waitHook) execute(ctx context.Context, hook *latest.HookConfig, client kubectl.Client, imageSelector []imageselector.ImageSelector, log logpkg.Logger) error {
 	labelSelector := ""
 	if len(hook.Container.LabelSelector) > 0 {
 		labelSelector = labels.Set(hook.Container.LabelSelector).String()
@@ -73,7 +73,7 @@ func (r *waitHook) execute(hook *latest.HookConfig, client kubectl.Client, image
 
 	// wait until the defined condition will be true, this will wait initially 2 seconds
 	err := wait.Poll(time.Second*2, time.Duration(timeout)*time.Second, func() (done bool, err error) {
-		podContainers, err := selector.NewFilter(client).SelectContainers(context.TODO(), selector.Selector{
+		podContainers, err := selector.NewFilter(client).SelectContainers(ctx, selector.Selector{
 			ImageSelector:   targetselector.ToStringImageSelector(imageSelector),
 			LabelSelector:   labelSelector,
 			Pod:             hook.Container.Pod,

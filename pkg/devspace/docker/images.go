@@ -11,13 +11,13 @@ import (
 )
 
 // DeleteImageByName deletes an image by name
-func (c *client) DeleteImageByName(imageName string, log log.Logger) ([]types.ImageDeleteResponseItem, error) {
-	return c.DeleteImageByFilter(filters.NewArgs(filters.Arg("reference", strings.TrimSpace(imageName))), log)
+func (c *client) DeleteImageByName(ctx context.Context, imageName string, log log.Logger) ([]types.ImageDeleteResponseItem, error) {
+	return c.DeleteImageByFilter(ctx, filters.NewArgs(filters.Arg("reference", strings.TrimSpace(imageName))), log)
 }
 
 // DeleteImageByFilter deletes an image by filter
-func (c *client) DeleteImageByFilter(filter filters.Args, log log.Logger) ([]types.ImageDeleteResponseItem, error) {
-	summary, err := c.ImageList(context.Background(), types.ImageListOptions{
+func (c *client) DeleteImageByFilter(ctx context.Context, filter filters.Args, log log.Logger) ([]types.ImageDeleteResponseItem, error) {
+	summary, err := c.ImageList(ctx, types.ImageListOptions{
 		Filters: filter,
 	})
 	if err != nil {
@@ -26,7 +26,7 @@ func (c *client) DeleteImageByFilter(filter filters.Args, log log.Logger) ([]typ
 
 	responseItems := make([]types.ImageDeleteResponseItem, 0, 128)
 	for _, image := range summary {
-		deleteResponse, err := c.ImageRemove(context.Background(), image.ID, types.ImageRemoveOptions{
+		deleteResponse, err := c.ImageRemove(ctx, image.ID, types.ImageRemoveOptions{
 			PruneChildren: true,
 			Force:         true,
 		})

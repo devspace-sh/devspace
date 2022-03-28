@@ -12,6 +12,3 @@ deployments:
     values:
       containers:
       - image: ${IMAGE}
-hooks:
-  - command: "echo 'Hello from dependency1'"
-    events: ["before:build:*"]

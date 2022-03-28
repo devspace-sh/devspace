@@ -3,6 +3,7 @@ package tunnel
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
+	"github.com/mgutz/ansi"
 	"io"
 	"net"
 	"strings"
@@ -283,7 +284,7 @@ func StartReverseForward(ctx context.Context, reader io.ReadCloser, writer io.Wr
 			}()
 
 			// wait until close
-			log.Donef("Reverse port forwarding started at %d->%d (%s/%s)", remotePort, localPort, namespace, name)
+			log.Donef("Port forwarding started on: %s", ansi.Color(fmt.Sprintf("%d <- %d", localPort, remotePort), "white+b"))
 			<-closeStream
 		}(c, int32(localPort), int32(remotePort))
 		closeStreams[i] = c

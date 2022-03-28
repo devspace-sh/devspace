@@ -369,6 +369,16 @@ func (f *fileLogger) WithPrefix(prefix string) Logger {
 	return &n
 }
 
+func (f *fileLogger) WithPrefixColor(prefix, color string) Logger {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	n := *f
+	n.m = &sync.Mutex{}
+	n.prefixes = append(n.prefixes, prefix)
+	return &n
+}
+
 func (f *fileLogger) ErrorStreamOnly() Logger {
 	return f
 }

@@ -1737,7 +1737,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		// check if variables were loaded correctly
 		fmt.Println(config.Variables())
-		framework.ExpectEqual(len(config.Variables()), 4+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(len(config.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(config.LocalCache().ListVars()), 1)
 		test1, _ := config.LocalCache().GetVar("TEST_1")
 		framework.ExpectEqual(test1, "test")

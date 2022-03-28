@@ -124,6 +124,10 @@ func (d *DiscardLogger) WithPrefix(prefix string) Logger {
 	return d
 }
 
+func (d *DiscardLogger) WithPrefixColor(prefix, color string) Logger {
+	return d
+}
+
 func (d *DiscardLogger) ErrorStreamOnly() Logger {
 	return d
 }

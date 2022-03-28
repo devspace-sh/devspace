@@ -57,7 +57,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
-		devspaceDockerClient, err := docker.NewClient(log)
+		devspaceDockerClient, err := docker.NewClient(context.TODO(), log)
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
@@ -93,7 +93,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
-		devspaceDockerClient, err := docker.NewClient(log)
+		devspaceDockerClient, err := docker.NewClient(context.TODO(), log)
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
@@ -143,7 +143,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
-		devspaceDockerClient, err := docker.NewClient(log)
+		devspaceDockerClient, err := docker.NewClient(context.TODO(), log)
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
@@ -177,7 +177,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
-		devspaceDockerClient, err := docker.NewClient(log)
+		devspaceDockerClient, err := docker.NewClient(context.TODO(), log)
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
@@ -241,7 +241,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
-		devspaceDockerClient, err := docker.NewClient(log)
+		devspaceDockerClient, err := docker.NewClient(context.TODO(), log)
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
@@ -305,7 +305,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
-		devspaceDockerClient, err := docker.NewClient(log)
+		devspaceDockerClient, err := docker.NewClient(context.TODO(), log)
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()

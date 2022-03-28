@@ -1,10 +1,10 @@
 package configure
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
-	"github.com/loft-sh/devspace/pkg/devspace/generator"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
 )
@@ -14,12 +14,12 @@ type Manager interface {
 	AddKubectlDeployment(deploymentName string, isKustomization bool) error
 	AddHelmDeployment(deploymentName string) error
 	AddComponentDeployment(deploymentName, image string, servicePort int) error
-	AddImage(imageName, image, projectNamespace, dockerfile string, languageHandler *generator.LanguageHandler) error
+	AddImage(imageName, image, projectNamespace, dockerfile string) error
 }
 
 // Factory defines the factory methods needed by the configure manager to create new configuration
 type Factory interface {
-	NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
+	NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
 	NewKubeConfigLoader() kubeconfig.Loader
 }
 
