@@ -5,7 +5,7 @@ export NODE_ENV=development
 if [ -f "yarn.lock" ] && [ ! -d "node_modules" ]; then
    echo "Installing Yarn Dependencies"
    yarn
-else
+else 
    if [ -f "package.json" ] && [ ! -d "node_modules" ]; then
       echo "Installing NPM Dependencies"
       npm install
