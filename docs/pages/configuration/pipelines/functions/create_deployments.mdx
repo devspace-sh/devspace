@@ -7,25 +7,25 @@ This function creates a new deployment for a pipeline.
 
 ## Arguments
 
-### set
+### `--set`
 
 Sets the configuration.
 
-### setString
+### `--setString`
 
 Sets the configuration as a string.
 
-### From
+### `--From`
 
 Reuses an exiting configuration.
 
-### FromFile
+### `--FromFile`
 
 Reuses an existing configuration from a file.
 
 ## Flags
 
-By default, these flags are set to "false." If any of these flags is set to "true," then then following actions are taken.
+By default, these flags are disabled. If any of these flags are enabled, then then following actions are taken.
 
 ### `--skip-deploy`
 
@@ -42,15 +42,3 @@ The deployments will be deployed sequentially, one after another.
 ### `--render`
 
 The rendered manifests will be printed to the console (stdout) instead of being deployed.
-
-## Config Overwrite Flags
-
-\#TODO: This needs to be a reusable section
-
-### `--set`
-
-### `--set-string`
-
-### `--from`
-
-### `--from-file`
