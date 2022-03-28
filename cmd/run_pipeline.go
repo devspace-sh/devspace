@@ -35,7 +35,7 @@ type RunPipelineCmd struct {
 	ForceDeploy bool
 	SkipDeploy  bool
 
-	DisableUI bool
+	ShowUI bool
 
 	configLoader loader.ConfigLoader
 	log          log.Logger
@@ -83,7 +83,7 @@ Execute a pipeline
 	runPipelineCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 	runPipelineCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
 
-	runPipelineCmd.Flags().BoolVar(&cmd.DisableUI, "disable-ui", false, "Disables the ui server")
+	runPipelineCmd.Flags().BoolVar(&cmd.ShowUI, "show-ui", false, "Shows the ui server")
 	return runPipelineCmd
 }
 
@@ -136,6 +136,6 @@ func (cmd *RunPipelineCmd) runCommand(ctx *devspacecontext.Context, f factory.Fa
 		},
 		ConfigOptions: configOptions,
 		Pipeline:      pipeline,
-		ShowUI:        !cmd.DisableUI,
+		ShowUI:        cmd.ShowUI,
 	})
 }

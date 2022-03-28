@@ -1,9 +1,0 @@
-version: v1beta11
-images:
-  test:
-    image: mydockeruser/devspace
-pipeline:
-  steps:
-    - name: Test
-      command: |-
-        devspace build > test.txt

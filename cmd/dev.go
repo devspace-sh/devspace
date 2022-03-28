@@ -53,7 +53,7 @@ type DevCmd struct {
 	WorkingDirectory string
 	Pipeline         string
 
-	DisableUI bool
+	ShowUI bool
 
 	configLoader loader.ConfigLoader
 	log          log.Logger
@@ -101,7 +101,7 @@ Starts your project in development mode
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 	devCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
 
-	devCmd.Flags().BoolVar(&cmd.DisableUI, "disable-ui", false, "Disables the ui server")
+	devCmd.Flags().BoolVar(&cmd.ShowUI, "show-ui", false, "Shows the ui server")
 
 	devCmd.Flags().IntVar(&cmd.UIPort, "ui-port", 0, "The port to use when opening the ui server")
 	devCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "", "The pipeline to execute")
@@ -172,7 +172,7 @@ func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, c
 		},
 		ConfigOptions: configOptions,
 		Pipeline:      cmd.Pipeline,
-		ShowUI:        !cmd.DisableUI,
+		ShowUI:        cmd.ShowUI,
 		UIPort:        cmd.UIPort,
 	})
 }
