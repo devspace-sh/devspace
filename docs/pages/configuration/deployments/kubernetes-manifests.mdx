@@ -8,6 +8,7 @@ import FragmentKubectlBinaryPath from '../../fragments/kubectl-options-binaryPat
 import FragmentKubectlKustomize from '../../fragments/kubectl-kustomize.mdx';
 import FragmentKustomizeBinaryPath from '../../fragments/kustomize-options-binaryPath.mdx';
 import FragmentKustomizeKustomizeArgs from '../../fragments/kustomize-options-kustomizeArgs.mdx';
+import FragmentUpdateImageTags from '../../fragments/kubectl-updateImageTags.mdx';
 
 To deploy Kubernetes manifests with `kubectl apply`, you need to configure them within the `deployments` section of the `devspace.yaml`.
 
@@ -61,12 +62,13 @@ deployments:
 ## General Options
 
 ### `name`
-The `name` option is required and expects a string to identify this deployment.
+The `name` option is optional and expects a string to identify this deployment. DevSpace will use the deployment key for the deployment name, but `name` can be used to override it.
 
 #### Example: Deployment Name
-```yaml {2}
+```yaml {3}
 deployments:
   backend:
+    name: custom-backend-name  # backend by default
     kubectl:
       manifests:
       - backend/
@@ -74,7 +76,7 @@ deployments:
 ```
 
 ### `namespace`
-The `namespace` option is required and expects a string with the namespace used to deploy the manifests.
+The `namespace` option is optional and expects a string with the namespace used to deploy the manifests.
 
 :::warning
 Only use this option if you really need to. Hard-coding the namespace in `devspace.yaml` makes it harder to share the configuration with your colleagues. It is recommended to set the default namespace of the current context instead using:
@@ -94,6 +96,9 @@ deployments:
       - backend-extra/
 ```
 
+### `updateImageTags`
+
+<FragmentUpdateImageTags/>
 
 ## Kubectl Options
 
@@ -132,7 +137,6 @@ kubectl create --dry-run --output yaml --validate=false --recursive -f backend/
 ### `kubectlBinaryPath`
 
 <FragmentKubectlBinaryPath/>
-
 
 ## Kustomize Options
 
