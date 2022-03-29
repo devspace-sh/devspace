@@ -1,12 +1,11 @@
 ---
-title: Function build_images
-sidebar_label: build_images
+title: Function ensure_pull_secrets
+sidebar_label: ensure_pull_secrets
 ---
 
-The function `build_images` builds either all images (`--all` flag) or the images provided as arguments (e.g. `build_images api ui`). Images are, by default, processed in parallel.
+This function deploys pull secrets in a configuration for a pipeline. PullSecrets are image pull secrets that will be created by devspace in the target namespace during devspace dev or devspace deploy.
 
-
-## Argumentss
+## Arguments
 
 ### `--set`
 
@@ -16,7 +15,7 @@ Sets the configuration.
 
 Sets the configuration as a string.
 
-### `--from`
+### `--From`
 
 Reuses an existing configuration.
 
@@ -28,34 +27,6 @@ Reuses an existing configuration from a file.
 
 By default, flags are disabled. If a flag is enabled, the following actions are taken.
 
-### `--all`
+### `-all`
 
-Build all images.
-
-### `--tag / -t`
-
-Override the default tags.
-
-### `--force-rebuild`
-
-Force an image to be rebuilt.
-
-### `--max-concurrent`
-
-The maximum number of concurrent images that can be built.
-
-### `--sequential`
-
-Build images sequentially, one after another.
-
-### `--skip`
-
-Skip building any images.
-
-### `--skip-push`
-
-Skip pushing any images.
-
-### `--skip-push-on-local-kubernetes`
-
-Skip pushing any images to a local kubernetes cluster.
+If enabled, ensures all pull secrets are deployed to a configuration.
