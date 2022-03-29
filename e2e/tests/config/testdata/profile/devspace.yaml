@@ -4,6 +4,7 @@ vars:
     value: name
   - name: NAME_2
     value: name2
+  - name: MANIFEST
 images:
   test:
     image: test
@@ -16,6 +17,22 @@ profiles:
   - name: remove-image
     replace:
       images: {}
+  - name: merge-deployments
+    merge:
+      deployments:
+        - name: test456
+          kubectl:
+            manifests:
+              - ${MANIFEST}
+              - test.yaml
+  - name: replace-manifests
+    replace:
+      deployments:
+        - name: test123
+          kubectl:
+            manifests:
+              - test123.yaml
+              - ${MANIFEST}
   - name: add-deployment
     patches: 
       - op: add

@@ -53,6 +53,7 @@ type Logger interface {
 	WithLevel(level logrus.Level) Logger
 	ErrorStreamOnly() Logger
 	WithPrefix(prefix string) Logger
+	WithPrefixColor(prefix, color string) Logger
 	WithSink(sink Logger) Logger
 	AddSink(sink Logger)
 }

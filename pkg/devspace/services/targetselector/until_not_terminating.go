@@ -46,7 +46,7 @@ func (u *untilNotTerminating) SelectPod(ctx context.Context, client kubectl.Clie
 		return false, nil, nil
 	} else if len(pods) == 0 {
 		if now.After(u.initialDelay.Add(time.Second * 6)) {
-			u.podInfoPrinter.PrintNotFoundWarning(client, namespace, log)
+			u.podInfoPrinter.PrintNotFoundWarning(ctx, client, namespace, log)
 		}
 
 		return false, nil, nil
@@ -68,7 +68,7 @@ func (u *untilNotTerminating) SelectContainer(ctx context.Context, client kubect
 		return false, nil, nil
 	} else if len(containers) == 0 {
 		if now.After(u.initialDelay.Add(time.Second * 6)) {
-			u.podInfoPrinter.PrintNotFoundWarning(client, namespace, log)
+			u.podInfoPrinter.PrintNotFoundWarning(ctx, client, namespace, log)
 		}
 
 		return false, nil, nil

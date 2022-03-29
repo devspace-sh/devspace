@@ -103,7 +103,7 @@ func (cmd *RunPipelineCmd) Run(f factory.Factory, args []string) error {
 		return err
 	}
 
-	return runWithHooks(ctx, "devCommand", func() error {
+	return runWithHooks(ctx, "runPipelineCommand", func() error {
 		// Build and deploy images
 		err = cmd.runCommand(ctx, f, configOptions, args[0])
 		if err != nil {

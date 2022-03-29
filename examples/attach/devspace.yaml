@@ -1,0 +1,17 @@
+version: v2beta1
+name: attach
+
+deployments:
+  my-deployment:
+    helm:
+      values:
+        containers:
+          - image: ubuntu
+
+dev:
+  my-dev:
+    imageSelector: ubuntu
+    attach: {}
+    workingDir: /app
+    sync:
+      - path: ./

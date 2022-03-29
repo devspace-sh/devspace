@@ -1,41 +1,27 @@
-version: v1beta11
+version: v2beta1
+name: kaniko
+
 vars:
-  - name: IMAGE
-    value: myuser/myimage
+  IMAGE: myuser/myimage
+
 images:
-  default:
+  my-image:
     image: ${IMAGE}
-    entrypoint: ["sleep"]
-    cmd: ["99999999999999"]
-    build:
-      kaniko: {}
-        # custom kaniko image
-        # image: mykaniko/kaniko:latest
-        # additional mounts for the kaniko pod
-        # additionalMounts:
-        #  - configMap:
-        #      name: test
-        #      items:
-        #        - key: key
-        #          path: config.json
-        #    mountPath: /test/test
-        #  - secret:
-        #      name: test2
-        #      items:
-        #        - key: key
-        #          path: config.json
-        #    mountPath: /test/test
+    kaniko: {}
+
 deployments:
-- name: devspace-default
-  helm:
-    chart:
-      name: ./chart
+  my-deployment:
+    updateImageTags: true
+    helm:
+      values:
+        containers:
+          - image: ${IMAGE}
+
 dev:
-  ports:
-  - imageSelector: ${IMAGE}
-    forward:
-    - port: 8080
-  sync:
-  - imageSelector: ${IMAGE}
-  terminal:
+  my-dev:
     imageSelector: ${IMAGE}
+    terminal: {}
+    ports:
+    - port: 8080
+    sync:
+    - path: ./

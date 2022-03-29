@@ -72,8 +72,9 @@ while ! [ -f $touchFile ]; do
     echo "Container started with restart helper."
     echo "Waiting for initial sync to complete before starting application..."
   else
-    if (( $number % 10 == 0 )); then
+    if [ "$counter" = 10 ]; then
       echo "(Still waiting for initial sync to complete)"
+      counter=0
     fi
   fi
   sleep 1
@@ -107,7 +108,7 @@ while $restart; do
     setsid "$@" &
     pid=$!
     echo "$pid" >"$pidFile"
-    tail --pid=$pid -f /dev/null
+    wait "$pid"
   fi
   set -e
 

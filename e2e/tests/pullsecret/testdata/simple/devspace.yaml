@@ -6,8 +6,23 @@ pullSecrets:
     username: my-user2
     password: my-password2
     serviceAccounts: ["default"]
+  test3:
+    registry: ghcr3.io
+    username: my-user3
+    password: my-password3
+    serviceAccounts: ["default"]
   test:
     registry: ghcr.io
     username: my-user
     password: my-password
     secret: test-secret
+  test4:
+    registry: ghcr4.io
+    username: my-user4
+    password: my-password4
+    secret: merged-secret
+  test5:
+    registry: ghcr5.io
+    username: my-user5
+    password: my-password5
+    secret: merged-secret

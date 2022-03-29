@@ -55,7 +55,7 @@ func EnsurePullSecrets(ctx *devspacecontext.Context, args []string) error {
 		return fmt.Errorf("either specify 'ensure_pull_secrets --all' or 'ensure_pull_secrets pullSecret1 pullSecret2'")
 	}
 
-	dockerClient, err := docker.NewClient(ctx.Log)
+	dockerClient, err := docker.NewClient(ctx.Context, ctx.Log)
 	if err != nil {
 		ctx.Log.Debugf("Error creating docker client: %v", err)
 		dockerClient = nil
