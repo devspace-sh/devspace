@@ -3,40 +3,30 @@ title: Function run_dependency_pipelines
 sidebar_label: run_dependency_pipelines
 ---
 
-## Description
-
-Description needed here
-
+Runs dependencies for pipelines.
 
 ## Arguments
 
-
-## Flags
-
 ### `--pipeline`
 
-
+The pipeline to be deployed from the dependency.
 
 ### `--exclude`
 
-
+The dependencies to be excluded from the pipeline.
 
 ### `--only`
 
+The dependencies to be included in the pipeline.
+
+## Flags
+
+By default, all flags are disabled. If any of these flags are enabled, the follwing actions will take place.
 
 ### `--sequential`
 
+The dependencies will be run in sequential order, one after another.
 
+### `--all`
 
-
-## Config Overwrite Flags
-
-\#TODO: This needs to be a reusable section
-
-### `--set`
-
-### `--set-string`
-
-### `--from`
-
-### `--from-file`
+If enabled, all dependencies will be deployed.
