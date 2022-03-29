@@ -37,28 +37,6 @@ kubectl apply -f frontend/manifest.yaml
 Deployments with `kubectl` require `kubectl` to be installed. If the `kubectl` binary cannot be found within the `$PATH` variable and it is not specified by specifying the [`cmdPath` option](#cmdpath), DevSpace will download the `kubectl` binary into the `$HOME/.devspace/bin` folder.
 :::
 
-
-## Manifests
-
-### `manifests`
-The `manifests` option is mandatory and expects an array of paths or path globs that point to Kubernetes manifest files (yaml or json files) or to folders containing Kubernetes manifests or Kustomizations.
-
-#### Example: Manifests
-```yaml
-deployments:
-  backend:
-    kubectl:
-      manifests:
-      - backend/
-      - backend-extra/
-      - glob/path/to/manifests/
-```
-
-### `kustomize`
-
-<FragmentKubectlKustomize/>
-
-
 ## General Options
 
 ### `name`
@@ -99,6 +77,26 @@ deployments:
 ### `updateImageTags`
 
 <FragmentUpdateImageTags/>
+
+## Manifests
+
+### `manifests`
+The `manifests` option is mandatory and expects an array of paths or path globs that point to Kubernetes manifest files (yaml or json files) or to folders containing Kubernetes manifests or Kustomizations.
+
+#### Example: Manifests
+```yaml
+deployments:
+  backend:
+    kubectl:
+      manifests:
+      - backend/
+      - backend-extra/
+      - glob/path/to/manifests/
+```
+
+### `kustomize`
+
+<FragmentKubectlKustomize/>
 
 ## Kubectl Options
 

@@ -33,28 +33,6 @@ kubectl apply -k another-kustomization/
 Kustomization deployments require `kubectl` or `kustomize` to be installed. If both are available, DevSpace will use the `kustomize` binary by default.
 :::
 
-
-## Manifests
-
-### `manifests`
-The `manifests` option is mandatory and expects an array of paths that point to directories containing Kustomizations.
-
-#### Example: Manifests
-```yaml
-deployments:
-  backend:
-    kubectl:
-      kustomize: true
-      manifests:
-      - my-kustomization/
-      - another-kustomization/
-```
-
-### `kustomize`
-
-<FragmentKubectlKustomize/>
-
-
 ## General Options
 
 ### `name`
@@ -96,6 +74,26 @@ deployments:
 ### `updateImageTags`
 
 <FragmentUpdateImageTags/>
+
+## Manifests
+
+### `manifests`
+The `manifests` option is mandatory and expects an array of paths that point to directories containing Kustomizations.
+
+#### Example: Manifests
+```yaml
+deployments:
+  backend:
+    kubectl:
+      kustomize: true
+      manifests:
+      - my-kustomization/
+      - another-kustomization/
+```
+
+### `kustomize`
+
+<FragmentKubectlKustomize/>
 
 ## Kubectl Options
 
