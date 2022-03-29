@@ -473,9 +473,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			if len(deployment.Helm.DeleteArgs) > 0 {
 				log.Warnf("deployments[*].helm.deleteArgs is not supported anymore in v6")
 			}
-			if deployment.Helm.ReplaceImageTags == nil || *deployment.Helm.ReplaceImageTags {
-				nextConfig.Deployments[name].UpdateImageTags = true
-			}
+			nextConfig.Deployments[name].UpdateImageTags = deployment.Helm.ReplaceImageTags
 		} else if deployment.Kubectl != nil {
 			nextConfig.Deployments[name].Kubectl = &next.KubectlConfig{
 				Manifests:         deployment.Kubectl.Manifests,
@@ -488,9 +486,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			if len(deployment.Kubectl.DeleteArgs) > 0 {
 				log.Warnf("deployments[*].kubectl.deleteArgs is not supported anymore in v6")
 			}
-			if deployment.Kubectl.ReplaceImageTags == nil || *deployment.Kubectl.ReplaceImageTags {
-				nextConfig.Deployments[name].UpdateImageTags = true
-			}
+			nextConfig.Deployments[name].UpdateImageTags = deployment.Kubectl.ReplaceImageTags
 		}
 	}
 

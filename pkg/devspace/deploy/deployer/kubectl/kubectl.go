@@ -221,7 +221,7 @@ func (d *DeployConfig) getReplacedManifest(ctx *devspacecontext.Context, manifes
 			Namespace:  resource.GetNamespace(),
 		})
 
-		if d.DeploymentConfig.UpdateImageTags {
+		if d.DeploymentConfig.UpdateImageTags == nil || *d.DeploymentConfig.UpdateImageTags {
 			redeploy, err := legacy.ReplaceImageNamesStringMap(resource.Object, ctx.Config, ctx.Dependencies, map[string]bool{"image": true})
 			if err != nil {
 				return false, "", nil, err

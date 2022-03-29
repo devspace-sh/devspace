@@ -533,7 +533,7 @@ type DeploymentConfig struct {
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 	// UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the
 	// images section with their most recent built tag.
-	UpdateImageTags bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
+	UpdateImageTags *bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
 
 	// Helm tells DevSpace to deploy this deployment via helm
 	Helm *HelmConfig `yaml:"helm,omitempty" json:"helm,omitempty"`
