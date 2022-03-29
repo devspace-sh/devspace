@@ -14,7 +14,6 @@ images:
 # Deploy the built image with helm and the component chart
 deployments:
   my-deployment:
-    updateImageTags: true
     helm:
       values:
         containers:

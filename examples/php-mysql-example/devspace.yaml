@@ -34,7 +34,6 @@ deployments:
           size: 5Gi
 
   php:
-    updateImageTags: true
     helm:
       values:
         containers:

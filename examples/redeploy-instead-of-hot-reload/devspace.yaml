@@ -15,7 +15,6 @@ images:
 
 deployments:
   default:
-    updateImageTags: true
     helm:
       values:
         containers:

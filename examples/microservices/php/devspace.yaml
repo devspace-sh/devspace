@@ -11,7 +11,6 @@ images:
 
 deployments:
   php:
-    updateImageTags: true
     helm:
       chart:
         name: chart
