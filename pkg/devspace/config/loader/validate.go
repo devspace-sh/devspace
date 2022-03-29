@@ -1,8 +1,8 @@
 package loader
 
 import (
-	"bytes"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -232,9 +232,7 @@ func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteVal
 		}
 
 		componentValues := &latest.ComponentConfig{}
-		decoder := yaml.NewDecoder(bytes.NewReader(b))
-		decoder.KnownFields(true)
-		err = decoder.Decode(componentValues)
+		err = yamlutil.UnmarshalStrict(b, componentValues)
 		if err != nil {
 			return errors.Errorf("deployments[%s].helm.componentChart: component values are incorrect: %v", deployConfig.Name, err)
 		}

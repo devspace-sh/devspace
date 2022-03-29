@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"mvdan.cc/sh/v3/interp"
 	"os"
 	"os/exec"
@@ -13,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
-	"gopkg.in/yaml.v3"
 )
 
 // ExpressionMatchRegex is the regex to check if a value matches the devspace var format
@@ -135,14 +135,14 @@ func ResolveExpressions(ctx context.Context, value, dir string) (interface{}, er
 
 		// is yaml object?
 		m := map[string]interface{}{}
-		err = yaml.Unmarshal([]byte(out), &m)
+		err = yamlutil.Unmarshal([]byte(out), &m)
 		if err == nil {
 			return m, nil
 		}
 
 		// is yaml array?
 		arr := []interface{}{}
-		err = yaml.Unmarshal([]byte(out), &arr)
+		err = yamlutil.Unmarshal([]byte(out), &arr)
 		if err == nil {
 			return arr, nil
 		}

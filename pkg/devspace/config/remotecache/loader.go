@@ -7,7 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/encryption"
-	"gopkg.in/yaml.v3"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -57,7 +57,7 @@ func (c *cacheLoader) Load(ctx context.Context, client kubectl.Client) (Cache, e
 
 	remoteCache := &RemoteCache{}
 	remoteCache.raw = secret.Data["cache"]
-	err = yaml.Unmarshal(secret.Data["cache"], remoteCache)
+	err = yamlutil.Unmarshal(secret.Data["cache"], remoteCache)
 	if err != nil {
 		return nil, err
 	}

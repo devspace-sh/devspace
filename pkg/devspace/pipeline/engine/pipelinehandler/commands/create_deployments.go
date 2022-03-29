@@ -10,8 +10,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/strvals"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -104,7 +104,7 @@ func applySetValues(ctx *devspacecontext.Context, name, objName string, set, set
 		}
 
 		m := map[string]interface{}{}
-		err = yaml.Unmarshal(out, m)
+		err = yamlutil.Unmarshal(out, m)
 		if err != nil {
 			return nil, fmt.Errorf("error unmarshalling %s, %v", f, err)
 		}

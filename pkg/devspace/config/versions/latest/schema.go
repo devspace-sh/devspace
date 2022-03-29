@@ -1,6 +1,7 @@
 package latest
 
 import (
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"strings"
 
 	"encoding/json"
@@ -34,7 +35,7 @@ func NewRaw() *Config {
 func (c *Config) Clone() *Config {
 	out, _ := yaml.Marshal(c)
 	n := &Config{}
-	_ = yaml.Unmarshal(out, n)
+	_ = yamlutil.Unmarshal(out, n)
 	return n
 }
 

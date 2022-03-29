@@ -2,6 +2,7 @@ package patch
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 
 	"gopkg.in/yaml.v3"
 )
@@ -11,7 +12,7 @@ type Patch []Operation
 // Apply returns a YAML document that has been mutated per patch
 func (p Patch) Apply(doc []byte) ([]byte, error) {
 	var node yaml.Node
-	err := yaml.Unmarshal(doc, &node)
+	err := yamlutil.Unmarshal(doc, &node)
 	if err != nil {
 		return nil, fmt.Errorf("failed unmarshaling doc: %s\n\n%s", string(doc), err)
 	}
@@ -33,7 +34,7 @@ func NewNode(raw *interface{}) (*yaml.Node, error) {
 	}
 
 	var node yaml.Node
-	err = yaml.Unmarshal(doc, &node)
+	err = yamlutil.Unmarshal(doc, &node)
 	if err != nil {
 		return nil, fmt.Errorf("failed unmarshaling doc: %s\n\n%s", string(doc), err)
 	}
