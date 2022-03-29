@@ -1,42 +1,276 @@
 ---
-title: Function run_default_pipeline
-sidebar_label: run_default_pipeline
+title: Function pipeline content
+sidebar_label: pipeline content
 ---
 
 
+
+
+# Purge Deployments
+
+This function removes a deployment.
+
+## Arguments
+
+
+## Flags
+--all
+Purges all existing deployments.
+
+--sequential
+Purges all existing deployments in sequential order.
+
+Config Overwrite Flags
+#TODO: This needs to be a reusable section
+
+--set
+--set-string
+--from
+--from-file
+
+# Exec Container
+
+This function enables you to execute commands inside a container.
+
+## Arguments
+--image-selector
+The image selector to be used when selecting the container.
+
+--label-selector
+The label selector to be used when selecting the container.
+
+--container
+The container to be used.
+
+--namespace
+The namespace to be used.
+
+--timeout
+The amount of time to wait for a container to be ready. The default is 5 minutes.
+
+## Flags
+By default, these flags are disabled. If any of these flags are enabled, the following actions will be taken.
+
+--diable-wait
+If enabled, will not wait for the container to be ready.
+
+Config Overwrite Flags
+#TODO: This needs to be a reusable section
+
+--set
+--set-string
+--from
+--from-file
+
+# Get Config Value
+
+Description needed here
+
+## Arguments
+
+
+
+
+## Flags
+--all
+--tag / -t
+--force-rebuild
+--max-concurrent
+--sequential
+--skip
+--skip-push
+--skip-push-on-local-kubernetes
+
+Config Overwrite Flags
+#TODO: This needs to be a reusable section
+
+--set
+--set-string
+--from
+--from-file
+
+# Get Image
+
+This function retrieves an image or image tag.
+
+## Arguments
+--dependency
+Retrieves the image or image tag from the named dependency.
+
+--only
+Displays either the image, or the tag, but not both.
+
+## Flags
+
+
+Config Overwrite Flags
+
+
+#TODO: This needs to be a reusable section
+
+--set
+--set-string
+--from
+--from-file
+
+# Run Default pipeline
+
 Runs the default pipeline.
 
+## Arguments
+
+
+## Flags
+--all
+--tag / -t
+--force-rebuild
+--max-concurrent
+--sequential
+--skip
+--skip-push
+--skip-push-on-local-kubernetes
+
+
+## Config Overwrite Flags
+#TODO: This needs to be a reusable section
+
+--set
+--set-string
+--from
+--from-file
+
+
+# Run Dependency Pipelines
+
+Runs dependencies for pipelines.
+
+## Arguments
+--pipeline
+The pipeline to be deployed from the dependency.
+
+--exclude
+The dependencies to be excluded from the pipeline.
+
+--only
+The dependencies to be included in the pipeline.
+
+## Flags
+By default, all flags are disabled. If any of these flags are enabled, the follwing actions will take place.
+
+--sequential
+The dependencies will be run in sequential order, one after another.
+
+--all
+If enabled, all dependencies will be deployed.
+
+# Run Pipelines
+
+This function triggers a new pipeline to be run.
+
+## Arguments
+
+
+
+## Flags
+--env
+Passes environment variables to the pipelines.
+
+--background
+Runs the pipeline in the background.
+
+--sequential
+Runs the pipelines in sequential order, one after another.
+
+## Config Overwrite Flags
+
+#TODO: This needs to be a reusable section
+
+--run-dependency-pipelines
+--create-deployments
+--start-dev-app
+
+# Select Pod
+
+This function is used to select the container (pod) to be used in the pipeline when it is run.
+
+## Arguments
+
+
+
+## Flags
+--all
+--tag / -t
+--force-rebuild
+--max-concurrent
+--sequential
+--skip
+--skip-push
+--skip-push-on-local-kubernetes
+
+
+## Config Overwrite Flags
+#TODO: This needs to be a reusable section
+
+--image-selector
+--label-selector
+--container
+--namespace
+--disable-wait
+--timeout
+
+# Start dev
+
+This function starts all existing dev configurations.
+
+## Arguments
+Set
+Sets the configuration.
+
+SetString
+Sets the configuration as a string.
+
+From
+Reuses an existing configuration.
+
+FromFile
+Reuses an existing configuration from a file.
+
+
+## Flags
+By default, these flasg are set to disabled. If any of these flags are enabled, the following actions will be taken.
+
+--continue-on-terminal-exit
+The dev start process will continue, even on a terminal exit.
+
+--disable-sync
+No sync configuraitons will be started.
+
+--disable-port-forwarding
+No port forwarding configurations will be started.
+
+--disable-pod-replace
+No pods will be replaced.
+
+--disable-open
+No pods will be opened.
+
+--kill-application
+Terminates the pipeline, including all dev pods.
+
+All
+Starts all dev configurations.
+
+
+
+
+# Stop dev
+
+This function stops all existing dev configurations.
 
 ## Arguments
 
 
 ## Flags
 
-### `--all`
-
-### `--tag / -t`
-
-### `--force-rebuild`
-
-### `--max-concurrent`
-
-### `--sequential`
-
-### `--skip`
-
-### `--skip-push`
-
-### `--skip-push-on-local-kubernetes`
-
-
-## Config Overwrite Flags
-
-\#TODO: This needs to be a reusable section
-
-### `--set`
-
-### `--set-string`
-
-### `--from`
-
-### `--from-file`
+--all
+Stops all current dev configurations.
