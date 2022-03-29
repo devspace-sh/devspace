@@ -50,57 +50,6 @@ func (ws *wsStream) Read(p []byte) (int, error) {
 	return len(message), nil
 }
 
-func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
-	/*// Kube Context
-	kubeContext := h.defaultContext
-	context, ok := r.URL.Query()["context"]
-	if ok && len(context) == 1 && context[0] != "" {
-		kubeContext = context[0]
-	}
-
-	// Namespace
-	kubeNamespace := h.defaultNamespace
-	namespace, ok := r.URL.Query()["namespace"]
-	if ok && len(namespace) == 1 && namespace[0] != "" {
-		kubeNamespace = namespace[0]
-	}
-
-	// Create kubectl client
-	client, err := h.getClientFromCache(kubeContext, kubeNamespace)
-	if err != nil {
-		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		h.log.Errorf("Error upgrading connection in %s: %v", r.URL.String(), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	defer ws.Close()
-
-	writer := &wsStream{WebSocket: ws}
-	manager, err := logs.NewLogManager(client, h.config, h.dependencies, make(chan error), log.NewStreamLogger(writer, logrus.InfoLevel))
-	if err != nil {
-		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
-		websocketError(ws, err)
-		return
-	}
-
-	err = manager.Start()
-	if err != nil {
-		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
-		websocketError(ws, err)
-		return
-	}
-
-	_ = ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
-	_ = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))*/
-}
-
 func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	// Kube Context
 	kubeContext := h.ctx.KubeClient.CurrentContext()

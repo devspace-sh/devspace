@@ -3,15 +3,16 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devspace/helper/util/port"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/loft-sh/devspace/helper/util/port"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -159,7 +160,6 @@ func newHandler(ctx *devspacecontext.Context, path string, pipeline types.Pipeli
 	handler.mux.HandleFunc("/api/enter", handler.enter)
 	handler.mux.HandleFunc("/api/resize", handler.resize)
 	handler.mux.HandleFunc("/api/logs", handler.logs)
-	handler.mux.HandleFunc("/api/logs-multiple", handler.logsMultiple)
 	return handler, nil
 }
 
