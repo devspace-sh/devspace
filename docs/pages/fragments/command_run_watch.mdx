@@ -1,20 +1,17 @@
-## Args
+TODO: run_watch one-liner description
 
+## Arguments
 
-## Flags
+### `--fail-on-error`
 
-### `--all`
+If true, the command will fail on an error while running the sub command.
 
-### `--tag / -t`
+```
+run_watch --path MY_PATH -- my_command
+```
 
-### `--force-rebuild`
+### `--path`, `-p`
 
-### `--max-concurrent`
+The paths to watch. Can be patterns in the form of `./**/my-file.txt`.
 
-### `--sequential`
-
-### `--skip`
-
-### `--skip-push`
-
-### `--skip-push-on-local-kubernetes`
+### Example
