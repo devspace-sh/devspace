@@ -6,36 +6,56 @@ sidebar_label: build_images
 The function `build_images` builds either all images (`--all` flag) or the images provided as arguments (e.g. `build_images api ui`). Images are, by default, processed in parallel.
 
 
-## Args
-
-
-## Flags
-
-### `--all`
-
-### `--tag / -t`
-
-### `--force-rebuild`
-
-### `--max-concurrent`
-
-### `--sequential`
-
-### `--skip`
-
-### `--skip-push`
-
-### `--skip-push-on-local-kubernetes`
-
-
-## Config Overwrite Flags
-
-\#TODO: This needs to be a reusable section
+## Argumentss
 
 ### `--set`
 
+Sets the configuration.
+
 ### `--set-string`
+
+Sets the configuration as a string.
 
 ### `--from`
 
+Reuses an existing configuration.
+
 ### `--from-file`
+
+Reuses an existing configuration from a file.
+
+## Flags
+
+By default, flags are disabled. If a flag is enabled, the following actions are taken.
+
+### `--all`
+
+Build all images.
+
+### `--tag / -t`
+
+Override the default tags.
+
+### `--force-rebuild`
+
+Force an image to be rebuilt.
+
+### `--max-concurrent`
+
+The maximum number of concurrent images that can be built.
+
+### `--sequential`
+
+Build images sequentially, one after another.
+
+### `--skip`
+
+Skip building any images.
+
+### `--skip-push`
+
+Skip pushing any images.
+
+### `--skip-push-on-local-kubernetes`
+
+Skip pushing any images to a local kubernetes cluster.
