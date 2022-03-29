@@ -3,38 +3,38 @@ title: Function exec_container
 sidebar_label: exec_container
 ---
 
-## Description
-
-Description needed here
+This function enables you to execute commands inside a container.
 
 
 ## Arguments
 
-
-## Flags
-
 ### `--image-selector`
 
-
+The image selector to be used when selecting the container.
 
 ### `--label-selector`
 
-
+The label selector to be used when selecting the container.
 
 ### `--container`
 
-
+The container to be used.
 
 ### `--namespace`
 
-
-
-### `--disable-wait`
-
-
+The namespace to be used.
 
 ### `--timeout`
 
+The amount of time to wait for a container to be ready. The default is 5 minutes.
+
+## Flags
+
+By default, these flags are disabled. If any of these flags are enabled, the following actions will be taken.
+
+### `--diable-wait`
+
+If enabled, will not wait for the container to be ready.
 
 
 ## Config Overwrite Flags
