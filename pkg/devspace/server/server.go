@@ -238,7 +238,7 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var data interface{}
-	if err := yaml.Unmarshal([]byte(s), &data); err != nil {
+	if err := yamlutil.Unmarshal([]byte(s), &data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
