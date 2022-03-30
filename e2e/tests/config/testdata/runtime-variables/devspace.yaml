@@ -3,7 +3,6 @@ vars:
   - name: OTHER
     value: test
   - name: NOT_RESOLVED
-    value: not-resolved
   - name: ALREADY_RESOLVED
     value: resolved
     alwaysResolve: true

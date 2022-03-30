@@ -47,13 +47,14 @@ var _ = DevSpaceDescribe("build", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// create build command
-		buildCmd := &cmd.BuildCmd{
+		buildCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
 			SkipPush: true,
+			Pipeline: "build",
 		}
-		err = buildCmd.Run(f)
+		err = buildCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
@@ -83,13 +84,14 @@ var _ = DevSpaceDescribe("build", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// create build command
-		buildCmd := &cmd.BuildCmd{
+		buildCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
 			SkipPush: true,
+			Pipeline: "build",
 		}
-		err = buildCmd.Run(f)
+		err = buildCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
@@ -117,13 +119,14 @@ var _ = DevSpaceDescribe("build", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// create build command
-		buildCmd := &cmd.BuildCmd{
+		buildCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
 			SkipPush: true,
+			Pipeline: "build",
 		}
-		err = buildCmd.Run(f)
+		err = buildCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 	})
 
@@ -133,13 +136,14 @@ var _ = DevSpaceDescribe("build", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// create build command
-		buildCmd := &cmd.BuildCmd{
+		buildCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
 			SkipPush: true,
+			Pipeline: "build",
 		}
-		err = buildCmd.Run(f)
+		err = buildCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
@@ -167,13 +171,14 @@ var _ = DevSpaceDescribe("build", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// create build command
-		buildCmd := &cmd.BuildCmd{
+		buildCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
 			SkipPush: true,
+			Pipeline: "build",
 		}
-		err = buildCmd.Run(f)
+		err = buildCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
@@ -231,13 +236,14 @@ var _ = DevSpaceDescribe("build", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// create build command
-		buildCmd := &cmd.BuildCmd{
+		buildCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
 			SkipPush: true,
+			Pipeline: "build",
 		}
-		err = buildCmd.Run(f)
+		err = buildCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
@@ -295,13 +301,14 @@ var _ = DevSpaceDescribe("build", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// create build command
-		buildCmd := &cmd.BuildCmd{
+		buildCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
 			SkipPush: true,
+			Pipeline: "build",
 		}
-		err = buildCmd.Run(f)
+		err = buildCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs

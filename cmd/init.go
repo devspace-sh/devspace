@@ -736,16 +736,17 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 
 	// Use the render command to render it.
 	writer := &bytes.Buffer{}
-	renderCmd := &RenderCmd{
+	renderCmd := &RunPipelineCmd{
 		GlobalFlags: &flags.GlobalFlags{
 			Silent:     true,
 			ConfigPath: renderPath,
 		},
-		SkipPush:  true,
-		SkipBuild: true,
-		Writer:    writer,
+		SkipPush:     true,
+		SkipBuild:    true,
+		Render:       true,
+		RenderWriter: writer,
 	}
-	err = renderCmd.Run(f)
+	err = renderCmd.RunDefault(f)
 	if err != nil {
 		return "", err
 	}

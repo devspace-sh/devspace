@@ -42,13 +42,14 @@ var _ = DevSpaceDescribe("portforward", func() {
 		framework.ExpectNoError(err)
 		defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
-		devCmd := &cmd.DevCmd{
+		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "dev",
 		}
-		err = devCmd.Run(f)
+		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 		framework.ExpectLocalFileContentsImmediately("test.txt", "Hello World!\n")
 	})
@@ -66,14 +67,15 @@ var _ = DevSpaceDescribe("portforward", func() {
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
-			devCmd := &cmd.DevCmd{
+			devCmd := &cmd.RunPipelineCmd{
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Ctx: cancelCtx,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
-			err := devCmd.Run(f)
+			err := devCmd.RunDefault(f)
 			if err != nil {
 				f.GetLog().Errorf("error: %v", err)
 			}
@@ -127,13 +129,14 @@ var _ = DevSpaceDescribe("portforward", func() {
 		framework.ExpectNoError(err)
 		defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
-		devCmd := &cmd.DevCmd{
+		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "dev",
 		}
-		err = devCmd.Run(f)
+		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 	})
 })

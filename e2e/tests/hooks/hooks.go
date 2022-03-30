@@ -47,14 +47,15 @@ var _ = DevSpaceDescribe("hooks", func() {
 			framework.ExpectNoError(err)
 		}()
 
-		buildCmd := &cmd.BuildCmd{
+		buildCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "build",
 			SkipPush: false,
 		}
-		err = buildCmd.Run(f)
+		err = buildCmd.RunDefault(f)
 		framework.ExpectError(err)
 
 		// check if files are there
@@ -72,14 +73,15 @@ var _ = DevSpaceDescribe("hooks", func() {
 		framework.ExpectError(err)
 
 		// now execute devspace dev and fail on deploy
-		devCmd := &cmd.DevCmd{
+		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "dev",
 			SkipPush: true,
 		}
-		err = devCmd.Run(f)
+		err = devCmd.RunDefault(f)
 		framework.ExpectError(err)
 
 		// check if files are correctly created
@@ -126,12 +128,13 @@ var _ = DevSpaceDescribe("hooks", func() {
 		// create first dev command
 		cancelCtx1, cancel1 := context.WithCancel(context.Background())
 		defer cancel1()
-		devCmd1 := &cmd.DevCmd{
+		devCmd1 := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Ctx: cancelCtx1,
+			Pipeline: "dev",
+			Ctx:      cancelCtx1,
 		}
 
 		// start the command
@@ -139,7 +142,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd1.Run(f)
+			err = devCmd1.RunDefault(f)
 			framework.ExpectNoError(err)
 		}()
 
@@ -173,12 +176,13 @@ var _ = DevSpaceDescribe("hooks", func() {
 		// create second dev command
 		cancelCtx2, cancel2 := context.WithCancel(context.Background())
 		defer cancel2()
-		devCmd2 := &cmd.DevCmd{
+		devCmd2 := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Ctx: cancelCtx2,
+			Pipeline: "dev",
+			Ctx:      cancelCtx2,
 		}
 
 		// start the command
@@ -186,7 +190,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd2.Run(f)
+			err = devCmd2.RunDefault(f)
 
 			framework.ExpectNoError(err)
 		}()

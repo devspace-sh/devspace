@@ -58,14 +58,15 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
-			devCmd := &cmd.DevCmd{
+			devCmd := &cmd.RunPipelineCmd{
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Ctx: cancelCtx,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
-			err := devCmd.Run(f)
+			err := devCmd.RunDefault(f)
 			if err != nil {
 				f.GetLog().Errorf("error: %v", err)
 			}
@@ -115,15 +116,16 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.DeployCmd{
+		deployCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "dev",
 		}
 
 		// run the command
-		err = deployCmd.Run(f)
+		err = deployCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// make sure the dependencies are correctly deployed
@@ -262,14 +264,15 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		// create a new dev command
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		devCmd := &cmd.DevCmd{
+		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Ctx: cancelCtx,
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
 		}
-		err = devCmd.Run(f)
+		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 		cancel()
 
@@ -292,14 +295,14 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectEqual(pods.Items[0].Spec.Containers[0].Image, "alpine:latest")
 
 		// now purge the deployment, dependency and make sure the replica set is deleted as well
-		purgeCmd := &cmd.PurgeCmd{
+		purgeCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			All: true,
+			Pipeline: "purge",
 		}
-		err = purgeCmd.Run(f)
+		err = purgeCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// wait until all pods are killed
