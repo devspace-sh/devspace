@@ -1,0 +1,29 @@
+TODO: run_watch one-liner description
+
+## Arguments
+
+### `--fail-on-error`
+
+If true, the command will fail on an error while running the sub command.
+
+```
+run_watch --path MY_PATH -- my_command
+```
+
+### `--path`, `-p`
+
+The paths to watch. Can be patterns in the form of `./**/my-file.txt`.
+
+```
+```
+
+### Example
+
+TODO: Fix example
+
+```yaml
+pipelines:
+  dev:
+    run: |-
+      run_watch
+```

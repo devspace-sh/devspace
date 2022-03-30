@@ -172,7 +172,7 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 		return nil, err
 	}
 
-	err = l.ensureRequires(parsedConfig, log)
+	err = l.ensureRequires(ctx, parsedConfig, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "require versions")
 	}
@@ -191,7 +191,7 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 	return c, nil
 }
 
-func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) error {
+func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config, log log.Logger) error {
 	if config == nil {
 		return nil
 	}
@@ -259,7 +259,7 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 			return errors.Wrapf(err, "parsing require.commands[%d].version", index)
 		}
 
-		out, err := command.Output(context.TODO(), filepath.Dir(l.absConfigPath), c.Name, versionArgs...)
+		out, err := command.Output(ctx, filepath.Dir(l.absConfigPath), c.Name, versionArgs...)
 		if err != nil {
 			return fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version)
 		}
@@ -554,12 +554,6 @@ func (l *configLoader) applyProfiles(ctx context.Context, data map[string]interf
 
 		// Apply merge
 		data, err = ApplyMerge(data, profiles[i])
-		if err != nil {
-			return nil, err
-		}
-
-		// Apply strategic merge
-		data, err = ApplyStrategicMerge(data, profiles[i])
 		if err != nil {
 			return nil, err
 		}

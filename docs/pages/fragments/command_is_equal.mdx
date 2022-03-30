@@ -1,0 +1,29 @@
+The function `is_equal` checks if two given arguments are a command in DevSpace.
+
+## Arguments
+
+### `[arg1 arg2]`
+
+```
+is_equal [arg1] [arg2]
+```
+
+### Example
+
+Use `is_equal` as a function under your pipeline definitions:
+
+```yaml
+pipelines:
+  dev:
+    run: |-
+      is_equal 1 1
+```
+Returns exit status 0
+
+```yaml
+pipelines:
+  dev:
+    run: |-
+      is_equal 1 2
+```
+Returns exist status 1 (fatal)

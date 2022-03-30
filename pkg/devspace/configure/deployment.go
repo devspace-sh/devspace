@@ -22,7 +22,7 @@ import (
 
 // AddKubectlDeployment adds a new kubectl deployment to the provided config
 func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bool) error {
-	question := "Please enter the paths to your Kubernetes manifests (comma separated, glob patterns are allowed, e.g. 'manifests/**' or 'kube/pod.yaml')"
+	question := "Please enter the paths to your Kubernetes manifests (comma separated, glob patterns are allowed, e.g. 'manifests/**' or 'kube/pod.yaml') [Enter to abort]"
 	if isKustomization {
 		question = "Please enter path to your Kustomization folder (e.g. ./kube/kustomization/)"
 	}
@@ -30,6 +30,10 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 	manifests, err := m.log.Question(&survey.QuestionOptions{
 		Question: question,
 		ValidationFunc: func(value string) error {
+			if value == "" {
+				return nil
+			}
+
 			if isKustomization {
 				stat, err := os.Stat(path.Join(value, "kustomization.yaml"))
 				if err == nil && !stat.IsDir() {
@@ -50,6 +54,10 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 	})
 	if err != nil {
 		return err
+	}
+
+	if manifests == "" {
+		return fmt.Errorf("adding kubectl deployment aborted")
 	}
 
 	splitted := strings.Split(manifests, ",")

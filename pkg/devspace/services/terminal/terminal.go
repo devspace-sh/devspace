@@ -2,6 +2,7 @@ package terminal
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"io"
 	"time"
 
@@ -24,7 +25,9 @@ func StartTerminalFromCMD(
 	selector targetselector.TargetSelector,
 	command []string,
 	wait,
-	restart bool,
+	restart,
+	screen bool,
+	screenSession string,
 	stdout io.Writer,
 	stderr io.Writer,
 	stdin io.Reader,
@@ -37,19 +40,7 @@ func StartTerminalFromCMD(
 	ctx.Log.Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
 	done := make(chan error)
 	go func() {
-		interruptpkg.Global.Stop()
-		defer interruptpkg.Global.Start()
-
-		done <- ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
-			Pod:         container.Pod,
-			Container:   container.Container.Name,
-			Command:     command,
-			TTY:         true,
-			Stdin:       stdin,
-			Stdout:      stdout,
-			Stderr:      stderr,
-			SubResource: kubectl.SubResourceExec,
-		})
+		done <- startTerminal(ctx, command, !screen, screenSession, stdout, stderr, stdin, container)
 	}()
 
 	// wait until either client has finished or we got interrupted
@@ -69,15 +60,15 @@ func StartTerminalFromCMD(
 				// 130 - Script terminated by Control-C
 				if restart && IsUnexpectedExitCode(exitError.Code) {
 					ctx.Log.WriteString(logrus.InfoLevel, "\n")
-					ctx.Log.Infof("Restarting terminal because: %s", err)
-					return StartTerminalFromCMD(ctx, selector, command, wait, restart, stdout, stderr, stdin)
+					ctx.Log.Infof("Restarting because: %s", err)
+					return StartTerminalFromCMD(ctx, selector, command, wait, restart, screen, screenSession, stdout, stderr, stdin)
 				}
 
 				return exitError.Code, nil
 			} else if restart {
 				ctx.Log.WriteString(logrus.InfoLevel, "\n")
-				ctx.Log.Infof("Restarting terminal because: %s", err)
-				return StartTerminalFromCMD(ctx, selector, command, wait, restart, stdout, stderr, stdin)
+				ctx.Log.Infof("Restarting because: %s", err)
+				return StartTerminalFromCMD(ctx, selector, command, wait, restart, screen, screenSession, stdout, stderr, stdin)
 			}
 
 			return 0, err
@@ -104,12 +95,17 @@ func StartTerminal(
 				return
 			}
 
-			ctx.Log.WriteString(logrus.InfoLevel, "\n")
-			ctx.Log.Infof("Restarting terminal because: %s", err)
-			time.Sleep(time.Second * 3)
+			ctx.Log.Infof("Restarting because: %s", err)
+			select {
+			case <-ctx.Context.Done():
+				return
+			case <-time.After(time.Second * 3):
+			}
 			err = StartTerminal(ctx, devContainer, selector, stdout, stderr, stdin, parent)
 			return
 		}
+
+		ctx.Log.Debugf("Stopped terminal")
 	}()
 
 	command := getCommand(devContainer)
@@ -118,69 +114,10 @@ func StartTerminal(
 		return err
 	}
 
-	ctx.Log.Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
+	ctx.Log.Infof("Opening shell to %s:%s (pod:container)", ansi.Color(container.Container.Name, "white+b"), ansi.Color(container.Pod.Name, "white+b"))
 	errChan := make(chan error)
 	parent.Go(func() error {
-		interruptpkg.Global.Stop()
-		defer interruptpkg.Global.Start()
-
-		// try to install screen
-		useScreen := false
-		if term.IsTerminal(stdin) && !devContainer.Terminal.DisableScreen {
-			ctx.Log.Debugf("Installing screen in container...")
-			bufferStdout, bufferStderr, err := ctx.KubeClient.ExecBuffered(ctx.Context, container.Pod, container.Container.Name, []string{
-				"sh",
-				"-c",
-				`if ! command -v screen; then
-  if command -v apk; then
-    apk add --no-cache screen
-  elif command -v apt-get; then
-    apt-get -qq update && apt-get install -y screen && rm -rf /var/lib/apt/lists/*
-  else
-    echo "Couldn't install screen using neither apt-get nor apk."
-    exit 1
-  fi
-fi
-if command -v screen; then
-  echo "Screen installed successfully."
-
-  if [ ! -f ~/.screenrc ]; then
-    echo "termcapinfo xterm* ti@:te@" > ~/.screenrc
-    echo "logfile /tmp/terminal-log.0" >> ~/.screenrc
-  fi
-else
-  echo "Couldn't find screen, need to fallback."
-  exit 1
-fi`,
-			}, nil)
-			if err != nil {
-				ctx.Log.Debugf("Error installing screen: %s %s %v", string(bufferStdout), string(bufferStderr), err)
-			} else {
-				useScreen = true
-			}
-		}
-		if useScreen {
-			newCommand := []string{"screen", "-dRSqL", "dev"}
-			newCommand = append(newCommand, command...)
-			command = newCommand
-		}
-
-		ctx.Log.Debugf("Starting terminal...")
-
-		before := log.GetBaseInstance().GetLevel()
-		log.GetBaseInstance().SetLevel(logrus.PanicLevel)
-		defer log.GetBaseInstance().SetLevel(before)
-
-		errChan <- ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
-			Pod:         container.Pod,
-			Container:   container.Container.Name,
-			Command:     command,
-			TTY:         true,
-			Stdin:       stdin,
-			Stdout:      stdout,
-			Stderr:      stderr,
-			SubResource: kubectl.SubResourceExec,
-		})
+		errChan <- startTerminal(ctx, command, devContainer.Terminal.DisableScreen, "dev", stdout, stderr, stdin, container)
 		return nil
 	})
 
@@ -215,6 +152,82 @@ fi`,
 	}
 
 	return nil
+}
+
+func startTerminal(
+	ctx *devspacecontext.Context,
+	command []string,
+	disableScreen bool,
+	screenSession string,
+	stdout io.Writer,
+	stderr io.Writer,
+	stdin io.Reader,
+	container *selector.SelectedPodContainer,
+) error {
+	interruptpkg.Global.Stop()
+	defer interruptpkg.Global.Start()
+
+	// try to install screen
+	useScreen := false
+	if term.IsTerminal(stdin) && !disableScreen {
+		ctx.Log.Debugf("Installing screen in container...")
+		bufferStdout, bufferStderr, err := ctx.KubeClient.ExecBuffered(ctx.Context, container.Pod, container.Container.Name, []string{
+			"sh",
+			"-c",
+			`if ! command -v screen; then
+  if command -v apk; then
+    apk add --no-cache screen
+  elif command -v apt-get; then
+    apt-get -qq update && apt-get install -y screen && rm -rf /var/lib/apt/lists/*
+  else
+    echo "Couldn't install screen using neither apt-get nor apk."
+    exit 1
+  fi
+fi
+if command -v screen; then
+  echo "Screen installed successfully."
+
+  if [ ! -f ~/.screenrc ]; then
+    echo "termcapinfo xterm* ti@:te@" > ~/.screenrc
+    echo "logfile /tmp/terminal-log.0" >> ~/.screenrc
+  fi
+else
+  echo "Couldn't find screen, need to fallback."
+  exit 1
+fi`,
+		}, nil)
+		if err != nil {
+			ctx.Log.Debugf("Error installing screen: %s %s %v", string(bufferStdout), string(bufferStderr), err)
+		} else {
+			useScreen = true
+		}
+	}
+	if useScreen {
+		newCommand := []string{"screen", "-dRSqL", screenSession, "--"}
+		newCommand = append(newCommand, command...)
+		command = newCommand
+	}
+
+	ctx.Log.Debugf("Starting terminal...")
+
+	before := log.GetBaseInstance().GetLevel()
+	log.GetBaseInstance().SetLevel(logrus.PanicLevel)
+	err := ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+		Pod:         container.Pod,
+		Container:   container.Container.Name,
+		Command:     command,
+		TTY:         true,
+		Stdin:       stdin,
+		Stdout:      stdout,
+		Stderr:      stderr,
+		SubResource: kubectl.SubResourceExec,
+	})
+	log.GetBaseInstance().SetLevel(before)
+	if err != nil {
+		ctx.Log.Debugf("error executing stream: %v", err)
+	}
+
+	return err
 }
 
 func IsUnexpectedExitCode(code int) bool {

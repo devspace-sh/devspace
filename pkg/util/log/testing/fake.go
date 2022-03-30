@@ -139,6 +139,10 @@ func (d *FakeLogger) WithPrefix(prefix string) log.Logger {
 	return d
 }
 
+func (d *FakeLogger) WithPrefixColor(prefix, color string) log.Logger {
+	return d
+}
+
 func (d *FakeLogger) ErrorStreamOnly() log.Logger {
 	return d
 }
