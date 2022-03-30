@@ -10,8 +10,13 @@ This function removes a deployment.
 
 ## Usage
 
+```
+purge_deployments deployment1 deployment2
+```
 
 ## Flags
+
+By default, flags are disabled. If a flag listed below is enabled, the following action will be taken.
 
 ### `--all`
 
@@ -19,13 +24,4 @@ Purges all existing deployments.
 
 ### `--sequential`
 
-Purges all existing deployments in sequential order.
-
-## Config Overwrite Flags
-
-#TODO: This needs to be a reusable section
-
---set
---set-string
---from
---from-file
+Purges all existing deployments in sequential order, one after another.

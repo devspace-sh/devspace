@@ -7,68 +7,43 @@ This function is used to select the container (pod) to be used in the pipeline w
 
 ## Arguments
 
+
 ### `--image-selector`
 
-
+The image selector used to select the container
 
 ### `--label-selector`
 
-
+The label selector used to select the container
 
 ### `--container`
 
-
+The container to be used.
 
 ### `--namespace`
 
-
-
-### `--disable-wait`
-
-
-
-### `--timeout`
-
+The namespace to be used.
 
 ## Usage
 
-
+```
+select_pod [--image-selector|--label-selector]
+```
 
 
 ## Flags
 
+By default, flags are disabled. If a flag listed below is enabled, the following action will be taken.
 
+### `--disable-wait`
 
-### `--all`
+The pod will be selected, regrdless of whether the container is ready.
 
+### `--timeout`
 
-
-### `--tag / -t`
-
-
-
-### `--force-rebuild`
-
-
-
-### `--max-concurrent`
-
-
-
-### `--sequential`
-
-
-
-### `--skip`
-
-
-
-### `--skip-push`
-
-
-
-### `--skip-push-on-local-kubernetes`
+The duration of time the before the request times out. The default is 5 minutes.
 
 
 ## Config Overwrite Flags
+
 #TODO: This needs to be a reusable section

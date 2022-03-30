@@ -3,23 +3,17 @@ title: Function run_pipelines
 sidebar_label: run_pipelines
 ---
 
-This function triggers a new pipeline to be run.
+This function triggers a new pipeline to be run. A pipeline defines what DevSpace should do.
+
+A pipeline consists of one or more jobs that are run in parallel and can depend on each other. Each job consists of one or more conditional steps that are executed in order.
 
 ## Arguments
 
-### `--run-dependency-pipelines`
-
-
-
-### `--create-deployments`
-
-
-
-### `--start-dev-app`
-
-
 ## Usage
 
+```
+run_pipeline [pipeline1]
+```
 
 ## Flags
 
