@@ -18,9 +18,6 @@
     mv $OUT_DIR/* tmp-$TARGET_OUT_DIR
     mkdir -p $TARGET_OUT_DIR
     mv tmp-$TARGET_OUT_DIR/* $TARGET_OUT_DIR
-
-    # Add extra files
-    mv public/* $OUT_DIR/
   """
 
 [build.processing]
