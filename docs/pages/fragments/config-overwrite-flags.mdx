@@ -1,0 +1,41 @@
+## Config Overwrite Flags
+
+These flags can be used to overwrite values in the current configuration.
+
+### `--set`
+
+Set configuration.
+
+Assigns argument to configuration.
+
+```
+devspace [command] --set=[configuration value]
+```
+
+### `--set-string`
+
+Set configuration as string.
+
+Takes a map and parses values to their new configuration keys.
+
+```
+devspace [command] --set-string=[key1:value1, key2:value2]
+```
+
+### `--from`
+
+Reuse an existing configuration.
+
+```
+devspace [command] --from=[existing configuration]
+```
+
+### `--from-file`
+
+Reuse an existing configuration from a file
+
+```
+devspace [command] --from-file=[path to existing configuration file]
+```
+
+### Example
