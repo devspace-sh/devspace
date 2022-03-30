@@ -66,14 +66,15 @@ sleep 1000000
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
-			devCmd := &cmd.DevCmd{
+			devCmd := &cmd.RunPipelineCmd{
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Ctx: cancelCtx,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
-			err := devCmd.Run(f)
+			err := devCmd.RunDefault(f)
 			if err != nil {
 				f.GetLog().Errorf("error: %v", err)
 			}
@@ -112,14 +113,15 @@ sleep 1000000
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
-			devCmd := &cmd.DevCmd{
+			devCmd := &cmd.RunPipelineCmd{
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Ctx: cancelCtx,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
-			done <- devCmd.Run(f)
+			done <- devCmd.RunDefault(f)
 		}()
 
 		// wait until we get the first hostnames
@@ -192,14 +194,15 @@ sleep 1000000
 
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		devCmd := &cmd.DevCmd{
+		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Ctx: cancelCtx,
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
 		}
-		err = devCmd.Run(f)
+		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "terminal-done.txt"), "Hello World!\n")
 	})

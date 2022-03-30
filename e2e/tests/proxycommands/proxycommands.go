@@ -55,15 +55,16 @@ var _ = DevSpaceDescribe("proxyCommands", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 
-			devCmd := &cmd.DevCmd{
+			devCmd := &cmd.RunPipelineCmd{
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Ctx: cancelCtx,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
 
-			done <- devCmd.Run(f)
+			done <- devCmd.RunDefault(f)
 		}()
 
 		// Check that the command is proxied to the host.

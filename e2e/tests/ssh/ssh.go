@@ -51,15 +51,16 @@ var _ = DevSpaceDescribe("ssh", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 
-			devCmd := &cmd.DevCmd{
+			devCmd := &cmd.RunPipelineCmd{
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Ctx: cancelCtx,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
 
-			done <- devCmd.Run(f)
+			done <- devCmd.RunDefault(f)
 		}()
 
 		// connect to the SSH server

@@ -287,7 +287,10 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 
 	// Reverse them
 	deploymentCaches := ctx.Config.RemoteCache().ListDeployments()
-	for _, deploymentCache := range deploymentCaches {
+	for i := len(deploymentCaches) - 1; i >= 0; i-- {
+		// Deployment cache
+		deploymentCache := deploymentCaches[i]
+
 		// Check if we should skip deleting deployment
 		if deployments != nil {
 			found := false
