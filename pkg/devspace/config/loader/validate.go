@@ -362,6 +362,21 @@ func validateDevContainer(path string, devContainer *latest.DevContainer, nameRe
 				}
 			}
 		}
+		for j, p := range sync.ExcludePaths {
+			if p == "" {
+				return errors.Errorf("%s.sync[%d].excludePaths[%d] is empty. This can happen if you use !path without quotes like this: '!path'", path, index, j)
+			}
+		}
+		for j, p := range sync.UploadExcludePaths {
+			if p == "" {
+				return errors.Errorf("%s.sync[%d].uploadExcludePaths[%d] is empty. This can happen if you use !path without quotes like this: '!path'", path, index, j)
+			}
+		}
+		for j, p := range sync.DownloadExcludePaths {
+			if p == "" {
+				return errors.Errorf("%s.sync[%d].downloadExcludePaths[%d] is empty. This can happen if you use !path without quotes like this: '!path'", path, index, j)
+			}
+		}
 	}
 	for index, port := range devContainer.ReversePorts {
 		if port.Port == "" {
