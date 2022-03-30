@@ -91,7 +91,7 @@ func (cmd *RunPipelineCmd) AddFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&cmd.SkipPush, "skip-push", cmd.SkipPush, "Skips image pushing, useful for minikube deployment")
 	command.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", cmd.SkipPushLocalKubernetes, "Skips image pushing, if a local kubernetes environment is detected")
 
-	command.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", cmd.Terminal, "Open a terminal instead of showing logs")
+	command.Flags().BoolVar(&cmd.Terminal, "terminal", cmd.Terminal, "Open a terminal instead of showing logs")
 	command.Flags().BoolVar(&cmd.ShowUI, "show-ui", cmd.ShowUI, "Shows the ui server")
 }
 

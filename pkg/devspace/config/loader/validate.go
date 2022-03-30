@@ -45,6 +45,11 @@ func Validate(config *latest.Config) error {
 		return err
 	}
 
+	err = validatePipelines(config)
+	if err != nil {
+		return err
+	}
+
 	err = validateImages(config)
 	if err != nil {
 		return err
@@ -85,11 +90,8 @@ func Validate(config *latest.Config) error {
 
 func validateVars(vars map[string]*latest.Variable) error {
 	for i, v := range vars {
-		if i == "" {
-			return fmt.Errorf("vars[*].name has to be specified")
-		}
 		if encoding.IsUnsafeUpperName(v.Name) {
-			return fmt.Errorf("vars[%s].name %s has to match the following regex: %v", i, v.Name, encoding.UnsafeUpperNameRegEx.String())
+			return fmt.Errorf("vars.%s has to match the following regex: %v", i, encoding.UnsafeUpperNameRegEx.String())
 		}
 	}
 
@@ -118,16 +120,26 @@ func validateRequire(config *latest.Config) error {
 	return nil
 }
 
+func validatePipelines(config *latest.Config) error {
+	for name := range config.Pipelines {
+		if encoding.IsUnsafeName(name) {
+			return fmt.Errorf("pipelines.%s has to match the following regex: %v", name, encoding.UnsafeNameRegEx.String())
+		}
+	}
+
+	return nil
+}
+
 func validateDependencies(config *latest.Config) error {
 	for name, dep := range config.Dependencies {
 		if encoding.IsUnsafeName(name) {
-			return fmt.Errorf("dependencies[%s] has to match the following regex: %v", name, encoding.UnsafeNameRegEx.String())
+			return fmt.Errorf("dependencies.%s has to match the following regex: %v", name, encoding.UnsafeNameRegEx.String())
 		}
 		if dep.Source == nil {
-			return errors.Errorf("dependencies[%s].source is required", name)
+			return errors.Errorf("dependencies.%s.source is required", name)
 		}
 		if dep.Source.Git == "" && dep.Source.Path == "" {
-			return errors.Errorf("dependencies[%s].git or dependencies[%s].path is required", name, name)
+			return errors.Errorf("dependencies.%s.git or dependencies[%s].path is required", name, name)
 		}
 	}
 
@@ -136,14 +148,11 @@ func validateDependencies(config *latest.Config) error {
 
 func validateCommands(config *latest.Config) error {
 	for key, command := range config.Commands {
-		if command.Name == "" {
-			return errors.Errorf("commands[%s].name is required", key)
-		}
-		if encoding.IsUnsafeUpperName(command.Name) {
-			return fmt.Errorf("commands[%s] has to match the following regex: %v", command.Name, encoding.UnsafeUpperNameRegEx.String())
+		if encoding.IsUnsafeName(command.Name) {
+			return fmt.Errorf("commands.%s has to match the following regex: %v", command.Name, encoding.UnsafeNameRegEx.String())
 		}
 		if command.Command == "" {
-			return errors.Errorf("commands[%s].command is required", key)
+			return errors.Errorf("commands.%s.command is required", key)
 		}
 	}
 
@@ -207,17 +216,17 @@ func validateHooks(config *latest.Config) error {
 
 func validateDeployments(config *latest.Config) error {
 	for index, deployConfig := range config.Deployments {
-		if deployConfig.Name == "" {
-			return errors.Errorf("deployments[%s].name is required", index)
-		}
 		if encoding.IsUnsafeName(deployConfig.Name) {
-			return fmt.Errorf("deployments[%s].name %s has to match the following regex: %v", index, deployConfig.Name, encoding.UnsafeNameRegEx.String())
+			return fmt.Errorf("deployments.%s has to match the following regex: %v", index, encoding.UnsafeNameRegEx.String())
 		}
 		if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
 			return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 		}
 		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
 			return errors.Errorf("deployments[%s].kubectl.manifests is required", index)
+		}
+		if deployConfig.Kubectl != nil && deployConfig.Helm != nil {
+			return errors.Errorf("deployments[%s].kubectl and deployments[%s].helm cannot be used together", index, index)
 		}
 	}
 
@@ -243,11 +252,11 @@ func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteVal
 
 func validatePullSecrets(config *latest.Config) error {
 	for _, ps := range config.PullSecrets {
-		if ps.Name == "" {
-			return errors.Errorf("pull secret keys cannot be an empty string")
-		}
 		if encoding.IsUnsafeName(ps.Name) {
-			return fmt.Errorf("pullSecrets[%s] has to match the following regex: %v", ps.Name, encoding.UnsafeNameRegEx.String())
+			return fmt.Errorf("pullSecrets.%s has to match the following regex: %v", ps.Name, encoding.UnsafeNameRegEx.String())
+		}
+		if ps.Registry == "" {
+			return fmt.Errorf("pullSecrets.%s.registry is required", ps.Name)
 		}
 	}
 
@@ -258,11 +267,8 @@ func validateImages(config *latest.Config) error {
 	// images lists all the image names in order to check for duplicates
 	images := map[string]bool{}
 	for imageConfigName, imageConf := range config.Images {
-		if imageConfigName == "" {
-			return errors.Errorf("images keys cannot be an empty string")
-		}
 		if encoding.IsUnsafeName(imageConfigName) {
-			return fmt.Errorf("images[%s] has to match the following regex: %v", imageConfigName, encoding.UnsafeNameRegEx.String())
+			return fmt.Errorf("images.%s has to match the following regex: %v", imageConfigName, encoding.UnsafeNameRegEx.String())
 		}
 		if imageConf == nil {
 			return errors.Errorf("images.%s is empty and should at least contain an image name", imageConfigName)
@@ -304,14 +310,11 @@ func validateImages(config *latest.Config) error {
 func validateDev(config *latest.Config) error {
 	for devPodName, devPod := range config.Dev {
 		devPodName = strings.TrimSpace(devPodName)
-		if devPodName == "" {
-			return errors.Errorf("dev[%s] is required", devPodName)
-		}
 		if encoding.IsUnsafeName(devPodName) {
-			return fmt.Errorf("dev[%s] has to match the following regex: %v", devPodName, encoding.UnsafeNameRegEx.String())
+			return fmt.Errorf("dev.%s has to match the following regex: %v", devPodName, encoding.UnsafeNameRegEx.String())
 		}
 		if len(devPod.LabelSelector) == 0 && devPod.ImageSelector == "" {
-			return errors.Errorf("dev[%s]: image selector and label selector are nil", devPodName)
+			return errors.Errorf("dev.%s: image selector and label selector are nil", devPodName)
 		}
 
 		definedSelectors := 0
@@ -322,16 +325,16 @@ func validateDev(config *latest.Config) error {
 			definedSelectors++
 		}
 		if definedSelectors > 1 {
-			return errors.Errorf("dev[%s]: image selector and label selector cannot all be defined", devPodName)
+			return errors.Errorf("dev.%s: image selector and label selector cannot be used together", devPodName)
 		}
 
-		err := validateDevContainer(fmt.Sprintf("dev[%s]", devPodName), &devPod.DevContainer, false)
+		err := validateDevContainer(fmt.Sprintf("dev.%s", devPodName), &devPod.DevContainer, false)
 		if err != nil {
 			return err
 		}
 		if len(devPod.Containers) > 0 {
 			for i, c := range devPod.Containers {
-				err := validateDevContainer(fmt.Sprintf("dev[%s].containers[%s]", devPodName, i), c, true)
+				err := validateDevContainer(fmt.Sprintf("dev.%s.containers[%s]", devPodName, i), c, true)
 				if err != nil {
 					return err
 				}

@@ -54,11 +54,11 @@ type RemoteCache struct {
 	Data map[string]string `yaml:"data,omitempty"`
 
 	// config path is the path where the cache was loaded from
-	secretName      string `yaml:"-" json:"-"`
-	secretNamespace string `yaml:"-" json:"-"`
-
-	raw         []byte     `yaml:"-" json:"-"`
-	accessMutex sync.Mutex `yaml:"-" json:"-"`
+	secretName      string     `yaml:"-" json:"-"`
+	configName      string     `yaml:"-" json:"-"`
+	secretNamespace string     `yaml:"-" json:"-"`
+	raw             []byte     `yaml:"-" json:"-"`
+	accessMutex     sync.Mutex `yaml:"-" json:"-"`
 }
 
 type DevPodCache struct {
@@ -330,7 +330,12 @@ func (l *RemoteCache) Save(ctx context.Context, client kubectl.Client) error {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      l.secretName,
 					Namespace: client.Namespace(),
+					Labels: map[string]string{
+						"owner": "devspace",
+						"name":  l.configName,
+					},
 				},
+				Type: SecretType,
 				Data: map[string][]byte{
 					"cache": data,
 				},
