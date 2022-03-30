@@ -16,8 +16,7 @@ To set `buildKit` as default build tool, use the following configuration:
 images:
   backend:
     image: john/appbackend
-    build:
-      buildKit: {}
+    buildKit: {}
 ```
 
 ## In Cluster Building
@@ -27,9 +26,8 @@ If the `inCluster` object is set, DevSpace will build the image directly in the 
 images:
   backend:
     image: john/appbackend
-    build:
-      buildKit: 
-        inCluster: {}
+    buildKit:
+      inCluster: {}
 ```
 
 **Explanation:**
@@ -84,21 +82,12 @@ If `buildKit.inCluster` is omitted, DevSpace will build the image with the local
 images:
   backend:
     image: john/appbackend
-    build:
-      buildKit: {}
+    buildKit: {}
 ```
 
 **Explanation:**
 - `buildKit` tells DevSpace to use the BuildKit engine to build the image.
 - Internally DevSpace will use `docker buildx build` to build the image.
-
-### `skipPush`
-
-The option takes a boolean as value. If this option is enabled, DevSpace will not push the image to the registry. If in cluster build is enabled, DevSpace will try to load the image into the local docker daemon if the image is not pushed.
-
-:::tip
-DevSpace will automatically skip image pushing if it detects a local docker daemon such as docker-desktop or minikube. You can disable this behaviour by setting the flag `--skip-push-local-kube=false` 
-:::
 
 ### `preferMinikube`
 
@@ -111,9 +100,8 @@ This option takes a string array as value. The arguments will be appended to the
 images:
   backend:
     image: john/appbackend
-    build:
-      buildKit: 
-        args: ["--cache-to", "user/app:cache"]
+    buildKit: 
+      args: ["--cache-to", "user/app:cache"]
 ```
 
 **Explanation:**
@@ -127,74 +115,9 @@ The option takes a string array as value. By default, DevSpace will use `docker 
 images:
   backend:
     image: john/appbackend
-    build:
-      buildKit: 
-        command: ["/path/to/my/buildx"]
+    buildKit: 
+      command: ["/path/to/my/buildx"]
 ```
 **Explanation:**
 - `buildKit` tells DevSpace to use the BuildKit engine to build the image.
 - The command option will tell DevSpace to use this command instead of `docker buildx` and the actual build command will look like this: `/path/to/my/buildx build --tag john/appbackend:DRLzYNS --push --file Dockerfile --cache-to user/app:cache -`
-
-## Build Options
-DevSpace allows you to configure the following build options:
-- `target` defining the build target for multi-stage builds
-- `network` to define which network to use during building (e.g. `docker build --network=host`)
-- `buildArgs` to pass arguments to the Dockerfile during the build process
-
-### `options.target`
-
-The `target` option expects a string stating the build target when using multi-stage builds.
-
-#### Example: Defining a Build Target for Docker
-```yaml
-images:
-  backend:
-    image: john/appbackend
-    build:
-      buildKit:
-        options:
-          target: production
-```
-**Explanation:**  
-The image `backend` would be built using `docker` and the target `production` would be used for building the image as defined in the `Dockerfile`.
-
-
-
-### `options.network`
-
-
-The `network` option expects a string stating the network setting for building the image.
-
-#### Example: Defining a Network for Docker
-```yaml
-images:
-  backend:
-    image: john/appbackend
-    build:
-      buildKit:
-        options:
-          network: host
-```
-**Explanation:**  
-The image `backend` would be built using `docker` and `docker build` would be called using the `--network=host` flag.
-
-
-
-### `options.buildArgs`
-
-The `buildArgs` option expects a map of buildArgs representing values for the `--build-arg` flag used for `docker` or `kaniko` build commands.
-
-#### Example: Defining Build Args for Docker
-```yaml
-images:
-  backend:
-    image: john/appbackend
-    build:
-      buildKit:
-        options:
-          buildArgs:
-            arg1: arg-value-2
-            arg2: arg-value-2
-```
-**Explanation:**  
-The image `backend` would be built using `docker` and `docker build` would be called using the `--build-arg arg1=arg-value-1 --build-arg arg2=arg-value-2` flags.

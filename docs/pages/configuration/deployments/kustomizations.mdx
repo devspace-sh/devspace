@@ -3,26 +3,27 @@ title: Deploy Kustomizations
 sidebar_label: kubectl (kustomize)
 ---
 
-import FragmentReplaceImageTags from '../../fragments/kubectl-replaceImageTags.mdx';
 import FragmentKubectlApplyArgs from '../../fragments/kubectl-options-applyArgs.mdx';
-import FragmentKubectlDeleteArgs from '../../fragments/kubectl-options-deleteArgs.mdx';
-import FragmentKubectlCmdPath from '../../fragments/kubectl-options-cmdPath.mdx';
+import FragmentKubectlBinaryPath from '../../fragments/kubectl-options-binaryPath.mdx';
+import FragmentKustomizeBinaryPath from '../../fragments/kustomize-options-binaryPath.mdx';
 import FragmentKubectlKustomize from '../../fragments/kubectl-kustomize.mdx';
+import FragmentKustomizeKustomizeArgs from '../../fragments/kustomize-options-kustomizeArgs.mdx';
+import FragmentUpdateImageTags from '../../fragments/kubectl-updateImageTags.mdx';
 
 To deploy Kustomizations using `kustomize` / `kubectl apply -k`, you need to configure them within the `deployments` section of the `devspace.yaml`.
 
 ## Example
 ```yaml {4}
 deployments:
-- name: my-deployment
-  kubectl:
-    kustomize: true
-    manifests:
-    - my-kustomization/
-    - another-kustomization/
+  my-deployment:
+    kubectl:
+      kustomize: true
+      manifests:
+      - my-kustomization/
+      - another-kustomization/
 ```
 
-The above example will be executing during the deployment process as follows:
+The above example will be executing during the deployment process as follows if the `kustomize` binary is not installed:
 ```bash
 kubectl apply -k my-kustomization/
 kubectl apply -k another-kustomization/
@@ -32,99 +33,25 @@ kubectl apply -k another-kustomization/
 Kustomization deployments require `kubectl` or `kustomize` to be installed. If both are available, DevSpace will use the `kustomize` binary by default.
 :::
 
-
-## Manifests
-
-### `manifests`
-The `manifests` option is mandatory and expects an array of paths that point to directories containing Kustomizations.
-
-#### Example: Manifests
-```yaml
-deployments:
-- name: backend
-  kubectl:
-    kustomize: true
-    manifests:
-    - my-kustomization/
-    - another-kustomization/
-```
-
-
-### `kustomize`
-
-<FragmentKubectlKustomize/>
-
-
-### `replaceImageTags`
-
-<FragmentReplaceImageTags/>
-
-
-## Kubectl Options
-
-### `applyArgs`
-
-<FragmentKubectlApplyArgs/>
-
-### `kustomizeArgs`
-The `kustomizeArgs` option expects an array of strings stating additional arguments (and flags) that should be used when calling `kustomize build`.
-
-:::info Kustomize Deployments
-DevSpace only uses `kustomize build` to render the manifest templates. The actual deployment will be executed using `kubectl apply`.
-:::
-
-#### Default Value for `kustomizeArgs`
-```yaml
-kustomizeArgs: []
-```
-
-#### Example: Custom Kustomize Args & Flags
-```yaml
-deployments:
-- name: backend
-  kubectl:
-    manifests:
-    - backend/
-    kustomize: true
-    kustomizeArgs:
-    - "--timeout"
-    - "10s"
-    - "--grace-period"
-    - "30"
-```
-**Explanation:**  
-Deploying the above example would roughly be equivalent to this command:
-```bash
-kustomize build --timeout=10s --grace-period=30 -f backend/
-```
-
-### `deleteArgs`
-
-<FragmentKubectlDeleteArgs/>
-
-
-### `cmdPath`
-
-<FragmentKubectlCmdPath/>
-
-
 ## General Options
 
 ### `name`
-The `name` option is required and expects a string to identify this deployment.
+The `name` option is optional and expects a string to identify this deployment.
 
 #### Example: Deployment Name
 ```yaml {2}
 deployments:
-- name: backend
-  kubectl:
-    manifests:
-    - backend/
-    - backend-extra/
+  backend:
+    name: custom-backend-name  # name by default
+    kubectl:
+      kustomize: true
+      manifests:
+      - my-kustomization/
+      - another-kustomization/
 ```
 
 ### `namespace`
-The `namespace` option is required and expects a string with the namespace used to deploy the manifests.
+The `namespace` option is optional and expects a string with the namespace used to deploy the manifests.
 
 :::warning
 Only use this option if you really need to. Hard-coding the namespace in `devspace.yaml` makes it harder to share the configuration with your colleagues. It is recommended to set the default namespace of the current context instead using:
@@ -136,14 +63,83 @@ devspace use namespace [some-namespace]
 #### Example: Deployment Namespace
 ```yaml {3}
 deployments:
-- name: backend
-  namespace: some-namespace
-  kubectl:
-    manifests:
-    - backend/
-    - backend-extra/
+  backend:
+    namespace: some-namespace
+    kubectl:
+      manifests:
+      - backend/
+      - backend-extra/
 ```
 
-## `disabled`
+### `updateImageTags`
 
-If true, the deployment will not be deployed, rendered or purged. Can be useful in combination with config expressions or command variables.
+<FragmentUpdateImageTags/>
+
+## Manifests
+
+### `manifests`
+The `manifests` option is mandatory and expects an array of paths that point to directories containing Kustomizations.
+
+#### Example: Manifests
+```yaml
+deployments:
+  backend:
+    kubectl:
+      kustomize: true
+      manifests:
+      - my-kustomization/
+      - another-kustomization/
+```
+
+### `kustomize`
+
+<FragmentKubectlKustomize/>
+
+## Kubectl Options
+
+### `applyArgs`
+
+<FragmentKubectlApplyArgs/>
+
+### `createArgs`
+The `createArgs` option expects an array of strings stating additional arguments (and flags) that should be used when calling `kubectl create`.
+
+:::info Kustomize Deployments
+DevSpace only uses `kustomize create` to render the manifests using the default flags `--dry-run --output yaml --validate=false`. The actual deployment will be executed using `kubectl apply` after DevSpace has replaced the image tags within the rendered manifests in memory.
+:::
+
+#### Default Value for `createArgs`
+```yaml
+createArgs: []
+```
+
+#### Example: Custom Kubectl Args & Flags
+```yaml
+deployments:
+  backend:
+    kubectl:
+      manifests:
+      - backend/
+      createArgs:
+      - "--recursive"
+```
+**Explanation:**
+Deploying the above example would roughly be equivalent to this command:
+```bash
+kubectl create --dry-run --output yaml --validate=false --recursive -f backend/
+```
+
+### `kubectlBinaryPath`
+
+<FragmentKubectlBinaryPath/>
+
+
+## Kustomize Options
+
+### `kustomizeArgs`
+
+<FragmentKustomizeKustomizeArgs/>
+
+### `kustomizeBinaryPath`
+
+<FragmentKustomizeBinaryPath/>
