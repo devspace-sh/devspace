@@ -73,31 +73,34 @@ type RunPipelineCmd struct {
 	log          log.Logger
 }
 
-func (cmd *RunPipelineCmd) AddFlags(command *cobra.Command, defaultPipeline string) {
-	command.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips the following dependencies for deployment")
-	command.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specified named dependencies")
+func (cmd *RunPipelineCmd) AddFlags(command *cobra.Command) {
+	command.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", cmd.SkipDependency, "Skips the following dependencies for deployment")
+	command.Flags().StringSliceVar(&cmd.Dependency, "dependency", cmd.Dependency, "Deploys only the specified named dependencies")
 
-	command.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
-	command.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
-	command.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
-	command.Flags().IntVar(&cmd.MaxConcurrentBuilds, "max-concurrent-builds", 0, "The maximum number of image builds built in parallel (0 for infinite)")
-	command.Flags().BoolVar(&cmd.Render, "render", false, "If true will render manifests and print them instead of actually deploying them")
+	command.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", cmd.ForceBuild, "Forces to build every image")
+	command.Flags().BoolVar(&cmd.SkipBuild, "skip-build", cmd.SkipBuild, "Skips building of images")
+	command.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", cmd.BuildSequential, "Builds the images one after another instead of in parallel")
+	command.Flags().IntVar(&cmd.MaxConcurrentBuilds, "max-concurrent-builds", cmd.MaxConcurrentBuilds, "The maximum number of image builds built in parallel (0 for infinite)")
+	command.Flags().BoolVar(&cmd.Render, "render", cmd.Render, "If true will render manifests and print them instead of actually deploying them")
 
-	command.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
-	command.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", false, "If enabled will skip deploying")
-	command.Flags().StringVar(&cmd.Pipeline, "pipeline", defaultPipeline, "The pipeline to execute")
+	command.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", cmd.ForceDeploy, "Forces to deploy every deployment")
+	command.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", cmd.SkipDeploy, "If enabled will skip deploying")
+	command.Flags().StringVar(&cmd.Pipeline, "pipeline", cmd.Pipeline, "The pipeline to execute")
 
-	command.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "Use the given tag for all built images")
-	command.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
-	command.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
+	command.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", cmd.Tags, "Use the given tag for all built images")
+	command.Flags().BoolVar(&cmd.SkipPush, "skip-push", cmd.SkipPush, "Skips image pushing, useful for minikube deployment")
+	command.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", cmd.SkipPushLocalKubernetes, "Skips image pushing, if a local kubernetes environment is detected")
 
-	command.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
-	command.Flags().BoolVar(&cmd.ShowUI, "show-ui", false, "Shows the ui server")
+	command.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", cmd.Terminal, "Open a terminal instead of showing logs")
+	command.Flags().BoolVar(&cmd.ShowUI, "show-ui", cmd.ShowUI, "Shows the ui server")
 }
 
 // NewRunPipelineCmd creates a new devspace run-pipeline command
 func NewRunPipelineCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &RunPipelineCmd{GlobalFlags: globalFlags}
+	cmd := &RunPipelineCmd{
+		GlobalFlags:             globalFlags,
+		SkipPushLocalKubernetes: true,
+	}
 	runPipelineCmd := &cobra.Command{
 		Use:   "run-pipeline",
 		Short: "Starts the development mode",
@@ -121,7 +124,7 @@ Execute a pipeline
 		},
 	}
 
-	cmd.AddFlags(runPipelineCmd, "")
+	cmd.AddFlags(runPipelineCmd)
 	return runPipelineCmd
 }
 

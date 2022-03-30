@@ -8,7 +8,11 @@ import (
 
 // NewBuildCmd creates a new devspace build command
 func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &RunPipelineCmd{GlobalFlags: globalFlags}
+	cmd := &RunPipelineCmd{
+		GlobalFlags: globalFlags,
+		Pipeline:    "build",
+		ForceBuild:  true,
+	}
 	buildCmd := &cobra.Command{
 		Use:   "build",
 		Short: "Builds all defined images and pushes them",
@@ -23,6 +27,6 @@ Builds all defined images and pushes them
 		},
 	}
 
-	cmd.AddFlags(buildCmd, "build")
+	cmd.AddFlags(buildCmd)
 	return buildCmd
 }

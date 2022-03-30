@@ -9,7 +9,11 @@ import (
 
 // NewPurgeCmd creates a new purge command
 func NewPurgeCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &RunPipelineCmd{GlobalFlags: globalFlags}
+	cmd := &RunPipelineCmd{
+		GlobalFlags:             globalFlags,
+		Pipeline:                "purge",
+		SkipPushLocalKubernetes: true,
+	}
 	purgeCmd := &cobra.Command{
 		Use:   "purge",
 		Short: "Delete deployed resources",
@@ -27,6 +31,6 @@ devspace purge
 		},
 	}
 
-	cmd.AddFlags(purgeCmd, "purge")
+	cmd.AddFlags(purgeCmd)
 	return purgeCmd
 }

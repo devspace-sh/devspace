@@ -8,7 +8,11 @@ import (
 
 // NewDevCmd creates a new devspace dev command
 func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &RunPipelineCmd{GlobalFlags: globalFlags}
+	cmd := &RunPipelineCmd{
+		GlobalFlags:             globalFlags,
+		SkipPushLocalKubernetes: true,
+		Pipeline:                "dev",
+	}
 	devCmd := &cobra.Command{
 		Use:   "dev",
 		Short: "Starts the development mode",
@@ -24,6 +28,6 @@ Starts your project in development mode
 		},
 	}
 
-	cmd.AddFlags(devCmd, "dev")
+	cmd.AddFlags(devCmd)
 	return devCmd
 }

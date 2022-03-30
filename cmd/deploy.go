@@ -8,7 +8,12 @@ import (
 
 // NewDeployCmd creates a new deploy command
 func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &RunPipelineCmd{GlobalFlags: globalFlags}
+	cmd := &RunPipelineCmd{
+		GlobalFlags:             globalFlags,
+		SkipPushLocalKubernetes: true,
+		Pipeline:                "deploy",
+	}
+
 	deployCmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy the project",
@@ -28,6 +33,6 @@ devspace deploy --kube-context=deploy-context
 		},
 	}
 
-	cmd.AddFlags(deployCmd, "deploy")
+	cmd.AddFlags(deployCmd)
 	return deployCmd
 }

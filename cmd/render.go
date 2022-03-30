@@ -11,8 +11,11 @@ import (
 // NewRenderCmd creates a new devspace render command
 func NewRenderCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &RunPipelineCmd{
-		GlobalFlags:  globalFlags,
-		RenderWriter: os.Stdout,
+		GlobalFlags:             globalFlags,
+		SkipPushLocalKubernetes: true,
+		Pipeline:                "deploy",
+		Render:                  true,
+		RenderWriter:            os.Stdout,
 	}
 
 	renderCmd := &cobra.Command{
@@ -32,6 +35,6 @@ deployment.
 		},
 	}
 
-	cmd.AddFlags(renderCmd, "deploy")
+	cmd.AddFlags(renderCmd)
 	return renderCmd
 }
