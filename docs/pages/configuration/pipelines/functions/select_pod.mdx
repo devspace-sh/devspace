@@ -7,14 +7,15 @@ This function is used to select the container (pod) to be used in the pipeline w
 
 ## Arguments
 
+None
 
 ### `--image-selector`
 
-The image selector used to select the container
+The image selector used to select the container.
 
 ### `--label-selector`
 
-The label selector used to select the container
+The label selector used to select the container.
 
 ### `--container`
 
@@ -30,10 +31,9 @@ The namespace to be used.
 select_pod [--image-selector|--label-selector]
 ```
 
-
 ## Flags
 
-By default, flags are disabled. If a flag listed below is enabled, the following action will be taken.
+By default, flags are disabled. If any of the flags below are enabled, the following actions are taken.
 
 ### `--disable-wait`
 
@@ -41,8 +41,7 @@ The pod will be selected, regrdless of whether the container is ready.
 
 ### `--timeout`
 
-The duration of time the before the request times out. The default is 5 minutes.
-
+The amount of time to wait for the container to be ready. The default is 5 minutes.
 
 ## Config Overwrite Flags
 

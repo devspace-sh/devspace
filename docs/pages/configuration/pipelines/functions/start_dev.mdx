@@ -3,7 +3,7 @@ title: Function start_dev
 sidebar_label: start_dev
 ---
 
-This function starts an existing dev configurations, or all dev configurations if you use the "-all" argument in the command.
+This function starts an existing dev configurations, or all dev configurations if you use the "--all" argument in the command.
 
 ## Arguments
 
@@ -23,7 +23,7 @@ start_dev devConfig1 devConfig2
 
 ## Flags
 
-By default, these flasg are set to disabled. If any of these flags are enabled, the following actions will be taken.
+By default, flags are disabled. If any of the flags below are enabled, the following actions are taken.
 
 ### `--continue-on-terminal-exit`
 
@@ -49,23 +49,6 @@ No pods will be opened.
 
 Terminates the pipeline, including all dev pods.
 
-
 ## Config Flag Overwrite
 
-TODO: Add resuable components here
-
-### `--set`
-
-Sets the configuration.
-
-### `--set-string`
-
-Sets the configuration as a string.
-
-### `--from`
-
-Reuses an existing configuration.
-
-### `--from-file`
-
-Reuses an existing configuration from a file.
+TODO: Add config overwrite flags fragement here
