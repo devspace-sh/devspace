@@ -2,35 +2,45 @@
 title: Function create_deployments
 sidebar_label: create_deployments
 ---
-# Create Deployments
 
 This function creates a new deployment for a pipeline.
 
 ## Arguments
 
-### `--set`
-Sets the configuration.
+### `--skip-deploy`
 
-### `--set-string`
-Sets the configuration as a string.
+The deployment will be skipped.
 
-### `--from`
-Reuses an exiting configuration.
+### `--force-deploy`
 
-### `--fromfile`
-Reuses an existing configuration from a file.
+The deployment will be forced to run.
+
+### `--sequential`
+
+The deployments will be deployed sequentially, one after another.
+
+### `--render`
+
+The rendered manifests will be printed to the console (stdout) instead of being deployed.
+
+## Usage
+
+```
+create_deployments_all
+```
+
+```
+create_deployments deployment1 deployment2
+```
 
 ## Flags
 By default, these flags are disabled. If any of these flags are enabled, then then following actions are taken.
 
-### `--skip-deploy`
-The deployment will be skipped.
+### `--all`
 
-### `--force-deploy`
-The deployment will be forced to run.
+Deploys all deployments.
 
-### `--sequential`
-The deployments will be deployed sequentially, one after another.
 
---render
-The rendered manifests will be printed to the console (stdout) instead of being deployed.
+## Config Overwrite Flags
+
+TODO: Import reusable fragmennts here
