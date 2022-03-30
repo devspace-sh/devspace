@@ -7,9 +7,7 @@ The function `build_images` builds either all images (`--all` flag) or the image
 
 ## Arguments
 
-### `--image`
-
-The image you want to have built.
+None
 
 ### Usage
 
@@ -36,15 +34,15 @@ The image will not be built.
 
 ### `--skip-push`
 
-The image will not be pushed to a container.
+The image will not be pushed to a container registry.
 
 ### `--skip-push-on-local-kubernetes`
 
-The image will not be pushed to a local kubernetes cluster.
+The image will not be pushed if the current Kubernetes config was detected to be a local cluster like docker-desktop or minikube.
 
 ### `--force-rebuild`
 
-The images will be rebuilt.
+The images will be forced to be rebuilt.
 
 ### `--sequential`
 
