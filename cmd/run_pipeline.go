@@ -374,8 +374,12 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 		ctx.Log.Debugf("Run pipeline:\n%s\n", string(configPipelineBytes))
 	}
 
+	// create dev context
+	devCtxCancel, cancelDevCtx := context.WithCancel(ctx.Context)
+	ctx = ctx.WithContext(values.WithDevContext(ctx.Context, devCtxCancel))
+
 	// create a new base dev pod manager
-	devPodManager := devpod.NewManager(ctx.Context)
+	devPodManager := devpod.NewManager(cancelDevCtx)
 	defer devPodManager.Close()
 
 	// create dependency registry

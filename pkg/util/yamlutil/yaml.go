@@ -38,6 +38,7 @@ func prettifyError(data []byte, err error) error {
 	if typeError, ok := err.(*yaml.TypeError); ok {
 		for i, message := range typeError.Errors {
 			typeError.Errors[i] = strings.Replace(message, "!!seq", "an array", -1)
+			typeError.Errors[i] = strings.Replace(message, "!!str", "string", -1)
 
 			// add line to error
 			match := lineRegEx.FindSubmatch([]byte(message))

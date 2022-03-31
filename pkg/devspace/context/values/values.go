@@ -12,7 +12,19 @@ const (
 	commandKey
 	dependencyKey
 	rootNameKey
+	devContextKey
 )
+
+// WithDevContext creates a new context with the dev context
+func WithDevContext(parent context.Context, devCtx context.Context) context.Context {
+	return WithValue(parent, devContextKey, devCtx)
+}
+
+// DevContextFrom returns a context used to start and stop dev configurations
+func DevContextFrom(ctx context.Context) (context.Context, bool) {
+	devCtx, ok := ctx.Value(devContextKey).(context.Context)
+	return devCtx, ok
+}
 
 // RootNameFrom returns the root name of the devspace config
 func RootNameFrom(ctx context.Context) (string, bool) {

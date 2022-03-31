@@ -81,19 +81,19 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 		for _, syncConfig := range devContainer.Sync {
 			// start a new go routine in the tomb
 			s := syncConfig
+			syncCtx := ctx
 			var cancel context.CancelFunc
 			if s.NoWatch {
 				var cancelCtx context.Context
-				cancelCtx, cancel = context.WithCancel(ctx.Context)
-				defer cancel()
-				ctx = ctx.WithContext(cancelCtx)
+				cancelCtx, cancel = context.WithCancel(syncCtx.Context)
+				syncCtx = syncCtx.WithContext(cancelCtx)
 			}
 			initDone := parent.NotifyGo(func() error {
 				if cancel != nil {
 					defer cancel()
 				}
 
-				return startSync(ctx, devPod.Name, string(devContainer.Arch), s, selector.WithContainer(devContainer.Container), starter, parent)
+				return startSync(syncCtx, devPod.Name, string(devContainer.Arch), s, selector.WithContainer(devContainer.Container), starter, parent)
 			})
 			initDoneArray = append(initDoneArray, initDone)
 
