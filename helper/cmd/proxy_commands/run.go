@@ -58,23 +58,20 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 	}
 	defer session.Close()
 
-	// check if we should use a pty
+	// check if we should use a pty#
+	var (
+		width  = 0
+		height = 0
+	)
+
 	tty, t := terminal.SetupTTY(os.Stdin, os.Stdout)
 	if tty {
 		info, ok := term.GetFdInfo(t.In)
 		if ok {
 			winSize, err := term.GetWinsize(info)
 			if err == nil {
-				err = session.RequestPty("xterm", int(winSize.Height), int(winSize.Width), ssh.TerminalModes{
-					ssh.ECHO:          0,
-					ssh.TTY_OP_ISPEED: 28800,
-					ssh.TTY_OP_OSPEED: 28800,
-				})
-				if err != nil {
-					return errors.Wrap(err, "request pty")
-				}
-
-				// TODO: terminal resize
+				width = int(winSize.Width)
+				height = int(winSize.Height)
 			}
 		}
 	}
@@ -87,6 +84,10 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 
 	// marshal command and execute command
 	proxyCommand := &types.ProxyCommand{
+		TTY:    tty,
+		Width:  width,
+		Height: height,
+
 		Env:        os.Environ(),
 		Args:       args,
 		WorkingDir: currentWorkingDir,
