@@ -85,6 +85,7 @@ func replaceHost(path, host, port string) (string, error) {
 	newLines = append(newLines, "  IdentityFile "+DevSpaceSSHPrivateKeyFile)
 	newLines = append(newLines, "  StrictHostKeyChecking no")
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
+	newLines = append(newLines, "  User devspace")
 	newLines = append(newLines, endMarker)
 	newLines = append(newLines, "")
 
