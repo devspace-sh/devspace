@@ -242,8 +242,8 @@ func replaceWorkingDir(ctx *devspacecontext.Context, devPod *latest.DevPod, devC
 
 func replaceCommand(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	// replace with DevSpace helper
-	injectRestartHelper := false
-	if devContainer.RestartHelper == nil || !devContainer.RestartHelper.Disable {
+	injectRestartHelper := devContainer.RestartHelper != nil && devContainer.RestartHelper.Inject != nil && *devContainer.RestartHelper.Inject
+	if devContainer.RestartHelper == nil || devContainer.RestartHelper.Inject == nil || *devContainer.RestartHelper.Inject {
 		for _, s := range devContainer.Sync {
 			if s.StartContainer || (s.OnUpload != nil && s.OnUpload.RestartContainer) {
 				injectRestartHelper = true
@@ -251,7 +251,7 @@ func replaceCommand(ctx *devspacecontext.Context, devPod *latest.DevPod, devCont
 		}
 	}
 	if len(devContainer.Command) == 0 && injectRestartHelper {
-		return fmt.Errorf("dev.%s.sync[*].onUpload.restartContainer is true, please specify the entrypoint that should get restarted in dev.%s.command", devPod.Name, devPod.Name)
+		return fmt.Errorf("dev.%s.sync[*].onUpload.restartContainer or dev.%s.restartHelper.inject is true, please specify the entrypoint that should get restarted in dev.%s.command", devPod.Name, devPod.Name, devPod.Name)
 	}
 	if !injectRestartHelper && len(devContainer.Command) == 0 && devContainer.Args == nil {
 		return nil

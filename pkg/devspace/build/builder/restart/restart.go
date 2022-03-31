@@ -70,10 +70,10 @@ counter=0
 while ! [ -f $touchFile ]; do
   if [ "$counter" = "0" ]; then
     echo "Container started with restart helper."
-    echo "Waiting for initial sync to complete before starting application..."
+    echo "Waiting for initial sync to complete or file $touchFile to exist before starting the application..."
   else
     if [ "$counter" = 10 ]; then
-      echo "(Still waiting for initial sync to complete)"
+      echo "(Still waiting...)"
       counter=0
     fi
   fi
@@ -82,7 +82,7 @@ while ! [ -f $touchFile ]; do
 done
 
 if ! [ "$counter" = "0" ]; then
-  echo "Initial sync completed. Starting application..."
+  echo "Starting application..."
 fi
 
 while $restart; do
