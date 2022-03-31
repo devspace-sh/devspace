@@ -28,11 +28,25 @@ func TestLoad(t *testing.T) {
 		t.Error("No test cases found. Add some!")
 	}
 
+	focused := []string{}
 	for _, dir := range dirs {
-		if !strings.HasPrefix(dir.Name(), "x_") {
-			testLoad(dir.Name(), t)
+		if strings.HasPrefix(dir.Name(), "f_") {
+			focused = append(focused, dir.Name())
 		}
 	}
+
+	if len(focused) > 0 {
+		for _, focus := range focused {
+			testLoad(focus, t)
+		}
+	} else {
+		for _, dir := range dirs {
+			if !strings.HasPrefix(dir.Name(), "x_") {
+				testLoad(dir.Name(), t)
+			}
+		}
+	}
+
 }
 
 func testLoad(dir string, t *testing.T) {
@@ -53,9 +67,10 @@ func testLoad(dir string, t *testing.T) {
 	}()
 
 	dockerComposePath := GetDockerComposePath()
-	loader := NewDockerComposeLoader(dockerComposePath)
+	loader := NewComposeManager(dockerComposePath)
 
-	actualConfig, actualError := loader.Load(log.Discard)
+	actualError := loader.Load(log.Discard)
+
 	if actualError != nil {
 		expectedError, err := ioutil.ReadFile("error.txt")
 		if err != nil {
@@ -65,107 +80,110 @@ func testLoad(dir string, t *testing.T) {
 		assert.Equal(t, string(expectedError), actualError.Error(), "Expected error:\n%s\nbut got:\n%s\n in testCase %s", string(expectedError), actualError.Error(), dir)
 	}
 
-	data, err := ioutil.ReadFile("expected.yaml")
-	if err != nil {
-		t.Errorf("Please create the expected DevSpace configuration by creating a expected.yaml in the testdata/%s folder", dir)
-	}
-
-	expectedConfig := &latest.Config{}
-	err = yaml.Unmarshal(data, expectedConfig)
-	if err != nil {
-		t.Errorf("Error unmarshaling the expected configuration: %s", err.Error())
-	}
-
-	assert.Check(
-		t,
-		cmp.DeepEqual(expectedConfig.Deployments, actualConfig.Deployments),
-		"deployment properties did not match in test case %s",
-		dir,
-	)
-	// actualDeployments := actualConfig.Deployments
-	actualConfig.Deployments = nil
-	expectedConfig.Deployments = nil
-
-	assert.Check(
-		t,
-		cmp.DeepEqual(toWaitHookMap(expectedConfig.Hooks), toWaitHookMap(actualConfig.Hooks)),
-		"hook properties did not match in test case %s",
-		dir,
-	)
-	actualHooks := actualConfig.Hooks
-	actualConfig.Hooks = nil
-	expectedConfig.Hooks = nil
-
-	assert.Check(
-		t,
-		cmp.DeepEqual(expectedConfig, actualConfig),
-		"config properties did not match in test case %s",
-		dir,
-	)
-
-	// Load docker compose to determine dependency ordering
-	content, err := ioutil.ReadFile(dockerComposePath)
-	if err != nil {
-		t.Errorf("Unexpected error occurred loading the docker-compose.yaml: %s", err.Error())
-	}
-	dockerCompose, err := composeloader.Load(composetypes.ConfigDetails{
-		ConfigFiles: []composetypes.ConfigFile{
-			{
-				Content: content,
-			},
-		},
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Determine which deployments should have wait hooks
-	expectedWaitHooks := map[string]bool{}
-	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
-		for _, dep := range service.GetDependencies() {
-			expectedWaitHooks[dep] = true
+	for path, actualConfig := range loader.Configs() {
+		data, err := ioutil.ReadFile(path)
+		if err != nil {
+			t.Errorf("Please create the expected DevSpace configuration by creating a %s in the testdata/%s folder", path, dir)
 		}
-		return nil
-	})
-	if err != nil {
-		t.Error(err)
-	}
 
-	// Iterate services in dependency order
-	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
-		waitHookIdx := getWaitHookIndex(service.Name, actualHooks)
+		expectedConfig := &latest.Config{}
+		err = yaml.Unmarshal(data, expectedConfig)
+		if err != nil {
+			t.Errorf("Error unmarshaling the expected configuration: %s", err.Error())
+		}
 
-		// for _, dep := range service.GetDependencies() {
-		// 	// Check deployments order
-		// 	assert.Check(t, getDeploymentIndex(dep, actualDeployments) < getDeploymentIndex(service.Name, actualDeployments), "%s deployment should come after %s for test case %s", service.Name, dep, dir)
+		assert.Check(
+			t,
+			cmp.DeepEqual(expectedConfig.Deployments, actualConfig.Deployments),
+			"deployment properties did not match in test case %s",
+			dir,
+		)
+		// actualDeployments := actualConfig.Deployments
+		actualConfig.Deployments = nil
+		expectedConfig.Deployments = nil
 
-		// 	// Check for wait hook order
-		// 	_, ok := expectedWaitHooks[service.Name]
-		// 	if ok {
-		// 		assert.Check(t, getWaitHookIndex(dep, actualHooks) < waitHookIdx, "%s wait hook should come after %s", service.Name, dep)
-		// 	}
-		// }
+		assert.Check(
+			t,
+			cmp.DeepEqual(toWaitHookMap(expectedConfig.Hooks), toWaitHookMap(actualConfig.Hooks)),
+			"hook properties did not match in test case %s",
+			dir,
+		)
+		actualHooks := actualConfig.Hooks
+		actualConfig.Hooks = nil
+		expectedConfig.Hooks = nil
 
-		uploadDoneHookIdx := getUploadDoneHookIndex(service.Name, actualHooks)
-		if uploadDoneHookIdx != -1 {
-			// Check that upload done hooks come before wait hooks
-			if waitHookIdx != -1 {
-				assert.Check(t, uploadDoneHookIdx < waitHookIdx, "%s wait hook should come after upload done hooks for test case %s", service.Name, dir)
+		assert.Check(
+			t,
+			cmp.DeepEqual(expectedConfig, actualConfig),
+			"config properties did not match in test case %s",
+			dir,
+		)
+
+		// Load docker compose to determine dependency ordering
+		content, err := ioutil.ReadFile(dockerComposePath)
+		if err != nil {
+			t.Errorf("Unexpected error occurred loading the docker-compose.yaml: %s", err.Error())
+		}
+		dockerCompose, err := composeloader.Load(composetypes.ConfigDetails{
+			ConfigFiles: []composetypes.ConfigFile{
+				{
+					Content: content,
+				},
+			},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Determine which deployments should have wait hooks
+		expectedWaitHooks := map[string]bool{}
+		err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
+			for _, dep := range service.GetDependencies() {
+				expectedWaitHooks[dep] = true
 			}
+			return nil
+		})
+		if err != nil {
+			t.Error(err)
+		}
 
-			// Check that upload hooks come before upload done hooks
-			for idx, hook := range actualHooks {
-				if hook.Upload != nil && hook.Container.ContainerName == UploadVolumesContainerName && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == service.Name {
-					assert.Check(t, idx < uploadDoneHookIdx, "%s upload done hook should come after upload hooks for test case %s", service.Name, dir)
+		// Iterate services in dependency order
+		err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
+			waitHookIdx := getWaitHookIndex(service.Name, actualHooks)
+
+			// for _, dep := range service.GetDependencies() {
+			// 	// Check deployments order
+			// 	assert.Check(t, getDeploymentIndex(dep, actualDeployments) < getDeploymentIndex(service.Name, actualDeployments), "%s deployment should come after %s for test case %s", service.Name, dep, dir)
+
+			// 	// Check for wait hook order
+			// 	_, ok := expectedWaitHooks[service.Name]
+			// 	if ok {
+			// 		assert.Check(t, getWaitHookIndex(dep, actualHooks) < waitHookIdx, "%s wait hook should come after %s", service.Name, dep)
+			// 	}
+			// }
+
+			uploadDoneHookIdx := getUploadDoneHookIndex(service.Name, actualHooks)
+			if uploadDoneHookIdx != -1 {
+				// Check that upload done hooks come before wait hooks
+				if waitHookIdx != -1 {
+					assert.Check(t, uploadDoneHookIdx < waitHookIdx, "%s wait hook should come after upload done hooks for test case %s", service.Name, dir)
+				}
+
+				// Check that upload hooks come before upload done hooks
+				for idx, hook := range actualHooks {
+					if hook.Upload != nil && hook.Container.ContainerName == UploadVolumesContainerName && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == service.Name {
+						assert.Check(t, idx < uploadDoneHookIdx, "%s upload done hook should come after upload hooks for test case %s", service.Name, dir)
+					}
 				}
 			}
-		}
 
-		return nil
-	})
-	if err != nil {
-		t.Error(err)
+			return nil
+		})
+		if err != nil {
+			t.Error(err)
+		}
 	}
+
 }
 
 func toDeploymentMap(deployments []*latest.DeploymentConfig) map[string]latest.DeploymentConfig {
