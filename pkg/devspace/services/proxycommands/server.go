@@ -166,7 +166,7 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, error) {
 	}
 
 	s.log.Debugf("run command '%s %s' locally", c, strings.Join(args, " "))
-	cmd.Env = append(cmd.Env, sess.Environ()...)
+	cmd.Env = append(cmd.Env, command.Env...)
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	return cmd, nil
 }

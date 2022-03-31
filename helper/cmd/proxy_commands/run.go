@@ -10,7 +10,6 @@ import (
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"os"
-	"strings"
 )
 
 // RunCmd holds the ssh cmd flags
@@ -59,19 +58,6 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 	}
 	defer session.Close()
 
-	// set environment variables
-	for _, v := range os.Environ() {
-		splitted := strings.Split(v, "=")
-		if len(splitted) < 2 {
-			continue
-		}
-
-		err = session.Setenv(splitted[0], strings.Join(splitted[1:], "="))
-		if err != nil {
-			return errors.Wrap(err, "set session env")
-		}
-	}
-
 	// check if we should use a pty
 	tty, t := terminal.SetupTTY(os.Stdin, os.Stdout)
 	if tty {
@@ -81,8 +67,8 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 			if err == nil {
 				err = session.RequestPty("xterm", int(winSize.Height), int(winSize.Width), ssh.TerminalModes{
 					ssh.ECHO:          0,
-					ssh.TTY_OP_ISPEED: 14400,
-					ssh.TTY_OP_OSPEED: 14400,
+					ssh.TTY_OP_ISPEED: 28800,
+					ssh.TTY_OP_OSPEED: 28800,
 				})
 				if err != nil {
 					return errors.Wrap(err, "request pty")
@@ -101,6 +87,7 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 
 	// marshal command and execute command
 	proxyCommand := &types.ProxyCommand{
+		Env:        os.Environ(),
 		Args:       args,
 		WorkingDir: currentWorkingDir,
 	}
