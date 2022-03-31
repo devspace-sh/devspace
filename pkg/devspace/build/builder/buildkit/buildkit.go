@@ -67,7 +67,7 @@ func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool)
 	// Check if image is present in local repository
 	if !rebuild && err == nil && b.helper.ImageConf.BuildKit.InCluster == nil {
 		if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient.CurrentContext()) {
-			dockerClient, err := dockerpkg.NewClientWithMinikube(ctx.Context, ctx.KubeClient.CurrentContext(), b.helper.ImageConf.BuildKit.PreferMinikube == nil || *b.helper.ImageConf.BuildKit.PreferMinikube, ctx.Log)
+			dockerClient, err := dockerpkg.NewClientWithMinikube(ctx.KubeClient.CurrentContext(), b.helper.ImageConf.BuildKit.PreferMinikube == nil || *b.helper.ImageConf.BuildKit.PreferMinikube, ctx.Log)
 			if err != nil {
 				return false, err
 			}
@@ -201,7 +201,7 @@ func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.
 		err         error
 	)
 	if useMinikubeDocker {
-		minikubeEnv, err = dockerpkg.GetMinikubeEnvironment(ctx)
+		minikubeEnv, err = dockerpkg.GetMinikubeEnvironment()
 		if err != nil {
 			return fmt.Errorf("error retrieving minikube environment with 'minikube docker-env --shell none'. Try setting the option preferMinikube to false: %v", err)
 		}

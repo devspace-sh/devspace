@@ -287,6 +287,18 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		}
 
 		if selectedDeploymentOption == DeployOptionHelm {
+			hasOwnHelmChart := "Yes"
+			helmChartAnswer, err := cmd.log.Question(&survey.QuestionOptions{
+				Question: "Do you already have a Helm chart for this project?",
+				Options: []string{
+					"No",
+					hasOwnHelmChart,
+				},
+			})
+			if err != nil {
+				return err
+			}
+
 			if isQuickstart {
 				quickstartYes := "Yes"
 				quickstartAnswer, err := cmd.log.Question(&survey.QuestionOptions{
@@ -305,33 +317,19 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 				}
 			}
 
-			if !mustAddComponentChart {
-				hasOwnHelmChart := "Yes"
-				helmChartAnswer, err := cmd.log.Question(&survey.QuestionOptions{
-					Question: "Do you already have a Helm chart for this project?",
-					Options: []string{
-						"No",
-						hasOwnHelmChart,
-					},
-				})
+			if helmChartAnswer == hasOwnHelmChart && !mustAddComponentChart {
+				err = configureManager.AddHelmDeployment(imageName)
 				if err != nil {
-					return err
-				}
-
-				if helmChartAnswer == hasOwnHelmChart {
-					err = configureManager.AddHelmDeployment(imageName)
-					if err != nil {
-						if err.Error() != "" {
-							cmd.log.WriteString(logrus.InfoLevel, "\n")
-							cmd.log.Errorf("Error: %s", err.Error())
-						}
-
-						// Retry questions on error
-						continue
+					if err.Error() != "" {
+						cmd.log.WriteString(logrus.InfoLevel, "\n")
+						cmd.log.Errorf("Error: %s", err.Error())
 					}
-				} else {
-					mustAddComponentChart = true
+
+					// Retry questions on error
+					continue
 				}
+			} else {
+				mustAddComponentChart = true
 			}
 		} else if selectedDeploymentOption == DeployOptionKubectl || selectedDeploymentOption == DeployOptionKustomize {
 			err = configureManager.AddKubectlDeployment(imageName, selectedDeploymentOption == DeployOptionKustomize)
@@ -375,7 +373,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 			}
 		}
 
-		err = configureManager.AddImage(imageName, image, projectNamespace+"/"+projectName, cmd.Dockerfile)
+		err = configureManager.AddImage(imageName, image, projectNamespace+"/"+projectName, cmd.Dockerfile, languageHandler)
 		if err != nil {
 			if err.Error() != "" {
 				cmd.log.Errorf("Error: %s", err.Error())

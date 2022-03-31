@@ -3,7 +3,6 @@ package ssh
 import (
 	"bytes"
 	"fmt"
-	"github.com/mgutz/ansi"
 	"io"
 	"strconv"
 	"strings"
@@ -123,6 +122,7 @@ func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, sshHost strin
 	}
 
 	// make sure the DevSpace helper binary is injected
+	ctx.Log.Info("SSH: Inject devspacehelper...")
 	err = inject.InjectDevSpaceHelper(ctx.Context, ctx.KubeClient, container.Pod, container.Container.Name, arch, ctx.Log)
 	if err != nil {
 		return err
@@ -183,6 +183,6 @@ func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, sshHost strin
 		return nil
 	})
 
-	ctx.Log.Donef("Use '%s' to connect via SSH", ansi.Color(fmt.Sprintf("ssh %s", sshHost), "white+b"))
+	ctx.Log.Donef("SSH started on host %s. Use 'ssh %s' to connect", sshHost, sshHost)
 	return nil
 }

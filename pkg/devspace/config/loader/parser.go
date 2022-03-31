@@ -40,7 +40,7 @@ type commandsParser struct{}
 
 func (c *commandsParser) Parse(ctx context.Context, originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, map[string]interface{}, error) {
 	// modify the config
-	preparedConfig, err := versions.Get(rawConfig, "commands")
+	preparedConfig, err := versions.GetCommands(rawConfig)
 	if err != nil {
 		return nil, nil, err
 	}

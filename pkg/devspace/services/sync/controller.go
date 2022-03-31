@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
-	"github.com/mgutz/ansi"
 	"io"
 	"os"
 	"path/filepath"
@@ -191,12 +190,8 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 					"ERROR":       err,
 				}, hook.EventsForSingle("restart:sync", options.Name).With("sync.restart")...)
 
-				ctx.Log.Errorf("Restarting because: %v", err)
-				shouldExit := PrintPodError(ctx.Context, ctx.KubeClient, pod.Pod, ctx.Log)
-				if shouldExit {
-					syncStop(ctx, client, options, parent)
-					return nil
-				}
+				options.SyncLog.Info("Restarting sync...")
+				PrintPodError(ctx.Context, ctx.KubeClient, pod.Pod, options.SyncLog)
 				for {
 					err := c.startWithWait(ctx.WithLogger(options.SyncLog), options, parent)
 					if err != nil {
@@ -238,30 +233,24 @@ func syncDone(ctx *devspacecontext.Context, options *Options, parent *tomb.Tomb)
 	hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
 		"sync_config": options.SyncConfig,
 	}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
-	ctx.Log.Debugf("Stopped sync %s", options.SyncConfig.Path)
 }
 
-func PrintPodError(ctx context.Context, kubeClient kubectl.Client, pod *v1.Pod, log logpkg.Logger) bool {
+func PrintPodError(ctx context.Context, kubeClient kubectl.Client, pod *v1.Pod, log logpkg.Logger) {
 	// check if pod still exists
 	newPod, err := kubeClient.KubeClient().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			log.Errorf("Restarted because old pod %s/%s seems to be erased", pod.Namespace, pod.Name)
-			return true
+			return
 		}
 
-		return false
-	}
-	if newPod.DeletionTimestamp != nil {
-		return true
+		return
 	}
 
 	podStatus := kubectl.GetPodStatus(newPod)
 	if podStatus != "Running" {
 		log.Errorf("Restarted because old pod %s/%s has status %s", pod.Namespace, pod.Name, podStatus)
 	}
-
-	return false
 }
 
 func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error) (*sync.Sync, *selector.SelectedPodContainer, error) {
@@ -274,7 +263,7 @@ func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, o
 		return nil, nil, errors.Wrap(err, "error selecting container")
 	}
 
-	ctx.Log.Debug("Starting sync...")
+	ctx.Log.Info("Starting sync...")
 	syncClient, err := c.initClient(ctx, container.Pod, options.Arch, container.Container.Name, syncConfig, options.Starter, options.Verbose, options.SyncLog)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "start sync")
@@ -285,11 +274,12 @@ func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, o
 		return nil, nil, errors.Errorf("Sync error: %v", err)
 	}
 
-	localPath, remotePath, err := ParseSyncPath(syncConfig.Path)
-	if err == nil {
-		ctx.Log.Donef("Sync started on: %s", ansi.Color(fmt.Sprintf("%s <-> %s", localPath, remotePath), "white+b"))
+	syncPath := "."
+	if syncConfig.Path != "" {
+		syncPath = syncConfig.Path
 	}
 
+	ctx.Log.Donef("Sync started on %s", syncPath)
 	return syncClient, container, nil
 }
 
@@ -557,7 +547,7 @@ func StartStream(ctx context.Context, client kubectl.Client, pod *v1.Pod, contai
 		defer stderrReader.Close()
 		s := scanner.NewScanner(stderrReader)
 		for s.Scan() {
-			log.Debug("Helper - " + s.Text())
+			log.Info("Helper - " + s.Text())
 		}
 		if s.Err() != nil && s.Err() != context.Canceled {
 			log.Warnf("Helper - Error streaming logs: %v", s.Err())

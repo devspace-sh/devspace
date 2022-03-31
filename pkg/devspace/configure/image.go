@@ -24,7 +24,7 @@ import (
 const dockerHubHostname = "hub.docker.com"
 
 // AddImage adds an image to the provided config
-func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string) error {
+func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string, languageHandler *generator.LanguageHandler) error {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
 		useGithubRegistry     = "Use GitHub image registry"
@@ -113,14 +113,14 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 		}
 
 		// Get docker client
-		dockerClient, err := m.factory.NewDockerClientWithMinikube(context.TODO(), kubeContext, true, m.log)
+		dockerClient, err := m.factory.NewDockerClientWithMinikube(kubeContext, true, m.log)
 		if err != nil {
 			return errors.Errorf("Cannot create docker client: %v", err)
 		}
 
 		// Check if user is logged into docker hub
 		isLoggedIntoDockerHub := false
-		authConfig, err := dockerClient.GetAuthConfig(context.TODO(), dockerHubHostname, true)
+		authConfig, err := dockerClient.GetAuthConfig(dockerHubHostname, true)
 		if err == nil && authConfig.Username != "" {
 			useDockerHub = useDockerHub + fmt.Sprintf(registryUsernameHint, authConfig.Username)
 			isLoggedIntoDockerHub = true
@@ -128,7 +128,7 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 
 		// Check if user is logged into GitHub
 		isLoggedIntoGitHub := false
-		authConfig, err = dockerClient.GetAuthConfig(context.TODO(), generator.GithubContainerRegistry, true)
+		authConfig, err = dockerClient.GetAuthConfig(generator.GithubContainerRegistry, true)
 		if err == nil && authConfig.Username != "" {
 			useGithubRegistry = useGithubRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
 			isLoggedIntoGitHub = true
@@ -231,13 +231,12 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 
 	registryUsername := ""
 	registryPassword := ""
-	retry := false
 
 	m.log.WriteString(logrus.WarnLevel, "\n")
 
 	for {
 		m.log.Info("Checking registry authentication for " + registryHostnamePrintable + "...")
-		authConfig, err := dockerClient.Login(context.TODO(), registryHostname, registryUsername, registryPassword, true, retry, retry)
+		authConfig, err := dockerClient.Login(registryHostname, registryUsername, registryPassword, true, false, false)
 		if err == nil && (authConfig.Username != "" || authConfig.Password != "") {
 			registryUsername = authConfig.Username
 
@@ -273,9 +272,22 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 		// Check if docker is running
 		_, runErr := command.Output(context.TODO(), "", "docker", "version")
 
+		retry := true
+
 		// If Docker is available, ask if we should retry registry login
-		if runErr == nil && registryUsername != "" {
-			retry = true
+		if runErr == nil {
+			retryNo := "no"
+			retryAnswer, err := m.log.Question(&survey.QuestionOptions{
+				Question: "Do you want to retry logging into this registry?",
+				Options:  []string{"yes", retryNo},
+			})
+			if err != nil {
+				return "", err
+			}
+
+			if retryAnswer == retryNo {
+				retry = false
+			}
 		}
 
 		if !retry {

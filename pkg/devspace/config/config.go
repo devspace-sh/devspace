@@ -80,12 +80,7 @@ func (c *config) LocalCache() localcache.Cache {
 }
 
 func (c *config) Variables() map[string]interface{} {
-	newVariables := map[string]interface{}{}
-	for k, v := range c.resolvedVariables {
-		newVariables[k] = v
-	}
-
-	return newVariables
+	return c.resolvedVariables
 }
 
 func (c *config) Path() string {

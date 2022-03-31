@@ -1,29 +1,39 @@
-version: v2beta1
-name: hot-reload-container-restart
-
+version: v1beta11
 vars:
-  IMAGE: myusername/devspace
-
+  - name: IMAGE
+    value: myusername/devspace
 images:
-  my-image:
+  default:
     image: ${IMAGE}
-
+    # this option tells devspace to automatically wrap the Dockerfile entrypoint in memory
+    # with a small restart helper script so that the process can be easily restarted from within the
+    # container. This should work with most Dockerfiles that have an ENTRYPOINT statement.
+    # This will also work for build targets.
+    # Note: If you override the entrypoint in the kubernetes yaml via the Pod.spec.containers.command,
+    # please make sure you wrap the command with the devspace script '/devspace-restart-helper'
+    injectRestartHelper: true
+    # If you don't have an entrypoint defined in your Dockerfile, you can also define an entrypoint here
+    # entrypoint: ["go"]
+    # cmd: ["run", "main.go"]
 deployments:
-  my-deployment:
-    updateImageTags: true
-    helm:
-      values:
-        containers:
-        - image: ${IMAGE}
-
+- name: quickstart
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: ${IMAGE}
+      service:
+        ports:
+        - port: 8080
 dev:
-  my-dev:
-    imageSelector: ${IMAGE}
-    command: ["go", "run", "main.go"] # Needed so that DevSpace knows which command to restart
-    logs: {}
-    ports:
+  ports:
+  - imageSelector: ${IMAGE}
+    forward:
     - port: 8080
-    sync:
-    - path: ./
-      onUpload:
-        restartContainer: true
+  sync:
+  - imageSelector: ${IMAGE}
+    onUpload:
+      # this option tells devspace to restart the container process if something changes within
+      # the container. This obviously only works if the restart helper script is present in the container.
+      # You can either manually add the restart script or add the injectRestartHelper option to the image
+      restartContainer: true

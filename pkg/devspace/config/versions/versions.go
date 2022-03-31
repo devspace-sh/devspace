@@ -53,14 +53,14 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(ctx context.Context, basePath string, data map[string]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, log log.Logger) ([]*latest.ProfileConfig, error) {
-	parsedProfiles := []*latest.ProfileConfig{}
+func ParseProfile(ctx context.Context, basePath string, data map[string]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, log log.Logger) ([]map[string]interface{}, error) {
+	parsedProfiles := []map[string]interface{}{}
 
 	// auto activated root level profiles
 	activatedProfiles := []string{}
 	if !disableProfileActivation {
 		var err error
-		activatedProfiles, err = getActivatedProfiles(ctx, data, resolver, log)
+		activatedProfiles, err = getActivatedProfiles(data, resolver)
 		if err != nil {
 			return nil, err
 		}
@@ -81,15 +81,15 @@ func ParseProfile(ctx context.Context, basePath string, data map[string]interfac
 	return parsedProfiles, nil
 }
 
-// Get parses only the key from the config
-func Get(data map[string]interface{}, key string) (map[string]interface{}, error) {
+// GetImports parses only the commands from the config
+func GetImports(data map[string]interface{}) (map[string]interface{}, error) {
 	retMap := map[string]interface{}{}
 	err := util.Convert(data, &retMap)
 	if err != nil {
 		return nil, err
 	}
 
-	keyData, ok := retMap[key]
+	imports, ok := retMap["imports"]
 	if !ok {
 		return map[string]interface{}{
 			"version": retMap["version"],
@@ -100,13 +100,35 @@ func Get(data map[string]interface{}, key string) (map[string]interface{}, error
 	return map[string]interface{}{
 		"version": retMap["version"],
 		"name":    retMap["name"],
-		key:       keyData,
+		"imports": imports,
+	}, nil
+}
+
+func GetCommands(data map[string]interface{}) (map[string]interface{}, error) {
+	retMap := map[string]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return nil, err
+	}
+
+	commands, ok := retMap["commands"]
+	if !ok {
+		return map[string]interface{}{
+			"version": retMap["version"],
+			"name":    retMap["name"],
+		}, nil
+	}
+
+	return map[string]interface{}{
+		"version":  retMap["version"],
+		"name":     retMap["name"],
+		"commands": commands,
 	}, nil
 }
 
 // ParseVariables parses only the variables from the config
 func ParseVariables(data map[string]interface{}, log log.Logger) (map[string]*latest.Variable, error) {
-	strippedData, err := Get(data, "vars")
+	strippedData, err := getVariables(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading variables")
 	}
@@ -223,10 +245,40 @@ func adjustConfig(config *latest.Config) {
 	}
 }
 
+// getVariables returns only the variables from the config
+func getVariables(data map[string]interface{}) (map[string]interface{}, error) {
+	retMap := map[string]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return nil, err
+	}
+
+	vars, ok := retMap["vars"]
+	if !ok {
+		return map[string]interface{}{
+			"version": retMap["version"],
+			"name":    retMap["name"],
+		}, nil
+	}
+
+	return map[string]interface{}{
+		"version": retMap["version"],
+		"name":    retMap["name"],
+		"vars":    vars,
+	}, nil
+}
+
 // getProfiles loads a certain profile
-func getProfiles(ctx context.Context, basePath string, data map[string]interface{}, profile string, profileChain *[]*latest.ProfileConfig, depth int, update bool, log log.Logger) error {
+func getProfiles(ctx context.Context, basePath string, data map[string]interface{}, profile string, profileChain *[]map[string]interface{}, depth int, update bool, log log.Logger) error {
 	if depth > 50 {
 		return fmt.Errorf("cannot load config with profile %s: max config loading depth reached. Seems like you have a profile cycle somewhere", profile)
+	}
+
+	// Convert config
+	retMap := map[string]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return err
 	}
 
 	// Check if a profile is defined
@@ -234,21 +286,30 @@ func getProfiles(ctx context.Context, basePath string, data map[string]interface
 		return nil
 	}
 
-	// get the profiles and parse them
-	profilesData, err := Get(data, "profiles")
-	if err != nil {
-		return err
-	}
-	profiles, err := Parse(profilesData, log)
-	if err != nil {
-		return err
+	// Convert to array
+	profiles, ok := retMap["profiles"].([]interface{})
+	if !ok {
+		return errors.Errorf("Couldn't load profile '%s': no profiles found", profile)
 	}
 
 	// Search for config
-	for _, profileConfig := range profiles.Profiles {
-		if profileConfig.Name == profile {
+	for i, profileMap := range profiles {
+		profileConfig := &latest.ProfileConfig{}
+		o, err := yaml.Marshal(profileMap)
+		if err != nil {
+			return err
+		}
+		decoder := yaml.NewDecoder(bytes.NewReader(o))
+		decoder.KnownFields(true)
+		err = decoder.Decode(profileConfig)
+		if err != nil {
+			return fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
+		}
+
+		configMap, ok := profileMap.(map[string]interface{})
+		if ok && profileConfig.Name == profile {
 			// Add to profile chain
-			*profileChain = append(*profileChain, profileConfig)
+			*profileChain = append(*profileChain, configMap)
 
 			// Get parents profiles
 			if profileConfig.Parent != "" && len(profileConfig.Parents) > 0 {
@@ -305,7 +366,7 @@ func getProfiles(ctx context.Context, basePath string, data map[string]interface
 	return errors.Errorf("Couldn't find profile '%s'", profile)
 }
 
-func getActivatedProfiles(ctx context.Context, data map[string]interface{}, resolver variable.Resolver, log log.Logger) ([]string, error) {
+func getActivatedProfiles(data map[string]interface{}, resolver variable.Resolver) ([]string, error) {
 	activatedProfiles := []string{}
 
 	// Check if there are profiles
@@ -313,25 +374,35 @@ func getActivatedProfiles(ctx context.Context, data map[string]interface{}, reso
 		return activatedProfiles, nil
 	}
 
-	// get the profiles and parse them
-	profilesData, err := Get(data, "profiles")
-	if err != nil {
-		return nil, err
-	}
-	profiles, err := Parse(profilesData, log)
-	if err != nil {
-		return nil, err
+	// Convert to array
+	profiles, ok := data["profiles"].([]interface{})
+	if !ok {
+		return activatedProfiles, errors.Errorf("Couldn't load profiles: no profiles found")
 	}
 
 	// Select which profiles are activated
-	for _, profileConfig := range profiles.Profiles {
+	for i, profileMap := range profiles {
+		profileConfig := &latest.ProfileConfig{}
+
+		o, err := yaml.Marshal(profileMap)
+		if err != nil {
+			return activatedProfiles, err
+		}
+
+		decoder := yaml.NewDecoder(bytes.NewReader(o))
+		decoder.KnownFields(true)
+		err = decoder.Decode(profileConfig)
+		if err != nil {
+			return activatedProfiles, fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
+		}
+
 		for _, activation := range profileConfig.Activation {
 			activatedByEnv, err := matchEnvironment(activation.Environment)
 			if err != nil {
 				return activatedProfiles, errors.Wrap(err, "error activating profile with env")
 			}
 
-			activatedByVars, err := matchVars(ctx, activation.Vars, resolver)
+			activatedByVars, err := matchVars(activation.Vars, resolver)
 			if err != nil {
 				return activatedProfiles, errors.Wrap(err, "error activating profile with vars")
 			}
@@ -360,9 +431,9 @@ func matchEnvironment(env map[string]string) (bool, error) {
 	return true, nil
 }
 
-func matchVars(ctx context.Context, activationVars map[string]string, resolver variable.Resolver) (bool, error) {
+func matchVars(activationVars map[string]string, resolver variable.Resolver) (bool, error) {
 	for k, v := range activationVars {
-		value, err := resolveVariableValue(ctx, k, resolver)
+		value, err := resolveVariableValue(k, resolver)
 		if err != nil {
 			return false, err
 		}
@@ -393,8 +464,8 @@ func sanitizeMatchExpression(expression string) string {
 	return exp
 }
 
-func resolveVariableValue(ctx context.Context, name string, resolver variable.Resolver) (string, error) {
-	val, err := resolver.FillVariables(ctx, "${"+name+"}")
+func resolveVariableValue(name string, resolver variable.Resolver) (string, error) {
+	val, err := resolver.FillVariables(context.TODO(), "${"+name+"}")
 	if err != nil {
 		return "", err
 	}

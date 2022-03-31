@@ -145,7 +145,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	defer ws.Close()
 
 	// Open logs connection
-	reader, err := client.Logs(context.TODO(), namespace[0], name[0], container[0], false, ptr.Int64(100), true)
+	reader, err := client.Logs(context.Background(), namespace[0], name[0], container[0], false, ptr.Int64(100), true)
 	if err != nil {
 		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
 		websocketError(ws, err)

@@ -66,5 +66,5 @@ func NewOverwriteCmd(f factory.Factory, globalFlags *flags.GlobalFlags, command 
 
 func (cmd *OverwriteCmd) Run(f factory.Factory, args []string) error {
 	devCtx := devspacecontext.NewContext(context.Background(), f.GetLog())
-	return executeCommandWithAfter(devCtx.Context, cmd.Command, args, cmd.Variables, devCtx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin, devCtx.Log)
+	return ExecuteCommand(devCtx.Context, cmd.Command, cmd.Variables, args, devCtx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
 }

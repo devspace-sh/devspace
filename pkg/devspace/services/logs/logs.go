@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"io"
 	"time"
 )
@@ -39,20 +40,16 @@ func StartLogs(
 	defer func() {
 		if err != nil {
 			if ctx.IsDone() {
+				err = nil
 				return
 			}
 
-			ctx.Log.Infof("Restarting because: %s", err)
-			select {
-			case <-ctx.Context.Done():
-				return
-			case <-time.After(time.Second * 3):
-			}
+			ctx.Log.WriteString(logrus.InfoLevel, "\n")
+			ctx.Log.Infof("Restarting logs because: %s", err)
+			time.Sleep(time.Second * 3)
 			err = StartLogs(ctx, devContainer, selector)
 			return
 		}
-
-		ctx.Log.Debugf("Stopped logs")
 	}()
 
 	containerObj, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)

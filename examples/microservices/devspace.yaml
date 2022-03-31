@@ -1,9 +1,37 @@
-version: v2beta1
-
-dependencies:
+# This example only works with minikube and docker desktop
+# If you want to try this example in other
+# Clusters you have to exchange the image names
+# and enable image pushing
+version: v1beta11
+images:
   node:
-    path: node
-    pipeline: dev
+    image: node
+    dockerfile: node/Dockerfile
+    context: node/
   php:
-    path: php
-    pipeline: dev
+    image: php
+    dockerfile: php/Dockerfile
+    context: php/
+deployments:
+- name: devspace-node
+  kubectl:
+    manifests:
+    - node/kube/*
+- name: devspace-php
+  helm:
+    chart:
+      name: php/chart
+dev:
+  ports:
+  - imageSelector: image(node):tag(node)
+    forward:
+    - port: 3000
+  sync:
+  - imageSelector: image(node):tag(node)
+    localSubPath: ./node
+    excludePaths:
+    - node_modules
+  - imageSelector: image(php):tag(php)
+    localSubPath: ./php
+  terminal:
+    imageSelector: image(node):tag(node)

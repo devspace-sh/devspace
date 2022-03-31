@@ -108,7 +108,7 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	}
 
 	// add image arg
-	if b.imageConf.Custom.SkipImageArg != nil && !*b.imageConf.Custom.SkipImageArg {
+	if b.imageConf.Custom.SkipImageArg == nil || !*b.imageConf.Custom.SkipImageArg {
 		for _, tag := range b.imageTags {
 			if b.imageConf.Custom.ImageFlag != "" {
 				args = append(args, b.imageConf.Custom.ImageFlag)
@@ -161,8 +161,7 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	}
 	defer writer.Close()
 
-	ctx.Log.Infof("Build %s:%s with custom command", b.imageConf.Image, b.imageTags[0])
-	ctx.Log.Debugf("Build %s:%s with custom command '%s %s' in working dir %s", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "), ctx.WorkingDir)
+	ctx.Log.Infof("Build %s:%s with custom command '%s %s'", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "))
 	if len(args) == 0 {
 		err = engine.ExecuteSimpleShellCommand(ctx.Context, ctx.WorkingDir, writer, writer, nil, nil, commandPath, args...)
 		if err != nil {

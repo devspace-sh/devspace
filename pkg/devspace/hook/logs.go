@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"context"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 
@@ -21,7 +22,7 @@ type remoteLogsHook struct {
 
 func (r *remoteLogsHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error {
 	ctx.Log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
-	reader, err := ctx.KubeClient.Logs(ctx.Context, podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, false, hook.Logs.TailLines, true)
+	reader, err := ctx.KubeClient.Logs(context.TODO(), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, false, hook.Logs.TailLines, true)
 	if err != nil {
 		return err
 	}

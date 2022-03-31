@@ -124,7 +124,7 @@ func (u *untilNewestRunning) SelectPod(ctx context.Context, client kubectl.Clien
 		u.podInfoPrinter.PrintPodWarning(pods[0], log)
 		return false, nil, nil
 	} else if kubectl.GetPodStatus(pods[0]) != "Running" {
-		u.podInfoPrinter.PrintPodInfo(ctx, client, pods[0], log)
+		u.podInfoPrinter.PrintPodInfo(client, pods[0], log)
 		return false, nil, nil
 	}
 
@@ -147,7 +147,7 @@ func (u *untilNewestRunning) SelectContainer(ctx context.Context, client kubectl
 		u.podInfoPrinter.PrintPodWarning(containers[0].Pod, log)
 		return false, nil, nil
 	} else if !targetselector.IsContainerRunning(containers[0]) {
-		u.podInfoPrinter.PrintPodInfo(ctx, client, containers[0].Pod, log)
+		u.podInfoPrinter.PrintPodInfo(client, containers[0].Pod, log)
 		return false, nil, nil
 	}
 

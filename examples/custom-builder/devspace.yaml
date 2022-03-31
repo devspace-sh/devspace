@@ -1,36 +1,29 @@
 # Note: This example only works in minikube, since the custom builder
 # does not push the image
-version: v2beta1
-name: custom-builder
-
+version: v1beta11
 vars:
-  IMAGE: myusername/devspace
-
+  - name: IMAGE
+    value: myusername/devspace
 images:
-  my-image:
+  default:
     image: ${IMAGE}
-    custom:
-      command: |-
-        # Also works on windows as this is executed in a pseudo shell
-        docker build -t ${runtime.images.my-image.image}:${runtime.images.my-image.tag} . -f custom/Dockerfile
-      onChange:
-      - main.go
-
+    build:
+      custom:
+        skipImageArg: true
+        command: |-
+          # Also works on windows as this is executed in a golang shell
+          docker build -t ${runtime.images.default.image}:${runtime.images.default.tag} . -f custom/Dockerfile
+        onChange:
+        - main.go
 deployments:
-  my-deployment:
-    updateImageTags: true
-    kubectl:
-      manifests:
-      - kube
-
+- name: devspace-default
+  kubectl:
+    manifests:
+    - kube
 dev:
-  my-dev:
-    imageSelector: ${IMAGE}
-    logs: {}
-    command: ["go", "run", "main.go"]
-    ports:
+  ports:
+  - imageSelector: ${IMAGE}
+    forward:
     - port: 8080
-    sync:
-    - path: ./
-      onUpload:
-        restartContainer: true
+  sync:
+  - imageSelector: ${IMAGE}

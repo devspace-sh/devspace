@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -150,9 +149,7 @@ var _ = DevSpaceDescribe("sync", func() {
 			defer waitGroup.Done()
 
 			err := syncCmd.Run(f)
-			if err != nil && errors.Cause(err) != context.Canceled {
-				framework.ExpectNoError(err)
-			}
+			framework.ExpectNoError(err)
 		}()
 
 		// wait until files were synced

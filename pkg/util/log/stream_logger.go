@@ -25,22 +25,10 @@ import (
 
 var Colors = []string{
 	"blue",
-	"blue+h",
-	"blue+b",
 	"green",
-	"green+h",
-	"green+b",
 	"yellow",
-	"yellow+h",
-	"yellow+b",
 	"magenta",
-	"magenta+h",
-	"magenta+b",
 	"cyan",
-	"cyan+h",
-	"cyan+b",
-	"white",
-	"white+h",
 	"white+b",
 }
 
@@ -205,21 +193,6 @@ func (s *StreamLogger) WithPrefix(prefix string) Logger {
 	n.prefixes = append(n.prefixes, Prefix{
 		Prefix: prefix,
 		Color:  Colors[hashNumber%len(Colors)],
-	})
-	return &n
-}
-
-func (s *StreamLogger) WithPrefixColor(prefix, color string) Logger {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	n := *s
-	n.m = &sync.Mutex{}
-	n.prefixes = []Prefix{}
-	n.prefixes = append(n.prefixes, s.prefixes...)
-	n.prefixes = append(n.prefixes, Prefix{
-		Prefix: prefix,
-		Color:  color,
 	})
 	return &n
 }

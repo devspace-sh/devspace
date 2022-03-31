@@ -22,11 +22,6 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	for i := range clonedConfig.Profiles {
-		clonedConfig.Profiles[i].Replace = nil
-		clonedConfig.Profiles[i].Merge = nil
-		clonedConfig.Profiles[i].StrategicMerge = nil
-	}
 	clonedConfig.Deployments = nil
 	clonedConfig.Dev = DevConfig{}
 	clonedConfig.Dependencies = nil
@@ -38,35 +33,6 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	err = util.Convert(clonedConfig, nextConfig)
 	if err != nil {
 		return nil, err
-	}
-
-	// convert profiles
-	for i, p := range c.Profiles {
-		if p.Merge != nil {
-			nextConfig.Profiles[i].Merge = &next.ProfileConfigStructure{
-				Images:          p.Merge.Images,
-				Hooks:           p.Merge.Hooks,
-				OldDeployments:  p.Merge.Deployments,
-				OldDependencies: p.Merge.Dependencies,
-				OldCommands:     p.Merge.Commands,
-				OldPullSecrets:  p.Merge.PullSecrets,
-				OldVars:         p.Merge.Vars,
-			}
-		}
-		if p.Replace != nil {
-			nextConfig.Profiles[i].Replace = &next.ProfileConfigStructure{
-				Images:          p.Replace.Images,
-				Hooks:           p.Replace.Hooks,
-				OldDeployments:  p.Replace.Deployments,
-				OldDependencies: p.Replace.Dependencies,
-				OldCommands:     p.Replace.Commands,
-				OldPullSecrets:  p.Replace.PullSecrets,
-				OldVars:         p.Replace.Vars,
-			}
-		}
-		if p.StrategicMerge != nil {
-			log.Errorf("profiles[*].strategicMerge is not supported anymore in v6")
-		}
 	}
 
 	// convert vars
@@ -97,12 +63,6 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			}
 		}
 	}
-
-	// add env file
-	if nextConfig.Vars == nil {
-		nextConfig.Vars = map[string]*next.Variable{}
-	}
-	nextConfig.Vars["DEVSPACE_ENV_FILE"] = &next.Variable{Value: ".env"}
 
 	deployPipeline := ""
 	buildPipeline := ""
@@ -558,6 +518,7 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 				Operation: p.Operation,
 				Path:      p.Path,
 				Value:     p.Value,
+				From:      p.From,
 			})
 		}
 		if replacePod.PersistenceOptions != nil {
@@ -795,10 +756,7 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 
 func getMatchingDevContainer(devPod *next.DevPod, containerName string) *next.DevContainer {
 	for key, container := range devPod.Containers {
-		if container.Container == containerName || container.Container == "" {
-			devPod.Containers[key].Container = containerName
-			return devPod.Containers[key]
-		} else if containerName == "" {
+		if container.Container == containerName {
 			return devPod.Containers[key]
 		}
 	}

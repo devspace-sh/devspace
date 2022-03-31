@@ -7,14 +7,17 @@ import FragmentWorkflowOpenLinks from '../../fragments/workflow-open-links.mdx';
 
 DevSpace allows you to define URLs that should open after deploying an application in development mode, i.e. using `devspace dev`.
 
-The configuration for automatically opening URLs can be found in the `dev.*.open` section of `devspace.yaml`.
+The configuration for automatically opening URLs can be found in the `dev.open` section of `devspace.yaml`.
 ```yaml
 dev:
-  my-dev:
-    open:
-    - url: http://localhost:3000/
-    - url: http://localhost:8089/   # DevSpace UI
+  open:
+  - url: http://localhost:3000/
+  - url: http://localhost:8089/   # DevSpace UI
 ```
+
+:::note
+Setting `dev.open` only affects `devspace dev`. To open your application after running `devspace deploy`, run `devspace open`.
+:::
 
 
 ## Workflow
@@ -35,10 +38,8 @@ open: []
 #### Example: Open URL when Starting Dev Mode
 ```yaml
 dev:
-  my-dev:
-    imageSelector: my-image
-    open:
-    - url: http://localhost:3000/login
+  open:
+  - url: http://localhost:3000/login
 ```
 **Explanation:**  
 Running `devspace dev` using the above configuration would do the following:

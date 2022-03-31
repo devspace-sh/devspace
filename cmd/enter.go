@@ -32,8 +32,6 @@ type EnterCmd struct {
 	Pick          bool
 	Wait          bool
 	Reconnect     bool
-	Screen        bool
-	ScreenSession string
 
 	WorkingDirectory string
 
@@ -81,8 +79,6 @@ devspace enter bash --image-selector "${runtime.images.app.image}:${runtime.imag
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod / container if multiple are found")
 	enterCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "Wait for the pod(s) to start if they are not running")
 	enterCmd.Flags().BoolVar(&cmd.Reconnect, "reconnect", false, "Will reconnect the terminal if an unexpected return code is encountered")
-	enterCmd.Flags().BoolVar(&cmd.Screen, "screen", false, "Use a screen session to connect")
-	enterCmd.Flags().StringVar(&cmd.ScreenSession, "screen-session", "enter", "The screen session to create or connect to")
 
 	return enterCmd
 }
@@ -162,7 +158,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, args []string) error {
 
 	// Start terminal
 	stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
-	exitCode, err := terminal.StartTerminalFromCMD(ctx, targetselector.NewTargetSelector(selectorOptions), command, cmd.Wait, cmd.Reconnect, cmd.Screen, cmd.ScreenSession, stdout, stderr, stdin)
+	exitCode, err := terminal.StartTerminalFromCMD(ctx, targetselector.NewTargetSelector(selectorOptions), command, cmd.Wait, cmd.Reconnect, stdout, stderr, stdin)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

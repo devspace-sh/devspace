@@ -63,12 +63,9 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 			}
 
 			// parse the .env file
-			envFile := env.GlobalGetEnv("DEVSPACE_ENV_FILE")
-			if envFile != "" {
-				err := godotenv.Load(envFile)
-				if err != nil && !os.IsNotExist(err) {
-					log.Warnf("Error loading .env: %v", err)
-				}
+			err := godotenv.Load()
+			if err != nil && !os.IsNotExist(err) {
+				log.Warnf("Error loading .env: %v", err)
 			}
 
 			// apply extra flags

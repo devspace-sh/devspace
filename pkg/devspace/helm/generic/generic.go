@@ -78,7 +78,7 @@ func (c *client) Exec(ctx *devspacecontext.Context, args []string) ([]byte, erro
 
 	// disable log for list, because it prints same command multiple times if we've multiple deployments.
 	if args[0] != "list" {
-		c.log.Debugf("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
+		c.log.Infof("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
 	}
 	result, err := command.Output(ctx.Context, ctx.WorkingDir, c.helmPath, args...)
 	if err != nil {

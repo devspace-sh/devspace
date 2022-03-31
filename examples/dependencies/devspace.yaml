@@ -1,16 +1,19 @@
-version: v2beta1
-
+version: v1beta11
 dependencies:
-  dependency1:
+- name: dependency1
+  source:
     path: dependency1
-  dependency2:
+- name: dependency2
+  source:
     path: dependency2
-    pipeline: dev      # Allow ports etc from dependency2
-  dependency3:
+  # Use dev.ports config from dependency2
+  dev:
+    ports: true
+- name: dependency3
+  source:
     git: https://github.com/devspace-cloud/example-dependency.git
-
 dev:
-  my-dev:
-    imageSelector: ${runtime.dependencies.dependency1.images.default}
-    terminal: {}
+  # Open terminal to the pod with the imageName created in dependency1
+  terminal:
+    imageSelector: image(dependency1.default)
     

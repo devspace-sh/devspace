@@ -8,7 +8,9 @@ import (
 // Client communicates with a registry
 type Client interface {
 	EnsurePullSecrets(ctx *devspacecontext.Context, dockerClient docker.Client, pullSecrets []string) error
+
 	EnsurePullSecret(ctx *devspacecontext.Context, dockerClient docker.Client, namespace, registryURL string) error
+	CreatePullSecret(ctx *devspacecontext.Context, options *PullSecretOptions) error
 }
 
 // NewClient creates a client for a registry

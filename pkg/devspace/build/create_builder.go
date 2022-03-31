@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/buildkit"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/custom"
@@ -58,13 +59,13 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 			kubeContext = ctx.KubeClient.CurrentContext()
 		}
 
-		dockerClient, err := dockerclient.NewClientWithMinikube(ctx.Context, kubeContext, preferMinikube, ctx.Log)
+		dockerClient, err := dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, ctx.Log)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker client: %v", err)
 		}
 
 		// Check if docker daemon is running
-		_, err = dockerClient.Ping(ctx.Context)
+		_, err = dockerClient.Ping(context.Background())
 		if err != nil {
 			if imageConf.Docker != nil && imageConf.Docker.DisableFallback != nil && *imageConf.Docker.DisableFallback {
 				return nil, errors.Errorf("Couldn't reach docker daemon: %v. Is the docker daemon running?", err)
@@ -88,7 +89,7 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 			return nil, err
 		}
 
-		dockerClient, err := dockerclient.NewClient(ctx.Context, ctx.Log)
+		dockerClient, err := dockerclient.NewClient(ctx.Log)
 		if err == nil {
 			if imageConf.Kaniko != nil && imageConf.Kaniko.Namespace != "" && ctx.KubeClient.Namespace() != imageConf.Kaniko.Namespace {
 				err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, imageConf.Kaniko.Namespace, registryURL)

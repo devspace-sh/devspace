@@ -4,11 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
-	"regexp"
-	"time"
-
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"regexp"
+	"strings"
+	"time"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -33,23 +32,6 @@ type PullSecretOptions struct {
 	Secret          string
 }
 
-// DockerConfigJSON represents a local docker auth config file
-// for pulling images.
-type DockerConfigJSON struct {
-	Auths DockerConfig `json:"auths"`
-}
-
-// DockerConfig represents the config file used by the docker CLI.
-// This config that represents the credentials that should be used
-// when pulling images from specific image repositories.
-type DockerConfig map[string]DockerConfigEntry
-
-// DockerConfigEntry holds the user information that grant the access to docker registry
-type DockerConfigEntry struct {
-	Auth  string `json:"auth"`
-	Email string `json:"email"`
-}
-
 // CreatePullSecret creates an image pull secret for a registry
 func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSecretOptions) error {
 	pullSecretName := options.Secret
@@ -57,9 +39,8 @@ func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSec
 		pullSecretName = GetRegistryAuthSecretName(options.RegistryURL)
 	}
 
-	registryURL := options.RegistryURL
-	if registryURL == "hub.docker.com" || registryURL == "" {
-		registryURL = "https://index.docker.io/v1/"
+	if options.RegistryURL == "hub.docker.com" || options.RegistryURL == "" {
+		options.RegistryURL = "https://index.docker.io/v1/"
 	}
 
 	authToken := options.PasswordOrToken
@@ -72,64 +53,48 @@ func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSec
 		email = "noreply@devspace.sh"
 	}
 
+	registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(authToken))
+	pullSecretDataValue := []byte(`{
+			"auths": {
+				"` + options.RegistryURL + `": {
+					"auth": "` + registryAuthEncoded + `",
+					"email": "` + email + `"
+				}
+			}
+		}`)
+
+	pullSecretData := map[string][]byte{}
+	pullSecretDataKey := k8sv1.DockerConfigJsonKey
+	pullSecretData[pullSecretDataKey] = pullSecretDataValue
+
+	registryPullSecret := &k8sv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: pullSecretName,
+		},
+		Data: pullSecretData,
+		Type: k8sv1.SecretTypeDockerConfigJson,
+	}
+
 	err := wait.PollImmediate(time.Second, time.Second*30, func() (bool, error) {
 		secret, err := ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Get(ctx.Context, pullSecretName, metav1.GetOptions{})
 		if err != nil {
-			if kerrors.IsNotFound(err) {
-				// Create the pull secret
-				secret, err := newPullSecret(pullSecretName, registryURL, authToken, email)
-				if err != nil {
-					return false, err
-				}
-
-				_, err = ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Create(ctx.Context, secret, metav1.CreateOptions{})
-				if err != nil {
-					if kerrors.IsAlreadyExists(err) {
-						// Retry
-						return false, nil
-					}
-
-					return false, errors.Wrap(err, "create pull secret")
-				}
-
-				ctx.Log.Donef("Created image pull secret %s/%s", options.Namespace, pullSecretName)
-				return true, nil
-			} else {
-				// Retry
-				return false, nil
-			}
-		}
-
-		dockerConfigJSON, err := fromPullSecretData(secret.Data)
-		if err != nil {
-			return false, err
-		}
-
-		existingEntry := dockerConfigJSON.Auths[registryURL]
-		updatedEntry := newDockerConfigEntry(authToken, email)
-		if hasChanges(existingEntry, updatedEntry) {
-			// Update secret entry
-			dockerConfigJSON.Auths[registryURL] = updatedEntry
-
-			// Update secret data
-			secret.Data, err = toPullSecretData(dockerConfigJSON)
+			_, err = ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Create(ctx.Context, registryPullSecret, metav1.CreateOptions{})
 			if err != nil {
-				return false, err
+				return false, errors.Errorf("Unable to create image pull secret: %s", err.Error())
 			}
 
-			// Update secret
-			_, err = ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Update(ctx.Context, secret, metav1.UpdateOptions{})
+			ctx.Log.Donef("Created image pull secret %s/%s", options.Namespace, pullSecretName)
+		} else if secret.Data == nil || string(secret.Data[pullSecretDataKey]) != string(pullSecretData[pullSecretDataKey]) {
+			_, err = ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Update(ctx.Context, registryPullSecret, metav1.UpdateOptions{})
 			if err != nil {
 				if kerrors.IsConflict(err) {
-					// Retry
 					return false, nil
 				}
 
-				return false, errors.Wrap(err, "update pull secret")
+				return false, errors.Errorf("Unable to update image pull secret: %s", err.Error())
 			}
-
-			ctx.Log.Donef("Updated image pull secret %s/%s", options.Namespace, pullSecretName)
 		}
+
 		return true, nil
 	})
 	if err != nil {
@@ -141,7 +106,11 @@ func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSec
 
 // GetRegistryAuthSecretName returns the name of the image pull secret for a registry
 func GetRegistryAuthSecretName(registryURL string) string {
-	return "devspace-pull-secrets"
+	if registryURL == "" {
+		return registryAuthSecretNamePrefix + "docker"
+	}
+
+	return SafeName(registryAuthSecretNamePrefix + registryNameReplaceRegex.ReplaceAllString(strings.ToLower(registryURL), "-"))
 }
 
 func SafeName(name string) string {
@@ -150,61 +119,4 @@ func SafeName(name string) string {
 		return name[0:52] + "-" + hex.EncodeToString(digest[0:])[0:10]
 	}
 	return name
-}
-
-func newPullSecret(name, registryURL, authToken, email string) (*k8sv1.Secret, error) {
-	dockerConfig := &DockerConfigJSON{
-		Auths: DockerConfig{
-			registryURL: newDockerConfigEntry(authToken, email),
-		},
-	}
-
-	pullSecretData, err := toPullSecretData(dockerConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "new pull secret")
-	}
-
-	return &k8sv1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Data: pullSecretData,
-		Type: k8sv1.SecretTypeDockerConfigJson,
-	}, nil
-}
-
-func newDockerConfigEntry(authToken, email string) DockerConfigEntry {
-	return DockerConfigEntry{
-		Auth:  base64.StdEncoding.EncodeToString([]byte(authToken)),
-		Email: email,
-	}
-}
-
-func hasChanges(existing, updated DockerConfigEntry) bool {
-	return existing.Auth != updated.Auth || existing.Email != updated.Email
-}
-
-func toPullSecretData(dockerConfig *DockerConfigJSON) (map[string][]byte, error) {
-	data, err := json.Marshal(dockerConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "marshal docker config")
-	}
-
-	return map[string][]byte{
-		k8sv1.DockerConfigJsonKey: data,
-	}, nil
-}
-
-func fromPullSecretData(data map[string][]byte) (*DockerConfigJSON, error) {
-	dockerConfig := &DockerConfigJSON{}
-	if data == nil {
-		return dockerConfig, nil
-	}
-
-	err := json.Unmarshal(data[k8sv1.DockerConfigJsonKey], &dockerConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "unmarshal docker config")
-	}
-
-	return dockerConfig, nil
 }

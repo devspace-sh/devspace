@@ -12,8 +12,8 @@ import (
 )
 
 // GetRegistryEndpoint retrieves the correct registry url
-func (c *client) GetRegistryEndpoint(ctx context.Context, registryURL string) (bool, string, error) {
-	authServer := c.getOfficialServer(ctx)
+func (c *client) GetRegistryEndpoint(registryURL string) (bool, string, error) {
+	authServer := c.getOfficialServer(context.Background())
 	if registryURL == "" || registryURL == "hub.docker.com" {
 		registryURL = authServer
 	}
@@ -22,8 +22,8 @@ func (c *client) GetRegistryEndpoint(ctx context.Context, registryURL string) (b
 }
 
 // GetAuthConfig returns the AuthConfig for a Docker registry from the Docker credential helper
-func (c *client) GetAuthConfig(ctx context.Context, registryURL string, checkCredentialsStore bool) (*types.AuthConfig, error) {
-	isDefaultRegistry, serverAddress, err := c.GetRegistryEndpoint(ctx, registryURL)
+func (c *client) GetAuthConfig(registryURL string, checkCredentialsStore bool) (*types.AuthConfig, error) {
+	isDefaultRegistry, serverAddress, err := c.GetRegistryEndpoint(registryURL)
 	if err != nil {
 		return nil, err
 	}
@@ -32,8 +32,9 @@ func (c *client) GetAuthConfig(ctx context.Context, registryURL string, checkCre
 }
 
 // Login logs the user into docker
-func (c *client) Login(ctx context.Context, registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*types.AuthConfig, error) {
-	isDefaultRegistry, serverAddress, err := c.GetRegistryEndpoint(ctx, registryURL)
+func (c *client) Login(registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*types.AuthConfig, error) {
+	ctx := context.Background()
+	isDefaultRegistry, serverAddress, err := c.GetRegistryEndpoint(registryURL)
 	if err != nil {
 		return nil, err
 	}

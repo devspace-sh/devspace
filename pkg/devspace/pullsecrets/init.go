@@ -162,7 +162,7 @@ func (r *client) createPullSecret(ctx *devspacecontext.Context, dockerClient doc
 	username := pullSecret.Username
 	password := pullSecret.Password
 	if username == "" && password == "" && dockerClient != nil {
-		authConfig, _ := dockerClient.GetAuthConfig(ctx.Context, pullSecret.Registry, true)
+		authConfig, _ := dockerClient.GetAuthConfig(pullSecret.Registry, true)
 		if authConfig != nil {
 			username = authConfig.Username
 			password = authConfig.Password

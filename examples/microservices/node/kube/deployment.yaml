@@ -15,4 +15,3 @@ spec:
       containers:
       - name: node
         image: node
-        imagePullPolicy: Never

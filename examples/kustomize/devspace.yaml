@@ -1,22 +1,24 @@
-version: v2beta1
-
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: yourusername/devspace
+images:
+  default:
+    image: loft-sh/vcluster
 deployments:
-  my-deployment:
-    kubectl:
-      kustomize: true
-      manifests:
-      - kube
-
+- name: devspace-app
+  kubectl:
+    manifests:
+    - kube
+    kustomize: true
 dev:
-  my-dev:
-    labelSelector:
-      app.kubernetes.io/component: default
-    devImage: node:17-alpine
-    terminal: {}
-    workingDir: /app
-    ports:
+  ports:
+  - imageSelector: ${IMAGE}
+    forward:
     - port: 3000
-    sync:
-    - path: ./
-      excludePaths:
-      - node_modules
+  sync:
+  - imageSelector: ${IMAGE}
+    excludePaths:
+    - node_modules
+  terminal:
+    imageSelector: ${IMAGE}
