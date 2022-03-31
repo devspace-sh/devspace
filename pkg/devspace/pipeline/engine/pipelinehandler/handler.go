@@ -48,13 +48,13 @@ var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline
 		return commands.CreateDeployments(devCtx, pipeline, args, hc.Stdout)
 	},
 	"purge_deployments": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		return commands.PurgeDeployments(devCtx, args)
+		return commands.PurgeDeployments(devCtx, pipeline, args)
 	},
 	"start_dev": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.StartDev(devCtx, pipeline, args)
 	},
 	"stop_dev": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		return commands.StopDev(devCtx, pipeline.DevPodManager(), args)
+		return commands.StopDev(devCtx, pipeline, args)
 	},
 	"run_dependency_pipelines": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunDependencyPipelines(devCtx, pipeline, args)

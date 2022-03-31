@@ -1,0 +1,15 @@
+version: v2beta1
+name: dependency
+
+deployments:
+  my-deployment:
+    helm:
+      values:
+        containers:
+          - image: alpine
+
+dev:
+  my-dev:
+    imageSelector: alpine
+    command: ["sleep"]
+    args: ["1000000"]

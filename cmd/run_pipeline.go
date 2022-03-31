@@ -58,6 +58,8 @@ type RunPipelineCmd struct {
 	BuildSequential     bool
 	MaxConcurrentBuilds int
 
+	ForcePurge bool
+
 	ForceDeploy bool
 	SkipDeploy  bool
 
@@ -83,6 +85,7 @@ func (cmd *RunPipelineCmd) AddFlags(command *cobra.Command) {
 	command.Flags().IntVar(&cmd.MaxConcurrentBuilds, "max-concurrent-builds", cmd.MaxConcurrentBuilds, "The maximum number of image builds built in parallel (0 for infinite)")
 	command.Flags().BoolVar(&cmd.Render, "render", cmd.Render, "If true will render manifests and print them instead of actually deploying them")
 
+	command.Flags().BoolVar(&cmd.ForcePurge, "force-purge", cmd.ForcePurge, "Forces to purge every deployment even though it might be in use by another DevSpace project")
 	command.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", cmd.ForceDeploy, "Forces to deploy every deployment")
 	command.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", cmd.SkipDeploy, "If enabled will skip deploying")
 	command.Flags().StringVar(&cmd.Pipeline, "pipeline", cmd.Pipeline, "The pipeline to execute")
@@ -224,6 +227,9 @@ func (cmd *RunPipelineCmd) BuildOptions(configOptions *loader.ConfigOptions) *Pi
 				RenderWriter: cmd.RenderWriter,
 				SkipDeploy:   cmd.SkipDeploy,
 			},
+			PurgeOptions: deploy.PurgeOptions{
+				ForcePurge: cmd.ForcePurge,
+			},
 			DependencyOptions: types.DependencyOptions{
 				Exclude: cmd.SkipDependency,
 				Only:    cmd.Dependency,
@@ -299,6 +305,9 @@ func (cmd *RunPipelineCmd) prepare(ctx context.Context, f factory.Factory, confi
 	if err != nil {
 		return nil, err
 	}
+
+	// add root name to context
+	ctx = values.WithRootName(ctx, configInterface.Config().Name)
 
 	// adjust config
 	err = cmd.adjustConfig(configInterface)

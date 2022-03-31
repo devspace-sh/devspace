@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/services/podreplace"
 	"github.com/loft-sh/devspace/pkg/util/lockfactory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -29,7 +30,7 @@ type Manager interface {
 	StartMultiple(ctx *devspacecontext.Context, devPods []string, options Options) error
 
 	// Reset will stop the DevPod if it exists and reset the replaced pods
-	Reset(ctx *devspacecontext.Context, name string) error
+	Reset(ctx *devspacecontext.Context, name string, options *deploy.PurgeOptions) error
 
 	// Stop will stop a specific DevPod
 	Stop(ctx *devspacecontext.Context, name string)
@@ -199,7 +200,7 @@ func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodCo
 	return dp, nil
 }
 
-func (d *devPodManager) Reset(ctx *devspacecontext.Context, name string) error {
+func (d *devPodManager) Reset(ctx *devspacecontext.Context, name string, options *deploy.PurgeOptions) error {
 	lock := d.lockFactory.GetLock(name)
 	lock.Lock()
 	defer lock.Unlock()
@@ -207,7 +208,7 @@ func (d *devPodManager) Reset(ctx *devspacecontext.Context, name string) error {
 	d.stop(name)
 	devPod, ok := ctx.Config.RemoteCache().GetDevPod(name)
 	if ok {
-		_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, &devPod)
+		_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, &devPod, options)
 		return err
 	}
 

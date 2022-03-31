@@ -818,6 +818,9 @@ type DevContainer struct {
 	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64, but
 	// devspace tries to find out the architecture by itself by looking at the node this container runs on.
 	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
+	// RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
+	// the container and restarting it and is injected via an annotation in the replaced pod.
+	RestartHelper *RestartHelper `yaml:"restartHelper,omitempty" json:"restartHelper,omitempty"`
 
 	// ReversePorts are port mappings to make local ports available inside the container
 	ReversePorts []*PortMapping `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty"`
@@ -832,11 +835,6 @@ type DevContainer struct {
 	// Env can be used to add environment variables to the container. DevSpace will
 	// not replace existing environment variables if an environment variable is defined here.
 	Env []EnvVar `yaml:"env,omitempty" json:"env,omitempty"`
-	// RestartHelperPath defines the path to the restart helper that might be used if certain config
-	// options are enabled
-	RestartHelperPath string `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
-	// DisableRestartHelper signals DevSpace to not inject the restart helper
-	DisableRestartHelper bool `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
 
 	// Terminal allows you to tell DevSpace to open a terminal with screen support to this container
 	Terminal *Terminal `yaml:"terminal,omitempty" json:"terminal,omitempty"`
@@ -852,6 +850,14 @@ type DevContainer struct {
 	SSH *SSH `yaml:"ssh,omitempty" json:"ssh,omitempty"`
 	// ProxyCommands allow you to proxy certain local commands to the container
 	ProxyCommands []*ProxyCommand `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
+}
+
+type RestartHelper struct {
+	// Path defines the path to the restart helper that might be used if certain config
+	// options are enabled
+	Path string `yaml:"path,omitempty" json:"path,omitempty"`
+	// Disable signals DevSpace to not inject the restart helper
+	Disable bool `yaml:"disable,omitempty" json:"disable,omitempty"`
 }
 
 type ProxyCommand struct {

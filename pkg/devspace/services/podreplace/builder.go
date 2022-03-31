@@ -243,7 +243,7 @@ func replaceWorkingDir(ctx *devspacecontext.Context, devPod *latest.DevPod, devC
 func replaceCommand(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	// replace with DevSpace helper
 	injectRestartHelper := false
-	if !devContainer.DisableRestartHelper {
+	if devContainer.RestartHelper == nil || !devContainer.RestartHelper.Disable {
 		for _, s := range devContainer.Sync {
 			if s.StartContainer || (s.OnUpload != nil && s.OnUpload.RestartContainer) {
 				injectRestartHelper = true
@@ -268,7 +268,13 @@ func replaceCommand(ctx *devspacecontext.Context, devPod *latest.DevPod, devCont
 		if podTemplate.Annotations == nil {
 			podTemplate.Annotations = map[string]string{}
 		}
-		restartHelperString, err := restart.LoadRestartHelper(devContainer.RestartHelperPath)
+
+		restartHelperPath := ""
+		if devContainer.RestartHelper != nil {
+			restartHelperPath = devContainer.RestartHelper.Path
+		}
+
+		restartHelperString, err := restart.LoadRestartHelper(restartHelperPath)
 		if err != nil {
 			return errors.Wrap(err, "load restart helper")
 		}
