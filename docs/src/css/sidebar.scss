@@ -36,14 +36,23 @@ body .menu {
     font-family: Menlo, 'Courier New', monospace;
   }
 
+  .menu__list-item-collapsible {
+    &,
+    &:hover {
+      background: transparent;
+    }
+  }
+
   .menu__list {
     &, 
     .menu__list-item,
     .menu__list-item-collapsible {
+      position: relative;
       margin: 0;
       padding: 0;
       border-radius: 0;
     }
+
 
     /* 1st level links */
     .menu__link {
@@ -56,23 +65,52 @@ body .menu {
       white-space: nowrap;
       text-overflow: ellipsis;
       overflow: hidden;
+
+      /* Link hover effects */
+      &[href]:not([href="#"]):not([href=""]) {
+        /* Blue dot indicator */
+        &::before {
+          content: "";
+          right: 100%;
+          margin-right: -1.2rem;
+          top: 50%;
+          margin-top: -4px;
+          height: 8px;
+          position: absolute;
+          width: 8px;
+          border-radius: 4px;
+          background-color: var(--ifm-color-info);
+          transform: scale(0);
+          transition: .4s cubic-bezier(.4,0,.2,1);
+        }
+
+        /* Background and dot for hover/active links */
+        &:hover,
+        &[aria-current="page"] {
+          background-color: rgb(195 207 211 / 16%) !important;
+
+          /* Show dot */
+          &::before {
+            transform: scale(1);
+          }
+        }
+
+        /* Turn dot into line for active link */
+        &[aria-current="page"]::before {
+          width: 2em;
+        }
+      }
     }
   
     .menu__list {
       /* 2nd level links */
       .menu__link {
-        padding: 0.4rem 0 0.4rem 2.8rem;
+        padding: 0.5rem 0 0.5rem 2.8rem;
         font-weight: 400;
         transition: 0.3s;
       }
   
       .menu__list {
-        &:not(.menu__link--active){
-          &:not(:hover) {
-            opacity: 0.85;
-          }
-        }
-  
         /* 3rd level links */
         .menu__link {
           padding-left: 4.3rem;
@@ -82,21 +120,25 @@ body .menu {
             opacity: 0.9;
           }
         }
+
+        /* 3rd level links that are categories */
+        .menu__list-item-collapsible .menu__link {
+          text-decoration: underline;
+
+          /* Prevent attribute propagation to next level */
+          .menu__link {
+            text-decoration: none;
+          }
+        }
   
         .menu__list {
-          &:not(.menu__link--active){
-            &:not(:hover) {
-              opacity: 0.85;
-            }
-          }
-    
           /* 4th level links */
           .menu__link {
             padding-left: 5.3rem;
             font-size: 0.9em;
             
-            &:not(:hover) {
-              opacity: 0.8;
+            &:not(.menu__link--active):not(:hover) {
+              opacity: 0.6;
             }
           }
         }
@@ -105,46 +147,15 @@ body .menu {
   }
 }
 
-.menu > .menu__list > .menu__list-item:nth-last-child(1) {
-  margin-top: 1.5em;
-  padding-top: 1.5em;
-  border-top: 1px solid #e9e9e9;
-}
-
-.menu__list-item > .menu__list .menu__list-item {
-  margin: 0 !important;
-  padding: 0 0 0.2em 0.8em;
-}
-
-.menu__list-item > .menu__list .menu__link {
-  position: relative;
-  margin: 0 !important;
-  padding: 0.1em 0 0.1em 0.2em;
-  background: transparent;
-}
-
-.theme-doc-sidebar-item-category.menu__list-item--collapsed,
-.theme-doc-sidebar-item-category.menu__list-item--collapsed .menu__link {
-  background: transparent !important;
-}
-
-.theme-doc-sidebar-menu > .theme-doc-sidebar-item-category > .menu__list-item-collapsible {
-  background: transparent !important;
-}
-
-.theme-doc-sidebar-menu > .theme-doc-sidebar-item-category,
-.theme-doc-sidebar-menu > .theme-doc-sidebar-item-category > .menu__link,
-.theme-doc-sidebar-menu > .menu__list-item > .menu__link--active {
-  background-color: rgb(195 207 211 / 16%);
-}
-
-.theme-doc-sidebar-menu > .theme-doc-sidebar-item-category:hover,
-.menu__list .menu__link:not([href="#"]):hover {
-  background-color: rgb(195 207 211 / 16%) !important;
-}
-
-.menu__list-item-collapsible {
-  display: block;
+/* 1st level categories: add a grey background when expanded (= not collapsed) OR active */
+.theme-doc-sidebar-item-category-level-1.menu__list-item:not(.menu__list-item--collapsed),
+.theme-doc-sidebar-item-category-level-1.menu__list-item.menu__list-item--active,
+.theme-doc-sidebar-item-category-level-2.menu__list-item:not(.menu__list-item--collapsed),
+.theme-doc-sidebar-item-category-level-2.menu__list-item.menu__list-item--active {
+  &,
+  + .menu__list {
+    background-color: rgb(195 207 211 / 14%);
+  }
 }
 
 /* Collapse/Expand icon */
@@ -152,53 +163,27 @@ body .menu {
   background-color: transparent !important;
   position: absolute;
   top: 0;
-  left: 0;
+  left: auto;
   right: 0;
   bottom: 0;
   padding-right: 20px;
   align-items: center;
-  
+  z-index: 1;
+
   &::before {
     margin-right: 0;
     margin-left: auto;
   }
 
-  .menu__list-item-collapsible:not(.menu__list-item-collapsible--active) & {
+  /* Make sure that clicking on icon opens category overview page (only if category is collapsed) */
+  .menu__list-item.menu__list-item--collapsed & {
     z-index: -1;
   }
 }
 
-/* Blue dot indicator */
-.menu__list .menu__link {
-  &::before {
-    content: "";
-    right: 100%;
-    margin-right: -1.2rem;
-    top: 50%;
-    margin-top: -4px;
-    height: 8px;
-    position: absolute;
-    width: 8px;
-    border-radius: 4px;
-    background-color: var(--ifm-color-info);
-    transform: scale(0);
-    transition: .4s cubic-bezier(.4,0,.2,1);
-  }
-
-  /* Show dot on hover and for active links */
-  &:hover::before,
-  &[aria-current="page"]::before {
-    transform: scale(1);
-  }
-
-  /* Turn dot into line for active link */
-  &[aria-current="page"]::before {
-    width: 2em;
-  }
-}
-
+/* Extra padding bottom for expanded categories */
 .theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) > .menu__list {
-  padding-bottom: 0.8rem;
+  padding-bottom: 1.2rem;
 
   .theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) > .menu__list {
     padding-bottom: 0.4rem;

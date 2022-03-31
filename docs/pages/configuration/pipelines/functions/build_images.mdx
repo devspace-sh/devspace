@@ -3,30 +3,58 @@ title: Function build_images
 sidebar_label: build_images
 ---
 
-import FragmentConfigOverwriteFlags from '../../../fragments/config-overwrite-flags.mdx';
+import FragmentConfigOverwriteFlags from '../../../_partials/config-overwrite-flags.mdx';
 
 The function `build_images` builds either all images (`--all` flag) or the images provided as arguments (e.g. `build_images api ui`). Images are, by default, processed in parallel.
 
+## Arguments
 
-## Args
+None
 
+### Usage
+
+```
+build_image image1 image2
+
+```
 
 ## Flags
 
+By default, flags are disabled. If any of the flags below are enabled, the following actions are taken.
+
 ### `--all`
+
+All images will be built.
 
 ### `--tag / -t`
 
-### `--force-rebuild`
+The build image tag will be returned.
 
-### `--max-concurrent`
+### `--skip-build`
 
-### `--sequential`
-
-### `--skip`
+The image will not be built.
 
 ### `--skip-push`
 
+The image will not be pushed to a container registry.
+
 ### `--skip-push-on-local-kubernetes`
+
+The image will not be pushed if the current Kubernetes config was detected to be a local cluster like docker-desktop or minikube.
+
+### `--force-rebuild`
+
+The images will be forced to be rebuilt.
+
+### `--sequential`
+
+Images will be built in sequential order, one after another.
+
+### `--max-concurrent-builds`
+
+An integer that represents the maximum number of images that can be built concurrently.
+
+
+## Config Overwrite Flags
 
 <FragmentConfigOverwriteFlags/>

@@ -1,0 +1,55 @@
+---
+title: Custom Build Scripts
+sidebar_label: custom
+---
+
+## `custom`
+Using `custom` as build tool allows you to define a custom command for building images. This is particularly useful if you want to use a remote build system such as Google Cloud Build.
+
+:::warning
+Make sure your `custom` build command terminates with exit code 0 when the build process was successful.
+:::
+
+### `command`
+The `command` option expects a string with the path to a build script or the name of a binary that should be executed in order to build an image.
+
+#### Example: Building Images With `custom` Build Command
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    custom:
+      skipImageArg: true
+      command: |-
+        # Also works on windows as this is executed in a golang shell
+        docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
+```
+**Explanation:**  
+The image `backend` would be built using the command `docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile"` while `${runtime.images.backend.image}` would be replaced with the `image` option (in this case: `john/appbackend`) and `${runtime.images.backend.tag}` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
+
+### `onChange`
+The `onChange` option expects an array of strings which represent paths to files or folders that should be watched for changes. DevSpace uses these paths and the hash values it stores about these paths for evaluating if an image should be rebuilt or if the image building can be skipped because the context of the image has not changed.
+
+:::info
+It is highly recommended to specify this option when using `custom` as build tool in order to speed up the build process.
+:::
+
+#### Default Value For `onChange`
+```yaml
+onChange: []
+```
+
+#### Example: OnChange Option For custom Build Command
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    custom:
+      command: ./build
+      imageFlag: "--image"
+      onChange:
+      - some/path/
+      - another/path/file.txt
+```
+**Explanation:**  
+The image `backend` would be built using the command `./build --image "[IMAGE]:[TAG]"` and DevSpace would skip the build if none of the files within `some/path/` nor the file `another/path/file.txt` has changed since the last build.

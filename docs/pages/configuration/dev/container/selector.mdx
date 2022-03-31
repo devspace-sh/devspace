@@ -1,0 +1,122 @@
+---
+title: Select Container As Dev Container
+sidebar_label: selector
+---
+
+
+## Pod/Container Selection
+The following config options are needed to determine the container which the file synchronization should be established to:
+- [`imageSelector`](#imageselector)
+- [`labelSelector`](#labelselector)
+- [`containerName`](#containername)
+- [`namespace`](#namespace)
+
+:::info Auto Reconnect
+If the sync is unable to establish a connection to the selected container or loses it after starting the sync, DevSpace will try to restart the sync several times.
+:::
+
+### `imageSelector`
+<FragmentImageSelector />
+
+#### Example: Select Container by Image
+```yaml
+vars:
+  - name: backend-image
+    value: john/devbackend
+  - name: backend-debugger-image
+    value: john/debugger
+images:
+  backend:
+    image: ${backend-image}
+  backend-debugger:
+    image: ${backend-debugger-image}
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: ${backend-image}
+      - name: container-1
+        image: ${backend-debugger-image}
+dev:
+  sync:
+  - imageSelector: ${backend-image}
+    excludePaths:
+    - node_modules/
+    - logs/
+  - imageSelector: ${backend-debugger-image}
+    localSubPath: ./debug-logs
+    containerPath: /logs
+```
+**Explanation:**
+- The above example defines two images that can be used as `imageSelector`: `john/devbackend` or `john/debugger`
+- The deployment starts two containers and each of them uses an image from the `images` section.
+- The `imageSelector` option of the first sync configuration in the `dev.sync` section references the same image as `images.backend`. That means DevSpace would select the first container for file synchronization, that would match `john/devbackend:tag(backend)`, where `tag(backend)` is the last built tag of `images.backend`
+- The first sync configuration does not define `localSubPath`, so it defaults to the project's root directory (location of `devspace.yaml`).
+- The first sync configuration does not define `containerPath`, so it defaults to the container's working directory (i.e. `WORKDIR`).
+- The `imageSelector` option of the second sync configuration in the `dev.sync` section references the same image as  `images.backend-debugger`. That means DevSpace would select the second container for file synchronization, as this container uses the `image: john/debugger` which belongs to the `backend-debugger` image as defined in the `images` section.
+
+In consequence, the following sync processes would be started when using the above config example assuming the local project root directoy `/my/project/`:
+
+1. `localhost:/my/project/` forwards to `container-0:$WORKDIR` **\***
+2. `localhost:/my/project/debug-logs/` forwards to `container-1:/logs`
+
+**\* Changes on either side (local and container filesystem) that occur within the sub-folders `node_modules/` and `logs/` would be ingored.**
+
+### `labelSelector`
+<FragmentLabelSelector />
+
+#### Example: Select Container by Label
+```yaml {18-21}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: john/devbackend
+      - name: container-1
+        image: john/debugger
+dev:
+  sync:
+  - labelSelector:
+      app.kubernetes.io/name: devspace-app
+      app.kubernetes.io/component: app-backend
+      custom-label: custom-label-value
+    containerName: container-0
+    localSubPath: ./src
+    containerPath: /app/src
+```
+**Explanation:**
+- The `labelSelector` would select the pod created for the component deployment `app-backend`.
+- Because the selected pod has two containers, we also need to specify the `containerName` option which defines the container that should be used for the file synchronization.
+
+
+### `containerName`
+The `containerName` option expects a string with a container name. This option is used to decide which container should be selected when using the `labelSelector` option because `labelSelector` selects a pod and a pod can have multiple containers.
+
+:::info
+The `containerName` option is not required if the pod you are selecting using `imageName` or `labelSelector` has only one container.
+:::
+
+#### Example
+**See "[Example: Select Container by Label](#example-select-container-by-label)"**
+
+
+### `namespace`
+The `namespace` option expects a string with a Kubernetes namespace used to select the container from.
+
+:::warning
+It is generally **not** needed (nor recommended) to specify the `namespace` option because by default, DevSpace uses the default namespace of your current kube-context which is usually the one that has been used to deploy your containers to.
+:::
+
+
+<br/>
