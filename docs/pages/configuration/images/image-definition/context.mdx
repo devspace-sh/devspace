@@ -1,0 +1,18 @@
+---
+title: Image Context
+sidebar_label: context
+---
+
+import FragmentFaqImageContext from '../../../_partials/faq-image-context.mdx';
+
+The `context` option expects a string with a path to the folder used as context path when building the image. The context path serves as root directory for Dockerfile statements like ADD or COPY.
+
+<FragmentFaqImageContext/>
+
+#### Default Value For `context`
+```yaml
+context: ./
+```
+
+#### Example
+**See "[Example: Different Dockerfiles](#example-different-dockerfile)"**

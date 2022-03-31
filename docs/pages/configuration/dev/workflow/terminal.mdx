@@ -3,8 +3,8 @@ title: Configure Terminal
 sidebar_label: terminal
 ---
 
-import FragmentImageSelector from '../../fragments/selector-image-selector.mdx';
-import FragmentLabelSelector from '../../fragments/selector-label-selector.mdx';
+import FragmentImageSelector from '../../../_partials/selector-image-selector.mdx';
+import FragmentLabelSelector from '../../../_partials/selector-label-selector.mdx';
 
 There are two main modes how to develop with DevSpace, by streaming the log output of pods in DevSpace or by opening a terminal to the pod you would like to develop with. If you prefer the latter, you can configure the `dev.*.terminal` option to tell DevSpace to open a terminal to a target container.
 
@@ -62,4 +62,3 @@ If true, DevSpace will not replace the pod and apply modifications. By default D
 ### `disableScreen`
 
 If true, DevSpace will not use [screen](https://linuxize.com/post/how-to-use-linux-screen/) to create a terminal session.
-

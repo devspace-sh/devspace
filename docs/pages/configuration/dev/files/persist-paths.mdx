@@ -1,6 +1,6 @@
 ---
 title: Changing
-sidebar_label: persist
+sidebar_label: persistPaths
 ---
 
 DevSpace offers you the ability to easily persist certain folders in an exchanged pod through a [persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims). This might be useful if you have to sync large amounts of files that are needed in multiple containers or the replaced pod might get rescheduled or killed often.
@@ -41,41 +41,3 @@ You can configure the following options in a persistent path:
 - `readOnly`: if the path should get mounted read only
 - `skipPopulate`: if true, devspace will not try to pre-populate the path
 - `initContainer.resources`: resources of the pre-populating init container
-
-### `persistenceOptions`
-
-`persistenceOptions` is an object that defines additional options for `persistPaths`. You can configure the following options:
-
-- `size`: the size of the persistent volume to request. (Defaults to `10Gi`)
-- `storageClassName`: the storage class name to use for the persistent volume claim. (Defaults to empty)
-- `accessModes`: the access modes to use for the persistent volume claim. (Defaults to `ReadWriteOnce`)
-- `readOnly`: if the persistent volume claim should get mounted in read only mode. (Defaults to `false`)
-- `name`: the name of the persistent volume claim to use or create. (Defaults to name of the replaced pod)
-
-#### Example: Share a single persistent volume across two pods
-```yaml
-dev:
-  frontend:
-    imageSelector: my-image/frontend
-    sync:
-    - path: .:/app
-    persistPaths:
-    - path: /app
-      volumePath: app
-    persistenceOptions:
-      name: my-pvc
-
-  backend:
-    imageSelector: my-image/backend
-    persistPaths:
-    - path: /backend
-      volumePath: app
-    persistenceOptions:
-      name: my-pvc
-      readOnly: true
-```
-
-**Explanation:**
-- DevSpace will create a persistent volume claim `my-pvc` if it does not exist
-- DevSpace will replace the pods with image `my-image/frontend` and `my-image/backend` with pods that mount the persistent volume claim called `my-pvc`
-- DevSpace will sync the local files into the persisted folder `/app` of the replaced pod with image `my-image/frontend`. Since the replaced pods share a common persistent volume claim, also the backend container will get the updated files.

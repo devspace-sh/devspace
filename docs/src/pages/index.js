@@ -2,7 +2,7 @@ import React from 'react';
 
 function Home() {
   React.useEffect(() => {
-    window.location.href = './quickstart';
+    window.location.href = './getting-started/introduction';
   }, []);
   
   return null
