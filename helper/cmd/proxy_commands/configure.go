@@ -55,7 +55,8 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 	// first configure the commands
 	for _, c := range cmd.Commands {
 		filePath := "/usr/local/bin/" + c
-		executeCommand := fmt.Sprintf("/tmp/devspacehelper proxy-commands run %s $@", c)
+		executeCommand := fmt.Sprintf(`#!/bin/sh
+/tmp/devspacehelper proxy-commands run %s $@`, c)
 		err := ioutil.WriteFile(filePath, []byte(executeCommand), 0777)
 		if err != nil {
 			return fmt.Errorf("error writing command '%s': %v", filePath, err)
