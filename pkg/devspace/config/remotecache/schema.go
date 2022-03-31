@@ -65,6 +65,9 @@ type DevPodCache struct {
 	// Name is the name of the dev pod
 	Name string `yaml:"name,omitempty"`
 
+	// Projects are the top level projects that have started this dev configuration
+	Projects []string `yaml:"projects,omitempty"`
+
 	// Namespace is the namespace where the replace happened
 	Namespace string `yaml:"namespace,omitempty"`
 
@@ -81,6 +84,9 @@ type DevPodCache struct {
 // DeploymentCache holds the information about a specific deployment
 type DeploymentCache struct {
 	Name string `yaml:"name,omitempty"`
+
+	// Projects are the top level projects that have deployed this deployment
+	Projects []string `yaml:"projects,omitempty"`
 
 	// DeploymentConfigHash is the deployment config hashed
 	DeploymentConfigHash string `yaml:"deploymentConfigHash,omitempty"`

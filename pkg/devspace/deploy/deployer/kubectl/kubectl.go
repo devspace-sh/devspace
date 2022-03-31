@@ -5,7 +5,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
@@ -192,6 +194,9 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error
 		ManifestsHash: manifestsHash,
 	}
 	deployCache.DeploymentConfigHash = deploymentConfigHash
+	if rootName, ok := values.RootNameFrom(ctx.Context); ok && !stringutil.Contains(deployCache.Projects, rootName) {
+		deployCache.Projects = append(deployCache.Projects, rootName)
+	}
 	ctx.Config.RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
 	return wasDeployed, nil
 }

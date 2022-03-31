@@ -6,6 +6,8 @@ import (
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"io"
 	"os"
 	"path/filepath"
@@ -133,10 +135,17 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 		}
 
 		deployCache.Helm = helmCache
+		if rootName, ok := values.RootNameFrom(ctx.Context); ok && !stringutil.Contains(deployCache.Projects, rootName) {
+			deployCache.Projects = append(deployCache.Projects, rootName)
+		}
 		ctx.Config.RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
 		return true, nil
 	}
 
+	if rootName, ok := values.RootNameFrom(ctx.Context); ok && !stringutil.Contains(deployCache.Projects, rootName) {
+		deployCache.Projects = append(deployCache.Projects, rootName)
+	}
+	ctx.Config.RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
 	return false, nil
 }
 

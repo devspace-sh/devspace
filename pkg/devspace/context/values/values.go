@@ -11,7 +11,19 @@ const (
 	tempFolderKey
 	commandKey
 	dependencyKey
+	rootNameKey
 )
+
+// RootNameFrom returns the root name of the devspace config
+func RootNameFrom(ctx context.Context) (string, bool) {
+	user, ok := ctx.Value(rootNameKey).(string)
+	return user, ok
+}
+
+// WithRootName returns a copy of parent with the root name included
+func WithRootName(parent context.Context, name string) context.Context {
+	return WithValue(parent, rootNameKey, name)
+}
 
 // WithValue returns a copy of parent in which the value associated with key is val.
 func WithValue(parent context.Context, key interface{}, val interface{}) context.Context {

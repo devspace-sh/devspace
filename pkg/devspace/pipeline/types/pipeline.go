@@ -13,6 +13,7 @@ import (
 type Options struct {
 	BuildOptions      build.Options
 	DeployOptions     deploy.Options
+	PurgeOptions      deploy.PurgeOptions
 	DependencyOptions DependencyOptions
 	DevOptions        devpod.Options
 }
