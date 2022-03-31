@@ -9,10 +9,10 @@ import (
 )
 
 type ConfigBuilder interface {
-	AddDependencies(dockerCompose composetypes.Project, service composetypes.ServiceConfig) error
+	AddDependencies(dependency composetypes.Project, service composetypes.ServiceConfig) error
 	AddDeployment(dockerCompose composetypes.Project, service composetypes.ServiceConfig) error
 	AddDev(service composetypes.ServiceConfig) error
-	AddImage(service composetypes.ServiceConfig) error
+	AddImage(dockerCompose composetypes.Project, service composetypes.ServiceConfig) error
 	AddSecret(dockerCompose composetypes.Project, service composetypes.ServiceConfig) error
 	Config() *latest.Config
 	SetName(name string)

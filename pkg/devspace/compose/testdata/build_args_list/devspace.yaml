@@ -4,7 +4,6 @@ name: docker-compose
 images:
   foo:
     image: foo
-    dockerfile: Dockerfile
     buildArgs:
       buildno: 1
       gitcommithash: cdc3b19

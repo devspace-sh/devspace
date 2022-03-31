@@ -7,25 +7,32 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
-func (cb *configBuilder) AddImage(service composetypes.ServiceConfig) error {
+func (cb *configBuilder) AddImage(dockerCompose composetypes.Project, service composetypes.ServiceConfig) error {
 	build := service.Build
 	if build == nil {
 		cb.config.Images = nil
 		return nil
 	}
 
-	context, err := filepath.Rel(cb.workingDir, filepath.Join(cb.workingDir, build.Context))
+	currentDir := filepath.Join(dockerCompose.WorkingDir, cb.workingDir)
+	contextDir := filepath.Join(dockerCompose.WorkingDir, build.Context)
+	context, err := filepath.Rel(currentDir, contextDir)
 	if err != nil {
 		return err
 	}
+
 	context = filepath.ToSlash(context)
 	if context == "." {
 		context = ""
 	}
 
-	dockerfile, err := filepath.Rel(cb.workingDir, filepath.Join(cb.workingDir, build.Context, build.Dockerfile))
+	dockerfile, err := filepath.Rel(currentDir, filepath.Join(dockerCompose.WorkingDir, build.Context, build.Dockerfile))
 	if err != nil {
 		return err
+	}
+
+	if dockerfile == "Dockerfile" {
+		dockerfile = ""
 	}
 
 	image := &latest.Image{
@@ -51,7 +58,6 @@ func (cb *configBuilder) AddImage(service composetypes.ServiceConfig) error {
 	}
 
 	if cb.config.Images == nil {
-
 		cb.config.Images = map[string]*latest.Image{}
 	}
 

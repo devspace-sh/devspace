@@ -73,25 +73,31 @@ func (cm *composeManager) Load(log log.Logger) error {
 
 	builders := map[string]ConfigBuilder{}
 	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
-		configKey := constants.DefaultConfigPath
 		configName := "docker-compose"
+		workingDir := filepath.Dir(cm.composePath)
 
 		isDependency := dependentsMap[service.Name] != nil
 		if isDependency {
-			configKey = "devspace-" + service.Name + ".yaml"
+			// configKey = "devspace-" + service.Name + ".yaml"
+			// if service.Build != nil && service.Build.Context != "" {
+			// 	configKey = filepath.Join(service.Build.Context, "devspace.yaml")
+			// }
+
 			configName = service.Name
+			if service.Build != nil && service.Build.Context != "" {
+				workingDir = filepath.Join(workingDir, service.Build.Context)
+			}
 		}
 
-		builder := builders[configKey]
+		builder := builders[configName]
 		if builder == nil {
-			workingDir := filepath.Dir(cm.composePath)
 			builder = NewConfigBuilder(workingDir, log)
-			builders[configKey] = builder
+			builders[configName] = builder
 		}
 
 		builder.SetName(configName)
 
-		err := builder.AddImage(service)
+		err := builder.AddImage(*dockerCompose, service)
 		if err != nil {
 			return err
 		}
@@ -122,8 +128,27 @@ func (cm *composeManager) Load(log log.Logger) error {
 		return err
 	}
 
-	for path, builder := range builders {
+	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
+		configName := "docker-compose"
+		path := constants.DefaultConfigPath
+
+		isDependency := dependentsMap[service.Name] != nil
+		if isDependency {
+			configName = service.Name
+
+			path = "devspace-" + service.Name + ".yaml"
+			if service.Build != nil && service.Build.Context != "" {
+				path = filepath.Join(service.Build.Context, "devspace.yaml")
+			}
+		}
+
+		builder := builders[configName]
 		cm.configs[path] = builder.Config()
+
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil
