@@ -856,8 +856,8 @@ type RestartHelper struct {
 	// Path defines the path to the restart helper that might be used if certain config
 	// options are enabled
 	Path string `yaml:"path,omitempty" json:"path,omitempty"`
-	// Disable signals DevSpace to not inject the restart helper
-	Disable bool `yaml:"disable,omitempty" json:"disable,omitempty"`
+	// Inject signals DevSpace to inject the restart helper
+	Inject *bool `yaml:"inject,omitempty" json:"inject,omitempty"`
 }
 
 type ProxyCommand struct {

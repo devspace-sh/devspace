@@ -51,12 +51,12 @@ func startProxyCommands(ctx *devspacecontext.Context, devContainer *latest.DevCo
 	}
 
 	// get a local port
-	port, err := ssh.LockPort()
+	port, err := ssh.GetInstance(ctx.Log).LockPort()
 	if err != nil {
 		return errors.Wrap(err, "find port")
 	}
 
-	defer ssh.ReleasePort(port)
+	defer ssh.GetInstance(ctx.Log).ReleasePort(port)
 
 	// get remote port
 	defaultRemotePort := DefaultRemotePort

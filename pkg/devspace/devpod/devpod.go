@@ -539,6 +539,9 @@ func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
 	if len(devContainer.PersistPaths) > 0 {
 		return true
 	}
+	if devContainer.RestartHelper != nil && devContainer.RestartHelper.Inject != nil && *devContainer.RestartHelper.Inject {
+		return true
+	}
 	if devContainer.Terminal != nil && !devContainer.Terminal.DisableReplace && (devContainer.Terminal.Enabled == nil || *devContainer.Terminal.Enabled) {
 		return true
 	}
@@ -554,7 +557,7 @@ func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
 	if devContainer.Args != nil {
 		return true
 	}
-	if devContainer.RestartHelper == nil || !devContainer.RestartHelper.Disable {
+	if devContainer.RestartHelper == nil || devContainer.RestartHelper.Inject == nil || *devContainer.RestartHelper.Inject {
 		for _, s := range devContainer.Sync {
 			if s.OnUpload != nil && s.OnUpload.RestartContainer {
 				return true

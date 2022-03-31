@@ -36,11 +36,15 @@ func Unmarshal(data []byte, out interface{}) error {
 func prettifyError(data []byte, err error) error {
 	// check if type error
 	if typeError, ok := err.(*yaml.TypeError); ok {
-		for i, message := range typeError.Errors {
-			typeError.Errors[i] = strings.Replace(message, "!!seq", "an array", -1)
+		for i := range typeError.Errors {
+			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!seq", "an array", -1)
+			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!str", "string", -1)
+			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!map", "an object", -1)
+			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!int", "number", -1)
+			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!bool", "boolean", -1)
 
 			// add line to error
-			match := lineRegEx.FindSubmatch([]byte(message))
+			match := lineRegEx.FindSubmatch([]byte(typeError.Errors[i]))
 			if len(match) > 1 {
 				line, lineErr := strconv.Atoi(string(match[1]))
 				if lineErr == nil {

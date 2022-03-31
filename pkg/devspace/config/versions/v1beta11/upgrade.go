@@ -774,7 +774,7 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 			if devPods[k].Containers[i].RestartHelper == nil {
 				devPods[k].Containers[i].RestartHelper = &next.RestartHelper{}
 			}
-			devPods[k].Containers[i].RestartHelper.Disable = true
+			devPods[k].Containers[i].RestartHelper.Inject = ptr.Bool(false)
 		}
 	}
 

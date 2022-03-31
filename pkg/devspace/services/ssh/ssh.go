@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/mgutz/ansi"
+	"github.com/mitchellh/go-homedir"
 	"io"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -56,24 +58,60 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 		return nil
 	}
 
-	// get a local port
-	port := sshConfig.LocalPort
-	var err error
-	if port == 0 {
-		port, err = LockPort()
-		if err != nil {
-			return errors.Wrap(err, "find port")
-		}
-
-		defer ReleasePort(port)
-	}
-
 	// configure ssh host
 	sshHost := name + "." + ctx.Config.Config().Name + ".devspace"
 	if sshConfig.LocalHostname != "" {
 		sshHost = sshConfig.LocalHostname
 	}
 
+	// try to find host port
+	homeDir, err := homedir.Dir()
+	if err != nil {
+		return errors.Wrap(err, "get home dir")
+	}
+
+	// get port
+	port := sshConfig.LocalPort
+	if port == 0 {
+		sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
+		hosts, err := ParseDevSpaceHosts(sshConfigPath)
+		if err != nil {
+			ctx.Log.Debugf("error parsing %s: %v", sshConfigPath, err)
+		} else {
+			for _, h := range hosts {
+				if h.Host == sshHost {
+					port = h.Port
+				}
+			}
+		}
+
+		if port == 0 {
+			port, err = GetInstance(ctx.Log).LockPort()
+			if err != nil {
+				return errors.Wrap(err, "find port")
+			}
+
+			// update ssh config
+			err = configureSSHConfig(sshHost, strconv.Itoa(port), ctx.Log)
+			if err != nil {
+				return errors.Wrap(err, "update ssh config")
+			}
+		}
+	} else {
+		err = GetInstance(ctx.Log).LockSpecificPort(port)
+		if err != nil {
+			return errors.Wrap(err, "find port")
+		}
+
+		// update ssh config
+		err = configureSSHConfig(sshHost, strconv.Itoa(port), ctx.Log)
+		if err != nil {
+			return errors.Wrap(err, "update ssh config")
+		}
+	}
+	defer GetInstance(ctx.Log).ReleasePort(port)
+
+	// get a local port
 	// get remote port
 	defaultRemotePort := helperssh.DefaultPort
 	if sshConfig.RemoteAddress != "" {
@@ -97,12 +135,6 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 	}, selector, parent)
 	if err != nil {
 		return errors.Wrap(err, "start ssh port forwarding")
-	}
-
-	// update ssh config
-	err = configureSSHConfig(sshHost, strconv.Itoa(port), ctx.Log)
-	if err != nil {
-		return errors.Wrap(err, "update ssh config")
 	}
 
 	// start ssh
