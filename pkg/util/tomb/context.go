@@ -38,10 +38,7 @@ func (t *Tomb) Context(parent context.Context) context.Context {
 	defer t.m.Unlock()
 
 	if parent == nil {
-		if t.parent == nil {
-			t.parent = context.Background()
-		}
-		parent = t.parent.(context.Context)
+		panic("parent context is empty")
 	}
 
 	if child, ok := t.child[parent]; ok {

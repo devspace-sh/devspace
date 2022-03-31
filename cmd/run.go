@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/exit"
+	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
 	"mvdan.cc/sh/v3/interp"
@@ -158,11 +159,56 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 		}
 
 		ctx = ctx.AsDependency(dep)
-		return ExecuteConfigCommand(ctx.Context, ctx.Config, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
+		commandConfig, err := findCommand(ctx.Config, args[0])
+		if err != nil {
+			return err
+		}
+
+		return executeCommandWithAfter(ctx.Context, commandConfig, args[1:], ctx.Config.Variables(), ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log)
 	}
 
-	// Execute command
-	return ExecuteConfigCommand(ctx.Context, ctx.Config, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
+	commandConfig, err := findCommand(ctx.Config, args[0])
+	if err != nil {
+		return err
+	}
+
+	return executeCommandWithAfter(ctx.Context, commandConfig, args[1:], ctx.Config.Variables(), ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log)
+}
+
+func findCommand(config config.Config, name string) (*latest.CommandConfig, error) {
+	// Find command
+	if config.Config().Commands == nil || config.Config().Commands[name] == nil {
+		return nil, errors.Errorf("couldn't find command '%s' in devspace config", name)
+	}
+
+	return config.Config().Commands[name], nil
+}
+
+func executeCommandWithAfter(ctx context.Context, command *latest.CommandConfig, args []string, variables map[string]interface{}, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, log log.Logger) error {
+	originalErr := interrupt.Global.Run(func() error {
+		return ExecuteCommand(ctx, command, variables, args, dir, stdout, stderr, stdin)
+	}, func() {
+		if command.After != "" {
+			vars := variables
+			vars["COMMAND_INTERRUPT"] = "true"
+			err := executeShellCommand(ctx, command.After, vars, args, dir, stdout, stderr, stdin)
+			if err != nil {
+				log.Errorf("error executing after command: %v", err)
+			}
+		}
+	})
+	if command.After != "" {
+		vars := variables
+		if originalErr != nil {
+			vars["COMMAND_ERROR"] = originalErr.Error()
+		}
+		err := executeShellCommand(ctx, command.After, vars, args, dir, stdout, stderr, stdin)
+		if err != nil {
+			return errors.Wrap(err, "error executing after command")
+		}
+	}
+
+	return originalErr
 }
 
 func ParseArgs(cobraCmd *cobra.Command, globalFlags *flags.GlobalFlags, log log.Logger) ([]string, error) {
@@ -221,14 +267,25 @@ func LoadCommandsConfig(configLoader loader.ConfigLoader, configOptions *loader.
 		WithConfig(commandsInterface), nil
 }
 
-// ExecuteConfigCommand executes a command from the config
-func ExecuteConfigCommand(ctx context.Context, config config.Config, name string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
-	if config.Config().Commands == nil || config.Config().Commands[name] == nil {
-		return errors.Errorf("couldn't find command '%s' in devspace config", name)
+func executeShellCommand(ctx context.Context, shellCommand string, variables map[string]interface{}, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
+	extraEnv := map[string]string{}
+	for k, v := range variables {
+		extraEnv[k] = fmt.Sprintf("%v", v)
 	}
 
-	cmd := config.Config().Commands[name]
-	return ExecuteCommand(ctx, cmd, config.Variables(), args, dir, stdout, stderr, stdin)
+	// execute the command in a shell
+	err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, args...)
+	if err != nil {
+		if status, ok := interp.IsExitStatus(err); ok {
+			return &exit.ReturnCodeError{
+				ExitCode: int(status),
+			}
+		}
+
+		return errors.Wrap(err, "execute command")
+	}
+
+	return nil
 }
 
 // ExecuteCommand executes a command from the config

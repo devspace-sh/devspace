@@ -1,0 +1,27 @@
+version: v2beta1
+vars:
+  IMAGE: alpine
+deployments:
+  test:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+          - image: ${IMAGE}
+            command: ["sleep"]
+            args: ["999999999999"]
+dev:
+  test:
+    imageSelector: ${IMAGE}
+    proxyCommands:
+    - command: host-check
+      localCommand: ./host-check.sh
+
+pipelines:
+  dev:
+    run: |
+      run_default_pipeline dev
+      exec_container --image-selector ${IMAGE} -- sh -c 'uname -n > container.out'
+      exec_container --image-selector ${IMAGE} -- sh -c host-check

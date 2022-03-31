@@ -430,7 +430,7 @@ func (s *Sync) Stop(fatalError error) {
 			}
 		}
 
-		s.log.Infof("Sync stopped")
+		s.log.Debugf("Sync stopped")
 		if s.onDone != nil {
 			close(s.onDone)
 		}

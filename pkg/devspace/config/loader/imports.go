@@ -33,7 +33,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		return nil, err
 	}
 
-	rawImports, err := versions.GetImports(rawData)
+	rawImports, err := versions.Get(rawData, "imports")
 	if err != nil {
 		return nil, err
 	}
