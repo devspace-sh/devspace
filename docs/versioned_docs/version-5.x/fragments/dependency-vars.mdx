@@ -1,0 +1,19 @@
+The `vars` option expects an array of objects with name and value of variables defined in the `devspace.yaml` of this dependency. When configuring this option, the variables will be overriden similar to passing variables via the `--var` flag to devspace.
+It is also useful to deploy the same dependency multiple times with just small adjustments.
+
+#### Example: Override Config Vars for Dependency
+```yaml
+# This will deploy the api server two times with
+# different variable configurations
+dependencies:
+- source:
+    git: https://github.com/my-api-server
+  vars:
+  - name: NAME
+    value: api-server-1
+- source:
+    git: https://github.com/my-api-server
+  vars:
+  - name: NAME
+    value: api-server-2
+```

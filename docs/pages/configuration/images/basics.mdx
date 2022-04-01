@@ -5,8 +5,8 @@ sidebar_label: Basics
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import FragmentFaqImageContext from '../../fragments/faq-image-context.mdx';
-import WarningBuildToolPriority from '../../fragments/warning-build-tool-priority.mdx';
+import FragmentFaqImageContext from '../../_partials/faq-image-context.mdx';
+import WarningBuildToolPriority from '../../_partials/warning-build-tool-priority.mdx';
 
 Images are configured within the `images` section of the `devspace.yaml`.
 
@@ -21,7 +21,6 @@ Images are configured within the `images` section of the `devspace.yaml`.
     { label: 'BuildKit', value: 'buildkit', },
     { label: 'kaniko', value: 'kaniko', },
     { label: 'Build Command', value: 'custom', },
-    { label: 'Disable', value: 'disabled', },
   ]
 }>
 <TabItem value="dockerhub">
@@ -69,13 +68,12 @@ images:
 images:
   backend:
     image: john/appbackend
-    build:
-      buildKit:
-        inCluster: {}
+    buildKit:
+      inCluster: {}
 ```
 
 :::info What is BuildKit?
-[BuildKit](https://github.com/moby/buildkit) is an open-source concurrent, cache-efficient, and Dockerfile-agnostic builder toolkit that lets you build images inside containers that run on top of Kubernetes or in your local docker daemon. To force image building using BuildKit, set `build.buildKit: {}`. To tell DevSpace to use in cluster building set `build.buildKit.inCluster: {}` as shown above. Learn more about [configuring BuildKit builds](../../configuration/images/buildkit.mdx).
+[BuildKit](https://github.com/moby/buildkit) is an open-source concurrent, cache-efficient, and Dockerfile-agnostic builder toolkit that lets you build images inside containers that run on top of Kubernetes or in your local docker daemon. To force image building using BuildKit, set `buildKit: {}`. To tell DevSpace to use in cluster building set `buildKit.inCluster: {}` as shown above. Learn more about [configuring BuildKit builds](../../configuration/images/buildkit.mdx).
 :::
 
 </TabItem>
@@ -85,13 +83,12 @@ images:
 images:
   backend:
     image: john/appbackend
-    build:
-      kaniko:
-        cache: true
+    kaniko:
+      cache: true
 ```
 
 :::info What is kaniko?
-Kaniko is an open-source tool that lets you build images inside containers that run on top of Kubernetes. DevSpace uses kaniko as automatic fallback if Docker is not installed. To force image building using kaniko, set `build.kaniko.cache: true` as shown above. Learn more about [configuring kaniko builds](../../configuration/images/kaniko.mdx).
+Kaniko is an open-source tool that lets you build images inside containers that run on top of Kubernetes. DevSpace uses kaniko as automatic fallback if Docker is not installed. To force image building using kaniko, set `kaniko.cache: true` as shown above. Learn more about [configuring kaniko builds](../../configuration/images/kaniko.mdx).
 :::
 
 </TabItem>
@@ -101,25 +98,11 @@ Kaniko is an open-source tool that lets you build images inside containers that 
 images:
   backend:
     image: john/appbackend
-    build:
-      custom:
-        skipImageArg: true
-        command: |-
-          # Also works on windows as this is executed in a golang shell
-          docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
-```
-
-</TabItem>
-<TabItem value="disabled">
-
-```yaml {5}
-images:
-  frontend:
-    image: john/appfrontend
-    build:
-      disabled: true
-  backend:
-    image: john/appbackend
+    custom:
+      skipImageArg: true
+      command: |-
+        # Also works on windows as this is executed in a golang shell
+        docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
 ```
 
 </TabItem>
@@ -185,7 +168,6 @@ DevSpace uses one of the following [build tools](../../configuration/images/basi
 - [`docker`](../../configuration/images/docker.mdx) for building images using a Docker daemon (default, prefers Docker daemon of local Kubernetes clusters)
 - [`kaniko`](../../configuration/images/kaniko.mdx) for building images directly inside Kubernetes (automatic fallback for `docker`)
 - [`custom`](../../configuration/images/custom.mdx) for building images with a custom build command (e.g. for using Google Cloud Build)
-- [`disabled`](../../configuration/images/disabled.mdx) if this image should not be built (especially useful for [config `profiles`](../../configuration/profiles/basics.mdx))
 
 ### 6. Tag Image
 DevSpace automatically tags all images after building them using a tagging schema that you can customize using the `tag` option. By default, this option is configured to generate a random string consisting of 5 characters. 

@@ -1,0 +1,9 @@
+```yaml
+dev:                                # struct   | Options for "devspace dev"
+  ports: []                         # struct[] | Array of port-forwarding settings for selected pods
+  open: []                          # struct[] | Array of auto-open settings
+  sync: []                          # struct[] | Array of file sync settings for selected pods
+  logs: ...                         # struct   | Options for configuring multi-container log streaming
+  autoReload: ...                   # struct   | Options for auto-reloading (i.e. re-deploying deployments and re-building images)
+  interactive: ...                  # struct   | Options for configuring the interactive mode
+```

@@ -1,0 +1,307 @@
+---
+title: Build Images with kaniko
+sidebar_label: kaniko
+---
+
+import FragmentBuildOptionsTarget from '../../fragments/build-option-target.mdx';
+import FragmentBuildOptionsNetwork from '../../fragments/build-option-network.mdx';
+import FragmentBuildOptionsBuildArgs from '../../fragments/build-option-buildArgs.mdx';
+
+Using `kaniko` as build tool allows you to build images direclty inside your Kubernetes cluster without a Docker daemon. DevSpace simply starts a build pod and builds the image using `kaniko`.
+
+:::note Automatic Cleanup
+After the build process completes, the build pod started for the kaniko build process will be deleted again.
+:::
+
+To set `kaniko` as default build tool, use the following configuration:
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        cache: true
+```
+
+## Flags & Arguments
+
+### `cache`
+The `cache` option expects a boolean that states if kaniko should make use of layer caching by pulling the previously build image and using the layers of this image as cache.
+
+#### Default Value For `cache`
+```yaml
+cache: true
+```
+
+#### Example: Building Images with kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        cache: true
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    build:
+      kaniko:
+        cache: false
+```
+**Explanation:**  
+- The first image `backend` would be built using kaniko and make use of the build cache.
+- The second image `frontend` would be built using kaniko and **not** use the build cache.
+
+
+### `snapshotMode`
+The `snapshotMode` option expects a string that can have the following values:
+- `full` tells kaniko to do a full filesystem snapshot
+- `time` tells kaniko to do a filesystem snapshot based on `mtime` (default)
+
+:::warning Limitations
+One of the biggest limitations of the `time` mode is that kaniko might **miss** file metadata changes introduced by `RUN` statements, e.g. kaniko might skip a command such as `RUN chown 333:333 -R /app`. In cases where this is not an option, use `full` instead. Learn more about [limitations related to kaniko snapshots using `mtime`](https://github.com/GoogleContainerTools/kaniko#mtime-and-snapshotting).
+:::
+
+#### Default Value For `snapshotMode`
+```yaml
+snapshotMode: time
+```
+
+#### Example: Building Images with kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        cache: true
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    build:
+      kaniko:
+        snapshotMode: time
+```
+**Explanation:**  
+- The first image `backend` would be built using kaniko and creating full filesystem snapshots.
+- The second image `frontend` would be built using kaniko and calculate filesystem snapthots only based on `mtime`.
+
+
+### `insecure`
+The `insecure` option expects a boolean stating if kaniko should allow to push to an insecure (plain HTTP instead of HTTPS) registry.
+
+:::warning
+This option should only be set to `true` for testing purposes.
+:::
+
+#### Default Value For `insecure`
+```yaml
+insecure: false
+```
+
+#### Example: Push to Insecure Registry With kaniko
+```yaml
+images:
+  backend:
+    image: 123.456.789.0:5000/john/appbackend
+    build:
+      kaniko:
+        insecure: false
+```
+**Explanation:**  
+The image `backend` would be built using kaniko and pushing to the insecure registry `123.456.789.0:5000` would be allowed.
+
+
+### `args`
+The `args` option expects an array of strings that will be passed as arguments (and flags) when running the kaniko build command.
+
+:::note Kaniko Documentation
+Take a look at the kaniko documentation for a full [list of available flags](https://github.com/GoogleContainerTools/kaniko#additional-flags).
+:::
+
+#### Default Value For `args`
+```yaml
+args: []
+```
+
+#### Example: Passing Args to kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        args:
+        - --cache-dir=/tmp
+        - --verbosity=debug
+```
+**Explanation:**  
+The image `backend` would be built using kaniko and the flags `--cache-dir=/tmp --verbosity=debug` would be set when running the build command within the kaniko pod used for image building.
+
+
+
+<br />
+
+## Build Pod Configuration
+
+### `image`
+The `image` option expects a string stating the image that should be used for the kaniko container within the build pod.
+
+:::warning
+This option should only be set to `true` for testing purposes.
+:::
+
+#### Default Value For `image`
+```yaml
+image: gcr.io/kaniko-project/executor:v0.17.1
+```
+
+#### Example: Use Different Kaniko Image/Version
+```yaml
+images:
+  backend:
+    image: 123.456.789.0:5000/john/appbackend
+    build:
+      kaniko:
+        image: gcr.io/kaniko-project/executor:v0.19.0
+```
+
+
+### `pullSecret`
+The `pullSecret` option expects a string with the name of a Kubernetes secret which is used by kaniko as pull/push secret (e.g. for pulling the base image defined in the `FROM` statement of the Dockerfile and for pushing the newly built image after the kaniko build process).
+
+:::info
+In most cases, DevSpace already makes sure that kaniko gets the correct pull secrets to push and pull to registries.
+:::
+
+#### Default Value For `pullSecret`
+```yaml
+pullSecret: ""
+```
+
+#### Example: Pull Secret For kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        pullSecret: custom-pull-secret
+```
+**Explanation:**  
+The image `backend` would be built using kaniko and kaniko would use the Kubernete secret `custom-pull-secret` to pull images from registries that require authentication.
+
+:::tip Creating Pull Secrets using `hooks`
+If you use the `pullSecret` option, you have to manually create the secret before DevSpace tries to build your images. You can automate this by [defining a hook in devspace.yaml](../../configuration/hooks/basics.mdx) as show in this example:
+```yaml
+hooks:
+- command: kubectl
+  args:
+    - create
+    - secret
+    - generic
+    - custom-pull-secret
+    - --from-literal
+    - config.json='{ "credsStore":"ecr-login" }'
+  when:
+    before:
+      images: all
+```
+:::
+
+:::note Building AWS ECR images on EKS
+If your EKS instance is [configured with access to ECR (see instance role permissions for AWS EKS and ECR)](https://docs.aws.amazon.com/AmazonECR/latest/userguide/ECR_on_EKS.html), your pull secret referenced by the `pullSecret` option, could be created with this kubectl command:
+```yaml
+kubectl create secret generic custom-pull-secret --from-literal config.json='{ "credsStore":"ecr-login" }'
+```
+The resulting Kubernetes secret would look like this:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: custom-pull-secret
+data:
+  config.json: eyAiY3JlZHNTdG9yZSI6ImVjci1sb2dpbiIgfQ==
+```
+If you define `pullSecret: custom-pull-secret` as shown in the example above, DevSpace will automatically mount this secret into the kaniko container and kaniko will be able to pull from and push to ECR.
+:::
+
+
+### `additionalMounts`
+The `additionalMounts` option expects an array of mount options that allow to mount Kubernetes Secrets and ConfigMaps into the kaniko container within the build pod.
+
+#### Default Value For `additionalMounts`
+```yaml
+additionalMounts: []
+```
+
+#### Example: Mount ConfigMaps & Secrets For Kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        additionalMounts:
+        - mountPath: /some/configmap/dir
+          configMap:
+            name: my-configmap
+        - mountPath: /some/secret/dir
+          secret:
+            name: my-secret
+            items:
+            - key: aws-token
+              path: token.json
+```
+**Explanation:**  
+The above configuration would create a kaniko container which mounts the following volumes:
+- All keys within the ConfigMap `my-configmap` will be mounted as files within the folder `/some/configmap/dir`. The filenames will be the keys within the ConfigMap.
+- The key `aws-token` within the Secret `my-secret` will be mounted as the file `/some/secret/dir/token.json`.
+
+
+### `namespace`
+The `namespace` option expects a string stating a namespace that should be used to start the kaniko build pod in.
+
+:::warning Hard-Coding Namespaces Discouraged
+Unless you really know what you are doing, it is discouraged to hard-code namespaces within devspace.yaml because that makes it harder to share the project and its configuration with others.
+:::
+
+#### Default Value For `namespace`
+```yaml
+namespace: "" # defaults to the default namespace of the current kube-context
+```
+
+#### Example: Different Namespace For kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        namespace: build-namespace
+```
+**Explanation:**  
+The image `backend` would be built using kaniko and the build pod started to run the kaniko build process would be created within the namespace `build-namespace` within the cluster that the current kube-context points to.
+
+
+
+<br />
+
+## Build Options
+DevSpace allows you to configure the following build options:
+- `target` defining the build target for multi-stage builds
+- `network` to define which network to use during building (e.g. `docker build --network=host`)
+- `buildArgs` to pass arguments to the Dockerfile during the build process
+
+
+### `options.target`
+
+<FragmentBuildOptionsTarget/>
+
+
+### `options.network`
+
+<FragmentBuildOptionsNetwork/>
+
+
+### `options.buildArgs`
+
+<FragmentBuildOptionsBuildArgs/>

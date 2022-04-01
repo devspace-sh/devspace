@@ -1,0 +1,234 @@
+---
+title: Onboarding Guide
+sidebar_label: Onboarding
+---
+
+## View Help & Flags
+To see help information and a list of all flags for any command, simply use the `-h` flag:
+```bash
+devspace -h         # Shows all major commands and flags
+devspace dev -h     # Shows sub-commands and specific flags for this command
+```
+
+<br/>
+
+---
+
+
+## Project-Specific Commands
+
+:::note devspace.yaml required
+The project-specific commands require that your project is already [initialized](../getting-started/initialize-project.mdx), i.e. there is a `devspace.yaml` config file.
+:::
+
+
+### Start Development
+This command deploys the project and then starts the development mode:
+```bash
+devspace dev
+```
+
+
+### Deploy Project
+This command deploys the project to Kubernetes:
+```bash
+devspace deploy # -p / --profile production     => see: devspace list profiles
+```
+
+Run this command to just build, tag and push all images to a registry without deploying the project:
+```bash
+devspace build
+```
+
+
+### Port Forwarding
+To get a list of all ports that are being forwarded as defined in `devspace.yaml`, run:
+```bash
+devspace list ports
+```
+
+
+### Commands
+This command lists all available command:
+```bash
+devspace list commands
+```
+
+Use this command to run one of the custom commands:
+```bash
+devspace run command [command-name] -- --some-flag --another-flag=value
+```
+
+
+### Profiles
+This command lists all available profiles:
+```bash
+devspace list profiles
+```
+
+Use this command to switch to a different profile:
+```bash
+devspace use profile [optional:profile-name]
+```
+
+Use the `-p` flag to just run a single command with a different profile without switching it permanently:
+```bash
+devspace deploy -p [profile-name]
+```
+
+Use this command to print the config after a profile has been applied:
+```bash
+devspace print -p [profile-name]
+```
+
+
+### Variables
+This command lists all variables as well as their values:
+```bash
+devspace list vars
+```
+
+To change the value of a variable, run:
+```bash
+devspace set var VAR_NAME=value # VAR_NAME_2=value2 VAR_NAME_3=value3
+```
+
+Use this command to reset all variables, i.e. delete variable values from the variable cache:
+```bash
+devspace reset vars
+```
+
+Use this command to print the config after all variables have been replaced:
+```bash
+devspace print
+```
+
+
+### Dependencies
+Use this command to update git-based dependencies:
+```bash
+devspace update dependencies
+```
+This command performs a `git fetch && git pull` for all git-based dependencies.
+
+Use this command to clear the dependencies cache:
+```bash
+devspace reset dependencies
+```
+
+
+### Open Project
+This command opens the current project in the browser:
+```bash
+devspace open
+```
+
+:::note Must be deployed
+This command requires that the project has already been deployed.
+:::
+
+<br/>
+
+---
+
+## General Purpose Commands
+
+### Open UI
+This command opens the localhost development UI:
+```bash
+devspace ui
+```
+:::note Development Mode
+The localhost development UI starts automatically in the background when running: `devspace dev`
+:::
+
+
+### Stream Logs
+This command streams logs of a container:
+```bash
+devspace logs
+```
+
+
+### Terminal & Commands
+This command opens an interactive terminal session for a container:
+```bash
+devspace enter
+```
+
+To run just a single command inside a container, use:
+```bash
+devspace enter -- my-command --my-flag=my-value ...
+```
+
+
+### File Sync
+This command starts an on-demand file synchronization between localhost and a container:
+```bash
+devspace sync
+```
+
+:::note Development Mode
+If file sync is configured in your project, it automatically starts when running: `devspace dev`
+:::
+
+
+
+<br/>
+
+---
+
+
+## Clusters & Namespaces
+This command sets a different namespace as default namespace for the current kube-context/cluster:
+```bash
+devspace use namespace [optional:namespace]
+```
+
+:::info Not for Spaces
+The command `devspace use namespace` does **<u>not</u>** work for Loft spaces. Use `devspace use space` instead.
+:::
+
+This command creates a new space using Loft:
+```bash
+devspace create space [space-name]
+```
+
+This command switches to a different spaces:
+```bash
+devspace use space [optional:space-name]
+```
+
+This command switches to a different kube-context/cluster:
+```bash
+devspace use context [optional:context-name]
+```
+
+
+
+<br/>
+
+## Advanced
+
+### Clean up Images
+When using Docker for image building, disk space on your local computer can get sparse after a lot of Docker builds. DevSpace provides a convenient command to clean up all images that were built with your local Docker daemon using DevSpace. This command does not remove any pushed images remotely and just clears local images and space.
+
+In order to clean up all created images locally, simply run the following command in your project folder:
+```bash
+devspace cleanup images
+```
+
+### Clean up Docker
+In addition, it also makes sense to prune your Docker environment to free additional space with the following command:
+
+```bash
+docker system prune
+```
+
+This command will remove:
+- all stopped containers
+- all networks not used by at least one container
+- all dangling images
+- all build cache
+
+These commands should free up a lot of space for new image builds to come.

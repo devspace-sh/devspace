@@ -1,0 +1,112 @@
+---
+title: Container Restart Helper
+sidebar_label: injectRestartHelper
+---
+
+## `injectRestartHelper`
+The `injectRestartHelper` option expects a boolean which decides if DevSpace should inject a restart helper and override the `ENTRYPOINT+CMD` of the image in runtime during the build process which wraps the regular container start command and allows to restart the regular container start command without terminating/recreating the container.
+
+
+:::note How does it work?
+The idea of the restart helper is to start the restart helper script as PID 1 inside the conainer. This script will then start the original container entrypoint which will run your application. If a [restart is triggered](#trigger-a-restart), the restart helper will just restart the application again.
+:::
+
+:::tip Automatic Restart On File Change
+The restart helper per se does not do much except restarting your application if it has been killed. You can combine this config option with the [post-sync command `restartContainer: true`](../development/file-synchronization.mdx#onuploadrestartcontainer) which will effectively restart your application inside the container every time DevSpace syncs files into the container.
+:::
+
+
+#### Default Value For `injectRestartHelper`
+```yaml
+injectRestartHelper: false
+```
+
+#### Example: Inject Restart Helper
+```yaml
+images:
+  backend:
+    image: john/appbackend
+  frontend:
+    image: john/appfrontend
+    injectRestartHelper: true
+```
+
+
+<br/>
+
+## Trigger a Restart
+You can restart a pod that has a restart helper injected with devspace itself:
+```
+devspace restart -n my-namespace
+devspace restart -n my-namespace --pod my-pod
+devspace restart -n my-namespace --label-selector abc=def
+```
+
+Restart a pod via kubectl:
+```
+kubectl exec my-pod -- sh -c 'PID=$(cat /.devspace/devspace-pid) && rm /.devspace/devspace-pid && kill -9 -$PID' 
+```
+
+You can also manually trigger a restart through the restart helper by doing the following (same as with kubectl):
+```bash
+# 1. Get the PID of your applications process
+PID=$(cat /.devspace/devspace-pid)
+
+# 2. Remove the PID file to tell the restart helper that this is an intended restart
+# (otherwise the restart helper will terminate as well which will kill the container)
+rm /.devspace/devspace-pid
+
+# 3. Kill the application process group (restart helper on PID 1 will detect this and restart it again)
+kill -9 -$PID
+```
+
+:::note Automatic Restart On File Change
+This is exactly what DevSpace is doing when the [post-sync command `restartContainer: true`](../development/file-synchronization.mdx#onuploadrestartcontainer) is configured.
+:::
+
+
+<br/>
+
+## Restart Helper Script
+```bash
+#!/bin/sh
+#
+# A process wrapper script to simulate a container restart. This file was injected with devspace during the build process
+#
+set -e
+pid=""
+trap quit TERM INT
+quit() {
+  if [ -n "$pid" ]; then
+    kill $pid
+  fi
+}
+while true; do
+  setsid "$@" &
+  pid=$!
+  echo "$pid" > /.devspace/devspace-pid
+  set +e
+  wait $pid
+  exit_code=$?
+  if [ -f /.devspace/devspace-pid ]; then
+    rm -f /.devspace/devspace-pid
+    printf "\nContainer exited with $exit_code. Will restart in 7 seconds...\n"
+    sleep 7
+  fi
+  set -e
+  printf "\n\n############### Restart container ###############\n\n"
+done
+```
+
+## Providing a custom restart helper script or changing the existing script
+
+DevSpace provides a way to change the existing restart helper script by defining the option `restartHelperPath`:
+```yaml
+images:
+  frontend:
+    image: john/appfrontend
+    injectRestartHelper: true
+    restartHelperPath: path/to/restarthelper.sh
+```
+
+DevSpace will now inject this script instead of the bundled restart helper script (see above). You can also specify an URL instead of a local path. This can be handy if you want to start up the application in a special way or want to make adjustments to the existing restart helper script.

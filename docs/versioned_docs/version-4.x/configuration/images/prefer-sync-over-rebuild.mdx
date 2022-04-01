@@ -1,0 +1,47 @@
+---
+title: Reduce Rebuilds During Dev
+sidebar_label: preferSyncOverRebuild
+---
+
+## `preferSyncOverRebuild`
+The `preferSyncOverRebuild` option expects a boolean which decides if DevSpace should skip rebuilding an image during `devspace dev` in case the file sync is configured for a container which references this image using the `imageName` option.
+
+:::note Development Only
+Using `preferSyncOverRebuild: true` does not affect `devspace deploy` because file sync is not being started even if it may be configured in devspace.yaml. So, this option takes effect during image builds via `devspace dev`.
+:::
+
+:::note Regular Skip Check
+Even if this option is enabled, DevSpace may still skip building an image if neither the Dockerfile nor any files within the context have changed since the latest rebuild.
+:::
+
+:::tip Trigger Rebuild Manually
+DevSpace will still rebuild when the `-b / --force-rebuild` flag is explicitly provided.
+:::
+
+#### Default Value For `preferSyncOverRebuild`
+```yaml
+preferSyncOverRebuild: false
+```
+
+#### Example: Prefer Sync Over Rebuild
+```yaml {4,12}
+images:
+  backend:
+    image: john/appbackend
+    preferSyncOverRebuild: true
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    preferSyncOverRebuild: true
+  cache:
+    image: dscr.io/${DEVSPACE_USERNAME}/cache
+dev:
+  sync:
+  - imageSelector: backend
+    onUpload:
+      restartContainer: true
+```
+**Explanation:**  
+When running `devspace dev` using the above configuration, DevSpace would:
+- **not** build the image `backend` because `dev.sync[0].imageName` is referencing this image and `preferSyncOverRebuild: true` is configured
+- build the image `frontend` because although `preferSyncOverRebuild: true` is configured, no sync configuration is referencing this image
+- build the image `cache` because `preferSyncOverRebuild` is not set to `true`

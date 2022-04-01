@@ -1,0 +1,187 @@
+---
+title: "Profiles: Patches"
+sidebar_label: patches
+---
+
+import FragmentInfoPrintConfig from '../../fragments/tip-print-config.mdx';
+
+Patches are a way to perform minor overrides to the configuration without having to create a separate config file. Patch functionality follows JSON Patch([RFC](https://tools.ietf.org/html/rfc6902)) semantics, as well as enhanced `path` selectors, as implemented by the [yaml-jsonpath](https://github.com/vmware-labs/yaml-jsonpath) library.
+
+## Example
+Patches are ideal for reflecting changes between different environments, e.g. dev, staging and production.
+```yaml {15-26}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
+profiles:
+- name: production
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/prodbackend
+  - op: replace
+    path: deployments.name=backend.helm.values.containers[0].image
+    value: john/prodbackend
+  - op: replace
+    path: deployments.name=backend.helm.values.containers[1].image
+    value: john/cache
+```
+**Explanation:**  
+- The above example defines 1 profile: `production`
+- When using the profile `production`, the config would be patched with 3 patches.
+- The resulting config used in-memory when the profile `production` is used would look like this:
+
+```yaml
+# In-Memory Config After Applying Patches For Profile `production`
+images:
+  backend:
+    image: john/prodbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/prodbackend
+      - image: john/cache
+```
+
+## Configuration
+
+### `name`
+The `name` option is mandatory and expects a string defining the name of the profile.
+
+### `patches`
+The `patches` option expects an array of patch objects which consists of the following properties:
+- `op` stating the patch operation (possible values: `replace`, `add`, `remove`)
+- `path` stating a jsonpath or a xpath within the config (e.g. `images.backend.image`, `deployments.name=backend.helm.values.containers[1]`)
+- `value` stating an arbitrary value used by the operation (e.g. a string, an integer, a boolean, a yaml object)
+
+:::warning `op: add` only for arrays
+Using `op: add` only works as expected when `path` points to an array value. Using `op: add` to add properties to an object (e.g. `deployments[*].helm.values`) will **not** work and instead replace all existing properties.
+:::
+
+:::tip Array Paths
+When you want to define a `path` that contains an array (e.g. `deployments`), you have several options:
+
+1. Use the index of the array item you want to patch, e.g. `deployments[0]`, `deployments/0`
+2. Use a property selector matching the array item(s) you want to patch, e.g. `deployments.name=backend`
+3. Use a wildcard selector to match all array item(s), e.g. `deployments.*`,`deployments[*]` or `deployments/*`
+4. Use a comparison selector matching the array item(s) you want to patch, e.g. `deployments[?(@.helm.timeout=='1000s')]`
+5. Use a regular expression selector matching the array item(s) you want to patch, e.g. `deployments[?(@.name=~/^production/)]`
+
+Using a selector rather than the array index is often better because it is more resilient and will not cause any issues even if the order of an array's items is changed later on. A selector is also able to select multiple array items if all of them have the same value for this property.
+:::
+
+:::info Value For Replace / Add
+If you use the `replace` or `add` operation, `value` is a mandatory property.
+:::
+
+:::info
+If `value` is defined, the new value must provide the correct type to be used when adding or replacing the existing value found under `path` using the newly provided `value`, e.g. an array must be replaced with an array.
+:::
+
+:::note
+The `patches` of a profile can modify all parts of the configuration **except** the sections `profiles` and `commands`.
+:::
+
+#### Example: Config Patches
+```yaml {15-38}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
+profiles:
+- name: staging
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/stagingbackend
+  - op: replace
+    path: deployments.name=backend.helm.values.containers.image=john/devbackend.image
+    value: john/stagingbackend
+  - op: remove
+    path: deployments.name=backend.helm.values.containers.image=john/debugger
+- name: production
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/prodbackend
+  - op: replace
+    path: deployments.name=backend.helm.values.containers.image=john/devbackend.image
+    value: john/prodbackend
+  - op: replace
+    path: deployments.name=backend.helm.values.containers.image=john/debugger.image
+    value: john/cache
+```
+**Explanation:**  
+- The above example defines 2 profiles: `staging`, `production`
+- Users can use the flag `-p staging` to use the `staging` profile for a single command execution
+- Users can use the flag `-p production` to use the `production` profile for a single command execution
+- Users can permanently switch to the `staging` profile using: `devspace use profile staging`
+- Users can permanently switch to the `production` profile using: `devspace use profile production`
+
+#### Example: Config Patches using Recursive Descent Selectors
+```yaml {18,21,25,28}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
+profiles:
+- name: staging
+  patches:
+  - op: replace
+    path: ..[?(@.image=='john/devbackend')].image
+    value: john/stagingbackend
+  - op: remove
+    path: deployments..[?(@.image=='john/debugger')]
+- name: production
+  patches:
+  - op: replace
+    path: ..[?(@.image=='john/devbackend')].image
+    value: john/prodbackend
+  - op: replace
+    path: deployments..[?(@.image=='john/debugger')].image
+    value: john/cache
+```
+**Explanation:**  
+- The above example has the same result as this [previous example](#example-config-patches).
+- By using a recursive descent selector, we can change many `image` values at once.
+- When the `staging` profile is used, all `image` properties that have value `john/devbackend` are changed to `john/stagingbackend`, and all deployment containers with `image` property equal to `john/debugger` are removed.
+- When the `production` profile is used, all `image` properties that have value `john/devbackend` are changed to `john/prodbackend`, and all deployment containers with `image` property equal to `john/debugger` are changed to `john/cache`.
+
+## Useful Commands
+
+### `devspace print -p [profile]`
+
+<FragmentInfoPrintConfig/>

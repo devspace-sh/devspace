@@ -1,0 +1,76 @@
+---
+title: Initialize a Project
+sidebar_label: 2. Initialize Project
+---
+
+import ChooseProjectFragment from '../fragments/choose-project.mdx';
+
+## Choose a Project
+You can either deploy one of your own projects or alternatively, checkout one of our demo applications using git:
+
+<ChooseProjectFragment/>
+
+
+<br/>
+
+## Initialize Your Project
+Run this command in your project directory to create a `devspace.yaml` config file for your project:
+```bash
+devspace init
+```
+
+```bash
+
+     ____              ____
+    |  _ \  _____   __/ ___| _ __   __ _  ___ ___
+    | | | |/ _ \ \ / /\___ \| '_ \ / _` |/ __/ _ \
+    | |_| |  __/\ V /  ___) | |_) | (_| | (_|  __/
+    |____/ \___| \_/  |____/| .__/ \__,_|\___\___|
+                            |_|
+
+
+? How do you want to deploy this project?  [Use arrows to move, type to filter]
+> helm: Use Component Helm Chart [QUICK START] (https://devspace.sh/component-chart/docs)
+  helm: Use my own Helm chart (e.g. local via ./chart/ or any remote chart)
+  kubectl: Use existing Kubernetes manifests (e.g. ./kube/deployment.yaml)
+  kustomize: Use an existing Kustomization (e.g. ./kube/kustomization/)
+```
+
+DevSpace will ask you a couple of questions about this project and then generate a `devspace.yaml` for you to start with. If you are using the quickstart projects, choose `Component Helm Chart` for the first question.
+
+After running `devspace init`, you will see a `devspace.yaml` file in your project which should look like this:
+```yaml
+version: v1beta10
+
+# `images` specifies all images that may need to be built for this project
+images:
+  app: # This image is called `app` and this name `app` is referenced multiple times in the config below
+    image: registry.tld/username/image
+    dockerfile: ./Dockerfile
+    build:
+      disabled: true
+
+# `deployments` tells DevSpace how to deploy this project
+deployments:
+- name: quickstart-kubectl
+  # This deployment uses `kubectl` but you can also define `helm` deployments
+  kubectl:
+    manifests:
+    - kube/deployment.yaml
+# OR:
+- name: quickstart-helm                   # Name of this deployment
+  helm:                                   # Deploy using Helm
+    componentChart: true                  # Use the Component Helm Chart
+    values:                               # Override Values for chart (can also be set using valuesFiles option)
+      containers:                         # Defines an array of containers that run in the same pods started by this component
+      - image: image(app):tag(app)        # Image of this container
+      service:                            # Expose this component with a Kubernetes service
+        ports:                            # Array of container ports to expose through the service
+        - port: 3000                      # Exposes container port 3000 on service port 3000
+
+# Settings for development mode (will be explained later)
+dev: ...
+
+# Settings for development mode (will be explained later)
+profiles: ...
+```

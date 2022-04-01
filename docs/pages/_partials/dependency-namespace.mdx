@@ -1,0 +1,9 @@
+The `namespace` option is optional and expects a string stating a namespace that should be used to deploy the dependency to.
+
+:::note
+By default, DevSpace deploys project dependencies in the same namespace as the project itself. 
+:::
+
+:::info
+You should only use the `namespace` option if you are an advanced user because using this option requires any user that deploys this project to be able to create this namespace during the deployment process or to have access to the namespace with the current kube-context, if the namespace already exists.
+:::

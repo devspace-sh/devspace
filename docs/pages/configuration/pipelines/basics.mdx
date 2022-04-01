@@ -1,0 +1,130 @@
+---
+title: Pipelines
+sidebar_label: pipelines
+---
+
+Pipelines in DevSpace are ... #TODO
+
+An example `pipelines` section could look like this in `devspace.yaml`:
+```yaml
+# File: devspace.yaml
+pipelines:
+  dev: |
+    run_dependency_pipelines --all    # 1. Deploy any projects this project needs (see "dependencies")
+    create_deployments --all          # 2. Deploy Helm charts and manifests specfied as "deployments"
+    start_dev app                     # 3. Start dev mode "app" (see "dev" section)
+  deploy: |
+    run_dependency_pipelines --all                    # 1. Deploy any projects this project needs (see "dependencies")
+    build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
+    create_deployments --all \                        # 3. Deploy Helm charts and manifests specfied as "deployments"
+      --set updateImageTags=true                      #    + make sure to update all image tags to the one from step 2
+  build: |
+    build_images --all -t $(git describe --always)
+  custom: ...
+```
+
+Pipelines can:
+- Call built-in functions such as `build_images`, `create_deployments` or `start_dev`
+- Call functions defined in `devspace.yaml` or in any `import`
+- Use bash-like syntax including `if []; then ... fi`, `&&`, `||` or `;`
+- Access environment variables and DevSpace variables
+
+Pipelines are invoked via:
+```bash
+devspace run-pipeline [name]
+```
+
+:::info Cross-Platform Execution
+Write all pipeline scrips in `bash` fashion. DevSpace is using a library to make them cross-platform executable.
+:::
+
+
+## Default Pipelines
+
+<details>
+<summary>
+
+### `dev`
+
+</summary>
+
+The `dev` pipeline is executed by running `devspace dev` and has the following default workflow:
+
+```bash
+run_dependency_pipelines --all      # 1. Deploy any projects this project needs (see "dependencies")
+create_deployments --all            # 2. Deploy Helm charts and manifests specfied as "deployments"
+start_dev --all                     # 3. Start all dev modes
+```
+
+</details>
+
+<details>
+<summary>
+
+### `deploy`
+
+</summary>
+
+The `deploy` pipeline is executed by running `devspace deploy` and has the following default workflow:
+
+```bash
+run_dependency_pipelines --all      # 1. Deploy any projects this project needs (see "dependencies")
+build_images --all                  # 2. Build, tag (git commit hash) and push all images (see "images")
+create_deployments --all \          # 3. Deploy Helm charts and manifests specfied as "deployments"
+  --set updateImageTags=true        #    + make sure to update all image tags to the one from step 2
+```
+
+</details>
+
+
+<details>
+<summary>
+
+### `build`
+
+</summary>
+
+The `build` pipeline is executed by running `devspace build` and has the following default workflow:
+
+```bash
+build_images --all      # Build, tag (git commit hash) and push all images (see "images")
+```
+
+</details>
+
+
+## Configuration
+
+### `name`
+The `name` option is mandatory and expects a string with name that is used to invoke the pipeline via:
+``` bash
+devspace run-pipeline [name]
+```
+
+:::info
+A few special names can be invoked as top-level commands, including:
+- `dev` can be invoked via `devspace dev`
+- `deploy` can be invoked via `devspace deploy`
+- `build` can be invoked via `devspace build`
+:::
+
+
+### `run`
+The `run` option is mandatory and specifies the script that is executed when this pipeline is invoked.
+
+:::info Implicit definition
+\# TODO: note about providing string value vs {run: ...} (see example below)
+:::
+
+Example:
+```yaml
+pipelines:
+  pipeline1: ...
+  pipeline3: |
+    ...
+  pipeline3:
+    run: ...
+```
+
+### `continueOnError`
+The `continueOnError` option expects a boolean value and #TODO

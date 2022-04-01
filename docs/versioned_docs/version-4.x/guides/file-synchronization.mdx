@@ -1,0 +1,54 @@
+---
+title: File Synchronization
+sidebar_label: File Synchronization
+---
+
+There are two types of file synchronzation processes:
+- on-demand file sync using `devspace sync` and
+- file synchronization during development mode using `devspace dev`. 
+
+
+## Start On-Demand File Sync
+To establish an on-demand file synchronization between your local computer and the containers running inside Kubernetes, use the following command:
+```bash
+devspace sync   # common flags: --local-path=./ --container-path=/app --no-watch --config=./devspace.yaml
+```
+[Learn more about the `devspace sync` command.](https://devspace.cloud/blog/2019/10/18/release-devspace-v4.1.0-kubectl-cp-file-synchronization)
+
+
+## Configure File Sync
+If you want to start file synchronization every time you run `devspace dev`, you can configure it within `devspace.yaml`.
+
+[Learn more about configuring file synchronization using `devspace.yaml`.](../configuration/development/file-synchronization.mdx)
+
+<br/>
+
+
+## Troubleshooting
+
+### Check `sync.log`
+DevSpace logs all sync activity in `.devspace/logs/sync.log`. Check this file to get more detailed error information.
+
+### Verbose Sync
+DevSpace provides the flag `--verbose-sync` to print additional information while running `devspace dev`:
+```bash
+devspace dev --verbose-sync
+```
+
+For an even cleaner output (sync-only logs, without container logs), deploy your application using `devspace dev` once, then abort the dev mode and start a standalone sync process using the `--verbose` flag:
+```bash
+devspace sync --config=devspace.yaml --verbose
+```
+
+### Ignore `.git/`
+The sync can fail when files are constantly being changed while they are being synchronized. DevSpace will retry failing sync attempts but for folder such as `.git/` which contain continuously changing information and files which may be locked by the IDE, we recommmend to [ignore them via the `excludePaths` option](../configuration/development/file-synchronization.mdx#excludepaths) in `devspace.yaml`.
+
+### File Permissions
+Without file write permission, the sync will not be able to work. If you start your containers (in production) using a different user than `root` and this user does not have sufficient permissions to read and write certain files, you can:
+- exclude these files using the [`excludePaths` option](../configuration/development/file-synchronization.mdx#excludepaths)
+- exclude these files using the [`uploadExcludePaths` option](../configuration/development/file-synchronization.mdx#uploadexcludepaths)
+- run the containers using a different user during development\*
+
+\* You can achieve this by:
+- Adding a `USER` statement in your Dockerfile: This is especially recommended when you are using multi-stage builds because you can add the `USER` statement for your development/build stage and add another `USER` statment to your production stage. Then, control the build target using the [`options.target` option](../configuration/images/docker.mdx#target) for Docker and kaniko builds and define a profile for removing the build stage for production deployments.
+- Setting `runAsUser` and `runAsGroup` to `0` within the `securityContext` of your Kubernetes pods.

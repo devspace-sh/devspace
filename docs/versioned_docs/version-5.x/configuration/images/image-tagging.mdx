@@ -1,0 +1,78 @@
+---
+title: Image Name & Tagging Schema
+sidebar_label: image + tags
+---
+
+The `images` section in `devspace.yaml` is a map with keys representing the name of the image and values representing the image definition including `tag`, `dockerfile` etc.
+```yaml
+images:                             # map[string]struct | Images to be built and pushed
+  image1:                           # string   | Name of the image
+    image: gcr.io/username/image    # string   | Image repository and name 
+    tags:                           # string[] | Image tags (may be a tagging schema with variables)
+    - latest
+    - 0.0.1
+    - dev-${devspace.git.commit}
+    - dev-${USER}-###               # Each # will be replaced with a random character 
+```
+
+## `image` *Image Repository*
+The `image` option expects a string containing the image repository including registry and image name. 
+
+- Make sure you [authenticate with the image registry](../../configuration/images/basics.mdx#authentication-registry) before using in here.
+- For Docker Hub images, do not specify a registry hostname and use just the image name instead (e.g. `mysql`, `my-docker-username/image`).
+
+#### Example: Multiple Images
+```yaml
+images:
+  backend:
+    image: john/appbackend
+  frontend:
+    image: custom-registry.com:5000/peter/appfrontend
+```
+**Explanation:**
+- The first image `backend` would be tagged as `appbackend:[TAG]` pushed to Docker Hub using the path `john` (which generally could be your Docker Hub username).
+- The second image `frontend` would be tagged as `appfrontend:[TAG]` and pushed to `custom-registry.com:5000` using the path `peter`.
+
+## `tags` *Tagging Schema*
+The `tags` option expects an array of strings, each containing a static tag or a tagging schema used to automatically tag images before pushing them to the registry. The tagging schema can contain [dynamic config variables](../../configuration/variables/basics.mdx). While you can define your own config variables, DevSpace provides a set of pre-defined variables. The most commonly used variables for tagging are:
+- **devspace.timestamp** A unix timestamp when the config was loaded
+- **devspace.git.commit**: A short hash of the local repo's current git commit
+- **devspace.namespace**: The default namespace of your current kube-context
+
+Besides dynamic config variables, DevSpace offers you a possibility to mark certain parts of the image tag as random generated. During image build DevSpace will fill these parts with random characters. The placeholder for a random character is **#**. For example, let's assume you want to generate tags with the format dev-BRANCH-RANDOM, you would write the tag as:
+```yaml
+images:
+  default:
+    image: my-registry.com/user/image
+    tags:
+    # The five # are replaced with 5 random characters. The variable ${devspace.git.branch} is replaced
+    # with the current branch the user is on
+    - 'dev-${devspace.git.branch}-#####' 
+```
+ 
+:::info Unique Tags For Development
+**Make sure tags are unique** when defining a custom tagging schema for development. Unique tags ensure that your application gets started with the newly built image instead of using an older, cached version. Therefore, it is highly recommended for non-production tags to either use `#` placeholders or `devspace.timestamp` as a suffix in your tagging schema (see [example below](#example-custom-tagging-schema)).
+:::
+
+#### Default Value For `tag`
+```yaml
+tags: 
+- '#####'
+```
+
+#### Example: Custom Tagging Schema
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    tags: 
+    - latest
+    - dev-backend-${devspace.git.commit}-#####
+```
+**Explanation:**  
+The above example would always use the tag `latest` and additionaly generate random tags which could look like this one: `dev-backend-b6caf8a-Jak9i`. This example tag consists of the following substrings defined by the tagging schema:
+- `dev-` static string 
+- `-backend-` static string 
+- `b6caf8a` latest git commit hash on current local branch
+- `-` static string
+- `Jak9i` auto-generated random string

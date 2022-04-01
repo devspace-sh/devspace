@@ -3,14 +3,14 @@ title: Deployment with DevSpace
 sidebar_label: 4. Deployment
 ---
 
-import KubeContextFragment from '../fragments/kube-context.mdx';
+import KubeContextFragment from '../_partials/kube-context.mdx';
 
 
 Once you are done with developing your application or you just want to test if it works even outside of development mode with your actual container image, you can start a clean deployment.
 
 <figure class="frame">
   <video controls loop autoplay="true">
-    <source src="/cli/img/devspace-deploy.mp4" type="video/mp4" />
+    <source src={require('@site/static/img/devspace-deploy.mp4').default} type="video/mp4" />
   </video>
   <figcaption>DevSpace CLI - Deployment</figcaption>
 </figure>
@@ -29,7 +29,7 @@ devspace deploy -p production
 ```
 
 <figure>
-  <img src="/cli/img/deployment-process-devspace.svg" alt="Deployment Workflow" />
+  <img src={require('@site/static/img/deployment-process-devspace.svg').default} alt="Deployment Workflow" />
   <figcaption>DevSpace CLI - Deployment Workflow</figcaption>
 </figure>
 

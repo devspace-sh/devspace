@@ -1,0 +1,169 @@
+---
+title: Deployments
+sidebar_label: Basics
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import FragmentWorkflowDeployDependencies from '../../fragments/workflow-deploy-dependencies.mdx';
+import FragmentWorkflowBuildImages from '../../fragments/workflow-build-images.mdx';
+import FragmentWorkflowReplaceTags from '../../fragments/workflow-replace-tags.mdx';
+import FragmentWorkflowDeployProject from '../../fragments/workflow-deploy-project.mdx';
+
+Deployments are configured within the `deployments` section of the `devspace.yaml`.
+
+## Examples
+
+<Tabs
+  defaultValue="mixed"
+  values={[
+    { label: 'Mixed', value: 'mixed', },
+    { label: 'Component Chart', value: 'component', },
+    { label: 'Custom Helm Chart', value: 'helm', },
+    { label: 'Manifests', value: 'manifests', },
+    { label: 'Kustomizations', value: 'kustomize', },
+  ]
+}>
+<TabItem value="mixed">
+
+```yaml
+deployments:
+- name: "deployment-1"      # Name of this deployment
+  helm:                     # Deploy using the Component Helm Chart
+    componentChart: true    # Use the component chart
+    values: ...             # See: https://devspace.sh/component-chart/docs/introduction
+
+- name: "deployment-2"      # Name of this deployment
+  kubectl:                  # Deploy Kubernetes manifests or Kustomizations
+    manifests:
+    - app/manifests/
+    - db/deployment.yaml
+
+- name: "deployment-3"      # Name of this deployment
+  helm:                     # Deploy a Helm Chart
+    chart:
+      name: bitnami/mysql   # Deploy chart from bitnami registry
+    values: ...
+
+- name: "deployment-4"      # Name of this deployment
+  helm: ...                 # Deploy another Helm Chart
+    chart:
+      name: ./chart         # Deploy chart from local folder
+    values: ...
+```
+
+</TabItem>
+<TabItem value="component">
+
+```yaml
+deployments:
+- name: "deployment-1"      # Name of this deployment
+  helm:                     # Deploy using the Component Helm Chart
+    componentChart: true    # Use the component chart
+    values: ...             # See: https://devspace.sh/component-chart/docs/introduction
+```
+
+</TabItem>
+<TabItem value="helm">
+
+```yaml
+deployments:
+- name: database            # Name of this deployment
+  helm:                     # Deploy a Helm Chart
+    chart:
+      name: bitnami/mysql   # Deploy chart from bitnami registry
+    values: ...
+- name: backend             # Name of this deployment
+  helm: ...                 # Deploy another Helm Chart
+    chart:
+      name: ./chart         # Deploy chart from local folder
+    values: ...
+```
+
+</TabItem>
+<TabItem value="manifests">
+
+```yaml
+deployments:
+- name: backend             # Name of this deployment
+  kubectl:                  # Deploy Kubernetes manifests or Kustomizations
+    manifests:
+    - app/manifests/
+    - db/deployment.yaml
+```
+
+</TabItem>
+<TabItem value="kustomize">
+
+```yaml
+deployments:
+- name: backend             # Name of this deployment
+  kubectl:                  # Deploy Kubernetes manifests or Kustomizations
+    kustomize: true
+    manifests:
+    - app/kustomization/
+```
+
+</TabItem>
+</Tabs>
+
+:::info Sequential Deployment
+Unlike images which are build in parallel, deployments will be deployed sequentially following the order in which they are specified in the `devspace.yaml`.
+:::
+
+## Run Deployments
+When you run one of the following commands, DevSpace will run the deployment process:
+- `devspace deploy` (before deploying the application)
+- `devspace dev` (before deploying the application and starting the development mode)
+
+### Important Flags
+The following flags are available for all commands that trigger the deployment process:
+- `-d / --force-deploy` redeploy all deployments (even if they could be skipped because they have not changed)
+- `-b / --force-build` rebuild all images (even if they could be skipped because context and Dockerfile have not changed)
+
+
+## Deployment Process
+DevSpace loads the `deployments` configuration from `devspace.yaml` and builds one deployment after another in the order that they are specified in the `deployments` array. Additionally, DevSpace also deploys related projects speficied in `dependencies`.
+
+
+### 1. Deploy Dependencies
+
+<FragmentWorkflowDeployDependencies/>
+
+
+### 2. Build, Tag &amp; Push Images
+
+<FragmentWorkflowBuildImages/>
+
+
+### 3. Tag Replacement
+
+<FragmentWorkflowReplaceTags/>
+
+
+### 4. Deploy Project
+
+<FragmentWorkflowDeployProject/>
+
+<br/>
+
+---
+
+## Useful Commands
+
+### `devspace list deployments`
+This command lists all deployments and their status:
+```bash
+devspace list deployments
+```
+
+### `devspace render`
+This command prints all Kubernetes manifests that would be created when running `devspace deploy` or `devspace dev` but without actually deploying them to the cluster:
+```bash
+devspace render
+```
+In case of Helm deployments, this command behaves similar to `helm install --dry-run --debug`
+
+:::info Image Building & Tag Replacement
+This command will build images (if necessary) and update the tags within manifests and Helm chart values.
+:::

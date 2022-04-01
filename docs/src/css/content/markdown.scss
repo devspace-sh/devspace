@@ -1,0 +1,201 @@
+body .markdown {
+  position: relative;
+  --ifm-h2-vertical-rhythm-top: 1.8;
+}
+
+.markdown h1:first-child {
+  font-size: 2.5rem;
+}
+
+.markdown summary {
+  font-weight: 500;
+}
+
+.markdown p + ul {
+  margin-top: -1.2em !important;
+  margin-bottom: 1.4em !important;
+}
+
+.markdown ul > li {
+  margin-top: 0 !important;
+}
+
+.markdown h2,
+.markdown h3 {
+  margin-top: 2.4em;
+  line-height: 1em;
+}
+
+.markdown .step_src-components-Step- {
+  margin-top: 0.8em !important;
+}
+
+.markdown .step_src-components-Step- + h2,
+.markdown .step_src-components-Step- + h3,
+.markdown .step_src-components-Step- + h4,
+.markdown .step_src-components-Step- + h5,
+.markdown .step_src-components-Step- + p {
+  display: inline-block;
+  margin-top: 1em;
+  margin-bottom: 0.9em;
+}
+
+.markdown .admonition *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.markdown pre code {
+  padding-right: 0;
+}
+
+.markdown pre code .token-line {
+  display: table;
+  min-width: 100%;
+  max-width: none;
+  width: auto;
+  padding-right: 3em !important;
+  margin-right: 0 !important;
+}
+
+.markdown pre code .token-line.docusaurus-highlight-code-line {
+  min-width: calc(100% + 1.1em);
+}
+
+.markdown .codeBlockTitle_node_modules-\@docusaurus-theme-classic-src-theme-CodeBlock- {
+  background: transparent!important;
+  display: none;
+}
+
+.markdown [role="tab"],
+.markdown .prism-code,
+code {
+  outline: none;
+}
+
+.markdown [role="tab"] .comment,
+.markdown .prism-code .comment,
+code .comment {
+  user-select: none;
+}
+
+html body .markdown button[aria-label="Copy code to clipboard"],
+html body pre.prism-code > button {
+  margin-top: 0.45em !important;
+  box-shadow: 0 0 0 8px #292d3e;
+}
+
+.markdown * {
+  position: relative;
+}
+
+.markdown :target,
+.markdown :target ~ *:not(h2:not(:target), h3:not(:target), h4:not(:target), :target ~ h2:not(:target) ~ *, :target ~ h3:not(:target) ~ *, :target ~ h4:not(:target) ~ *) {
+  &::before {
+    content: " ";
+    width: 3px;
+    position: absolute;
+    left: -20px;
+    top: -20px;
+    bottom: calc(-1*var(--ifm-paragraph-margin-bottom));
+    background: #077EEC;
+    z-index: -1;
+
+    @media (min-width: 1500px) {
+      & {
+        left: -40px;
+      }
+    }
+  }
+
+  &.admonition::before {
+    margin-left: -4px;
+  }
+}
+
+
+span:target::before {
+  bottom: -5px;
+}
+
+details .active-section::before {
+  display: none;
+}
+
+blockquote.active-section::before {
+  left: -25px;
+}
+
+.markdown h4 {
+  font-size: 1.15em;
+  margin-bottom: 0.4em;
+}
+
+.markdown h2:not(:first-of-type) {
+  margin-top: 3em;
+}
+
+.markdown summary > * {
+  display: inline;
+  font-size: inherit;
+  font-weight: inherit;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.markdown h2 + h3 {
+  margin-top: 1.5em !important;
+}
+
+h3.active-section::before {
+  top: -2.4em;
+}
+
+*:not(.active-section) + h2.active-section::before,
+*:not(.active-section) + h3.active-section::before {
+  top: -0.5em;
+}
+
+.markdown button {
+  background: #4191f7;
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  padding: 0.6em 1em;
+  margin: 0 0.2em;
+  font-size: 0.9em;
+  cursor: inherit;
+  letter-spacing: 0.5px;
+}
+
+.markdown p > button {
+  pointer-events: none;
+}
+
+.markdown button svg {
+  transform: scale(1.4);
+}
+
+.markdown details {
+  --docusaurus-details-decoration-color: #00bdff;
+  --ifm-tabs-color-active-border: #00bdff !important;
+  --docusaurus-details-transition: transform var(--ifm-transition-fast) ease;
+  margin: 0 0 var(--ifm-spacing-vertical);
+  border-color: #00bdff;
+  border-style: solid;
+  border-width: var(--ifm-alert-border-width);
+  border-left-width: 0;
+  background: #fff;
+  border-radius: 0;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 5px 0px;
+}
+
+.markdown p + ul,
+.markdown p + ol {
+  margin-top: calc(-0.5 * var(--ifm-paragraph-margin-bottom));
+  margin-bottom: calc(0.8 * var(--ifm-paragraph-margin-bottom));
+}
+
+.markdown .admonition {
+  margin-left: -1px;
+  border-radius: 4px;
+}

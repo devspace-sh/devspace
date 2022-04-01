@@ -1,0 +1,20 @@
+The `cmdPath` option expects an array of strings stating additional flags and flag values that should be used when calling `kubectl apply`.
+
+:::warning
+Setting `cmdPath` makes it much harder to share your `devspace.yaml` with other team mates. It is recommended to add `kubectl` to your `$PATH` environment variable instead.
+:::
+
+#### Example: Setting Path To Kubectl Binary
+```yaml
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    cmdPath: /path/to/kubectl
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+/path/to/kubectl apply -f backend/
+```

@@ -3,9 +3,9 @@ title: Development with DevSpace
 sidebar_label: 3. Development
 ---
 
-import KubeContextFragment from '../fragments/kube-context.mdx';
-import StartAppFragment from '../fragments/start-app.mdx';
-import FragmentWarningMultipleDev from '../fragments/warning-multiple-dev.mdx';
+import KubeContextFragment from '../_partials/kube-context.mdx';
+import StartAppFragment from '../_partials/start-app.mdx';
+import FragmentWarningMultipleDev from '../_partials/warning-multiple-dev.mdx';
 
 DevSpace allows you to develop applications directly inside a Kubernetes cluster.
 
@@ -13,7 +13,7 @@ The biggest advantages of developing directly inside Kubernetes is that your dev
 
 <figure class="frame">
   <video controls loop autoplay="true">
-    <source src="/cli/img/devspace-dev-ide.mp4" type="video/mp4" />
+    <source src={require('@site/static/img/devspace-dev-ide.mp4').default} type="video/mp4" />
   </video>
   <figcaption>DevSpace - Development Mode</figcaption>
 </figure>
@@ -75,7 +75,7 @@ devspace ui
 
 <figure class="frame">
   <video controls loop autoplay="true">
-    <source src="/cli/img/devspace-ui.mp4" type="video/mp4" />
+    <source src={require('@site/static/img/devspace-ui.mp4').default} type="video/mp4" />
   </video>
   <figcaption>DevSpace - Development UI</figcaption>
 </figure>

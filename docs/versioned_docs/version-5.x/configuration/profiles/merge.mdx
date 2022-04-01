@@ -1,0 +1,65 @@
+---
+title: "Profiles: Merge"
+sidebar_label: merge
+---
+
+Merge patches are a way to perform specific overrides to the configuration without having to create a completely separate config file. Patch functionality follows [JSON Merge Patch, RFC 7386](https://tools.ietf.org/html/rfc7386) semantics.
+
+### Example
+
+Merge patches are ideal for reflecting changes between different environments, e.g. dev, staging and production.
+```yaml {16-30}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
+profiles:
+- name: production
+  merge:
+    images:
+      # Change the backend image
+      backend:
+        image: john/prodbackend
+      # Delete the backend-debugger image
+      backend-debugger: null
+    # Override deployments
+    deployments:
+    - name: backend
+      helm:
+        componentChart: true
+        values:
+          containers:
+          - image: john/prodbackend
+```
+**Explanation:**  
+- The above example defines 1 profile: `production`
+- When using the profile `production`, the config is merged with the given merge patch at `profiles[0].merge`.
+- Merge patches follow the rules as defined in [JSON Merge Patch, RFC 7386](https://tools.ietf.org/html/rfc7386):
+  - Arrays are overriden
+  - Objects are merged together
+  - Keys that have a `null` value are removed from objects
+- The resulting config used in-memory when the profile `production` is used would look like this (you can check via `devspace print -p production`):
+
+```yaml
+# In-Memory Config After Applying Merge Patches For Profile `production`
+images:
+  backend:
+    image: john/prodbackend
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/prodbackend
+```
+

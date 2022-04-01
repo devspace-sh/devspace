@@ -1,0 +1,29 @@
+The function `is_true` checks for the string "true". NOTE: This function does not check for a boolean value.
+
+## Arguments
+
+### `["true"|<string>]`
+
+```
+is_true [value]
+```
+
+### Example
+
+Use `is_true` as a function under your pipeline definitions:
+
+```yaml
+pipelines:
+  dev:
+    run: |-
+      is_true true
+```
+Returns exit status 0
+
+```yaml
+pipelines:
+  dev:
+    run: |-
+      is_true nope!
+```
+Returns exit status 1 (fatal)

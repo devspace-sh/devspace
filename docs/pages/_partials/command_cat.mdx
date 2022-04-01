@@ -1,0 +1,22 @@
+The function `cat` prints the content of a given filename to the terminal.
+
+## Arguments
+
+### `[filename]`
+
+Takes an existing filename.
+
+```
+cat [filename]
+```
+
+### Examples
+
+Use `cat` as a function under your pipeline definitions:
+
+```yaml
+pipelines:
+  dev:
+    run: |-
+      cat file.txt
+```

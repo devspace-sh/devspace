@@ -1,0 +1,67 @@
+---
+title: Deployment with DevSpace
+sidebar_label: 4. Build & Deploy
+---
+
+
+<figure class="frame">
+  <video controls loop autoplay="true">
+    <source src={require('@site/static/img/devspace-deploy.mp4').default} type="video/mp4" />
+  </video>
+  <figcaption>DevSpace CLI - Deployment</figcaption>
+</figure>
+
+
+## Deploy Project
+Run the local deployment pipeline using this command:
+```bash
+devspace deploy
+```
+
+Running `devspace deploy` will do the following:
+
+1. **Build the Dockerfile(s)** specified in the [`images` section of the `devspace.yaml`](../configuration/images/basics.mdx)
+2. **Tag** the resulting image(s) with an auto-generated tag according to a [customizable tag schema](../configuration/images/basics.mdx)
+3. **Push** the resulting Docker images to the specified registries
+4. **Create image pull secrets** in your Kubernetes namespace (optional, enabled by default)
+5. **Deploy** everything that is defined within the [`deployments` section in the `devspace.yaml`](../configuration/deployments/basics.mdx)
+
+<figure>
+  <img src={require('@site/static/img/deployment-process-devspace.svg').default} alt="Deployment Workflow" />
+  <figcaption>DevSpace CLI - Deployment Workflow</figcaption>
+</figure>
+
+:::note Image Building Only
+If you only want to build, tag and push all images but not deploy anything, run:
+```bash
+devspace build
+```
+:::
+
+
+<br/>
+
+## Deploy to Production
+As shown earlier, DevSpace is by default configured to override your `ENTRYPOINT` to restart your application after files are synchronized into the container. However, in production, we don't want DevSpace to change anything about our Docker image. That's why you see the following section in your devspace.yaml:
+
+```yaml
+profiles:
+- name: production                                  # Name of this profile: production
+  patches:                                          # Patches to change the config for this profile
+  - op: remove                                      # A patch to remove the injectResartHelper option
+    path: images.app.injectRestartHelper
+  - op: remove                                      # Second patch ONLY for multi-stage builds
+    path: images.app.build.docker.options.target    # Remote the build target to build entire Dockerfile
+```
+
+Profiles allow you to modify the config for certain use cases or deployment environment (e.g. your production cluster). You can print the config after applying all patches of this profile using this command:
+```bash
+devspace print -p production
+```
+
+The flag `-p / --profile` is a global flag, so we can also use it to apply this profile during the deployment process:
+```bash
+devspace deploy -p production
+```
+
+Learn more about [integrating DevSpace into your CI/CD pipelines](../guides/ci-cd-integration.mdx).

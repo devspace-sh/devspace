@@ -1,0 +1,9 @@
+```yaml
+deployments:                        # struct[] | Array of deployments
+- name: my-deployment               # string   | Name of the deployment
+  namespace: ""                     # string   | Namespace to deploy to (Default: "" = namespace of the active namespace/Space)
+  disabled: false                   # bool     | If true, the deployment will not be deployed, purged or rendered
+  concurrent: false                 # bool     | Deploy concurrently with other deployments that also have concurrency enabled (Default: false)
+  helm: ...                         # struct   | Use Helm as deployment tool and set options for Helm
+  kubectl: ...                      # struct   | Use "kubectl apply" as deployment tool and set options for kubectl
+```

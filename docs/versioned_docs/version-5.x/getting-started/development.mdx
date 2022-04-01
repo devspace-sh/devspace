@@ -1,0 +1,90 @@
+---
+title: Development with DevSpace
+sidebar_label: 3. Development
+---
+
+import KubeContextFragment from '../fragments/kube-context.mdx';
+import StartAppFragment from '../fragments/start-app.mdx';
+import FragmentWarningMultipleDev from '../fragments/warning-multiple-dev.mdx';
+
+DevSpace allows you to develop applications directly inside a Kubernetes cluster.
+
+The biggest advantages of developing directly inside Kubernetes is that your dev environment will be very similar to your production environment and you can have much greater confidence that everything will work in production when shipping new features.
+
+<figure class="frame">
+  <video controls loop autoplay="true">
+    <source src={require('@site/static/img/devspace-dev-ide.mp4').default} type="video/mp4" />
+  </video>
+  <figcaption>DevSpace - Development Mode</figcaption>
+</figure>
+
+
+## Kube-Context & Namespace
+To develop and deploy your project with DevSpace, you need a valid kube-context because DevSpace uses the kube-config file just like kubectl or helm.
+
+<KubeContextFragment/>
+
+
+## Start Development Mode
+Run the following command to start the development mode:
+```bash
+devspace dev
+```
+
+
+Running `devspace dev` will do the following:
+
+1. **Deploy** your application according to your [`deployments` section](../configuration/deployments/basics.mdx)
+2. **Replace pods** according to your [`dev.replacePods` section](../configuration/development/replace-pods.mdx)
+3. **Forward ports** specified in the [`dev.ports` section](../configuration/development/port-forwarding.mdx)
+4. **Sync file changes** between your local project directory and the k8s pods according to the [`dev.sync` section](../configuration/development/file-synchronization.mdx)
+5. **Open a terminal** according to the [`dev.terminal` section](../configuration/development/terminal.mdx), so you start your application and work inside your container
+
+Once the terminal session starts, run the command to start your application:
+
+<StartAppFragment/>
+
+
+
+<br/>
+
+## Workflows
+
+### 1. File Sync
+While `devspace dev` is running, your source code files will be synchronized between your local project folder and your containers running inside Kubernetes. This allows you to code with your favorite IDE or text editor without having to rebuild your images or redeploy your containers.
+
+**Try it and just edit a file!**
+
+
+### 2. DevSpace UI
+When running `devspace dev`, DevSpace starts a client-only UI for Kubernetes. You can see that in the output of `devspace dev` which should contain a log line similar to this one:
+```bash
+#########################################################
+[info]   DevSpace UI available at: http://localhost:8090
+#########################################################
+```
+
+By default, DevSpace starts the development UI on port `8090` but if the port is already in use, it will use a different port. If `devspace dev` is running, you can open the link shown in the `devspace dev` logs, e.g. [http://localhost:8090](http://localhost:8090)
+
+You can also start the UI without running `devspace dev` using this command:
+```bash
+devspace ui
+```
+
+[Follow this guide to learn more about the functionalities of the DevSpace UI for Kubernetes development.](../guides/localhost-ui.mdx)
+
+<figure class="frame">
+  <video controls loop autoplay="true">
+    <source src={require('@site/static/img/devspace-ui.mp4').default} type="video/mp4" />
+  </video>
+  <figcaption>DevSpace - Development UI</figcaption>
+</figure>
+
+:::info Runs on Localhost
+The UI of DevSpace is open-source just like the rest of the CLI and it runs entirely on localhost.
+:::
+
+
+## Notes
+
+<FragmentWarningMultipleDev/>

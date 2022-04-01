@@ -1,0 +1,18 @@
+The `skipBuild` option expects a boolean that defines if the image building process should be skipped when deploying this dependency. This is often useful if you rather want to use the tags that are defined in the deployment files (e.g. manifests or helm charts) which may reference more stable, production-like versions of the images.
+
+:::info
+Using `skipBuild` is useful when trying to speed up the dependency deployment process, especially when working with many dependencies that frequently change.
+:::
+
+#### Default Value For `skipBuild`
+```yaml
+skipBuild: false
+```
+
+#### Example: Skip Build for Dependency
+```yaml
+dependencies:
+- source:
+    git: https://github.com/my-api-server
+  skipBuild: true
+```

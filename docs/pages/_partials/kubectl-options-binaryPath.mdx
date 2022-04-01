@@ -1,0 +1,20 @@
+The `kubectlBinaryPath` is optional expects a path to the `kubectl` binary. By default, DevSpace will use the `kustomize` located on your `$PATH`.  Use this to specify a location for `kubectl` if it is not on your `$PATH` and you do not want DevSpace to download the latest version.
+
+:::warning
+Setting `kubectlBinaryPath` makes it much harder to share your `devspace.yaml` with other team mates. It is recommended to add `kubectl` to your `$PATH` environment variable instead.
+:::
+
+#### Example: Setting Path To Kubectl Binary
+```yaml
+deployments:
+  backend:
+    kubectl:
+      kubectlBinaryPath: /path/to/kubectl
+      manifests:
+      - backend/
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+/path/to/kubectl apply -f backend/
+```

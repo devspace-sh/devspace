@@ -1,0 +1,16 @@
+```yaml
+images:                             # map[string]struct | Images to be built and pushed
+  image1:                           # string   | Name of the image
+    image: dscr.io/username/image   # string   | Image repository and name 
+    tags:                           # string[] | Image tags (may be a tagging schema with variables)
+    - latest
+    - 0.0.1
+    - dev-${DEVSPACE_GIT_COMMIT}
+    dockerfile: ./Dockerfile        # string   | Relative path to the Dockerfile used for building (Default: ./Dockerfile)
+    context: ./                     # string   | Relative path to the context used for building (Default: ./)
+    entrypoint: []                  # string[] | Override ENTRYPOINT defined in Dockerfile
+    cmd: []                         # string[] | Override CMD defined in Dockerfile
+    createPullSecret: true          # bool     | Create a pull secret containing your Docker credentials (Default: false)
+    build: ...                      # struct   | Build options for this image
+  image2: ...
+```

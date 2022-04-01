@@ -1,0 +1,29 @@
+The `applyArgs` option expects an array of strings stating additional arguments (and flags) that should be used when calling `kubectl apply`.
+
+:::info Apply for Kustomize Deployments
+Even if you set `kustomize: true`, DevSpace only renders the manifest templates using kustomize but the actual deployment will be executed using `kubectl apply`.
+:::
+
+#### Default Value for `applyArgs`
+```yaml
+applyArgs: []
+```
+
+#### Example: Custom Kubectl Args & Flags
+```yaml
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    applyArgs:
+    - "--timeout"
+    - "10s"
+    - "--grace-period"
+    - "30"
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+kubectl apply --timeout=10s --grace-period=30 -f backend/
+```

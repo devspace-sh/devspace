@@ -1,0 +1,197 @@
+---
+title: DevSpace Plugins
+sidebar_label: Plugins
+---
+
+The functionality of DevSpace can be extended and changed via plugins. Plugins are managed through DevSpace and are contained in a single binary or shell script. Plugins are able to extend DevSpace in the following ways:
+- Add new commands to DevSpace (e.g. `devspace login` or `devspace list users`)
+- Add new [predefined variables](../configuration/variables/basics.mdx)
+- Execute hooks at specific events (like a command execution)
+
+## Installing a plugin
+ 
+Plugins can be installed from an URL, Git Repository or local file. To install a plugin run:
+```
+# Add a plugin from a git repository
+devspace add plugin https://github.com/my-organization/my-repo
+
+# Add a plugin from an URL
+devspace add plugin https://myorg.com/path/to/plugin.yaml
+
+# Add a plugin from a local path
+devspace add plugin ./plugin.yaml
+```
+
+After installing a plugin you can check all your existing plugins via:
+```
+devspace list plugins
+```
+
+## Updating a plugin
+
+To update a DevSpace plugin run the following command:
+
+```
+# Enter the name and not the path
+devspace update plugin PLUGIN_NAME
+
+# This only works for GIT plugins
+devspace update plugin PLUGIN_NAME --version GIT_TAG
+```
+
+## Removing a plugin
+
+To remove a plugin via the DevSpace command line:
+```
+# Enter the name and not the path
+devspace remove plugin PLUGIN_NAME
+```
+
+If the plugin cannot be removed because a certain hook fails (or any other reason), you can also delete the plugin manually. DevSpace saves all plugin data in `$HOME/.devspace/plugins`. You will have to check each folders `plugin.yaml` to see which plugin is stored in the folder. To remove a plugin, simply delete the complete plugin folder.
+
+## Developing a custom DevSpace plugin
+
+Creating an own DevSpace plugin is quite easy. You only need a `plugin.yaml` that specifies where DevSpace can find the plugin binary and how DevSpace should execute it. You can also take a look at the [devspace-plugin-example](https://github.com/loft-sh/devspace-plugin-loft) project for a complete example.
+For each installed plugin, DevSpace will create a folder in `$HOME/.devspace/plugins` with a `plugin.yaml` and a downloaded or copied `binary` that will be executed.
+
+### plugin.yaml
+
+The `plugin.yaml` specifies how the plugin is installed and integrates into DevSpace and consists of the following parts.
+
+#### `name`
+
+Name of the plugin as shown in devspace list plugins and used for devspace update plugin and devspace remove plugin. (e.g. `my-devspace-plugin`)
+
+#### `version`
+
+The semantic current version of the plugin (e.g. `0.0.1`)
+
+#### `binaries`
+
+This section states where DevSpace can retrieve the plugin binary for the current operating system and architecture. If devspace cannot find a binary for the current [runtime.GOOS](https://golang.org/pkg/runtime/#pkg-constants) and [runtime.GOARCH](https://golang.org/pkg/runtime/#pkg-constants) it will not install the plugin.
+The `binaries` section expects an array with objects that can have the following properties:
+* `os` is the runtime.GOOS name of the operating system (e.g. darwin, windows, linux etc.)
+* `arch` is the runtime.GOARCH name of the system (e.g. amd64, 386 etc.)
+* `path` is the URL to the binary to download or the local path to the binary to copy
+
+#### `commands`
+
+This section specifies which commands should be added to DevSpace. It expects an array with objects that can have the following properties:
+* `name` of the command that should be added to devspace (e.g. `login` will add `devspace login`)
+* `baseArgs` these args are prepended to the plugin binary, so when a user will call 'devspace login other --flag 123', devspace will call the plugin binary with 'plugin-binary baseArgs... other --flag 123'
+* `usage` the usage of the command to print in `devspace --help`
+* `description` the description of the command to print in `devspace --help`
+* `subCommand` (Optional) the subcommand to append the command to (e.g. `add` will add the command to `devspace add`)
+
+DevSpace will forward all passed arguments and flags to the plugin command. 
+
+#### `vars`
+
+This section specifies which [predefined variables](../configuration/variables/basics.mdx) are added to DevSpace. These variable values will be retrieved from the plugin binary instead of asking the user. It expects an array with objects that can have the following properties:
+* `name` of the predefined variable to add (e.g. `EXAMPLE_VARIABLE` which can then be used in a `devspace.yaml` as `${EXAMPLE_VARIABLE}`)
+* `baseArgs` these args are appended to the plugin binary (e.g. `["print", "var", "test"]` will cause devspace to call the plugin binary with: `plugin-binary print var test`)
+
+DevSpace expects the plugin binary to either fail (exit code unequal zero) or print the variable value to the stdout stream. Furthermore when executing the plugin-binary, DevSpace will set the following environment variables:
+- `DEVSPACE_PLUGIN_OS_ARGS` all arguments that were used to call the current command encoded as JSON (e.g. `["devspace", "dev", "--wait", "--force-build"]`)
+- `DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG` the value of `--namespace` if set (e.g. `namespace`)
+- `DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG` the value of `--kube-context` if set (e.g. `my-kube-context`)
+
+#### `hooks`
+
+This section specifies certain plugin commands that should be executed at certain DevSpace events. It expects an array with objects that can have the following properties:
+* `event` name of the event when to execute the command. The following events exist:
+  * `after:installPlugin` executed after the plugin was installed
+  * `before:updatePlugin` executed before the plugin will be updated
+  * `after:updatePlugin` executed after the plugin was updated
+  * `before:removePlugin` executed before the plugin will be removed
+  * `before:build`, `before:build:*`, `after:build`, `after:build:*`, `error:build:*` executed when DevSpace will build an image. The environment variables `DEVSPACE_PLUGIN_IMAGE_CONFIG_NAME`, `DEVSPACE_PLUGIN_IMAGE_NAME`, `DEVSPACE_PLUGIN_IMAGE_TAGS` and `DEVSPACE_PLUGIN_IMAGE_CONFIG` will be available in the hook
+  * `before:deploy`, `after:deploy`, `before:deploy:*`, `after:deploy:*`, `error:deploy:*`, `skip:deploy:*`, `before:render`, `after:render`, `before:render:*`, `after:render:*`, `error:render:*`, `before:purge`, `after:purge`, `before:purge:*`, `after:purge:*`, `error:purge:*` executed when DevSpace will deploy a defined deployment. The environment variables `DEVSPACE_PLUGIN_DEPLOY_CONFIG` will be available in the hook
+  * `before:resolveDependency:*`, `after:resolveDependency:*`, `error:resolveDependency:*`, `before:buildDependency:*`, `after:buildDependency:*`, `error:buildDependency:*`, `before:deployDependency:*`, `after:deployDependency:*`, `error:deployDependency:*`, `before:renderDependency:*`, `after:renderDependency:*`, `error:renderDependency:*`, `before:purgeDependency:*`, `after:purgeDependency:*`, `error:purgeDependency:*` executed before, after or onError during dependency handling. The environment variables `DEVSPACE_PLUGIN_DEPENDENCY_CONFIG`, `DEVSPACE_PLUGIN_DEPENDENCY_CONFIG_PATH`and `DEVSPACE_PLUGIN_DEPENDENCY_NAME` will be available in the hook
+  * `before:configLoad`, `after:configLoad`, `error:configLoad` executed when DevSpace tries to load a `devspace.yaml`. The environment variables `DEVSPACE_PLUGIN_LOAD_PATH`, `DEVSPACE_PLUGIN_LOADED_RAW`, `DEVSPACE_PLUGIN_LOADED_VARS` and `DEVSPACE_PLUGIN_LOADED_CONFIG` (only in `config.afterLoad`) will be available in the hook
+  * `start:sync:*`, `stop:sync:*`, `error:sync:*`, `restart:sync:*` executed when DevSpace will start syncing a new sync config, closing a running one or restarting/stopping because of an error. The environment variables `DEVSPACE_PLUGIN_SYNC_CONFIG` will be available in the hook
+  * `before:initialSync:*`, `after:initialSync:*`, `error:initialSync:*` executed right before DevSpace will do an initial sync and afterwards (if successful). The environment variables `DEVSPACE_PLUGIN_SYNC_CONFIG` will be available in the hook
+  * `start:portForwarding:*`, `restart:portForwarding:*`, `error:portForwarding:*`, `stop:portForwarding:*` executed when DevSpace will start, restart, stop port forwarding. The environment variables `DEVSPACE_PLUGIN_PORT_FORWARDING_CONFIG` will be available in the hook
+  * `start:reversePortForwarding:*`, `restart:reversePortForwarding:*`, `error:reversePortForwarding:*`, `stop:reversePortForwarding:*` executed when DevSpace will start, restart, stop reverse port forwarding. The environment variables `DEVSPACE_PLUGIN_REVERSE_PORT_FORWARDING_CONFIG` will be available in the hook
+  * `before:createPullSecrets`, `after:createPullSecrets`, `error:createPullSecrets`: executed while DevSpace creates `pullSecrets`
+  * `devCommand:before:sync`, `devCommand:after:sync`, `devCommand:before:portForwarding`, `devCommand:after:portForwarding`, `devCommand:before:replacePods`, `devCommand:after:replacePods`, `devCommand:before:runPipeline`, `devCommand:after:runPipeline`, `devCommand:before:deployDependencies`, `devCommand:after:deployDependencies`, `devCommand:before:build`, `devCommand:after:build`, `devCommand:before:deploy`, `devCommand:after:deploy`, `devCommand:before:openTerminal`, `devCommand:before:streamLogs`, `devCommand:before:execute`, `devCommand:after:execute`, `devCommand:interrupt`, `devCommand:error` executed at different checkpoints when `devspace dev` is executed
+  * `deployCommand:before:execute`, `deployCommand:after:execute`, `deployCommand:error`, `deployCommand:interrupt` executed at different checkpoints when `devspace deploy` is executed
+  * `purgeCommand:before:execute`, `purgeCommand:after:execute`, `purgeCommand:error`, `purgeCommand:interrupt` executed at different checkpoints when `devspace purge` is executed
+  * `buildCommand:before:execute`, `buildCommand:after:execute`, `buildCommand:error`, `buildCommand:interrupt` executed at different checkpoints when `devspace build` is executed
+  * `command:before:execute`, `command:after:execute`, `command:error` executed at the beginning, ending or if an error occurs during any DevSpace command execution
+  * `analyze`, `attach`, `build`, `deploy`, `dev`, `enter`, `init`, `logs`, `open`, `print`, `purge`, `render`, `restart`, `run`, `sync`, `ui`, `upgrade` are executed after the corresponding devspace command has loaded the config and created a kubernetes client (if there is a config to load or a kubernetes client to create)
+* `baseArgs` these args are appended to the plugin binary (e.g. `["run", "my", "command"]` will cause devspace to call the plugin binary with: `plugin-binary run my command`)
+* `background` if true will execute the hook in the background and continue DevSpace command execution
+
+If a non-background hook fails (exit code unequals zero) DevSpace will stop command execution and the complete DevSpace command fails. Furthermore when executing the plugin-binary, DevSpace will set the following environment variables (if they apply for the event):
+- `DEVSPACE_PLUGIN_EXECUTION_ID` a unique identifier that stays the complete duration of a command but will change each time DevSpace is re-executed
+- `DEVSPACE_PLUGIN_EVENT` the event that has triggered the hook
+- `DEVSPACE_PLUGIN_OS_ARGS` all arguments that were used to call the current command encoded as JSON (e.g. `["devspace", "dev", "--wait", "--force-build"]`)
+- `DEVSPACE_PLUGIN_CONFIG` the config that was loaded for the command as yaml encoded (all profiles and variables are resolved at this point)
+- `DEVSPACE_PLUGIN_COMMAND` the name of the DevSpace command that was executed (e.g. `dev`)
+- `DEVSPACE_PLUGIN_COMMAND_LINE` the complete name of the DevSpace command that was executed (e.g. `devspace dev [FLAGS]`)
+- `DEVSPACE_PLUGIN_COMMAND_FLAGS` the flags that were passed to the DevSpace command encoded as JSON (e.g. `["--namespace", "test", "--skip-build", "true"]`)
+- `DEVSPACE_PLUGIN_COMMAND_ARGS` the arguments that were passed to the DevSpace command encoded as JSON (without any flags) (e.g. `["arg1"]`)
+- `DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG` the kubernetes namespace where DevSpace will operate in (e.g. `namespace`)
+- `DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG` the kubernetes context where DevSpace will operate in (e.g. `my-kube-context`)
+- `DEVSPACE_PLUGIN_ERROR` the error that occurred at a certain event (usually only supplied in the `error` or `restart` events)
+
+### Example
+
+An example `plugin.yaml` could look like this:
+```yaml
+name: devspace-plugin-example
+version: 0.0.1
+commands:
+    # This will add the command devspace login
+  - name: "login"
+    # these args are prepended to the plugin binary, so when a user will call 'devspace login test test2 --flag 123'
+    # devspace will call the plugin binary with 'plugin-binary other command test test2 --flag 123'
+    baseArgs: ["other", "command"]
+    usage: "short description of command"
+    description: "long description of command"
+    # You can also add commands under already existing devspace subcommands
+    # This will add the devspace command: devspace list env
+  - name: "env"
+    baseArgs: ["list", "env"]
+    subCommand: "list"
+# Hooks are called before certain already existing commands are executed 
+# in devspace, for example devspace dev
+hooks:
+  # will be executed when devspace print is run by the user
+  - event: print
+    # this will call the plugin binary before devspace print is called with: 'plugin-binary list env'
+    baseArgs: ["list", "env"]
+  # root is executed before any other event and command execution except for other plugin commands
+  - event: root
+    baseArgs: ["login"]
+# You can also add predefined variables for the config via plugins
+vars:
+  # the name of the predefined variable 
+  # that can be used within any devspace.yaml
+  - name: EXAMPLE_USER
+    # this will call the plugin binary when resolving this variable and expects the variable
+    # output on stdout.
+    baseArgs: ["print", "env", "USER"]
+  - name: EXAMPLE_HOME
+    baseArgs: [ "print", "env", "HOME" ]
+# In this section the plugin binaries (or scripts) and their locations are defined
+# if devspace cannot find a binary for the current runtime.GOOS and runtime.GOARCH
+# it will not install the plugin
+binaries:
+  - os: darwin
+    arch: amd64
+    # can be either an URL or local path
+    path: ./main
+  - os: linux
+    arch: amd64
+    path: main
+  - os: linux
+    arch: "386"
+    path: main
+  - os: windows
+    arch: amd64
+    path: path/to/main.exe
+  - os: windows
+    arch: "386"
+    path: https://my-domain.url/path/to/windows.exe
+```

@@ -1,0 +1,104 @@
+---
+title: "Profiles: Parents"
+sidebar_label: parents
+---
+
+import FragmentApplyMultiple from '../../fragments/profiles-apply-multiple.mdx';
+
+The `parents` option is optional and expects the names of other profiles which should be applied before this profile.
+The profiles are applied in the order they are specified. It is also possible to apply profiles from distant `devspace.yaml`s. 
+The kind of profile inheritance that the `parents` option provides can help to reduce redundancy when multiple profiles need to change the config in a similar way.
+
+:::info Execution Order
+A parent profile is applied before the profile that defines the parent. A parent profile can have parents of its own.
+:::
+
+#### Example: Defining a Parent Profile
+```yaml {16-17}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
+profiles:
+- name: production
+  parents: 
+  - profile: staging
+  patches:
+  - op: add
+    path: deployments.name=backend.helm.values.containers
+    value:
+      image: john/cache
+- name: staging
+  replace:
+    images:
+      backend:
+        image: john/backendprod
+  patches:
+  - op: replace
+    path: deployments.name=backend.helm.values.containers[0].image
+    value: john/backendprod
+  - op: remove
+    path: deployments.name=backend.helm.values.containers[1]
+```
+When the `production` profile is active, the `replace` and `patches` statements configured in `staging` would be applied first because of the `parents` statement in line 16. After applying the `staging` profile, DevSpace would additionally apply the currently active `production` profile. In this example, the `production` profile is based on the `staging` profile and the only difference is that the `production` profile adds another container to the `backend` deployment which is using the image `john/cache`.
+
+#### Example: Defining multiple Parent Profiles
+```yaml
+version: v1beta9
+profiles:
+- name: multi-parents
+  # Field that applies the profile deployments first and then the profile images
+  parents:
+  - profile: deployments
+  - profile: images
+- name: deployments
+  replace:
+   deployments:
+   - name: my-deployment
+     helm:
+       componentChart: true
+       values:
+         containers:
+         - name: test
+- name: images
+  replace:
+    images:
+      test:
+        image: mydockeruser/devspace
+        createPullSecret: true
+```
+
+
+It is also possible to load a profile from a different source with the option `profiles.*.parents.*.source` that can define profiles that lie in a different `devspace.yaml`:
+
+#### Example: Define a profile from a different devspace.yaml
+```yaml
+version: v1beta9
+profiles:
+- name: dev
+  parents:
+  # Will load the profile images from the devspace.yaml specified in other-folder/devspace.yaml
+  - profile: images
+    source:
+      path: other-folder # devspace.yaml will be automatically appended to the path (same syntax as with dependencies)
+      # or load from url
+      # path: https://raw.githubusercontent.com/my-org/my-repo/master/devspace.yaml
+      # or load from git
+      # git: https://github.com/loft-sh/devspace.git 
+  - profile: deployments
+    source:
+      path: other-folder-2
+```
+
+Under `source` the same options can be specified as for loading [dependencies](../../configuration/dependencies/basics.mdx). 
+
+<FragmentApplyMultiple />

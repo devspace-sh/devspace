@@ -1,0 +1,5 @@
+The `default` option expects a string defining the default value for the variable.
+
+:::note Type Casting
+If a default value is specified, DevSpace will assume the type of the default value as the type for the variable, i.e. when `default: "123"` is defined and a value of `123` (int) is provided it would be casted to `"123"` (string). To explicitly use the value of a variable as a string within `devspace.yaml`, use `$!{VAR_NAME}` instead of `${VAR_NAME}`.
+:::

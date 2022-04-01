@@ -1,0 +1,113 @@
+---
+title: Variables From Commands
+sidebar_label: "source: command"
+---
+
+import FragmentVarsName from '../../fragments/vars-name.mdx';
+import FragmentVarsDefault from '../../fragments/vars-default.mdx';
+import FragmentVarsForceString from '../../fragments/vars-force-string.mdx';
+
+If the `source` is `command`, DevSpace will **<u>not</u>** ask the user a question and instead execute a command to determine the value of the variable.
+```yaml {3,5-8}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  source: command
+  # Will execute the command in a Golang Shell (cross plattform compatible)
+  command: "echo 5.5"
+```
+
+If you need different commands depending on the operating system you can use `commands`:
+```yaml {3,7-10}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  source: command
+  commands:
+  - command: bash
+    args: ["-c", "echo '5.5'"]
+    os: linux,darwin
+  command: echo
+  args: ["5.5"]
+```
+
+:::info
+If not command for the current operating system can be found under `commands`, the `command` and `args` will be used as fallback.
+:::
+
+<FragmentVarsForceString/>
+
+## Configuration
+
+### `name`
+
+<FragmentVarsName/>
+
+
+### `command` & `args`
+
+The command and arguments to execute to retrieve the value of the variable. The captured stdout of the command will be used as variable value. Whitespaces and newlines will be trimmed from the command output.
+
+:::tip
+You can use other variables in the command or args definition as long as they are either a predefined variable or defined before the variable in the `vars` array. For example:
+```yaml
+vars:
+- name: SECRET_NAME
+  source: env
+- name: SECRET_VALUE
+  command: ./retrieve-secret-value.sh
+  args: ["--secret-name=${SECRET_NAME}", "--namespace=${devspace.namespace}"]
+```
+:::
+
+### `commands`
+
+Commands expects an array of objects that define commands for specific operating systems. If no command can be found for the current operating system in `commands`, then `command` will be used as fallback.
+
+```yaml
+vars:
+- name: MYSQL_VERSION
+  source: command
+  commands:
+  # Use command on linux
+  - command: bash
+    args: ["-c", "echo '5.5'"]
+    os: linux
+  # Use command on mac
+  - command: bash
+    args: ["-c", "echo '5.6'"]
+    os: darwin
+  # Use on all other operating systems
+  command: echo
+  args: ["5.5"]
+```
+
+### `default`
+
+If the command returns nothing, this is the value that will be used for this variable.
+
+### `alwaysResolve`
+
+If enabled, the variable will be loaded even though it is not used within the config. This might be useful for variables that should be resolved after a config expression is applied. E.g.:
+
+`devspace.yaml`:
+```
+vars:
+- name: my-var
+  value: my-value
+  alwaysResolve: true
+hooks:
+- name: my-hook
+  command: $(cat command.txt)
+  events: ["after:deploy"]
+```
+
+`command.txt`:
+```
+echo Hello ${my-var}!
+```
+

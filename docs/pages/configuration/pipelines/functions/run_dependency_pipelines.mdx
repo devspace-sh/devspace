@@ -1,0 +1,38 @@
+---
+title: Function run_dependency_pipelines
+sidebar_label: run_dependency_pipelines
+---
+
+Runs dependencies for pipelines.
+
+## Arguments
+
+### `--pipeline`
+
+The pipeline that is executed from the dependency.
+
+### `--exclude`
+
+The dependencies to be excluded from the pipeline if the --all flag is used.
+
+### `--only`
+
+The dependencies to be included in the pipeline.
+
+## Usage
+
+```
+run_dependency_pipelines [buildDependencies] [renderDependencies]
+```
+
+## Flags
+
+By default, all flags are disabled. If any of these flags are enabled, the follwing actions will take place.
+
+### `--sequential`
+
+The dependencies will be run in sequential order, one after another.
+
+### `--all`
+
+If enabled, all dependencies will be run.

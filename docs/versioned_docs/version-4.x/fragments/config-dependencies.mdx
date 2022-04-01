@@ -1,0 +1,16 @@
+```yaml
+dependencies:                       # struct[]  | Array of dependencies (other projects containing a devspace.yaml or devspace-configs.yaml) that need to be deployed before this project
+- source:                           # struct    | Defines where to find the dependency (exactly one source is allowed)
+    git: https://github.com/my-repo # string    | HTTP(S) URL of the git repository (recommended method for referencing dependencies, must have the format of the git remote repo as usually checked out via git clone)
+    subPath: repo/sub/path          # string    | Path within the git repo where devspace.yaml can be found
+    branch: master                  # string    | Git branch to checkout
+    tag: v1.2.3                     # string    | Git tag to checkout
+    revision: ac66e49               # string    | Git revision (commit has) to checkout
+    disableShallow: false           # bool      | Allows to disable shallow git clones using "--depth 1"
+    cloneArgs: []                   # string[]  | Array of args for the "git clone" command for retrieving git based dependencies
+    path: ../../my-projects/repo    # string    | Path to a project on your local computer (not recommended, instead of using git-related options)
+  profile: default                  # string    | Name of the profile used to deploy this dependency (when multiple profiles are defined in the devspace.yaml of the dependency)
+  skipBuild: false                  # bool      | Do not build images of this dependency (= only start deployments)
+  ignoreDependencies: false         # bool      | Do not build and deploy dependencies of this dependency
+  namespace: ""                     # string    | Kubernetes namespace to deploy dependency to (Default: default namespace of current kube-context)
+```

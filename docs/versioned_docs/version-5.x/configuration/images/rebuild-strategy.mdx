@@ -1,0 +1,44 @@
+---
+title: Rebuild Strategies
+sidebar_label: rebuildStrategy
+---
+
+## `rebuildStrategy`
+The `rebuildStrategy` option expects a string which decides when DevSpace will rebuild an image. By default DevSpace will rebuild an image if one of the conditions is true:
+- The image was not built before
+- The dockerfile has changed
+- The configuration within the devspace.yaml for the image has changed
+- A file within the docker context (excluding .dockerignore rules) has changed
+
+:::tip Skip Rebuild Manually
+DevSpace will skip building when the `--skip-build` flag is explicitly provided.
+:::
+
+:::tip Trigger Rebuild Manually
+DevSpace will always rebuild when the `-b / --force-rebuild` flag is explicitly provided.
+:::
+
+#### Options For `rebuildStrategy`
+Currently DevSpace supports the rebuild strategies `always` and `ignoreContextChanges`:
+- **always**: if this strategy is provided, DevSpace will always rebuild the image
+- **ignoreContextChanges**: same as default except that DevSpace will ignore changes to files within the docker context
+
+#### Example
+```yaml {4,7}
+images:
+  backend:
+    image: john/appbackend
+    rebuildStrategy: always
+  frontend:
+    image: john/appfrontend
+    rebuildStrategy: ignoreContextChanges
+  cache:
+    image: john/cache
+    build:
+      disabled: true
+```
+**Explanation:**  
+When running `devspace dev`, `devspace build` or `devspace deploy` using the above configuration, DevSpace would:
+- **not** build the image `cache` because `build.disabled` is `true`
+- build the image `frontend` only if it was not built yet, there were changes to the Dockerfile or the image config itself changed 
+- build the image `backend` because `rebuildStrategy` is set to `always`

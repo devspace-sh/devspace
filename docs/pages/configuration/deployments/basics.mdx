@@ -5,10 +5,10 @@ sidebar_label: Basics
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import FragmentWorkflowDeployDependencies from '../../fragments/workflow-deploy-dependencies.mdx';
-import FragmentWorkflowBuildImages from '../../fragments/workflow-build-images.mdx';
-import FragmentWorkflowReplaceTags from '../../fragments/workflow-replace-tags.mdx';
-import FragmentWorkflowDeployProject from '../../fragments/workflow-deploy-project.mdx';
+import FragmentWorkflowDeployDependencies from '../../_partials/workflow-deploy-dependencies.mdx';
+import FragmentWorkflowBuildImages from '../../_partials/workflow-build-images.mdx';
+import FragmentWorkflowReplaceTags from '../../_partials/workflow-replace-tags.mdx';
+import FragmentWorkflowDeployProject from '../../_partials/workflow-deploy-project.mdx';
 
 Deployments are configured within the `deployments` section of the `devspace.yaml`.
 
@@ -28,28 +28,27 @@ Deployments are configured within the `deployments` section of the `devspace.yam
 
 ```yaml
 deployments:
-- name: "deployment-1"      # Name of this deployment
-  helm:                     # Deploy using the Component Helm Chart
-    componentChart: true    # Use the component chart
-    values: ...             # See: https://devspace.sh/component-chart/docs/introduction
+  deployment-1:               # Name of this deployment
+    helm:                     # Deploy using the Component Helm Chart
+      values: ...             # See: https://devspace.sh/component-chart/docs/introduction
+  
+  deployment-2:               # Name of this deployment
+    kubectl:                  # Deploy Kubernetes manifests or Kustomizations
+      manifests:
+      - app/manifests/
+      - db/deployment.yaml
 
-- name: "deployment-2"      # Name of this deployment
-  kubectl:                  # Deploy Kubernetes manifests or Kustomizations
-    manifests:
-    - app/manifests/
-    - db/deployment.yaml
+  deployment-3:               # Name of this deployment
+    helm:                     # Deploy a Helm Chart
+      chart:
+        name: bitnami/mysql   # Deploy chart from bitnami registry
+      values: ...
 
-- name: "deployment-3"      # Name of this deployment
-  helm:                     # Deploy a Helm Chart
-    chart:
-      name: bitnami/mysql   # Deploy chart from bitnami registry
-    values: ...
-
-- name: "deployment-4"      # Name of this deployment
-  helm: ...                 # Deploy another Helm Chart
-    chart:
-      name: ./chart         # Deploy chart from local folder
-    values: ...
+  deployment-4:               # Name of this deployment
+    helm: ...                 # Deploy another Helm Chart
+      chart:
+        name: ./chart         # Deploy chart from local folder
+      values: ...
 ```
 
 </TabItem>
@@ -57,10 +56,9 @@ deployments:
 
 ```yaml
 deployments:
-- name: "deployment-1"      # Name of this deployment
-  helm:                     # Deploy using the Component Helm Chart
-    componentChart: true    # Use the component chart
-    values: ...             # See: https://devspace.sh/component-chart/docs/introduction
+  deployment-1:               # Name of this deployment
+    helm:                     # Deploy using the Component Helm Chart
+      values: ...             # See: https://devspace.sh/component-chart/docs/introduction
 ```
 
 </TabItem>
@@ -68,16 +66,16 @@ deployments:
 
 ```yaml
 deployments:
-- name: database            # Name of this deployment
-  helm:                     # Deploy a Helm Chart
-    chart:
-      name: bitnami/mysql   # Deploy chart from bitnami registry
-    values: ...
-- name: backend             # Name of this deployment
-  helm: ...                 # Deploy another Helm Chart
-    chart:
-      name: ./chart         # Deploy chart from local folder
-    values: ...
+  database:                   # Name of this deployment
+    helm:                     # Deploy a Helm Chart
+      chart:
+        name: bitnami/mysql   # Deploy chart from bitnami registry
+      values: ...
+  backend:                    # Name of this deployment
+    helm: ...                 # Deploy another Helm Chart
+      chart:
+        name: ./chart         # Deploy chart from local folder
+      values: ...
 ```
 
 </TabItem>
@@ -85,11 +83,11 @@ deployments:
 
 ```yaml
 deployments:
-- name: backend             # Name of this deployment
-  kubectl:                  # Deploy Kubernetes manifests or Kustomizations
-    manifests:
-    - app/manifests/
-    - db/deployment.yaml
+  backend:                    # Name of this deployment
+    kubectl:                  # Deploy Kubernetes manifests or Kustomizations
+      manifests:
+      - app/manifests/
+      - db/deployment.yaml
 ```
 
 </TabItem>
@@ -97,18 +95,18 @@ deployments:
 
 ```yaml
 deployments:
-- name: backend             # Name of this deployment
-  kubectl:                  # Deploy Kubernetes manifests or Kustomizations
-    kustomize: true
-    manifests:
-    - app/kustomization/
+  backend:                    # Name of this deployment
+    kubectl:                  # Deploy Kubernetes manifests or Kustomizations
+      kustomize: true
+      manifests:
+      - app/kustomization/
 ```
 
 </TabItem>
 </Tabs>
 
 :::info Sequential and Concurrent Deployment
-Unlike images, which are built in parallel by default, deployments will be deployed sequentially following the order in which they are specified in the `devspace.yaml`. If a deployment has `concurrent: true` set, then it will run before any sequential deployments and in parallel with other deployments that also have concurrency enabled.
+Deployments, like images, will be processed in parallel by default. To process deployments sequentially, you can specify it as a dependency, or override the pipeline and call [create_deployments](../../configuration/pipelines/functions/create_deployments.mdx) sequentially.
 :::
 
 ## Run Deployments

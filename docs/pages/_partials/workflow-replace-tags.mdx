@@ -1,0 +1,13 @@
+After finishing the image building process, DevSpace searches your deployments for references to the images that are specified in the `images` section of the `devspace.yaml`. If DevSpace finds that an image is used by one of your deployments and the deployment does not explicitly define a tag for the image, DevSpace will append the tag that has been auto-generated as part of the automated image tagging during the image building process.
+
+:::warning Prevent Hard-Coded Tags
+To use automated tag replacement, make sure you do **not** specify image tags in the deployment configuration.
+:::
+
+Replacing or appending tags to images that are used in your deployments makes sure that your deployments are always started using the most recently pushed image tag. This automated process saves a lot of time compared to manually replacing image tags each time before you deploy something.
+
+DevSpace will replace the following things:
+- **registry.url/repo/name** that corresponds to a `images.*.image`, will be rewritten to `registry.url/repo/name:generated_tag`
+- **${runtime.images.image-key.image}** that corresponds to a `images.*` key, will be rewritten to `registry.url/repo/name`. You can also use dependency images here with `${runtime.dependencies.dep1.images.dep-image.image}`
+- **${runtime.images.image-key.tag}** that corresponds to a `images.*` key, will be rewritten to `generated_tag`. You can also use dependency images here with `${runtime.dependencies.dep1.images.dep-image.tag}`
+

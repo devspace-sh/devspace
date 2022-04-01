@@ -1,0 +1,52 @@
+---
+title: Configure Dockerfile & Context
+sidebar_label: dockerfile + context
+---
+
+import FragmentFaqImageContext from '../../fragments/faq-image-context.mdx';
+
+## `dockerfile`
+The `dockerfile` option expects a string with a path to a `Dockerfile`.
+- The path in `dockerfile` should be relative to the `devspace.yaml`.
+- When setting the `dockerfile` option, it is often useful to set the [`context` option](#context) as well.
+- To share your configuration with team mates, make sure `devspace.yaml` and all `Dockerfiles` used in the `images` section are checked into your code repository.
+
+#### Default Value For `dockerfile`
+```yaml
+dockerfile: ./Dockerfile
+```
+
+#### Example: Different Dockerfile
+```yaml
+images:
+  backend:
+    image: john/appbackend
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    dockerfile: frontend/Dockerfile
+    context: frontend/
+```
+**Explanation:**  
+- The first image would be built using the Dockerfile in `./Dockerfile` and the context path `./`.
+- The second image would be built using the Dockerfile in `./frontend/Dockerfile` and the context path `./frontend/`.
+- Switching the `context` for image `frontend` would assure that a statement like `ADD file.txt` or  `COPY file.txt .` in `./frontend/Dockerfile` would use the local file `./frontend/file.txt` instead of `./file.txt`.
+- In this example, it would probably be useful to have a `./.dockerignore` file which ignores the `frontend/` folder when building the first image called `backend`.
+
+:::note
+See **[Best Practices for Image Building](../../guides/image-building.mdx)** for details on how to optimize your Dockerfiles and use `.dockerignore` for faster image building.
+:::
+
+
+
+## `context`
+The `context` option expects a string with a path to the folder used as context path when building the image. The context path serves as root directory for Dockerfile statements like ADD or COPY.
+
+<FragmentFaqImageContext/>
+
+#### Default Value For `context`
+```yaml
+context: ./
+```
+
+#### Example
+**See "[Example: Different Dockerfiles](#example-different-dockerfile)"**

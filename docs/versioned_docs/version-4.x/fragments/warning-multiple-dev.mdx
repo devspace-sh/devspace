@@ -1,0 +1,8 @@
+:::warning
+It is highly discouraged to run `devspace dev` multiple times in parallel because multiple instances of port forwarding and file synchronization will disturb each other. Instead:
+
+- Run `devspace enter` to open additional terminal sessions without port forwarding and file sync
+- Run `devspace logs` to start log streaming without port forwarding and file sync
+- Run `devspace sync` to sync files on-demand without starting port forwarding etc.
+- Run `devspace ui` to open the localhost development UI in the browser
+:::

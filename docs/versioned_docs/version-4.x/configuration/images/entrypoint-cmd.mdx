@@ -1,0 +1,64 @@
+---
+title: Override ENTRYPOINT and CMD
+sidebar_label: entrypoint + cmd
+---
+
+:::warning
+If you are overriding the Dockerfile `ENTRYPOINT` or `CMD`, it only affects the image but <u>**not**</u> the deployment in Kubernetes. If a deployment using this image defines the `command` or `args` options, they will take precedence over the overrides you define for the image.
+:::
+
+### `entrypoint`
+The `entrypoint` option expects an array of strings which tells DevSpace to override the `ENTRYPOINT` defined in the `Dockerfile` during the image building process.
+
+:::note
+If you are overriding the `ENTRYPOINT`, it is often useful to also [override the `CMD` statement](#cmd). If you want to define `entrypoint: ...` for an image and you do **not** want the `CMD` statement from the Dockerfile, add `cmd: []` to the image configuration in your `devspace.yaml`.
+:::
+
+#### Default Value For `entrypoint`
+```yaml
+entrypoint: []
+```
+
+#### Example: Override ENTRYPOINT For Image
+```yaml
+images:
+  backend:
+    image: john/appbackend
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    entrypoint:
+    - npm
+    - run
+    - dev
+```
+**Explanation:**  
+- The first image `backend` will be built using the regular `ENTRYPOINT` (e.g. `[npm, start]`) defined by the Dockerfile located in `./Dockerfile`
+- The second image `frontend` will be built using the same Dockerfile but instead of the original `ENTRYPOINT`, DevSpace would use the `[npm, run, dev]` as value for `ENTRYPOINT`
+
+
+## `cmd`
+The `cmd` option expects an array of strings which tells DevSpace to override the `CMD` defined in the `Dockerfile` during the image building process.
+
+:::note
+`CMD` generally defines the arguments for `ENTRYPOINT`.
+:::
+
+#### Default Value For `cmd`
+```yaml
+cmd: []
+```
+
+#### Example: Override CMD For Image
+```yaml
+images:
+  backend:
+    image: john/appbackend
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    cmd:
+    - run
+    - dev
+```
+**Explanation:**  
+- The first image `backend` will be built using the regular `CMD` (e.g. `[start]`) for `ENTRYPOINT` (e.g. `[npm]`) defined by the Dockerfile located in `./Dockerfile`
+- The second image `frontend` will be built using the same Dockerfile but instead of the original `CMD`, DevSpace would use the `[run, dev]` as value for `CMD`

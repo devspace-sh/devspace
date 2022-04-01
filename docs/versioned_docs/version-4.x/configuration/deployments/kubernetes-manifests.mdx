@@ -1,0 +1,145 @@
+---
+title: Deploy Kubernetes Manifests
+sidebar_label: kubectl (manifests)
+---
+
+import FragmentReplaceImageTags from '../../fragments/kubectl-replaceImageTags.mdx';
+import FragmentKubectlApplyArgs from '../../fragments/kubectl-options-applyArgs.mdx';
+import FragmentKubectlDeleteArgs from '../../fragments/kubectl-options-deleteArgs.mdx';
+import FragmentKubectlCmdPath from '../../fragments/kubectl-options-cmdPath.mdx';
+import FragmentKubectlKustomize from '../../fragments/kubectl-kustomize.mdx';
+
+To deploy Kubernetes manifests with `kubectl apply`, you need to configure them within the `deployments` section of the `devspace.yaml`.
+
+## Example
+```yaml
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    - backend-extra/
+- name: frontend
+  kubectl:
+    manifests:
+    - frontend/manifest.yaml
+```
+
+The above example will be executing during the deployment process as follows:
+```bash
+kubectl apply -f backend/
+kubectl apply -f backend-extra/
+kubectl apply -f frontend/manifest.yaml
+```
+
+:::note Kubectl
+Deployments with `kubectl` require `kubectl` to be installed. If the `kubectl` binary cannot be found within the `$PATH` variable and it is not specified by specifying the [`cmdPath` option](#cmdpath), DevSpace will download the `kubectl` binary into the `$HOME/.devspace/bin` folder.
+:::
+
+
+## Manifests
+
+### `manifests`
+The `manifests` option is mandatory and expects an array of paths or path globs that point to Kubernetes manifest files (yaml or json files) or to folders containing Kubernetes manifests or Kustomizations.
+
+#### Example: Manifests
+```yaml
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    - backend-extra/
+    - glob/path/to/manifests/
+```
+
+
+### `kustomize`
+
+<FragmentKubectlKustomize/>
+
+
+### `replaceImageTags`
+
+<FragmentReplaceImageTags/>
+
+
+## Kubectl Options
+
+### `applyArgs`
+
+<FragmentKubectlApplyArgs/>
+
+### `createArgs`
+The `createArgs` option expects an array of strings stating additional arguments (and flags) that should be used when calling `kubectl create`.
+
+:::info Kustomize Deployments
+DevSpace only uses `kustomize create` to render the manifests using the default flags `--dry-run --output yaml --validate=false`. The actual deployment will be executed using `kubectl apply` after DevSpace has replaced the image tags within the rendered manifests in memory.
+:::
+
+#### Default Value for `createArgs`
+```yaml
+createArgs: []
+```
+
+#### Example: Custom Kubectl Args & Flags
+```yaml
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    createArgs:
+    - "--recursive"
+```
+**Explanation:**
+Deploying the above example would roughly be equivalent to this command:
+```bash
+kubectl create --dry-run --output yaml --validate=false --recursive -f backend/
+```
+
+### `deleteArgs`
+
+<FragmentKubectlDeleteArgs/>
+
+
+### `cmdPath`
+
+<FragmentKubectlCmdPath/>
+
+
+## General Options
+
+### `name`
+The `name` option is required and expects a string to identify this deployment.
+
+#### Example: Deployment Name
+```yaml {2}
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    - backend-extra/
+```
+
+### `namespace`
+The `namespace` option is required and expects a string with the namespace used to deploy the manifests.
+
+:::warning
+Only use this option if you really need to. Hard-coding the namespace in `devspace.yaml` makes it harder to share the configuration with your colleagues. It is recommended to set the default namespace of the current context instead using:
+```bash
+devspace use namespace [some-namespace]
+```
+:::
+
+#### Example: Deployment Namespace
+```yaml {3}
+deployments:
+- name: backend
+  namespace: some-namespace
+  kubectl:
+    manifests:
+    - backend/
+    - backend-extra/
+```

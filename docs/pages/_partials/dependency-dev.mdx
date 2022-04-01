@@ -1,0 +1,28 @@
+The `dev` option allows you to reuse certain parts of a dependencies `dev` configuration.
+
+:::note
+If `dev` configuration is reused this will be merged into the top-level `devspace.yaml` and executed after image building and deployment
+::: 
+
+#### Example: Override Config Vars for Dependency
+```yaml
+# This will use the dev.ports configuration of the dependency
+# component-1
+dependencies:
+- source:
+    path: component-1
+  dev:
+    ports: true
+```
+
+### `dev.ports`
+
+If enabled will reuse the dependency's `dev.ports` configuration. 
+
+### `dev.sync`
+
+If enabled will reuse the dependency's `dev.sync` configuration. **The base path of the sync configurations reused from a dependency is the folder where the dependency is saved in and not the current working directory.**
+
+### `dev.replacePods`
+
+If enabled will reuse the dependency's `dev.replacePods` configuration.

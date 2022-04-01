@@ -1,0 +1,26 @@
+---
+title: Disable Image Building
+sidebar_label: disabled
+---
+
+## `disabled`
+The `disabled` option expects a boolean and allows you to disable image building for an image.
+
+#### Default Value For `disabled`
+```yaml
+disabled: false
+```
+
+#### Example: Disabling Image Building
+```yaml
+images:
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    build:
+      disabled: true
+  backend:
+    image: john/appbackend
+```
+**Explanation:**  
+- The first image `frontend` would not be built at all.
+- The second image `backend` would be built using [`docker`](../../configuration/images/docker.mdx) because nothing is specified and `docker` is the default build tool for images.

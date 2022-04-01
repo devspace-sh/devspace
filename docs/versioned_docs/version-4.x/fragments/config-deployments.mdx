@@ -1,0 +1,7 @@
+```yaml
+deployments:                        # struct[] | Array of deployments
+- name: my-deployment               # string   | Name of the deployment
+  namespace: ""                     # string   | Namespace to deploy to (Default: "" = namespace of the active namespace/Space)
+  helm: ...                         # struct   | Use Helm as deployment tool and set options for Helm
+  kubectl: ...                      # struct   | Use "kubectl apply" as deployment tool and set options for kubectl
+```

@@ -1,0 +1,425 @@
+---
+title: Config Reference
+sidebar_label: Config Reference
+---
+
+import FragmentConfigImages from '../fragments/config-images.mdx';
+import FragmentConfigDeployments from '../fragments/config-deployments.mdx';
+import FragmentConfigDev from '../fragments/config-dev.mdx';
+import FragmentConfigDependencies from '../fragments/config-dependencies.mdx';
+import FragmentConfigVars from '../fragments/config-vars.mdx';
+import FragmentConfigProfiles from '../fragments/config-profiles.mdx';
+import FragmentConfigCommands from '../fragments/config-commands.mdx';
+import FragmentConfigHooks from '../fragments/config-hooks.mdx';
+import WarningBuildToolPriority from '../fragments/warning-build-tool-priority.mdx';
+
+## `version`
+```yaml
+version: v1beta11                   # string   | Version of the config
+```
+
+## `images`
+
+<FragmentConfigImages/>
+
+[Learn more about how to configure image building.](../configuration/images/basics.mdx)
+
+### `images[*].build`
+```yaml
+build:                              # struct   | Build configuration for an image
+  docker: ...                       # struct   | Build image with docker and set options for docker
+  kaniko: ...                       # struct   | Build image with kaniko and set options for kaniko
+  custom: ...                       # struct   | Build image using a custom build script
+  disabled: false                   # bool     | Disable image building (Default: false)
+```
+:::info
+Setting the key `docker`, `kaniko`, `custom` or `disabled` will define the build tool for this image.
+
+- If neither `docker`, `kaniko`, `custom` nor `disabled` is specified, `docker` will be used by default.
+- By default, `docker` will use `kaniko` as fallback when DevSpace is unable to reach the Docker host.
+:::
+
+<WarningBuildToolPriority/>
+
+### `images[*].build.docker`
+```yaml
+docker:                             # struct   | Options for building images with Docker
+  preferMinikube: true              # bool     | If available, use minikube's in-built docker daemon instaed of local docker daemon (default: true)
+  skipPush: false                   # bool     | Skip pushing image to registry, enabled automatically for minikube and docker-desktop (Default: false)
+  disableFallback: false            # bool     | Disable using kaniko as fallback when Docker is not installed (Default: false)
+  useCli: false                     # bool     | If true will use the docker cli for building    
+  args:                             # []string | Additional arguments that should be used for executing the docker cli
+  - --any-flag    
+  options: ...                      # struct   | Set general build options
+```
+
+### `images[*].build.buildKit`
+```yaml
+buildKit:
+  skipPush: false                   # bool     | If this is true, DevSpace will not push any images
+  preferMinikube: true              # bool     | If false, will not try to use the minikube docker daemon to build the image
+  args: []                          # string[] | Additional arguments to call docker buildx build with
+  command: []                       # string[] | Override the base command to create a builder and build images. Defaults to ["docker", "buildx"]
+  options: ...                      # struct   | Set build general build options
+  inCluster:                        # struct   | If specified, DevSpace will use BuildKit to build the image within the Kubernetes cluster
+    name: ""                        # string   | Name is the name of the builder to use. If omitted, DevSpace will try to create
+	                                #          | or reuse a builder in the form devspace-$NAMESPACE
+    namespace: ""                   # string   | Namespace where to create the builder deployment in. Defaults to the current active namespace.
+    rootless: false                 # bool     | If enabled will create a rootless BuildKit deployment.
+    image: ""                       # string   | The docker image to use for the BuildKit deployment
+    nodeSelector: ""                # string   | The node selector to use for the BuildKit deployment
+    createArgs: []                  # string[] | Additional args to create the builder with.
+    noCreate: false                 # bool     | By default, DevSpace will try to create a new builder if it cannot be found.
+	                                #          | If this is true, DevSpace will fail if the specified builder cannot be found.
+    noRecreate: false               # bool     | By default, DevSpace will try to recreate the builder if the builder configuration
+	                                #          | in the devspace.yaml differs from the actual builder configuration. If this is
+	                                #          | true, DevSpace will not try to do that.
+    noLoad: false                   # bool     | If enabled, DevSpace will not try to load the built image into the local docker
+	                                #          | daemon if skip push is defined
+```
+
+### `images[*].build.kaniko`
+```yaml
+kaniko:                             # struct   | Options for building images with kaniko
+  cache: true                       # bool     | Use caching for kaniko build process
+  annotations: {}                   # map      | Extra annotations for the kaniko build pod
+  labels: {}                        # map      | Extra labels for the kaniko build pod
+  snapshotMode: "time"              # string   | Type of snapshotMode for kaniko build process (compresses layers)
+  insecure: false                   # bool     | Allow working with an insecure registry by not validating the SSL certificate (Default: false)
+  command: []                       # string[] | Array of strings for the kaniko pod
+  args: []                          # string[] | Array of additional args for kaniko build command
+  image: ""                         # string   | Allows to change the kaniko image or kaniko version / image tag.
+  initImage: ""                     # string   | Allows to change the init container kaniko image (defaults to alpine)
+  serviceAccount: ""                # string   | The service account to use for this build pod
+  nodeSelector: {}                  # map      | A key value map of node labels to select a node for the build pod
+  tolerations: []                   # struct[] | Array of node tolerations that should be used to schedule the build pod
+  pullSecret: ""                    # string   | Mount this Kubernetes secret instead of creating one to authenticate to the registry (default: "")
+  additionalMounts: []              # struct[] | Array of mount configurations for Kubernetes Secrets and ConfigMaps that should be mounted into the kaniko build container
+  namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
+  options: ...                      # struct   | Set build general build options
+  skipPullSecretMount: true         # bool     | If true devspace will not mount and create any image pull secret for the kaniko pod
+  env:                              # map      | Key value pairs of environment variables that should be added to the kaniko container (fills the env.value field)
+    my-string-env: value
+  envFrom:                          # map      | Key value pairs of environment variables that should be added to the kaniko container (fills the env.valueFrom field)
+    my-env-from-secret:
+      secretKeyRef: ...               
+    my-env-from-configmap:
+      configMapKeyRef: ... 
+  initEnv: {}                       # map      | Key value pairs of enviroment variables that should be added to the kaniko init pod
+```
+
+### `images[*].build.custom`
+```yaml
+custom:                             # struct   | Options for building images with a custom build script
+  command: "./scripts/builder"      # string   | Command to be executed for building (e.g. path to build script or executable)
+  commands: []                      # struct[] | An array of objects with keys command and os to exchange the command for a specific os
+  args: []                          # string[] | Array of arguments for the custom build command
+  appendArgs: []                    # string[] | Args are prepended to the command (before the image tags) and appendArgs are appended
+  imageFlag: string                 # string   | Name of the flag that DevSpace uses to pass the image name + tag to the build script
+  imageTagOnly: false               # bool     | If true devspace will only use the image tag as argument
+  skipImageArg: false               # bool     | If true devspace will skip adding image:tag as argument completely
+  onChange: []                      # string[] | Array of paths (glob format) to check for file changes to see if image needs to be rebuilt
+```
+
+### `images[*].build.disabled`
+```yaml
+build:                              # struct   | Build configuration for an image
+  disabled: true                    # bool     | Disable image building (Default: false)
+```
+
+### `images[*].build.*.options`
+```yaml
+options:                            # struct   | Options for building images
+  target: ""                        # string   | Target used for multi-stage builds
+  network: ""                       # string   | Network mode used for building the image
+  buildArgs: {}                     # map[string]string | Key-value map specifying build arguments that will be passed to the build tool (e.g. docker)
+```
+
+
+## `deployments`
+
+<FragmentConfigDeployments/>
+
+:::info
+Using the `helm` or `kubectl` key will define the type of deployment and the deployment tool to be used.
+:::
+
+:::warning
+You **cannot** use `helm` and `kubectl` in combination.
+:::
+
+### `deployments[*].helm`
+```yaml
+helm:                               # struct   | Options for deploying with Helm
+  chart: ...                        # struct   | Relative path 
+  componentChart: false             # bool     | Use the DevSpace component chart instead of a custom `chart` = deployment is a component (Default: false)
+  values: {}                        # struct   | Any object with Helm values to override values.yaml during deployment
+  valuesFiles:                      # string[] | Array of paths to values files
+  - ./chart/my-values.yaml          # string   | Path to a file to override values.yaml with
+  replaceImageTags: true            # bool     | Enable automated tag replacement (Default: true)
+  wait: false                       # bool     | Wait for pods to start after deployment (Default: false)
+  displayOutput: false              # bool     | Display output from helm install/upgrade (Default: false)  
+  timeout: 180                      # int      | Timeout to wait for pods to start after deployment (Default: 180)
+  force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
+  atomic: false                     # bool     | Rollback deployment if it fails (Default: false)
+  cleanupOnFail: false              # bool     | Delete resources if rollback fails (Default: false)
+  recreate: false                   # bool     | Recreate pods for applicable resources, e.g. deployments (Default: false)
+  disableHooks: false               # bool     | Disable hooks (Default: false)
+  v2: false                         # bool     | Use legacy Helm v2 (Default: false)
+  tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in when using Helm v2 (Default: "" = same a deployment namespace)
+  deleteArgs: []                    # []string | Extra args for the `helm delete` command during devspace purge
+  templateArgs: []                  # []string | Extra args for the `helm template` command during devspace render
+  upgradeArgs: []                   # []string | Extra args for the `helm upgrade` command during devspace deploy/dev
+  fetchArgs: []                     # []string | Extra args for the `helm fetch` command during devspace render
+```
+[Learn more about configuring deployments with Helm.](../configuration/deployments/helm-charts.mdx)
+
+### `deployments[*].helm.componentChart`
+```yaml
+helm:
+  componentChart: true              # bool     | Use Component chart
+  values:                           # struct   | Options for deploying a component = Deployment/StatefulSet
+    initContainers: ...             # struct[] | Init Containers of this Deployment/StatefulSet
+    containers: ...                 # struct[] | Containers of this Deployment/StatefulSet
+    labels: {}                      # map[string]string | Map of Kubernetes labels for labeling the pods of this component
+    annotations: {}                 # map[string]string | Map of Kubernetes annotations for annotating the pods of this component
+    volumes: ...                    # struct   | Component volumes
+    service: ...                    # struct   | Component service
+    serviceName: my-service         # string   | Service name for headless service (for StatefulSets)
+    ingress: ...                    # struct   | Component ingress
+    replicas: 1                     # int      | Number of replicas (Default: 1)
+    autoScaling: ...                # struct   | AutoScaling configuration
+    rollingUpdate: ...              # struct   | RollingUpdate configuration
+    pullSecrets: ...                # string[] | Array of PullSecret names
+    podManagementPolicy: OrderedReady # enum     | "OrderedReady" or "Parallel" (for StatefulSets)
+    options: ...                    # struct   | Options for deploying this component with helm
+```
+
+[Learn more about configuring the component chart.](https://devspace.sh/component-chart/docs/introduction)
+
+### `deployments[*].helm.chart`
+
+#### `deployments[*].helm.chart.name`
+
+```yaml
+chart:                              # struct   | Chart to deploy
+  name: my-chart                    # string   | Path to local chart on filesystem OR chart name for remote chart in helm chart repository
+  version: v1.0.1                   # string   | Chart version
+  repo: "https://my-repo.tld/"      # string   | Helm chart repository
+  username: "my-username"           # string   | Username for Helm chart repository
+  password: "my-password"           # string   | Password for Helm chart repository
+```
+
+#### `deployments[*].helm.chart.git`
+
+```yaml
+chart:
+  git:
+    url: https://github.com/chart-repo # string    | HTTP(S) URL of the git repository (recommended method for referencing dependencies, must have the format of the git remote repo as usually checked out via git clone)
+    branch: master                     # string    | Git branch to checkout
+    tag: v1.2.3                        # string    | Git tag to checkout
+    revision: ac66e49                  # string    | Git revision (commit has) to checkout
+    cloneArgs: []                      # string[]  | Array of args for the "git clone" command for retrieving git based dependencies
+    subPath: subpath/chartdir          # string    | Path within the git repo where devspace.yaml can be found
+```
+
+### `deployments[*].kubectl`
+```yaml
+kubectl:                            # struct   | Options for deploying with "kubectl apply"
+  manifests: []                     # string[] | Array containing glob patterns for the Kubernetes manifests to deploy using "kubectl apply" (e.g. kube or manifests/service.yaml)
+  kustomize: false                  # bool     | Use kustomize when deploying manifests via "kubectl apply" (Default: false)
+  replaceImageTags: true            # bool     | Enable automated tag replacement (Default: true)
+  applyArgs: []                     # string[] | Array of args for the "kubectl apply" command during deployment
+  createArgs: []                    # string[] | Array of args for the "kubectl create" command during deployment
+  kustomizeArgs: []                 # string[] | Array of args for the "kustomize build" command during deployment
+  deleteArgs: []                    # string[] | Array of args for the "kubectl delete" command when purging deployments
+  cmdPath: ""                       # string   | Path to the kubectl binary (Default: "" = detect automatically)
+```
+[Learn more about configuring deployments with kubectl.](../configuration/deployments/kubernetes-manifests.mdx)
+
+
+## `dev`
+
+<FragmentConfigDev/>
+
+[Learn more about configuring development mode.](../configuration/development/basics.mdx)
+
+### `dev.ports`
+```yaml
+ports:                              # struct[] | Array of port forwarding settings for selected pods
+- name: somePort                    # string   | Optional string stating the name of this port-forwarding configuration
+  imageSelector: john/backend:0.1   # string   | Image of a container by which DevSpace should select the pod
+  labelSelector: ...                # struct   | Key Value map of labels and values to select pods with
+  namespace: ""                     # string   | Kubernetes namespace to select pods in
+  containerName: ""                 # string   | Name of the container to select (only applies if reverseForward is used)
+  arch: "amd64"                     # string   | Target architecture of the selected container (only applies if reverseForward is used)
+  forward:                          # struct[] | Array of ports to be forwarded
+  - port: 8080                      # int      | Forward this port on your local computer
+    remotePort: 3000                # int      | Forward traffic to this port exposed by the pod/container selected
+    bindAddress: ""                 # string   | Address used for binding / use 0.0.0.0 to bind on all interfaces (Default: "localhost" = 127.0.0.1)
+  reverseForward:                   # struct[] | Array of ports to reverse forward
+  - port: 3000                      # int      | Local port that should be accessible remotely
+    remotePort: 8080                # int      | Port in the container where the local port can be accessed
+```
+[Learn more about configuring port forwarding.](../configuration/development/port-forwarding.mdx)
+
+### `dev.open`
+```yaml
+open:                               # struct[] | Array of auto-open settings
+- url: "https://localhost:3000/"    # string   | URL to open after application has started
+```
+[Learn more about configuring auto-opening links.](../configuration/development/open-links.mdx)
+
+### `dev.sync`
+```yaml
+sync:                               # struct[] | Array of file sync settings for selected pods
+- name: someSync                    # string   | Optional string stating the name of this sync configuration
+  imageSelector: john/backend:0.1   # string   | Image of a container by which DevSpace should select the pod
+  labelSelector: ...                # struct   | Key Value map of labels and values to select pods with
+  containerName: ""                 # string   | Container name to use after selecting a pod
+  namespace: ""                     # string   | Kubernetes namespace to select pods in
+  localSubPath: ./                  # string   | Relative path to a local folder that should be synchronized (Default: "./" = entire project)
+  disableDownload: false            # bool     | If true will disable downloading files
+  disableUpload: false              # bool     | If true will disable uploading files
+  containerPath: /app               # string   | Path in the container that should be synchronized with localSubPath (Default is working directory of container ("."))
+  excludePaths: []                  # string[] | Paths to exclude files/folders from sync in .gitignore syntax
+  excludeFile : ""                  # string   | Path to a file using .gitignore syntax to exclude files/folders from sync
+  downloadExcludePaths: []          # string[] | Paths to exclude files/folders from download in .gitignore syntax
+  downloadExcludeFile : ""          # string   | Path to a file using .gitignore syntax to exclude files/folders from download
+  uploadExcludePaths: []            # string[] | Paths to exclude files/folders from upload in .gitignore syntax
+  uploadExcludeFile : ""            # string   | Path to a file using .gitignore syntax to exclude files/folders from upload
+  initialSync: mirrorLocal          # enum     | Specifies the initialSync algorithm: mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll (Default: mirrorLocal)
+  initialSyncCompareBy: mtime       # enum     | Specifies how the initialSync determines if a file has changed: mtime / size
+  waitInitialSync: false            # bool     | Wait until initial sync is completed before continuing (Default: false)
+  throttleChangeDetection: 100      # int      | If greater zero, describes the amount of milliseconds to wait after each checked 100 files on the remote site
+  arch: "amd64"                     # string   | Target architecture of the selected container
+  polling: false                    # bool     | If polling should be used to detect file changes in the container
+  bandwidthLimits:                  # struct   | Bandwidth limits for the synchronization algorithm
+    download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
+    upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
+  onUpload:                         # struct   | After a file/folder has been uploaded to the container...
+    restartContainer: true          # bool     | Restart container after uploading files (requires images.*.injectRestartHelper: true)
+    exec:
+    - name: "my-exec-name"          # string   | Optional string stating the name of this exec configuration
+      command: "touch abc.txt"      # string   | Command that should be executed after DevSpace made changes
+      args: []                      # string[] | Optional args that will force DevSpace to not execute the command in a shell
+      failOnError: false            # bool     | If true, DevSpace will restart the sync if the command fails (default: false)
+      local: false                  # bool     | If true, DevSpace will run the command locally instead of in the container (default: false)
+      onChange: ["package.json"]    # string[] | Optional array of file patterns that will trigger this command
+```
+[Learn more about configuring the file synchronization.](../configuration/development/file-synchronization.mdx)
+
+### `dev.logs`
+```yaml
+logs:                               # struct   | Options for multi-container log streaming in development mode
+  disabled: false                   # bool     | Disable log streaming in development mode (Default: false)
+  showLast: 200                     # int      | Number of last log lines to show before starting stream (Default: 50)
+  sync: true                        # bool     | If the sync log should be merged with container and pod logs
+  selectors:                        # struct[] | An array of label or image selectors to select pods to stream logs from
+  - labelSelector:            
+      other: label
+    namespace: optional
+    containerName: optional
+  - imageSelector: nginx
+    namespace: optional
+```
+[Learn more about configuring multi-container log streaming.](../configuration/development/log-streaming.mdx)
+
+### `dev.autoReload`
+```yaml
+autoReload:                         # struct   | Options for auto-reloading (i.e. re-deploying deployments and re-building images)
+  paths: []                         # string[] | Array containing glob patterns of files that are watched for auto-reloading (i.e. reload when a file matching any of the patterns changes)
+  deployments: []                   # string[] | Array containing names of deployments to watch for auto-reloading (i.e. reload when kubectl manifests or files within the Helm chart change)
+  images: []                        # string[] | Array containing names of images to watch for auto-reloading (i.e. reload when the Dockerfile changes)
+```
+
+### `dev.terminal`
+```yaml
+terminal:                         # struct   | Options for terminal mode
+  imageSelector: john/backend:0.1 # string   | Image of a container by which DevSpace should select the pod
+  labelSelector: ...              # struct   | Key Value map of labels and values to select pods with
+  containerName: ""               # string   | Container name to use after selecting a pod
+  namespace: ""                   # string   | Kubernetes namespace to select pods in
+  command: []                     # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
+  workDir: ""                     # string   | The working directory where to execute the command or open the shell
+```
+
+[Learn more about terminal config options.](../configuration/development/terminal.mdx)
+
+### `dev.replacePods`
+```yaml
+replacePods:                              # struct[] | Which pods should be replaced
+- imageSelector: john/backend:0.1         # string   | Image of a container by which DevSpace should select the pod
+  labelSelector: ...                      # struct   | Key Value map of labels and values to select pods with
+  containerName: ""                       # string   | Container name to use after selecting a pod
+  namespace: ""                           # string   | Kubernetes namespace to select pods in
+  replaceImage: ""                        # string   | The image that should be used for the pod
+  persistPaths:                           # struct[] | Paths that should get persisted in the replaced pod
+  - path: /app                            # string   | The container path that should get persisted
+    volumePath: my-volume/app             # string   | Optional path on the persistent volume to mount
+    containerName: ""                     # string   | Optional container name in the replaced pod to persist the path
+    readOnly: false                       # bool     | If the path should get mounted read only
+    skipPopulate: false                   # bool     | If true, devspace will not try to pre-populate the path
+    initContainer:                        # struct   | Additional options for the pre-populating init container 
+      resources: {}                       # struct   | Resources of the pre-populating init container
+  persistenceOptions:                     # struct   | Additional options for persistPaths
+    name: ""                              # string   | Optional name of the pvc to reuse / create
+    size: "10Gi"                          # string   | Size of the pvc to create 
+    readOnly: false                       # bool     | If all defined persistPaths should get mounted read only
+    storageClassName: ""                  # string   | StorageClassName to use for the persistent volume claim
+    accessModes: ["ReadWriteOnce"]        # string[] | Access modes to use for the persistent volume claim
+  patches:                                # struct[] | Other patches that should be applied on the pod
+  - op: add                               # enum     | Patch operation (replace, add, remove)
+    path: "spec.containers[0].command"    # string    | Jsonpath or xpath to config option that should be patched
+    value: ["sleep"]                      # arbitrary | Value to use for patch operation
+```
+
+[Learn more about replacing pods.](../configuration/development/replace-pods.mdx)
+
+## `dependencies`
+
+<FragmentConfigDependencies/>
+
+[Learn more about configuring dependencies.](./dependencies/basics.mdx)
+
+:::warning
+You **cannot** use `source.git` and `source.path` in combination. You **must** exactly use one of the two.
+:::
+
+## `hooks`
+
+<FragmentConfigHooks/>
+
+
+## `commands`
+
+<FragmentConfigCommands/>
+
+[Learn more about configuring custom commands.](../configuration/commands/basics.mdx)
+
+
+## `vars`
+
+<FragmentConfigVars/>
+
+[Learn more about configuring config variables.](../configuration/variables/basics.mdx)
+
+
+## `profiles`
+
+<FragmentConfigProfiles/>
+
+[Learn more about configuring profiles and patches.](../configuration/profiles/basics.mdx)
+
+## `pullSecrets`
+
+```yaml
+pullSecrets:                              # struct[] | Which pull secrets should get created
+- registry: my-registry.com:5000          # string   | The name of the registry this secret should get created for
+  disabled: false                         # bool     | If enabled will not create the pull secret for this registry
+  username: my-user                       # string   | Optional and expects a string with the username to login into the registry
+  password: my-password                   # string   | Optional and expects a string with the password to login into the registry
+  email: my-email@domain.com              # string   | Optional and expects a string with the email to login into the registry. 
+  secret: ""                              # string   | Optional and expects a string how the secret should be named.
+  serviceAccounts: []                     # string[] | Optional and expects an array of strings to which the pull secret should be added
+```

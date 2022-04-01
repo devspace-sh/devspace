@@ -1,0 +1,57 @@
+---
+title: Environment Variables
+sidebar_label: "source: env"
+---
+
+import FragmentVarsName from '../../fragments/vars-name.mdx';
+import FragmentVarsDefault from '../../fragments/vars-default.mdx';
+import FragmentVarsForceString from '../../fragments/vars-force-string.mdx';
+
+If the `source` is `env`, DevSpace will **<u>not</u>** ask the user a question and instead use environment variables to determine the value of the variable.
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  source: env
+  default: "5.5"
+```
+
+:::info
+If `source` is `env` and the environment variable is **not** defined, DevSpace will use the [`default` value](#default) or terminate with a fatal error, if there is **no** [`default` value](#default) configured.
+:::
+
+<FragmentVarsForceString/>
+
+## Configuration
+
+### `name`
+
+<FragmentVarsName/>
+
+
+### `default`
+
+<FragmentVarsDefault/>
+
+### `alwaysResolve`
+
+If enabled, the variable will be loaded even though it is not used within the config. This might be useful for variables that should be resolved after a config expression is applied. E.g.:
+
+`devspace.yaml`:
+```
+vars:
+- name: my-var
+  value: my-value
+  alwaysResolve: true
+hooks:
+- name: my-hook
+  command: $(cat command.txt)
+  events: ["after:deploy"]
+```
+
+`command.txt`:
+```
+echo Hello ${my-var}!
+```

@@ -1,0 +1,31 @@
+---
+title: Predefined Variables
+sidebar_label: "predefined"
+---
+
+Predefined variables are certain variables provided by DevSpace that might be useful to use within your config. These variables allow you for example to change configuration based on kubernetes context or namespace.
+
+## Predefined Variables
+DevSpace provides some variables that are filled automatically and can be used within the config. These can be helpful for image tagging and other use cases:
+
+- **devspace.namespace**: The default namespace of the current kube-context (= the namespace that you are deploying to)
+- **devspace.context**: Name of the current kube-context
+- **devspace.git.commit**: A short hash of the local repo's current git commit
+- **devspace.git.branch**: The current branch name of the local repo
+- **devspace.version**: The version of the devspace cli without a leading v (e.g. 5.4.3)
+- **devspace.profile**: The main profile used for DevSpace (value of the last --profile flag)
+- **devspace.userHome**: The absolute path to the user's home directory
+- **devspace.timestamp** A unix timestamp when the config was loaded
+- **devspace.random**: A random 6 character long string
+
+#### Example: Using `${devspace.git.commit}`
+```yaml
+images:
+  default:
+    image: myrepo/devspace
+    tags: ["${devspace.git.commit}-${devspace.timestamp}"]
+```
+**Explanation:**  
+This config will tag the image in the form of `myrepo/devspace:d9b4bcd-1559766514`. Many other combinations are possible with this method.
+
+

@@ -1,0 +1,69 @@
+---
+title: Image Name & Tagging Schema
+sidebar_label: image + tags
+---
+
+The `images` section in `devspace.yaml` is a map with keys representing the name of the image and values representing the image definition including `tag`, `dockerfile` etc.
+```yaml
+images:                             # map[string]struct | Images to be built and pushed
+  image1:                           # string   | Name of the image
+    image: dscr.io/username/image   # string   | Image repository and name 
+    tags:                           # string[] | Image tags (may be a tagging schema with variables)
+    - latest
+    - 0.0.1
+    - dev-${DEVSPACE_GIT_COMMIT}
+```
+
+## `image` *Image Repository*
+The `image` option expects a string containing the image repository including registry and image name. 
+
+- Make sure you [authenticate with the image registry](../../configuration/images/basics.mdx#authentication-registry) before using in here.
+- For Docker Hub images, do not specify a registry hostname and use just the image name instead (e.g. `mysql`, `my-docker-username/image`).
+
+#### Example: Multiple Images
+```yaml
+images:
+  backend:
+    image: john/appbackend
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+```
+**Explanation:**
+- The first image `backend` would be tagged as `appbackend:[TAG]` pushed to Docker Hub using the path `john` (which generally could be your Docker Hub username).
+- The second image `frontend` would be tagged as `appfrontend:[TAG]` and pushed to `dscr.io` using the path `${DEVSPACE_USERNAME}` which is a [dynamic config variable](../../configuration/variables/basics.mdx) that resolves to your username in DevSpace Cloud. 
+
+
+## `tags` *Tagging Schema*
+The `tags` option expects an array of strings, each containing a static tag or a tagging schema used to automatically tag images before pushing them to the registry. The tagging schema can contain [dynamic config variables](../../configuration/variables/basics.mdx). While you can define your own config variables, DevSpace provides a set of pre-defined variables. The most commonly used variables for tagging are:
+- **DEVSPACE_RANDOM**: A random 6 character long string
+- **DEVSPACE_TIMESTAMP** A unix timestamp when the config was loaded
+- **DEVSPACE_GIT_COMMIT**: A short hash of the local repo's current git commit
+- **DEVSPACE_USERNAME**: The username currently logged into DevSpace Cloud
+
+:::info Unique Tags For Development
+**Make sure tags are unique** when defining a custom tagging schema for development. Unique tags ensure that your application gets started with the newly built image instead of using an older, cached version. Therefore, it is highly recommended for non-production tags to either use `DEVSPACE_RANDOM` or `DEVSPACE_TIMESTAMP` as a suffix in your tagging schema (see [example below](#example-custom-tagging-schema)).
+:::
+
+#### Default Value For `tag`
+```yaml
+tags: 
+- ${DEVSPACE_RANDOM}
+```
+
+#### Example: Custom Tagging Schema
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    tags: 
+    - latest
+    - dev-${DEVSPACE_USERNAME}-backend-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
+```
+**Explanation:**  
+The above example would always use the tag `latest` and additionaly generate random tags which could look like this one: `dev-john-backend-b6caf8a-Jak9i`. This example tag consists of the following substrings defined by the tagging schema:
+- `dev-` static string 
+- `john` [DevSpace Cloud](https://devspace.cloud/cloud/docs/introduction) username
+- `-backend-` static string 
+- `b6caf8a` latest git commit hash on current local branch
+- `-` static string
+- `Jak9i` auto-generated random string

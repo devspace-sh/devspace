@@ -1,0 +1,50 @@
+---
+title: Function select_pod
+sidebar_label: select_pod
+---
+
+import FragmentConfigOverwriteFlags from '../../../_partials/config-overwrite-flags.mdx';
+
+This function is used to select the container (pod) to be used in the pipeline when it is run.
+
+## Arguments
+
+None
+
+### `--image-selector`
+
+The image selector used to select the container.
+
+### `--label-selector`
+
+The label selector used to select the container.
+
+### `--container`
+
+The container to be used.
+
+### `--namespace`
+
+The namespace to be used.
+
+## Usage
+
+```
+select_pod [--image-selector|--label-selector]
+```
+
+## Flags
+
+By default, flags are disabled. If any of the flags below are enabled, the following actions are taken.
+
+### `--disable-wait`
+
+The pod will be selected, regrdless of whether the container is ready.
+
+### `--timeout`
+
+The amount of time to wait for the container to be ready. The default is 5 minutes.
+
+## Config Overwrite Flags
+
+<FragmentConfigOverwriteFlags/>

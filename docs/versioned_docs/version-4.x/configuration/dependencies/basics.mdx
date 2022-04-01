@@ -1,0 +1,89 @@
+---
+title: Dependencies
+sidebar_label: "Basics"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+DevSpace allows you to define dependencies between several software projects that have a `devspace.yaml`, e.g. across different git repositories. This makes DevSpace a great tool for building and deploying software that consists of several microservices.
+
+Dependencies for DevSpace projects are defined within the `dependencies` section of `devspace.yaml`.
+
+<Tabs
+  defaultValue="git"
+  values={[
+    { label: 'Git Repository', value: 'git', },
+    { label: 'Local Path', value: 'path', },
+  ]
+}>
+<TabItem value="git">
+
+```yaml
+dependencies:
+- source:
+    git: https://github.com/my-api-server
+    branch: stable
+- source:
+    git: https://github.com/my-auth-server
+    revision: c967392
+  profile: production
+- source:
+    git: https://github.com/my-database-server
+    tag: v3.0.1
+    subPath: /configuration
+```
+
+</TabItem>
+<TabItem value="path">
+
+```yaml
+dependencies:
+- source:
+    path: ./different/subproject
+- source:
+    path: ./different/another-subproject
+```
+
+</TabItem>
+</Tabs>
+
+
+## Dependency Source
+DevSpace is able to work with dependencies from the following sources:
+- [`git` repository](../../configuration/dependencies/git-repository.mdx) as dependency that has a devspace configuration (**recommended**)
+- [`path` to a local folder](../../configuration/dependencies/git-repository.mdx) that contains a dependency (path is relative to the current project's root directory)
+
+:::tip 
+Using `git` as dependency source is recommended because it makes it much easier to share the configuration with other developers on your team without forcing everyone to check out the dependencies and to place them in the same folder structure.
+:::
+
+
+## Dependency Resolution
+When a DevSpace project has dependencies, DevSpace will:
+
+1. Resolve all dependencies in a recursive manner
+2. Build a non-cyclic dependency tree
+3. Choose a leave node from the dependency tree, build its images (unless skip is defined) and deploy its deployments
+4. Remove the leave node from the tree and repeat step 3 until everything has been deployed
+
+The algorithm used by DevSpace for building and deploying dependencies ensures that all dependencies have been deployed in the correct order before the project you are calling DevSpace from will be built and deployed.
+
+### Redundant Dependencies
+If DevSpace detects that two projects within the dependency tree define the same child-dependency (i.e. a redundant dependency), DevSpace will try to resolve this by removing the denepdency that is "higher" (i.e. found first when resolving dependencies) within the tree.
+
+### Circular Dependencies
+If DevSpace detects two projects which define each other as dependencies (either directly or via child-dependencies), DevSpace will terminate with an error showing the problematic dependency path within the dependency tree.
+
+:::info
+To resolve circular dependencies, DevSpace allows you to ignore dependencies of dependencies by setting `ignoreDependencies: true` for a dependency.
+:::
+
+
+## Useful Commands
+
+### `devspace update dependencies`
+If you want to force DevSpace to update the dependencies (e.g. git fetch & pull), you can run the following command:
+```bash
+devspace update dependencies
+```

@@ -1,0 +1,56 @@
+---
+title: Image Building
+sidebar_label: Image Building
+---
+
+Take a look at the following best practices to speed up image building and to set up DevSpace for an ideal workflow.
+
+## Optimize Dockerfiles
+You can drastically speed up image building by optimizing your Dockerfiles with the following tips:
+- Use a small base image (e.g. alpine version)
+- Use layer caching for dependencies: Add dependency file, install dependencies, then add the rest of your source code as shown in the example snippet below
+
+```Dockerfile
+FROM 8.16.1-alpine
+
+# Set working dir
+WORKDIR /app
+
+# Copy dependency file to WORKDIR
+ADD package.json
+
+# Install dependencies
+RUN npm install
+
+# Copy remaining source code from local WORKDIR to image WORKDIR
+COPY . .
+```
+
+## `.dockerignore` For Better Caching
+DevSpace respects the `.dockerignore` file when defined on the root level of your context directory. This file follows a similar syntax as the `.gitignore` file but instead of excluding files from git, the `.dockerignore` file defines files and folders which should not be included in the context for building an image. 
+
+:::info Skip Image Building
+Adding paths to the `.dockerignore` file makes sure that DevSpace is not forced to rebuild images when files belonging to these paths change.
+:::
+
+It can often be useful to:
+- Add `devspace.yaml` to `.dockerignore` to prevent config changes from triggering image rebuilding (`devspace init` does this by default)
+- Add temporary files (e.g. `.DS_Store`) to `.dockerignore` (DevSpace ALWAYS ignores `.devspace/` temp folder even if not specified in `.dockerignore`)
+- Add dependency folders to `.dockerignore`, here are a few examples of dependency folders for different languages:
+
+### Recommended Paths for `.dockerignore`
+| Language / Dependency Tool | `.dockerignore` statements                                                                                    |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| All Languages | `devspace.yaml` |
+| PHP / composer | `composer.phar`<br/>`vendor/` |
+| Node.js / npm | `node_modules/`<br/>`npm-debug.log*`<br/>`report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json`<br/>`pids`<br/>`*.pid*`<br/>`*.seed*`<br/>`*.pid.lock*` |
+| Python / pip | `__pycache__/`<br/>`wheels/`<br/>`pip-log.txt`<br/>`pip-wheel-metadata/` |
+
+
+## Different Images for Development vs. Staging vs. Production
+Generally, there are several options to achieve this:
+- using multiple Dockerfiles (e.g. `Dockerfile`, `Dockerfile_production`)
+- using one Dockerfile in combination with `BUILD_ARGS` and `ENTRYPOINT` overrides for each environment
+- using one Dockerfile in combination with multi-stage builds with targets for each environment
+
+All options have their benefits and caveats. Which one is the best for your project depends on your use case and your priorities.

@@ -1,0 +1,106 @@
+---
+title: Deploy Path-Based Local Dependencies
+sidebar_label: "source.path"
+---
+
+import FragmentDependencyProfile from '../../fragments/dependency-profile.mdx';
+import FragmentDependencySkipBuild from '../../fragments/dependency-skipBuild.mdx';
+import FragmentDependencyIgnoreDependencies from '../../fragments/dependency-ignoreDependencies.mdx';
+import FragmentDependencyNamespace from '../../fragments/dependency-namespace.mdx';
+import FragmentDependencyName from '../../fragments/dependency-name.mdx';
+import FragmentDependencyVars from '../../fragments/dependency-vars.mdx';
+import FragmentDependencyDev from '../../fragments/dependency-dev.mdx';
+import FragmentDependencyOverwriteVars from '../../fragments/dependency-overwrite-vars.mdx';
+
+
+## Example
+```yaml
+dependencies:
+- name: component-1
+  source:
+    path: ./different/component-1
+- name: component-2
+  source:
+    path: ./different/component-2
+deployments:
+- name: use-dependency-image
+  helm:
+    componentChart: true
+    values:
+      containers:
+        - image: ${runtime.dependencies.component-1.image1}
+```
+
+## `source`
+
+### `source.path`
+The `source.path` option expects a string with a relative path to a folder that contains a `devspace.yaml` which marks a project that is a dependency of the project referencing it.
+
+#### Example: Local Project as Dependency
+```yaml
+dependencies:
+- source:
+    path: ../other-project
+- source:
+    path: ./different/subproject
+```
+**Explanation:**  
+- Whenever you run `devspace deploy` or `devspace dev`, DevSpace will:
+  - Load the `devspace.yaml` files of both dependencies and resolve their dependencies respectively.
+  - Deploy both projects according to their `devspace.yaml` files.
+
+### `source.configName`
+The `source.configName` option is optional and specifies the dependency's DevSpace configuration file name. If not provided, `devspace.yaml` at the dependency `source.path` will be used.
+
+#### Default Value For `source.configName`
+```yaml
+configName: devspace.yaml
+```
+
+#### Example: Use dev.yaml for Dependency's DevSpace Configuration
+```yaml
+# This will use the file component-1/dev.yaml
+# for the dependency's DevSpace configuration
+dependencies:
+- source:
+    path: component-1
+    configName: dev.yaml
+```
+
+## General Options
+
+### `profile`
+
+<FragmentDependencyProfile/>
+
+
+### `skipBuild`
+
+<FragmentDependencySkipBuild/>
+
+
+### `ignoreDependencies`
+
+<FragmentDependencyIgnoreDependencies/>
+
+
+### `name`
+
+<FragmentDependencyName/>
+
+
+### `namespace`
+
+<FragmentDependencyNamespace/>
+
+### `vars`
+
+<FragmentDependencyVars/>
+
+### `overwriteVars`
+
+<FragmentDependencyOverwriteVars/>
+
+### `dev`
+
+<FragmentDependencyDev/>

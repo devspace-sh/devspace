@@ -1,0 +1,20 @@
+```yaml
+vars:                               # struct[]  | Array of config variables
+- name: CONFIG_VAR                  # string    | Name of the config variable
+  value: my-value                   # any       | The fixed value of the config variable
+  alwaysResolve: false              # bool      | If enabled, the variable will be loaded even though it is not used in config
+  question: "What is CONFIG_VAR?"   # string    | Question to ask the user if no value is found for variable
+  options: []                       # string[]  | Options for picker (selector) to show to user (to choose a value for variable)
+  noCache: false                    # bool      | Disable caching and prompt for value on every run.
+  password: false                   # bool      | Hide user input when providing value via command-line, i.e. replaces input with `*****` (Default: false)
+  validationPattern: ""             # string    | Regexp to validate user input
+  validationMessage: ""             # string    | Message to show to user for input validation
+  default: ""                       # any       | Default value for variable
+  source: "all"                     # enum      | Source for variable (all = default, env, input, command)
+  command: ""                       # string    | If specified will retrieve the variable from the command
+  args: []                          # string[]  | The arguments for the command to retrieve the variable from
+  commands:                 
+  - command: ""                     # string    | Os specified command to retrieve the variable from
+    args: []                        # string[]  | The arguments for the os specific command
+    os: darwin                      # string    | The os to execute this command on
+```

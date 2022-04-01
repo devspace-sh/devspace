@@ -1,0 +1,317 @@
+---
+title: Replacing Pods for Development
+sidebar_label: replacePods
+---
+
+import FragmentImageSelector from '../../fragments/selector-image-selector.mdx';
+import FragmentLabelSelector from '../../fragments/selector-label-selector.mdx';
+
+`replacePods` gives you the option to exchange an already running or just deployed pod with a modified version. This is especially useful if you:
+
+- Need to configure or disable an option on a pod which is not configurable via your helm chart or manifests
+- Do not want to use DevSpace for your pipeline and instead only want to use DevSpace for development 
+- Want to debug a setup in an already deployed app by exchanging a single pod temporarily with modifications
+
+For example:
+```yaml
+vars:
+- name: IMAGE
+  value: idonotexist:neverexisted
+deployments:
+- name: my-app
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: ${IMAGE}
+dev:
+  # DevSpace will try to find a pod with the given image selector. If found (even if its currently in a failed state)
+  # DevSpace will copy the pod, scale down the owning ReplicaSet, Deployment or StatefulSet
+  # and create the new modified pod in the cluster.
+  replacePods:
+    - imageSelector: ${IMAGE}
+      replaceImage: ubuntu:latest
+      patches:
+        - op: replace
+          path: spec.containers[0].command
+          value: ["sleep"]
+        - op: replace
+          path: spec.containers[0].args
+          value: ["9999999999"]
+        - op: replace
+          path: spec.containers[0].workingDir
+          value: "/workdir"
+  # This will create a terminal to the replaced pod
+  terminal:
+    imageSelector: ${IMAGE}
+  # This will sync to the replaced pod's working directory
+  sync:
+    - imageSelector: ${IMAGE}
+```
+
+## How does it work?
+
+Each entry that you specify under `dev.replacePods` will tell DevSpace to search for a pod that should be replaced with the given configuration. If DevSpace finds a pod to replace, it does the following things:
+- Copy the pod.metadata and pod.spec of the already running pod
+- Scale down the owning ReplicaSet, Deployment or StatefulSet replicas to 0
+- Apply the patches to the copied pod 
+- Create the copied pod through a replica set in the cluster
+
+Within the `dev` part of DevSpace, replacing pods is the first step that is executed, which means that all other services such as port-forwarding, sync, log streaming or terminal forwarding will wait until DevSpace has either replaced the pods or already found replaced pods. The services will then target the newly created patched pod instead of the old one.
+
+:::note
+DevSpace will automatically recognize changes to the parent Deployment, ReplicaSet or StatefulSet and apply them to the replaced pod automatically in the next run.
+:::
+
+## Configuration
+
+### `name`
+The `name` option is optional and expects a string stating the name of this replace pods configuration. This can be used as a steady identifier when using profile patches or to override the log messages for this replace pods configuration.
+
+For example:
+```yaml {3}
+dev:
+  replacePods:
+  - name: devbackend
+    imageSelector: john/devbackend
+    replaceImage: ubuntu:latest
+profiles:
+- name: production
+  patches:
+  - op: replace
+    path: dev.replacePods.name=devbackend.imageSelector
+    value: john/prodbackend
+```
+
+## Pod/Container Selection
+The following config options are needed to determine the container which should be replaced:
+- [`imageSelector`](#imageselector)
+- [`labelSelector`](#labelselector)
+- [`containerName`](#containername)
+- [`namespace`](#namespace)
+
+### `imageSelector`
+<FragmentImageSelector />
+
+#### Example: Select Container by Image Selector
+```yaml
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: john/devbackend
+dev:
+  replacePods:
+  - imageSelector: john/devbackend
+    replaceImage: ubuntu:latest
+    patches:
+    - op: replace
+      path: spec.containers[0].command
+      value: ["sleep"]
+    - op: replace
+      path: spec.containers[0].args
+      value: ["9999999999"]
+    - op: replace
+      path: spec.containers[0].workingDir
+      value: "/workdir"
+  terminal:
+    imageSelector: john/devbackend
+```
+
+### `labelSelector`
+<FragmentLabelSelector />
+
+#### Example: Select Container by Label
+```yaml
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: idontexist 
+dev:
+  replacePods:
+  - labelSelector:
+      app.kubernetes.io/component: app-backend
+    containerName: container-0
+    replaceImage: ubuntu:latest
+    patches:
+    - op: replace
+      path: spec.containers[0].command
+      value: ["sleep"]
+    - op: replace
+      path: spec.containers[0].args
+      value: ["9999999999"]
+    - op: replace
+      path: spec.containers[0].workingDir
+      value: "/workdir"
+  sync:
+  - labelSelector:
+      app.kubernetes.io/component: app-backend
+    containerName: container-0
+```
+**Explanation:**
+- The `labelSelector` would select the pod created for the component deployment `app-backend`.
+
+### `containerName`
+The `containerName` option expects a string with a container name. This option is used to decide which container should be selected when using the `labelSelector` option because `labelSelector` selects a pod and a pod can have multiple containers.
+
+:::info
+The `containerName` option is not required if the pod you are selecting using `imageName` or `labelSelector` has only one container.
+:::
+
+### `namespace`
+The `namespace` option expects a string with a Kubernetes namespace used to select the container from.
+
+:::warning
+It is generally **not** needed (nor recommended) to specify the `namespace` option because by default, DevSpace uses the default namespace of your current kube-context which is usually the one that has been used to deploy your containers to.
+:::
+
+## Pod Modifications
+
+### `replaceImage`
+
+`replaceImage` expects a string with the new image name (inclusive tag) that should be used for the selected pod. For example: `replaceImage: my-repo/my-debug-image:1.0`. In addition, DevSpace will also replace the following things:
+
+- **registry.url/repo/name** that corresponds to a `images.*.image`, will be rewritten to `registry.url/repo/name:generated_tag`
+- **${runtime.images.image-key.image}** that corresponds to a `images.*` key, will be rewritten to `registry.url/repo/name`
+- **${runtime.images.image-key.tag}** that corresponds to a `images.*` key, will be rewritten to `xApsTn`
+
+### `patches`
+
+`patches` define more generic patches that should be applied to the pod. You can basically modify anything in the pod here. Patch functionality follows JSON Patch([RFC](https://tools.ietf.org/html/rfc6902)) semantics, as implemented by the [yaml-patch](https://github.com/krishicks/yaml-patch) library.
+
+The `patches` option expects a patch object which consists of the following properties:
+- `op` stating the patch operation (possible values: `replace`, `add`, `remove`)
+- `path` stating a jsonpath or a xpath within the pod (e.g. `metadata.annotations`, `spec.containers.name=backend.env`)
+- `value` stating an arbitrary value used by the operation (e.g. a string, an integer, a boolean, a yaml object)
+
+:::warning `op: add` only for arrays
+Using `op: add` only works as expected when `path` points to an array value. Using `op: add` to add properties to an object (e.g. `metadata.annotations`) will **not** work and instead replace all existing properties.
+:::
+
+:::tip Array Paths
+When you want to define a `path` that contains an array (e.g. `spec.containers`), you have two options:
+
+1. Use the index of the array item you want to patch, e.g. `spec.containers[0]`
+2. Use a property selector matching the array item(s) you want to patch, e.g. `spec.containers.name=backend`
+
+Using a property selector is often better because it is more resilient and will not cause any issues even if the order of an array's items is changed later on. A property selector is also able to select multiple array items if all of them have the same value for this property.
+:::
+
+:::info Value For Replace / Add
+If you use the `replace` or `add` operation, `value` is a mandatory property.
+:::
+
+:::info
+If `value` is defined, the new value must provide the correct type to be used when adding or replacing the existing value found under `path` using the newly provided `value`, e.g. an array must be replaced with an array.
+:::
+
+#### Example: Overwrite command and args of a pod
+```yaml
+dev:
+  replacePods:
+  - labelSelector:
+      app.kubernetes.io/component: app-backend
+    containerName: container-0
+    patches:
+    - op: replace
+      path: spec.containers[0].command
+      value: ["sleep"]
+    - op: replace
+      path: spec.containers[0].args
+      value: ["9999999999"]
+```
+
+**Explanation:**
+- The `labelSelector` would select the pod created for the component deployment `app-backend`.
+
+## Persistence
+
+Replace pods offer you the ability to easily persist certain folders in the exchanged pod through a [persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims). This might be useful if you have to sync large amounts of files that are needed in multiple containers or the replaced pod might get rescheduled or killed often.
+
+:::info Cleanup of Persistent Volume Claims
+If DevSpace creates the persistent volume claim, it will also get cleaned up on a `devspace reset pods` or if config changes in the `replacePods` section are detected.
+:::
+
+### `persistPaths`
+
+The `persistPaths` option expects an array of paths that should get persisted on the replaced pod. 
+
+#### Example: Persist the folders
+```yaml
+dev:
+  replacePods:
+  - imageSelector: my-app/dev
+    persistPaths:
+    - path: /app
+      # Optional path on the persistent volume to mount
+      # volumePath: my-volume/app
+      # Optional name of the container to persist this path
+      # containerName: my-container
+```
+
+**Explanation:**
+- The `imageSelector` would select the pod with image `my-app/dev`.
+- DevSpace would create a new persistent volume claim for the pod if the pod was not yet replaced
+- DevSpace would replace the pod with a pod which has a volume mount for the path `/app` that references the created persistent volume claim
+
+#### Options
+
+You can configure the following options in a persistent path:
+
+- `path`: the container path that should get persisted
+- `volumePath`: optional path on the persistent volume to mount
+- `containerName`: optional container name in the replaced pod to persist the path
+- `readOnly`: if the path should get mounted read only
+- `skipPopulate`: if true, devspace will not try to pre-populate the path
+- `initContainer.resources`: resources of the pre-populating init container
+
+### `persistenceOptions`
+
+`persistenceOptions` is an object that defines additional options for `persistPaths`. You can configure the following options:
+
+- `size`: the size of the persistent volume to request. (Defaults to `10Gi`)
+- `storageClassName`: the storage class name to use for the persistent volume claim. (Defaults to empty)
+- `accessModes`: the access modes to use for the persistent volume claim. (Defaults to `ReadWriteOnce`)
+- `readOnly`: if the persistent volume claim should get mounted in read only mode. (Defaults to `false`)
+- `name`: the name of the persistent volume claim to use or create. (Defaults to name of the replaced pod)
+
+#### Example: Share a single persistent volume across two pods
+```yaml
+dev:
+  sync:
+  - imageSelector: my-image/frontend
+    containerPath: /app
+  replacePods:
+  - imageSelector: my-image/frontend
+    persistPaths:
+    - path: /app
+      volumePath: app
+    persistenceOptions:
+      name: my-pvc
+  - imageSelector: my-image/backend
+    persistPaths:
+    - path: /backend
+      volumePath: app
+    persistenceOptions:
+      name: my-pvc
+      readOnly: true
+```
+
+**Explanation:**
+- DevSpace will create a persistent volume claim `my-pvc` if it does not exist
+- DevSpace will replace the pods with image `my-image/frontend` and `my-image/backend` with pods that mount the persistent volume claim called `my-pvc`
+- DevSpace will sync the local files into the persisted folder `/app` of the replaced pod with image `my-image/frontend`. Since the replaced pods share a common persistent volume claim, also the backend container will get the updated files.
+
+## Reset replaced pods
+
+If you want to reset replaced pods and revert the cluster state to before, you can run 
+```
+devspace reset pods
+```
