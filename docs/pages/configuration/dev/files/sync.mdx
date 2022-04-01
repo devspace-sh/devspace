@@ -93,7 +93,7 @@ dev:
 ```
 **Explanation:**
 - Files in `logs/` and in `more/logs/` would not be synchronized at all.
-- Files in `node_modules/` would only be synchronized from the container to the local filesystem but not the other way around.
+- Files in `node_modules/` would only be synchronized from the container to the local filesystem, but not the other way around.
 - Files in `tmp/` would only be synchronized from the local to the container filesystem, but not the other way around.
 
 #### Example: Only Sync Specific Folders
