@@ -147,7 +147,10 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 	// Print upgrade message if new version available
 	if !cmd.Render {
 		upgrade.PrintUpgradeMessage(cmd.log)
+	} else {
+		cmd.RenderWriter = os.Stdout
 	}
+
 	if cobraCmd != nil {
 		plugin.SetPluginCommand(cobraCmd, args)
 	}

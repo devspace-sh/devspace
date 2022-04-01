@@ -734,8 +734,6 @@ type HelmConfig struct {
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
 	// UpgradeArgs are additional arguments to pass to `helm upgrade`
 	UpgradeArgs []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
-	// FetchArgs are additional arguments to pass to `helm fetch`
-	FetchArgs []string `yaml:"fetchArgs,omitempty" json:"fetchArgs,omitempty"`
 }
 
 // ChartConfig defines the helm chart options
