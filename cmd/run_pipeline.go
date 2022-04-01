@@ -117,9 +117,7 @@ Execute a pipeline
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			if len(args) == 0 && cmd.Pipeline == "" {
 				return fmt.Errorf("please specify a pipeline through --pipeline or argument")
-			} else if len(args) == 1 && cmd.Pipeline != "" {
-				return fmt.Errorf("please specify a pipeline either through --pipeline or argument")
-			} else if len(args) == 1 {
+			} else if len(args) == 1 && cmd.Pipeline == "" {
 				cmd.Pipeline = args[0]
 			}
 
