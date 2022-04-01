@@ -12,11 +12,9 @@ xargs [utility [argument ...]]
 
 ### Example
 
-TODO: Fix example
-
 ```yaml
 pipelines:
   dev:
     run: |-
-      xargs 
+      echo [image1] [image2] | xargs build_images
 ```
