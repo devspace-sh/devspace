@@ -35,10 +35,10 @@ devspace dev
 Running `devspace dev` will do the following:
 
 1. **Deploy** your application according to your [`deployments` section](../configuration/deployments/basics.mdx)
-2. **Replace pods** according to your [`dev.replacePods` section](../configuration/development/replace-pods.mdx)
-3. **Forward ports** specified in the [`dev.ports` section](../configuration/development/port-forwarding.mdx)
-4. **Sync file changes** between your local project directory and the k8s pods according to the [`dev.sync` section](../configuration/development/file-synchronization.mdx)
-5. **Open a terminal** according to the [`dev.terminal` section](../configuration/development/terminal.mdx), so you start your application and work inside your container
+2. **Replace pods** according to your [`dev.replacePods` section](../configuration/dev/container/devimage.mdx)
+3. **Forward ports** specified in the [`dev.ports` section](../configuration/dev/ports/forwarding.mdx)
+4. **Sync file changes** between your local project directory and the k8s pods according to the [`dev.sync` section](../configuration/dev/files/sync.mdx)
+5. **Open a terminal** according to the [`dev.terminal` section](../configuration/dev/workflow/terminal.mdx), so you start your application and work inside your container
 
 Once the terminal session starts, run the command to start your application:
 

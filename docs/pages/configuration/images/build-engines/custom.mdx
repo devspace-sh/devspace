@@ -24,8 +24,8 @@ images:
         # Also works on windows as this is executed in a golang shell
         docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
 ```
-**Explanation:**  
-The image `backend` would be built using the command `docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile"` while `${runtime.images.backend.image}` would be replaced with the `image` option (in this case: `john/appbackend`) and `${runtime.images.backend.tag}` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
+**Explanation:**
+The image `backend` would be built using the command `docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile"` while `${runtime.images.backend.image}` would be replaced with the `image` option (in this case: `john/appbackend`) and `${runtime.images.backend.tag}` would be replaced with the tag generated according to the [tagging schema](../../images/image-definition/tags.mdx).
 
 ### `onChange`
 The `onChange` option expects an array of strings which represent paths to files or folders that should be watched for changes. DevSpace uses these paths and the hash values it stores about these paths for evaluating if an image should be rebuilt or if the image building can be skipped because the context of the image has not changed.
@@ -51,5 +51,5 @@ images:
       - some/path/
       - another/path/file.txt
 ```
-**Explanation:**  
+**Explanation:**
 The image `backend` would be built using the command `./build --image "[IMAGE]:[TAG]"` and DevSpace would skip the build if none of the files within `some/path/` nor the file `another/path/file.txt` has changed since the last build.

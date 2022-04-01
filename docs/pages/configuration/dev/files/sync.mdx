@@ -53,7 +53,6 @@ path: my-folder      # Map local my-folder to remote working-directory/my-folder
 path: ./ # Map local working directory to remote working directory
 ```
 
->>>>>>> upstream/v6-docs
 ## Exclude Paths
 The config options for excluding paths use the same syntax as `.gitignore`.
 
@@ -70,29 +69,7 @@ excludePaths: [] # Do not exclude anything from file synchronization
 ```
 
 #### Example: Exclude Paths from Synchronization
-<<<<<<< HEAD
-```yaml {14-20}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    excludePaths:
-    - logs/
-    - more/logs/
-    uploadExcludePaths:
-    - node_modules/
-    downloadExcludePaths:
-    - tmp/
-=======
+
 ```yaml {11-19}
 deployments:
  app-backend:
@@ -113,34 +90,14 @@ dev:
       - node_modules/
       downloadExcludePaths:
       - tmp/
->>>>>>> upstream/v6-docs
 ```
-**Explanation:**  
+**Explanation:**
 - Files in `logs/` and in `more/logs/` would not be synchronized at all.
 - Files in `node_modules/` would only be synchronized from the container to the local filesystem but not the other way around.
 - Files in `tmp/` would only be synchroniyed from the local to the container filesystem but not the other way around.
 
 #### Example: Only Sync Specific Folders
-<<<<<<< HEAD
-```yaml {14-20}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    excludePaths:
-    - '**'
-    - '!/my-folder-1/'
-    - '!/my-folder-2/'
-=======
+
 ```yaml {11-16}
 deployments:
   app-backend:
@@ -158,34 +115,15 @@ dev:
       - '**'
       - '!/my-folder-1/'
       - '!/my-folder-2/'
->>>>>>> upstream/v6-docs
 ```
-**Explanation:**  
+**Explanation:**
 - All files will be excluded except those in folders `./my-folder-1/` and `./my-folder-2/`
 
 ### `excludeFile`
 The `excludeFile` option expects a path to a file from which the exclude paths can be loaded. Once loaded, the behavior is identical to the `excludePaths` option. This is useful for sharing a common list of exclude paths between many components. The earlier example, [Exclude Paths from Synchronization](#example-exclude-paths-from-synchronization), can be converted to files as follows:
 
 #### Example: Exclude Paths from Synchronization using files
-<<<<<<< HEAD
-```yaml {14-20}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    excludeFile: .gitignore
-    uploadExcludeFile: upload.gitignore
-    downloadExcludeFile: download.gitignore
-=======
+
 ```yaml {11-15}
 deployments:
  app-backend:
@@ -202,7 +140,6 @@ dev:
       excludeFile: .gitignore
       uploadExcludeFile: upload.gitignore
       downloadExcludeFile: download.gitignore
->>>>>>> upstream/v6-docs
 ```
 
 #### Example: `.gitignore`
@@ -278,8 +215,6 @@ Sometimes it is useful to execute commands after the sync uploads files/director
 Make sure that post-sync commands will **<u>not</u>** trigger a new sync process which could lead to an **endless loop**.
 :::
 
-<<<<<<< HEAD
-=======
 ### `startContainer`
 
 The `startContainer` option can be used to delay starting a container until sync has finished uploading all files initially. This is very useful if your container entrypoint requires certain files. Needs `command` to be set as otherwise DevSpace doesn't know which command to start.
@@ -308,16 +243,11 @@ dev:
 If multiple sync paths with `startContainer` exist, DevSpace will wait for all to finish before starting the container. You can combine `startContainer` sync configurations and non `startContainer` configurations to customize when the container is actually started.
 :::
 
->>>>>>> upstream/v6-docs
 ### `onUpload.restartContainer`
 The `restartContainer` option expects a boolean which defines if DevSpace should restart the container every time either a single file or even a batch of files have been uploaded to the container using file sync.
 
 :::caution Restart Helper Required
-<<<<<<< HEAD
-Setting `restartContainer: true` requires to set `injectRestartHelper: true` for the image that is used to run the affected container. Otherwise, this option does not have any effect.
-=======
 Setting `restartContainer: true` requires to set `command: ["my", "container", "entrypoint"]`. Otherwise, DevSpace doesn't know which command to restart.
->>>>>>> upstream/v6-docs
 :::
 
 :::note When not to use this option
@@ -325,28 +255,7 @@ Using `restartContainer: true` is most useful if your application runs based on 
 :::
 
 #### Example: Enable Container Restart
-<<<<<<< HEAD
-```yaml {4,16}
-images:
-  backend:
-    image: john/devbackend
-    injectRestartHelper: true
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    onUpload:
-      restartContainer: true
-```
 
-
-=======
 ```yaml {17}
 deployments:
   app-backend:
@@ -367,44 +276,13 @@ dev:
         restartContainer: true
 ```
 
->>>>>>> upstream/v6-docs
 ### `onUpload.exec`
 The `onUpload.exec` option defines command(s) that should be executed after DevSpace uploaded files and folder to the container. DevSpace will make sure that those commands are not executed while initially syncing the state and command execution will also halt any syncing activities.
 
-If this is defined together with `onUpload.restartContainer`, DevSpace will make sure that the commands are always executed **before** the container is restarted. 
+If this is defined together with `onUpload.restartContainer`, DevSpace will make sure that the commands are always executed **before** the container is restarted.
 
 #### Example: Post-Upload Commands
 ```yaml {14-29}
-<<<<<<< HEAD
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    onUpload:
-      # These post-sync commands will be executed after DevSpace synced changes to the container in the given order
-      exec: 
-      - name: npm-install
-        command: |-
-          npm install
-        onChange: ["./package.json"]
-      - command: |-
-          echo 123 > local.txt
-        local: true                   # Execute this command locally instead of in the container
-      - command: "touch abc.txt"      # string   | Command that should be executed after DevSpace made changes
-        args: []                      # string[] | Optional args that will force DevSpace to not execute the command in a shell
-        failOnError: false            # bool     | If true, DevSpace will restart the sync if the command fails (default: false)
-	    local: false                  # bool     | If true, DevSpace will run the command locally instead of in the container (default: false)
-	    onChange: ["package.json"]    # string[] | Optional array of file patterns that will trigger this command
-=======
 deployments:
   app-backend:
     helm:
@@ -432,7 +310,6 @@ dev:
 	      local: false                  # bool     | If true, DevSpace will run the command locally instead of in the container (default: false)
 	      onChange: ["package.json"]    # string[] | Optional array of file patterns that will trigger this command
 	      name: my-command              # string   | DevSpace will print this name instead of the command when executing
->>>>>>> upstream/v6-docs
 ```
 
 ## One-Directional Sync
@@ -447,28 +324,7 @@ disableDownload: false # Do not ignore remote container files during synchroniza
 ```
 
 #### Example: Synchronize Local Filesystem Only
-<<<<<<< HEAD
-```yaml {14-20}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    disableDownload: true
-    excludePaths:
-    - logs/
-    - more/logs/
-    uploadExcludePaths:
-    - node_modules/
-=======
+
 ```yaml
 deployments:
   app-backend:
@@ -483,7 +339,6 @@ dev:
     sync:
     - path: ./
       disableDownload: true
->>>>>>> upstream/v6-docs
 ```
 
 ### `disableUpload`
@@ -495,31 +350,7 @@ disableUpload: false # Do not ignore local files during synchronization
 ```
 
 #### Example: Synchronize Remote Container Filesystem Only
-<<<<<<< HEAD
-```yaml {14-20}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    disableUpload: true
-    excludePaths:
-    - logs/
-    - more/logs/
-    downloadExcludePaths:
-    - tmp/
-```
 
-
-=======
 ```yaml
 deployments:
   app-backend:
@@ -536,18 +367,14 @@ dev:
       disableUpload: true
 ```
 
->>>>>>> upstream/v6-docs
 <br/>
 
 ## Initial Sync
 
-<<<<<<< HEAD
-=======
 ### `noWatch`
 
 If the `noWatch` option is specified, DevSpace will stop syncing after initially comparing and resolving differences. This is useful if you want a one-time sync but then continue doing other steps in your pipeline.
 
->>>>>>> upstream/v6-docs
 ### `initialSync`
 The `initialSync` option expects a string with an initial sync strategy. The following strategies are available:
 
@@ -559,7 +386,7 @@ The `initialSync` option expects a string with an initial sync strategy. The fol
 
 #### • `preferLocal` is like `mirrorLocal` but skips step 1.
 
-#### • `mirrorRemote` mirrors the container files to the local filesystem: 
+#### • `mirrorRemote` mirrors the container files to the local filesystem:
 
 1. deletes all files on the local filesystem that are not existing inside the container
 2. downloads all files which are existing inside the container but are missing on the local filesystem
@@ -585,27 +412,7 @@ initialSync: mirrorLocal
 
 #### Example: Configuring Initial Sync
 <<<<<<< HEAD
-```yaml {19}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    excludePaths:
-    - node_modules/*
-  - imageSelector: john/devbackend
-    localSubPath: ./node_modules/
-    containerPath: /app/node_modules/
-    initialSync: preferRemote
-=======
+
 ```yaml
 deployments:
   app-backend:
@@ -623,45 +430,19 @@ dev:
       - node_modules/*
     - path: ./node_modules/:/app/node_modules/
       initialSync: preferRemote
->>>>>>> upstream/v6-docs
 ```
-**Explanation:**  
+**Explanation:**
 With this configuration, `devspace dev` would do the following:
 - DevSpace would start port-forwarding and file synchronzation.
 - Initial sync would be started automatically.
 - The first sync config section would synchronize all files except files within `node_modules/`. This means that during initial sync, all remote files that are not existing locally would be deleted and other files would be updated to the most recent version.
 - The second sync config section would only synchronize files within `node_modules/` and because of `initialSync: preferRemote`, DevSpace would download all remote files which are not present on the local filesystem and override all local files which are different than the files within the container.
 
-<<<<<<< HEAD
-
-=======
->>>>>>> upstream/v6-docs
 ### `waitInitialSync`
 The `waitInitialSync` option expects a boolean which defines if DevSpace should wait until the initial sync process has terminated before opening the container terminal or the multi-container log streaming.
 
 #### Default Value For `waitInitialSync`
 ```yaml
-<<<<<<< HEAD
-waitInitialSync: false # Start container terminal or log streaming before initial sync is completed
-```
-
-#### Example: Wait For Initial Sync To Complete
-```yaml {14}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    waitInitialSync: true
-=======
 waitInitialSync: true
 ```
 
@@ -681,18 +462,14 @@ dev:
     sync:
     - path: ./
       waitInitialSync: false
->>>>>>> upstream/v6-docs
 ```
-**Explanation:**  
+**Explanation:**
 With the configuration `devspace dev` would do the following:
 - DevSpace would start port-forwarding and file synchronzation.
 - Initial sync would be started automatically.
-<<<<<<< HEAD
-- After the initial sync process is finished, DevSpace starts the multi-container log streaming.
 
-=======
 - Before the initial sync process is finished, DevSpace starts the log streaming.
->>>>>>> upstream/v6-docs
+
 
 <br/>
 
@@ -707,25 +484,7 @@ By default, the file synchronization algorithm uses the maximum bandwidth possib
 :::
 
 #### Example: Limiting Network Bandwidth
-<<<<<<< HEAD
-```yaml {14-16}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    bandwidthLimits:
-      download: 200
-      upload: 100
-=======
+
 ```yaml
 deployments:
   app-backend:
@@ -742,9 +501,8 @@ dev:
       bandwidthLimits:
         download: 200 # 200 KB/s
         upload: 100   # 100 KB/s
->>>>>>> upstream/v6-docs
 ```
-**Explanation:**  
+**Explanation:**
 - Downloading files from the container to the local filesystem would be limited to a transfer speed of `200 KB/s`.
 - Upload files from the local filesystem to the container would be limited to a transfer speed of `100 KB/s`.
 
@@ -760,34 +518,10 @@ By default, the file synchronization algorithm uses the maximum bandwidth possib
 
 ## Advanced Options
 
-<<<<<<< HEAD
-### `arch`
-
-Arch specifies which DevSpace helper architecture should be used for the container. Currently valid values are either no value, `amd64` or `arm64`. Depending on this value, DevSpace will inject the DevSpace helper binary with the corresponding architecture suffix.
-
-=======
->>>>>>> upstream/v6-docs
 ### `polling`
 
 Polling specifies if the DevSpace helper should traverse over all watched files and folders periodically in the container to identify file changes. By default, DevSpace will use [inotify](https://man7.org/linux/man-pages/man7/inotify.7.html) to detect changes which is more efficient, however sometimes it might be unsupported or not feasible in certain situations, in which polling might be preferred.
 
-<<<<<<< HEAD
-```yaml {14}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    polling: true
-=======
 ```yaml
 deployments:
   app-backend:
@@ -802,7 +536,6 @@ dev:
     sync:
     - path: ./
       polling: true
->>>>>>> upstream/v6-docs
 ```
 
 :::info
@@ -810,7 +543,7 @@ Polling might increase CPU consumption of the container drastically, depending o
 :::
 
 :::info
-If you are using a DevSpace config version below `v1beta10`, polling will be enabled by default, as it was the default syncing method in older DevSpace versions 
+If you are using a DevSpace config version below `v1beta10`, polling will be enabled by default, as it was the default syncing method in older DevSpace versions
 :::
 
 ## Useful Commands
@@ -852,7 +585,7 @@ The algorithm roughly works like this:
 
 <br/>
 
-The `tar` command has to be present in the container otherwise `kubectl cp` does not work and the helper binary cannot be injected into the container.  
+The `tar` command has to be present in the container otherwise `kubectl cp` does not work and the helper binary cannot be injected into the container.
 
 Other than that, no server-side component or special container privileges for code synchronization are required, as the sync algorithm runs completely client-only within DevSpace. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
 

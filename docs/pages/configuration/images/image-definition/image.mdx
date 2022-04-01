@@ -7,18 +7,18 @@ The `images` section in `devspace.yaml` is a map with keys representing the name
 ```yaml
 images:                             # map[string]struct | Images to be built and pushed
   image1:                           # string   | Name of the image
-    image: gcr.io/username/image    # string   | Image repository and name 
+    image: gcr.io/username/image    # string   | Image repository and name
     tags:                           # string[] | Image tags (may be a tagging schema with variables)
     - latest
     - 0.0.1
     - dev-${devspace.git.commit}
-    - dev-${USER}-###               # Each # will be replaced with a random character 
+    - dev-${USER}-###               # Each # will be replaced with a random character
 ```
 
 ## `image` *Image Repository*
-The `image` option expects a string containing the image repository including registry and image name. 
+The `image` option expects a string containing the image repository including registry and image name.
 
-- Make sure you [authenticate with the image registry](../../configuration/images/basics.mdx#authentication-registry) before using in here.
+- Make sure you [authenticate with the image registry](../../images/basics.mdx#authentication-registry) before using in here.
 - For Docker Hub images, do not specify a registry hostname and use just the image name instead (e.g. `mysql`, `my-docker-username/image`).
 
 #### Example: Multiple Images
