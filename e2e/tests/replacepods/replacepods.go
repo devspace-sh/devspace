@@ -52,14 +52,15 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
-			devCmd := &cmd.DevCmd{
+			devCmd := &cmd.RunPipelineCmd{
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Ctx: cancelCtx,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
-			err := devCmd.Run(f)
+			err := devCmd.RunDefault(f)
 			if err != nil {
 				f.GetLog().Errorf("error: %v", err)
 			}
@@ -97,13 +98,14 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
 		// create a new dev command
-		devCmd := &cmd.DevCmd{
+		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "dev",
 		}
-		err = devCmd.Run(f)
+		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// check if replica set exists & pod got replaced correctly
@@ -138,13 +140,14 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectNoError(err)
 
 		// rerun
-		devCmd = &cmd.DevCmd{
+		devCmd = &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "dev",
 		}
-		err = devCmd.Run(f)
+		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// check if replica set exists & pod got replaced correctly
@@ -165,13 +168,14 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectEqual(pods.Items[0].Spec.Containers[0].Image, "alpine:3.14")
 
 		// now purge the deployment and make sure the replica set is deleted as well
-		purgeCmd := &cmd.PurgeCmd{
+		purgeCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "purge",
 		}
-		err = purgeCmd.Run(f)
+		err = purgeCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// wait until all pods are killed
@@ -201,13 +205,14 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
 		// create a new dev command
-		devCmd := &cmd.DevCmd{
+		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "dev",
 		}
-		err = devCmd.Run(f)
+		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// check if replica set exists & pod got replaced correctly
@@ -237,13 +242,14 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectNoError(err)
 
 		// rerun
-		devCmd = &cmd.DevCmd{
+		devCmd = &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "dev",
 		}
-		err = devCmd.Run(f)
+		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// check if replica set exists & pod got replaced correctly
@@ -264,13 +270,14 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectEqual(pods.Items[0].Spec.Containers[0].Image, "alpine:3.14")
 
 		// now purge the deployment and make sure the replica set is deleted as well
-		purgeCmd := &cmd.PurgeCmd{
+		purgeCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "purge",
 		}
-		err = purgeCmd.Run(f)
+		err = purgeCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// wait until all pods are killed

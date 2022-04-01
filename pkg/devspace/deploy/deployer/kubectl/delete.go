@@ -8,7 +8,6 @@ import (
 func Delete(ctx *devspacecontext.Context, deploymentName string) error {
 	deploymentCache, ok := ctx.Config.RemoteCache().GetDeployment(deploymentName)
 	if !ok || deploymentCache.Kubectl == nil || len(deploymentCache.Kubectl.Objects) == 0 {
-		ctx.Config.RemoteCache().DeleteDeployment(deploymentName)
 		return nil
 	}
 
@@ -24,8 +23,5 @@ func Delete(ctx *devspacecontext.Context, deploymentName string) error {
 			ctx.Log.Errorf("error deleting %s %s: %v", resource.Kind, resource.Name, err)
 		}
 	}
-
-	// Delete from cache
-	ctx.Config.RemoteCache().DeleteDeployment(deploymentName)
 	return nil
 }

@@ -16,10 +16,11 @@ images:
         onChange:
         - main.go
 deployments:
-- name: devspace-default
-  kubectl:
-    manifests:
-    - kube
+  my-deployment:
+    kubectl:
+      manifests:
+      - kube
+
 dev:
   ports:
   - imageSelector: ${IMAGE}

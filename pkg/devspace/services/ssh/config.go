@@ -9,11 +9,17 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 )
 
 var configLock sync.Mutex
+
+var (
+	MarkerStartPrefix = "# DevSpace Start "
+	MarkerEndPrefix   = "# DevSpace End "
+)
 
 func configureSSHConfig(host, port string, log log.Logger) error {
 	configLock.Lock()
@@ -25,7 +31,7 @@ func configureSSHConfig(host, port string, log log.Logger) error {
 	}
 
 	sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
-	newFile, err := replaceHost(sshConfigPath, host, port)
+	newFile, err := addHost(sshConfigPath, host, port)
 	if err != nil {
 		return errors.Wrap(err, "parse ssh config")
 	}
@@ -43,7 +49,65 @@ func configureSSHConfig(host, port string, log log.Logger) error {
 	return nil
 }
 
-func replaceHost(path, host, port string) (string, error) {
+type DevSpaceSSHEntry struct {
+	Host     string
+	Hostname string
+	Port     int
+}
+
+func ParseDevSpaceHosts(path string) ([]DevSpaceSSHEntry, error) {
+	var reader io.Reader
+	f, err := os.Open(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+
+		reader = strings.NewReader("")
+	} else {
+		reader = f
+		defer f.Close()
+	}
+
+	configScanner := scanner.NewScanner(reader)
+	inSection := false
+
+	entries := []DevSpaceSSHEntry{}
+	current := &DevSpaceSSHEntry{}
+	for configScanner.Scan() {
+		text := strings.TrimSpace(configScanner.Text())
+		if strings.HasPrefix(text, MarkerStartPrefix) {
+			inSection = true
+		} else if strings.HasPrefix(text, MarkerEndPrefix) {
+			if current.Host != "" && current.Port > 0 && current.Hostname != "" {
+				entries = append(entries, *current)
+			}
+			current = &DevSpaceSSHEntry{}
+			inSection = false
+		} else if inSection {
+			if strings.HasPrefix(text, "Host ") {
+				current.Host = strings.TrimPrefix(text, "Host ")
+			}
+			if strings.HasPrefix(text, "Port ") {
+				port := strings.TrimPrefix(text, "Port ")
+				intPort, err := strconv.Atoi(port)
+				if err == nil {
+					current.Port = intPort
+				}
+			}
+			if strings.HasPrefix(text, "HostName ") {
+				current.Hostname = strings.TrimPrefix(text, "HostName ")
+			}
+		}
+	}
+	if configScanner.Err() != nil {
+		return nil, errors.Wrap(err, "parse ssh config")
+	}
+
+	return entries, nil
+}
+
+func addHost(path, host, port string) (string, error) {
 	var reader io.Reader
 	f, err := os.Open(path)
 	if err != nil {
@@ -77,7 +141,6 @@ func replaceHost(path, host, port string) (string, error) {
 	}
 
 	// add new section
-	newLines = append(newLines, "")
 	newLines = append(newLines, startMarker)
 	newLines = append(newLines, "Host "+host)
 	newLines = append(newLines, "  HostName localhost")
@@ -85,8 +148,7 @@ func replaceHost(path, host, port string) (string, error) {
 	newLines = append(newLines, "  IdentityFile "+DevSpaceSSHPrivateKeyFile)
 	newLines = append(newLines, "  StrictHostKeyChecking no")
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
+	newLines = append(newLines, "  User devspace")
 	newLines = append(newLines, endMarker)
-	newLines = append(newLines, "")
-
 	return strings.Join(newLines, "\n"), nil
 }

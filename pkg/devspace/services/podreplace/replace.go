@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	patch2 "github.com/loft-sh/devspace/pkg/util/patch"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
@@ -35,7 +38,7 @@ type PodReplacer interface {
 	ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPod) error
 
 	// RevertReplacePod will try to revert a pod replacement with the given config
-	RevertReplacePod(ctx *devspacecontext.Context, devPodCache *remotecache.DevPodCache) (bool, error)
+	RevertReplacePod(ctx *devspacecontext.Context, devPodCache *remotecache.DevPodCache, options *deploy.PurgeOptions) (bool, error)
 }
 
 func NewPodReplacer() PodReplacer {
@@ -56,6 +59,12 @@ func (p *replacer) ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPo
 		devPodCache.Namespace = namespace
 	}
 
+	// check if root name exists
+	rootName, ok := values.RootNameFrom(ctx.Context)
+	if ok && !stringutil.Contains(devPodCache.Projects, rootName) {
+		devPodCache.Projects = append(devPodCache.Projects, rootName)
+	}
+
 	// did we already replace a pod?
 	if devPodCache.Deployment != "" {
 		// check if there is a replaced pod in the target namespace
@@ -74,6 +83,11 @@ func (p *replacer) ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPo
 			if err != nil {
 				return err
 			} else if !recreateNeeded {
+				ctx.Config.RemoteCache().SetDevPod(devPodCache.Name, devPodCache)
+				err = ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
+				if err != nil {
+					return err
+				}
 				return nil
 			}
 

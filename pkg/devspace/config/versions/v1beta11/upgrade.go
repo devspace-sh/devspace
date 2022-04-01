@@ -385,7 +385,9 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				DisplayOutput: deployment.Helm.DisplayOutput,
 				TemplateArgs:  deployment.Helm.TemplateArgs,
 				UpgradeArgs:   deployment.Helm.UpgradeArgs,
-				FetchArgs:     deployment.Helm.FetchArgs,
+			}
+			if len(deployment.Helm.FetchArgs) > 0 {
+				log.Warnf("deployments[*].helm.fetchArgs is not supported anymore in DevSpace v6")
 			}
 			if deployment.Helm.Driver != "" {
 				log.Warnf("deployments[*].helm.driver is not supported anymore in DevSpace v6")
@@ -433,9 +435,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			if len(deployment.Helm.DeleteArgs) > 0 {
 				log.Warnf("deployments[*].helm.deleteArgs is not supported anymore in v6")
 			}
-			if deployment.Helm.ReplaceImageTags == nil || *deployment.Helm.ReplaceImageTags {
-				nextConfig.Deployments[name].UpdateImageTags = true
-			}
+			nextConfig.Deployments[name].UpdateImageTags = deployment.Helm.ReplaceImageTags
 		} else if deployment.Kubectl != nil {
 			nextConfig.Deployments[name].Kubectl = &next.KubectlConfig{
 				Manifests:         deployment.Kubectl.Manifests,
@@ -448,9 +448,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			if len(deployment.Kubectl.DeleteArgs) > 0 {
 				log.Warnf("deployments[*].kubectl.deleteArgs is not supported anymore in v6")
 			}
-			if deployment.Kubectl.ReplaceImageTags == nil || *deployment.Kubectl.ReplaceImageTags {
-				nextConfig.Deployments[name].UpdateImageTags = true
-			}
+			nextConfig.Deployments[name].UpdateImageTags = deployment.Kubectl.ReplaceImageTags
 		}
 	}
 
@@ -736,7 +734,10 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 	// disable sync replace
 	for k := range devPods {
 		for i := range devPods[k].Containers {
-			devPods[k].Containers[i].DisableRestartHelper = true
+			if devPods[k].Containers[i].RestartHelper == nil {
+				devPods[k].Containers[i].RestartHelper = &next.RestartHelper{}
+			}
+			devPods[k].Containers[i].RestartHelper.Inject = ptr.Bool(false)
 		}
 	}
 
@@ -756,7 +757,16 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 
 func getMatchingDevContainer(devPod *next.DevPod, containerName string) *next.DevContainer {
 	for key, container := range devPod.Containers {
-		if container.Container == containerName {
+		if container.Container == containerName || container.Container == "" {
+			if container.Container == "" && containerName != "" {
+				devContainer := container
+				devContainer.Container = containerName
+				delete(devPod.Containers, key)
+				devPod.Containers[containerName] = devContainer
+				return devPod.Containers[containerName]
+			}
+			return devPod.Containers[key]
+		} else if containerName == "" {
 			return devPod.Containers[key]
 		}
 	}

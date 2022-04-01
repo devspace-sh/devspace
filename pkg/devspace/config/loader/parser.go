@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -77,7 +78,7 @@ func (p *profilesParser) Parse(ctx context.Context, originalRawConfig map[string
 		if err != nil {
 			continue
 		}
-		err = yaml.Unmarshal(o, profileConfig)
+		err = yamlutil.Unmarshal(o, profileConfig)
 		if err != nil {
 			continue
 		}

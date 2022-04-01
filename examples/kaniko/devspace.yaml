@@ -26,10 +26,12 @@ images:
         #          path: config.json
         #    mountPath: /test/test
 deployments:
-- name: devspace-default
-  helm:
-    chart:
-      name: ./chart
+  my-deployment:
+    helm:
+      values:
+        containers:
+          - image: ${IMAGE}
+
 dev:
   ports:
   - imageSelector: ${IMAGE}

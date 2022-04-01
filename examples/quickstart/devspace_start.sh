@@ -2,11 +2,11 @@
 set +e  # Continue on errors
 
 export NODE_ENV=development
-if [ -f "yarn.lock" ]; then
+if [ -f "yarn.lock" ] && [ ! -d "node_modules" ]; then
    echo "Installing Yarn Dependencies"
    yarn
-else 
-   if [ -f "package.json" ]; then
+else
+   if [ -f "package.json" ] && [ ! -d "node_modules" ]; then
       echo "Installing NPM Dependencies"
       npm install
    fi
@@ -27,6 +27,7 @@ Welcome to your development container!
 This is how you can work with it:
 - Run \`${COLOR_CYAN}npm start${COLOR_RESET}\` to start the application
 - ${COLOR_CYAN}Files will be synchronized${COLOR_RESET} between your local machine and this container
+- Use \`${COLOR_CYAN}ssh my-dev.quickstart.devspace${COLOR_RESET}\` to access the application via SSH
 - Some ports will be forwarded, so you can access this container on your local machine via ${COLOR_CYAN}http://localhost:3000${COLOR_RESET}
 "
 

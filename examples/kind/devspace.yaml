@@ -5,6 +5,8 @@ vars:
 images:
   default:
     image: ${IMAGE}
+    rebuildStrategy: ignoreContextChanges
+
 deployments:
   - name: quickstart
     helm:

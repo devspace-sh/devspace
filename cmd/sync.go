@@ -76,7 +76,7 @@ devspace sync --container-path=/my-path
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			// Print upgrade message if new version available
-			upgrade.PrintUpgradeMessage()
+			upgrade.PrintUpgradeMessage(f.GetLog())
 			plugin.SetPluginCommand(cobraCmd, args)
 			return cmd.Run(f)
 		},

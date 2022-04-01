@@ -119,6 +119,7 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 	// should wait for initial sync?
 	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync {
 		ctx.Log.Info("Waiting for initial sync to complete")
+		defer ctx.Log.Info("Initial sync completed")
 		var (
 			uploadDone   = false
 			downloadDone = false

@@ -1,0 +1,26 @@
+version: v2beta1
+name: php
+
+vars:
+  IMAGE: myuser/php
+
+images:
+  php:
+    image: ${IMAGE}
+    rebuildStrategy: ignoreContextChanges
+
+deployments:
+  php:
+    helm:
+      chart:
+        name: chart
+      values:
+        containers:
+          php:
+            image: ${IMAGE}
+
+dev:
+  php:
+    imageSelector: ${IMAGE}
+    sync:
+      - path: .

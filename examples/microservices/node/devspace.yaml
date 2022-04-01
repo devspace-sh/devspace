@@ -1,0 +1,29 @@
+version: v2beta1
+name: node
+
+vars:
+  IMAGE: myuser/node
+
+images:
+  node:
+    image: ${IMAGE}
+    rebuildStrategy: ignoreContextChanges
+
+deployments:
+  node:
+    kubectl:
+      manifests:
+        - kube/*
+
+dev:
+  node:
+    labelSelector:
+      release: devspace-node
+    devImage: ${runtime.images.node}
+    ports:
+      - port: 3000
+    sync:
+      - path: ./
+        excludePaths:
+          - node_modules
+    terminal: {}

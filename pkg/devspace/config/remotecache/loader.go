@@ -7,9 +7,13 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/encryption"
-	"gopkg.in/yaml.v3"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	SecretType = "devspace.sh/remote-cache"
 )
 
 // Loader is the interface for loading the cache
@@ -18,46 +22,40 @@ type Loader interface {
 }
 
 // NewCache generates a new generated config
-func NewCache(secretName string) *RemoteCache {
+func NewCache(configName, secretName string) *RemoteCache {
 	return &RemoteCache{
 		Vars:        make(map[string]string),
 		Deployments: []DeploymentCache{},
 		DevPods:     []DevPodCache{},
 		Data:        make(map[string]string),
 		secretName:  secretName,
+		configName:  configName,
 	}
 }
 
-// NewCacheLoader creates a new remote cache loader for the given DevSpace configuration name
-func NewCacheLoader(devSpaceName string) Loader {
-	return &cacheLoader{
-		secretName: secretName(devSpaceName),
-	}
-}
-
-type cacheLoader struct {
-	secretName string
-}
-
-func (c *cacheLoader) Load(ctx context.Context, client kubectl.Client) (Cache, error) {
-	secret, err := client.KubeClient().CoreV1().Secrets(client.Namespace()).Get(ctx, c.secretName, metav1.GetOptions{})
+// NewCacheFromSecret loads the cache from secret
+func NewCacheFromSecret(ctx context.Context, client kubectl.Client, secretName string) (*RemoteCache, error) {
+	secret, err := client.KubeClient().CoreV1().Secrets(client.Namespace()).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
-		if !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) {
-			return nil, err
-		}
+		return nil, err
+	}
 
-		s := NewCache(c.secretName)
-		s.secretNamespace = client.Namespace()
-		return s, nil
-	} else if secret.Data == nil || len(secret.Data["cache"]) == 0 {
-		s := NewCache(c.secretName)
+	// get config name
+	configName := ""
+	if secret.Labels != nil {
+		configName = secret.Labels["name"]
+	}
+
+	// return secret
+	if secret.Data == nil || len(secret.Data["cache"]) == 0 {
+		s := NewCache(configName, secretName)
 		s.secretNamespace = client.Namespace()
 		return s, nil
 	}
 
 	remoteCache := &RemoteCache{}
 	remoteCache.raw = secret.Data["cache"]
-	err = yaml.Unmarshal(secret.Data["cache"], remoteCache)
+	err = yamlutil.Unmarshal(secret.Data["cache"], remoteCache)
 	if err != nil {
 		return nil, err
 	}
@@ -95,8 +93,37 @@ func (c *cacheLoader) Load(ctx context.Context, client kubectl.Client) (Cache, e
 		remoteCache.VarsEncrypted = false
 	}
 
-	remoteCache.secretName = c.secretName
+	remoteCache.configName = configName
+	remoteCache.secretName = secretName
 	remoteCache.secretNamespace = client.Namespace()
+	return remoteCache, nil
+}
+
+// NewCacheLoader creates a new remote cache loader for the given DevSpace configuration name
+func NewCacheLoader(devSpaceName string) Loader {
+	return &cacheLoader{
+		secretName: secretName(devSpaceName),
+		configName: devSpaceName,
+	}
+}
+
+type cacheLoader struct {
+	secretName string
+	configName string
+}
+
+func (c *cacheLoader) Load(ctx context.Context, client kubectl.Client) (Cache, error) {
+	remoteCache, err := NewCacheFromSecret(ctx, client, c.secretName)
+	if err != nil {
+		if !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) {
+			return nil, err
+		}
+
+		s := NewCache(c.configName, c.secretName)
+		s.secretNamespace = client.Namespace()
+		return s, nil
+	}
+
 	return remoteCache, nil
 }
 

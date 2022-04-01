@@ -11,7 +11,31 @@ const (
 	tempFolderKey
 	commandKey
 	dependencyKey
+	rootNameKey
+	devContextKey
 )
+
+// WithDevContext creates a new context with the dev context
+func WithDevContext(parent context.Context, devCtx context.Context) context.Context {
+	return WithValue(parent, devContextKey, devCtx)
+}
+
+// DevContextFrom returns a context used to start and stop dev configurations
+func DevContextFrom(ctx context.Context) (context.Context, bool) {
+	devCtx, ok := ctx.Value(devContextKey).(context.Context)
+	return devCtx, ok
+}
+
+// RootNameFrom returns the root name of the devspace config
+func RootNameFrom(ctx context.Context) (string, bool) {
+	user, ok := ctx.Value(rootNameKey).(string)
+	return user, ok
+}
+
+// WithRootName returns a copy of parent with the root name included
+func WithRootName(parent context.Context, name string) context.Context {
+	return WithValue(parent, rootNameKey, name)
+}
 
 // WithValue returns a copy of parent in which the value associated with key is val.
 func WithValue(parent context.Context, key interface{}, val interface{}) context.Context {
