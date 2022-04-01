@@ -176,7 +176,9 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, *types.ProxyCommand, e
 	}
 
 	s.log.Debugf("run command '%s %s' locally", c, strings.Join(args, " "))
-	cmd.Env = append(cmd.Env, command.Env...)
+	if !reverseCommand.SkipContainerEnv {
+		cmd.Env = append(cmd.Env, command.Env...)
+	}
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	return cmd, command, nil
 }

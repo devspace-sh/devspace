@@ -265,7 +265,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 		if err != nil {
 			return true, err
 		}
-	} else {
+	} else if !options.Render {
 		ctx.Log.Infof("Skipping deployment %s", deployConfig.Name)
 		// Execute skip deploy hook
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{

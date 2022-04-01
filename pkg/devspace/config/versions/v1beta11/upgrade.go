@@ -425,7 +425,9 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				DisplayOutput: deployment.Helm.DisplayOutput,
 				TemplateArgs:  deployment.Helm.TemplateArgs,
 				UpgradeArgs:   deployment.Helm.UpgradeArgs,
-				FetchArgs:     deployment.Helm.FetchArgs,
+			}
+			if len(deployment.Helm.FetchArgs) > 0 {
+				log.Warnf("deployments[*].helm.fetchArgs is not supported anymore in DevSpace v6")
 			}
 			if deployment.Helm.Driver != "" {
 				log.Warnf("deployments[*].helm.driver is not supported anymore in DevSpace v6")
