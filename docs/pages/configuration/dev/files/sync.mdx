@@ -212,12 +212,12 @@ uploadExcludeFile: "" # Do not load exclude paths from a file
 Sometimes it is useful to execute commands after the sync uploads files/directories between the local filesystem and the container.
 
 :::warning
-Make sure that post-sync commands will **<u>not</u>** trigger a new sync process which could lead to an **endless loop**.
+Make sure that post-sync commands will **<u>not</u>** trigger a new sync process. This could lead to an **endless loop**.
 :::
 
 ### `startContainer`
 
-The `startContainer` option can be used to delay starting a container until sync has finished uploading all files initially. This is very useful if your container entrypoint requires certain files. Needs `command` to be set as otherwise DevSpace doesn't know which command to start.
+The `startContainer` option can be used to delay starting a container until sync has finished uploading all files initially. This is very useful if your container entrypoint requires certain files. This option requires `command` to be set; otherwise, DevSpace will not know which command to start.
 
 #### Example: Enable Container start
 ```yaml
@@ -247,7 +247,7 @@ If multiple sync paths with `startContainer` exist, DevSpace will wait for all t
 The `restartContainer` option expects a boolean which defines if DevSpace should restart the container every time either a single file or even a batch of files have been uploaded to the container using file sync.
 
 :::caution Restart Helper Required
-Setting `restartContainer: true` requires to set `command: ["my", "container", "entrypoint"]`. Otherwise, DevSpace doesn't know which command to restart.
+Setting `restartContainer: true` requires you to also set `command: ["my", "container", "entrypoint"]`. Otherwise, DevSpace will not know which command to restart.
 :::
 
 :::note When not to use this option
@@ -411,7 +411,6 @@ initialSync: mirrorLocal
 ```
 
 #### Example: Configuring Initial Sync
-<<<<<<< HEAD
 
 ```yaml
 deployments:
@@ -434,7 +433,7 @@ dev:
 **Explanation:**
 With this configuration, `devspace dev` would do the following:
 - DevSpace would start port-forwarding and file synchronzation.
-- Initial sync would be started automatically.
+- Initial sync is started automatically.
 - The first sync config section would synchronize all files except files within `node_modules/`. This means that during initial sync, all remote files that are not existing locally would be deleted and other files would be updated to the most recent version.
 - The second sync config section would only synchronize files within `node_modules/` and because of `initialSync: preferRemote`, DevSpace would download all remote files which are not present on the local filesystem and override all local files which are different than the files within the container.
 
@@ -503,8 +502,8 @@ dev:
         upload: 100   # 100 KB/s
 ```
 **Explanation:**
-- Downloading files from the container to the local filesystem would be limited to a transfer speed of `200 KB/s`.
-- Upload files from the local filesystem to the container would be limited to a transfer speed of `100 KB/s`.
+- Downloading files from the container to the local filesystem is limited to a transfer speed of `200 KB/s`.
+- Upload files from the local filesystem to the container is limited to a transfer speed of `100 KB/s`.
 
 ### `bandwidthLimits.upload`
 The `bandwidthLimits.upload` option expects an integer representing the max file upload speed in KB/s, e.g. `upload: 100` would limit the file sync to a upload speed of `100 KB/s`.
@@ -520,7 +519,7 @@ By default, the file synchronization algorithm uses the maximum bandwidth possib
 
 ### `polling`
 
-Polling specifies if the DevSpace helper should traverse over all watched files and folders periodically in the container to identify file changes. By default, DevSpace will use [inotify](https://man7.org/linux/man-pages/man7/inotify.7.html) to detect changes which is more efficient, however sometimes it might be unsupported or not feasible in certain situations, in which polling might be preferred.
+Polling specifies if the DevSpace helper should traverse over all watched files and folders periodically in the container to identify file changes. By default, DevSpace uses [inotify](https://man7.org/linux/man-pages/man7/inotify.7.html) to detect changes. This can be more efficient, however, sometimes it might be unsupported or not feasible in certain situations, in which case, polling might be preferred.
 
 ```yaml
 deployments:
