@@ -41,7 +41,7 @@ devspace sync --config=devspace.yaml --verbose
 ```
 
 ### Ignore `.git/`
-The sync can fail when files are constantly being changed while they are being synchronized. DevSpace will retry failing sync attempts but for folder such as `.git/` which contain continuously changing information and files which may be locked by the IDE, we recommmend to [ignore them via the `excludePaths` option](../configuration/dev/files/sync.mdx#exclude-paths) in `devspace.yaml`.
+The sync can fail when files are constantly being changed while they are being synchronized. DevSpace will retry failing sync attempts, but for a folder such as `.git/`, which contains continuously changing information and files which may be locked by the IDE, we recommend you [ignore them via the `excludePaths` option](../configuration/dev/files/sync.mdx#exclude-paths) in `devspace.yaml`.
 
 ### File Permissions
 Without file write permission, the sync will not be able to work. If you start your containers (in production) using a different user than `root` and this user does not have sufficient permissions to read and write certain files, you can:
