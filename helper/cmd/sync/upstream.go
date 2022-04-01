@@ -91,7 +91,7 @@ func ensurePath(args []string) (string, error) {
 	}
 
 	if absolutePath == "/" && path != "/" {
-		return "", fmt.Errorf("you are trying to sync the complete container root (/). By default this is not allowed, because this usually leads to unwanted behaviour. Please specify the correct container directory via the `--path` flag or `.path: localPath:/remotePath` option")
+		return "", fmt.Errorf("you are trying to sync the complete container root (/). By default this is not allowed, because this usually leads to unwanted behaviour. Please specify the correct container directory via the `--container-path` flag or `.containerPath` option")
 	}
 
 	return absolutePath, nil

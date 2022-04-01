@@ -3,12 +3,13 @@ package localcache
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"io/ioutil"
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/util/encryption"
+
+	yaml "gopkg.in/yaml.v3"
 )
 
 const (
@@ -57,7 +58,7 @@ func (l *cacheLoader) Load(devSpaceFilePath string) (Cache, error) {
 		loadedConfig = New(cachePath).(*LocalCache)
 	} else {
 		loadedConfig = &LocalCache{}
-		err := yamlutil.Unmarshal(data, loadedConfig)
+		err := yaml.Unmarshal(data, loadedConfig)
 		if err != nil {
 			return nil, err
 		}

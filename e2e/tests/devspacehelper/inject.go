@@ -50,17 +50,16 @@ var _ = DevSpaceDescribe("devspacehelper", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
 			SkipPush: true,
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable
@@ -101,17 +100,16 @@ var _ = DevSpaceDescribe("devspacehelper", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
 			SkipPush: true,
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable

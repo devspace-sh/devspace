@@ -1,11 +1,11 @@
 package loader
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -602,7 +602,7 @@ func (l *configLoader) LoadRaw() (map[string]interface{}, error) {
 	}
 
 	rawMap := map[string]interface{}{}
-	err = yamlutil.Unmarshal(fileContent, &rawMap)
+	err = yaml.Unmarshal(fileContent, &rawMap)
 	if err != nil {
 		return nil, err
 	}
@@ -697,7 +697,7 @@ func copyRaw(in map[string]interface{}) (map[string]interface{}, error) {
 	}
 
 	n := map[string]interface{}{}
-	err = yamlutil.Unmarshal(o, &n)
+	err = yaml.Unmarshal(o, &n)
 	if err != nil {
 		return nil, err
 	}
@@ -725,7 +725,9 @@ func copyForValidation(profile interface{}) (*latest.ProfileConfig, error) {
 	}
 
 	profileConfig := &latest.ProfileConfig{}
-	err = yamlutil.UnmarshalStrict(o, profileConfig)
+	decoder := yaml.NewDecoder(bytes.NewReader(o))
+	decoder.KnownFields(true)
+	err = decoder.Decode(profileConfig)
 	if err != nil {
 		return nil, err
 	}

@@ -9,7 +9,7 @@ images:
       buildKit:
         inCluster: {}
 deployments:
-  my-deployment:
+  - name: quickstart
     helm:
       componentChart: true
       values:

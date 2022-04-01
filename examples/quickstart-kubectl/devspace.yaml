@@ -1,30 +1,21 @@
-version: v2beta1
-name: quickstart-kubectl
-
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: mydockeruser/quickstart
+images:
+  default:
+    image: ${IMAGE}
 deployments:
-  quickstart:
-    kubectl:
-      manifests:
-      - kube
-
+- name: devspace-default
+  kubectl:
+    manifests:
+    - kube
 dev:
-  my-dev:
-    imageSelector: mydockeruser/quickstart
-    # Use this image for development
-    devImage: loftsh/javascript:latest
-    # Start port forwarding
-    ports:
+  ports:
+  - imageSelector: ${IMAGE}
+    forward:
     - port: 3000
-    # Start file sync
-    sync:
-    - path: ./
-      excludePaths:
-      - node_modules
-    # Open url as soon as ready
-    open:
-      - url: http://localhost:3000
-    # Start terminal forwarding with script entrypoint
-    terminal:
-      command: ./devspace_start.sh
-    # Start remote ssh server
-    ssh: {}
+  sync:
+  - imageSelector: ${IMAGE}
+    excludePaths:
+    - node_modules

@@ -80,6 +80,7 @@ func New(ctx *devspacecontext.Context, helmClient helmtypes.Client, deployConfig
 func Delete(ctx *devspacecontext.Context, deploymentName string) error {
 	deploymentCache, ok := ctx.Config.RemoteCache().GetDeployment(deploymentName)
 	if !ok || deploymentCache.Helm == nil || deploymentCache.Helm.Release == "" || deploymentCache.Helm.ReleaseNamespace == "" {
+		ctx.Config.RemoteCache().DeleteDeployment(deploymentName)
 		return nil
 	}
 
@@ -94,5 +95,6 @@ func Delete(ctx *devspacecontext.Context, deploymentName string) error {
 	}
 
 	// Delete from cache
+	ctx.Config.RemoteCache().DeleteDeployment(deploymentName)
 	return nil
 }

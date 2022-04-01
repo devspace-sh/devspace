@@ -130,7 +130,7 @@ func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, erro
 
 	// add always resolve variables
 	for _, v := range r.vars {
-		if v.AlwaysResolve || v.Value != nil {
+		if v.AlwaysResolve {
 			varsUsed[v.Name] = true
 		}
 	}
@@ -242,7 +242,7 @@ func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{
 	}
 
 	// resolve expressions
-	preparedConfigInterface, err = expression.ResolveAllExpressions(ctx, preparedConfigInterface, filepath.Dir(r.options.ConfigPath), nil, paths, r.memoryCache)
+	preparedConfigInterface, err = expression.ResolveAllExpressions(ctx, preparedConfigInterface, filepath.Dir(r.options.ConfigPath), nil, paths)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{
 	}
 
 	// resolve expressions
-	preparedConfigInterface, err = expression.ResolveAllExpressions(ctx, preparedConfigInterface, filepath.Dir(r.options.ConfigPath), paths, nil, r.memoryCache)
+	preparedConfigInterface, err = expression.ResolveAllExpressions(ctx, preparedConfigInterface, filepath.Dir(r.options.ConfigPath), paths, nil)
 	if err != nil {
 		return nil, err
 	}

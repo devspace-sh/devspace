@@ -154,4 +154,5 @@ func matchesImageSelector(ctx *devspacecontext.Context, pod *corev1.PodTemplateS
 	}
 
 	return matchingContainers, nil
+
 }

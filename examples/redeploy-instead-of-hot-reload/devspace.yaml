@@ -1,26 +1,13 @@
-version: v2beta1
-name: redeploy-instead-of-hot-reload
-
-vars:
-  IMAGE: yourusername/devspace
-
-commands:
-  # Overwrite default devspace dev
-  dev: |-
-    run_watch -p devspace.yaml -p *.go -- devspace run-pipeline dev $@
-
+version: v1beta11
 images:
   default:
-    image: ${IMAGE}
-
+    image: yourusername/devspace
 deployments:
-  default:
-    helm:
-      values:
-        containers:
-          - image: ${IMAGE}
-
+- name: devspace-default
+  kubectl:
+    manifests:
+    - kube
 dev:
-  default:
-    imageSelector: ${IMAGE}
-    logs: {}
+  autoReload:
+    paths:
+    - ./**

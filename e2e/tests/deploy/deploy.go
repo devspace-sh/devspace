@@ -49,16 +49,15 @@ var _ = DevSpaceDescribe("deploy", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// check if deployments are there
@@ -82,16 +81,15 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectError(err)
 
 		// create a new purge command
-		purgeCmd := &cmd.RunPipelineCmd{
+		purgeCmd := &cmd.PurgeCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "purge",
 		}
 
 		// run the command
-		err = purgeCmd.RunDefault(f)
+		err = purgeCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// check if deployments are still there
@@ -118,16 +116,15 @@ var _ = DevSpaceDescribe("deploy", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable
@@ -149,16 +146,15 @@ var _ = DevSpaceDescribe("deploy", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable
@@ -189,16 +185,15 @@ var _ = DevSpaceDescribe("deploy", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable
@@ -220,16 +215,15 @@ var _ = DevSpaceDescribe("deploy", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable
@@ -251,16 +245,15 @@ var _ = DevSpaceDescribe("deploy", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable
@@ -282,16 +275,15 @@ var _ = DevSpaceDescribe("deploy", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable
@@ -320,16 +312,15 @@ var _ = DevSpaceDescribe("deploy", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable

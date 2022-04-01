@@ -1,0 +1,50 @@
+# https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  clusterIP: None
+  ports:
+    - name: web
+      port: 80
+  selector:
+    app: nginx
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: simple-stateful-set
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx  # has to match .spec.template.metadata.labels
+  serviceName: "nginx"
+  template:
+    metadata:
+      labels:
+        app: nginx  # has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - image: nginx
+          name: nginx
+          ports:
+            - containerPort: 80
+              name: web
+          volumeMounts:
+            - mountPath: /usr/share/nginx/html
+              name: www
+  volumeClaimTemplates:
+    - metadata:
+        name: www
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: "my-storage-class"

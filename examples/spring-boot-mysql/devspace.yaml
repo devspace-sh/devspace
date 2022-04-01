@@ -1,57 +1,55 @@
-version: v2beta1
-
+version: v1beta11
 vars:
-  IMAGE: maven:3.8.4-eclipse-temurin-16
-
+- name: IMAGE
+  value: maven:3.8.4-eclipse-temurin-16
 deployments:
-  mysql:
-    helm:
-      values:
-        containers:
-          - env:
-              - name: MYSQL_ROOT_PASSWORD
-                value: mypassword
-              - name: MYSQL_DATABASE
-                value: mydatabase
-            image: mariadb:10.5.8
-            volumeMounts:
-              - containerPath: /var/lib/mysql
-                volume:
-                  name: mysql-data
-                  subPath: /mysql
-        service:
-          name: mysql
-          ports:
-            - port: 3306
-        volumes:
-          - name: mysql-data
-            size: 5Gi
-
-  spring-boot:
-    helm:
-      values:
-        containers:
-        - image: ${IMAGE}
-
+- name: mysql
+  helm:
+    componentChart: true
+    values:
+      containers:
+        - env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: mypassword
+            - name: MYSQL_DATABASE
+              value: mydatabase
+          image: mariadb:10.5.8
+          volumeMounts:
+            - containerPath: /var/lib/mysql
+              volume:
+                name: mysql-data
+                subPath: /mysql
+      service:
+        name: mysql
+        ports:
+          - port: 3306
+      volumes:
+        - name: mysql-data
+          size: 5Gi
+- name: app
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: ${IMAGE}
+        command: ["sleep"]
+        args: ["9999999"]
+      service:
+        ports:
+        - port: 8080
 dev:
-  spring-boot:
+  terminal:
     imageSelector: ${IMAGE}
-    # Change working dir to /src
-    workingDir: /src
-    # Make sure our entrypoint script is the container entrypoint
-    command: ["./run.sh"]
-    # Stream logs from the application
-    logs: {}
-    open:
-      - url: http://localhost:8080
-    # Forward 8080 -> 8080
-    ports:
+    workDir: /src
+    command: ["./devspace_start.sh"]
+  ports:
+  - imageSelector: ${IMAGE}
+    forward:
     - port: 8080
-    # Sync local files to container and restart after change
-    sync:
-    - path: .:/src
-      onUpload:
-        restartContainer: true
-      excludePaths:
-      - .git/
-      - target/
+  sync:
+  - imageSelector: ${IMAGE}
+    excludePaths:
+    - .git/
+    - target/
+    containerPath: /src
+    localSubPath: .

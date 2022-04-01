@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"strings"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -34,7 +33,7 @@ func GetConfigValue(ctx *devspacecontext.Context, args []string) error {
 	}
 
 	var doc yaml.Node
-	err = yamlutil.Unmarshal(out, &doc)
+	err = yaml.Unmarshal(out, &doc)
 	if err != nil {
 		ctx.Log.Debugf("%v", err)
 		return nil

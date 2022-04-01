@@ -1,8 +1,0 @@
-version: v2beta1
-name: project1
-
-dependencies:
-  dependency:
-    path: dependency.yaml
-    pipeline: dev
-

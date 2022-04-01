@@ -41,109 +41,6 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		kubeClient, err = kube.NewKubeHelper()
 	})
 
-	ginkgo.It("should not purge common dependency", func() {
-		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/purge")
-		framework.ExpectNoError(err)
-		defer framework.CleanupTempDir(initialDir, tempDir)
-
-		ns, err := kubeClient.CreateNamespace("dependencies")
-		framework.ExpectNoError(err)
-		defer func() {
-			err := kubeClient.DeleteNamespace(ns)
-			framework.ExpectNoError(err)
-		}()
-
-		// create a new dev command and start it
-		devCmd := &cmd.RunPipelineCmd{
-			GlobalFlags: &flags.GlobalFlags{
-				NoWarn:     true,
-				Namespace:  ns,
-				ConfigPath: "project1.yaml",
-			},
-			Pipeline: "dev",
-		}
-		err = devCmd.RunDefault(f)
-		framework.ExpectNoError(err)
-
-		// make sure the dependencies are correctly deployed
-		deploy, err := kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "my-deployment", metav1.GetOptions{})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Image, "alpine")
-
-		// check if replica set exists & pod got replaced correctly
-		list, err := kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(len(list.Items), 1)
-		framework.ExpectEqual(list.Items[0].Spec.Template.Spec.Containers[0].Command, []string{"sleep"})
-
-		// run second dev command
-		devCmd = &cmd.RunPipelineCmd{
-			GlobalFlags: &flags.GlobalFlags{
-				NoWarn:     true,
-				Namespace:  ns,
-				ConfigPath: "project2.yaml",
-			},
-			Pipeline: "dev",
-		}
-		err = devCmd.RunDefault(f)
-		framework.ExpectNoError(err)
-
-		// make sure the dependencies are correctly deployed
-		deploy, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "my-deployment", metav1.GetOptions{})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Image, "alpine")
-
-		// check if replica set exists & pod got replaced correctly
-		list, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(len(list.Items), 1)
-		framework.ExpectEqual(list.Items[0].Spec.Template.Spec.Containers[0].Command, []string{"sleep"})
-
-		// purge project 1
-		purgeCmd := &cmd.RunPipelineCmd{
-			GlobalFlags: &flags.GlobalFlags{
-				NoWarn:     true,
-				Namespace:  ns,
-				ConfigPath: "project1.yaml",
-			},
-			Pipeline: "purge",
-		}
-		err = purgeCmd.RunDefault(f)
-		framework.ExpectNoError(err)
-
-		// make sure the dependencies are correctly deployed
-		deploy, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "my-deployment", metav1.GetOptions{})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(deploy.Spec.Template.Spec.Containers[0].Image, "alpine")
-
-		// check if replica set exists & pod got replaced correctly
-		list, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(len(list.Items), 1)
-		framework.ExpectEqual(list.Items[0].Spec.Template.Spec.Containers[0].Command, []string{"sleep"})
-
-		// purge project 2
-		purgeCmd = &cmd.RunPipelineCmd{
-			GlobalFlags: &flags.GlobalFlags{
-				NoWarn:     true,
-				Namespace:  ns,
-				ConfigPath: "project2.yaml",
-			},
-			Pipeline: "purge",
-		}
-		err = purgeCmd.RunDefault(f)
-		framework.ExpectNoError(err)
-
-		// make sure the dependencies are correctly deployed
-		deploy, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "my-deployment", metav1.GetOptions{})
-		framework.ExpectError(err)
-
-		// check if replica set exists & pod got replaced correctly
-		list, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(len(list.Items), 0)
-	})
-
 	ginkgo.It("should deploy git dependency", func() {
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/git")
 		framework.ExpectNoError(err)
@@ -161,15 +58,14 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
-			devCmd := &cmd.RunPipelineCmd{
+			devCmd := &cmd.DevCmd{
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline: "dev",
-				Ctx:      cancelCtx,
+				Ctx: cancelCtx,
 			}
-			err := devCmd.RunDefault(f)
+			err := devCmd.Run(f)
 			if err != nil {
 				f.GetLog().Errorf("error: %v", err)
 			}
@@ -219,16 +115,15 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "dev",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// make sure the dependencies are correctly deployed
@@ -367,15 +262,14 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		// create a new dev command
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		devCmd := &cmd.RunPipelineCmd{
+		devCmd := &cmd.DevCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "dev",
-			Ctx:      cancelCtx,
+			Ctx: cancelCtx,
 		}
-		err = devCmd.RunDefault(f)
+		err = devCmd.Run(f)
 		framework.ExpectNoError(err)
 		cancel()
 
@@ -398,14 +292,14 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectEqual(pods.Items[0].Spec.Containers[0].Image, "alpine:latest")
 
 		// now purge the deployment, dependency and make sure the replica set is deleted as well
-		purgeCmd := &cmd.RunPipelineCmd{
+		purgeCmd := &cmd.PurgeCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "purge",
+			All: true,
 		}
-		err = purgeCmd.RunDefault(f)
+		err = purgeCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until all pods are killed

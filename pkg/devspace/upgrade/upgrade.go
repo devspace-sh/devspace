@@ -35,12 +35,12 @@ func eraseVersionPrefix(version string) (string, error) {
 }
 
 // PrintUpgradeMessage prints an upgrade message if there is a new version available
-func PrintUpgradeMessage(log log.Logger) {
+func PrintUpgradeMessage() {
 	if env.GlobalGetEnv("DEVSPACE_SKIP_VERSION_CHECK") != "true" {
 		// Get version of current binary
 		latestVersion := NewerVersionAvailable()
 		if latestVersion != "" {
-			log.Warnf("There is a newer version of DevSpace: v%s. Run `devspace upgrade` to upgrade to the newest version.\n", latestVersion)
+			log.GetInstance().Warnf("There is a newer version of DevSpace: v%s. Run `devspace upgrade` to upgrade to the newest version.\n", latestVersion)
 		}
 	}
 }

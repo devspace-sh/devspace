@@ -47,15 +47,14 @@ var _ = DevSpaceDescribe("hooks", func() {
 			framework.ExpectNoError(err)
 		}()
 
-		buildCmd := &cmd.RunPipelineCmd{
+		buildCmd := &cmd.BuildCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "build",
 			SkipPush: false,
 		}
-		err = buildCmd.Run(nil, nil, f, "build", "buildCommand")
+		err = buildCmd.Run(f)
 		framework.ExpectError(err)
 
 		// check if files are there
@@ -73,15 +72,14 @@ var _ = DevSpaceDescribe("hooks", func() {
 		framework.ExpectError(err)
 
 		// now execute devspace dev and fail on deploy
-		devCmd := &cmd.RunPipelineCmd{
+		devCmd := &cmd.DevCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "dev",
 			SkipPush: true,
 		}
-		err = devCmd.Run(nil, nil, f, "dev", "devCommand")
+		err = devCmd.Run(f)
 		framework.ExpectError(err)
 
 		// check if files are correctly created
@@ -128,13 +126,12 @@ var _ = DevSpaceDescribe("hooks", func() {
 		// create first dev command
 		cancelCtx1, cancel1 := context.WithCancel(context.Background())
 		defer cancel1()
-		devCmd1 := &cmd.RunPipelineCmd{
+		devCmd1 := &cmd.DevCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "dev",
-			Ctx:      cancelCtx1,
+			Ctx: cancelCtx1,
 		}
 
 		// start the command
@@ -142,7 +139,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd1.RunDefault(f)
+			err = devCmd1.Run(f)
 			framework.ExpectNoError(err)
 		}()
 
@@ -176,13 +173,12 @@ var _ = DevSpaceDescribe("hooks", func() {
 		// create second dev command
 		cancelCtx2, cancel2 := context.WithCancel(context.Background())
 		defer cancel2()
-		devCmd2 := &cmd.RunPipelineCmd{
+		devCmd2 := &cmd.DevCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "dev",
-			Ctx:      cancelCtx2,
+			Ctx: cancelCtx2,
 		}
 
 		// start the command
@@ -190,7 +186,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd2.RunDefault(f)
+			err = devCmd2.Run(f)
 
 			framework.ExpectNoError(err)
 		}()

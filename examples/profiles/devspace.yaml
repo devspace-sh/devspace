@@ -1,0 +1,67 @@
+version: v1beta11
+vars:
+  - name: IMAGE_1
+    value: mydockeruser/service-1
+  - name: IMAGE_2
+    value: mydockeruser/service-2
+images:
+  service-image-1:
+    image: ${IMAGE_1}
+    dockerfile: service1/Dockerfile
+    context: service1/
+  service-image-2:
+    image: ${IMAGE_2}
+    dockerfile: service2/Dockerfile
+    context: service2/
+deployments:
+  - name: service-1
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: ${IMAGE_1}
+  - name: service-2
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: ${IMAGE_2}
+commands:
+  - name: dev-service1
+    command: "devspace dev --profile=dev-service1"
+  - name: dev-service2
+    command: "devspace dev --profile=dev-service2-only"
+profiles:
+# Use the profiles with 'devspace use profile dev-service1'
+- name: dev-service1
+  # Replace defines fields that should be completely overriden
+  replace:
+    dev:
+      terminal:
+        imageSelector: ${IMAGE_1}
+      ports:
+        - imageSelector: ${IMAGE_1}
+          forward:
+            - port: 8080
+      sync:
+        - imageSelector: ${IMAGE_1}
+          localSubPath: ./service1
+# Use the config with 'devspace use profile dev-service2-only'
+- name: dev-service2-only
+  replace:
+    dev:
+      terminal:
+        imageSelector: ${IMAGE_2}
+      ports:
+        - imageSelector: ${IMAGE_2}
+          forward:
+            - port: 8080
+      sync:
+        - imageSelector: ${IMAGE_2}
+          localSubPath: ./service2
+  # Patches allow you to make specific changes in the config
+  patches:
+  - op: remove
+    path: deployments[0]
+  - op: remove
+    path: images["service-image-1"]

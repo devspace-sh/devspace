@@ -23,7 +23,7 @@ export interface DevSpaceConfig {
   changeKubeContext: (newContext: NewContext) => void;
 
   config: Config;
-  generatedConfig: LocalCache;
+  generatedConfig: GeneratedConfig;
 
   profile: string;
   kubeNamespace: string;
@@ -56,10 +56,42 @@ interface ImageConfig {
   image: string;
 }
 
-export interface LocalCache {
+interface GeneratedConfig {
   vars: { [key: string]: string };
+  profiles: { [key: string]: GeneratedCacheConfig };
 }
 
+interface GeneratedCacheConfig {
+  deployments: { [key: string]: GeneratedDeploymentCache };
+  images: { [key: string]: GeneratedImageCache };
+  dependencies: { [key: string]: string };
+  lastContext: GeneratedLastContextConfig;
+}
+
+interface GeneratedImageCache {
+  imageConfigHash: string;
+  dockerfileHash: string;
+  contextHash: string;
+  entrypointHash: string;
+
+  customFilesHash: string;
+
+  imageName: string;
+  tag: string;
+}
+
+interface GeneratedDeploymentCache {
+  deploymentConfigHash: string;
+
+  helmOverridesHash: string;
+  helmChartHash: string;
+  kubectlManifestsHash: string;
+}
+
+interface GeneratedLastContextConfig {
+  namespace: string;
+  context: string;
+}
 
 export const DevSpaceConfigContextProvider = reactDevSpaceConfigContext.Provider;
 

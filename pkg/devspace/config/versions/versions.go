@@ -1,10 +1,10 @@
 package versions
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta11"
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -161,7 +161,9 @@ func Parse(data map[string]interface{}, log log.Logger) (*latest.Config, error) 
 	if err != nil {
 		return nil, err
 	}
-	err = yamlutil.UnmarshalStrict(out, latestConfig)
+	decoder := yaml.NewDecoder(bytes.NewReader(out))
+	decoder.KnownFields(true)
+	err = decoder.Decode(latestConfig)
 	if err != nil {
 		return nil, errors.Errorf("error loading config: %v", err)
 	}
@@ -338,7 +340,7 @@ func getProfiles(ctx context.Context, basePath string, data map[string]interface
 						}
 
 						rawMap := map[string]interface{}{}
-						err = yamlutil.Unmarshal(fileContent, &rawMap)
+						err = yaml.Unmarshal(fileContent, &rawMap)
 						if err != nil {
 							return err
 						}

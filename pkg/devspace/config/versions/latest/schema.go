@@ -1,7 +1,6 @@
 package latest
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"strings"
 
 	"encoding/json"
@@ -35,7 +34,7 @@ func NewRaw() *Config {
 func (c *Config) Clone() *Config {
 	out, _ := yaml.Marshal(c)
 	n := &Config{}
-	_ = yamlutil.Unmarshal(out, n)
+	_ = yaml.Unmarshal(out, n)
 	return n
 }
 
@@ -480,18 +479,11 @@ type CustomConfigCommand struct {
 
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
-	// Name of the deployment
-	Name string `yaml:"name,omitempty" json:"name,omitempty"`
-	// Namespace where to deploy this deployment
-	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	// UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the
-	// images section with their most recent built tag.
-	UpdateImageTags *bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
-
-	// Helm tells DevSpace to deploy this deployment via helm
-	Helm *HelmConfig `yaml:"helm,omitempty" json:"helm,omitempty"`
-	// Kubectl tells DevSpace to deploy this deployment via kubectl or kustomize
-	Kubectl *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
+	Name            string         `yaml:"name,omitempty" json:"name,omitempty"`
+	Namespace       string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	UpdateImageTags bool           `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
+	Helm            *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
+	Kubectl         *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
 }
 
 // ComponentConfig holds the component information
@@ -680,13 +672,8 @@ type HelmConfig struct {
 	DisplayOutput bool                   `yaml:"displayOutput,omitempty" json:"output,omitempty"`
 
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
-<<<<<<< HEAD
 	UpgradeArgs  []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
 	FetchArgs    []string `yaml:"fetchArgs,omitempty" json:"fetchArgs,omitempty"`
-=======
-	// UpgradeArgs are additional arguments to pass to `helm upgrade`
-	UpgradeArgs []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
->>>>>>> upstream/master
 }
 
 // ChartConfig defines the helm chart options
@@ -736,11 +723,7 @@ type DevContainer struct {
 
 	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
 	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
-	// RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
-	// the container and restarting it and is injected via an annotation in the replaced pod.
-	RestartHelper *RestartHelper `yaml:"restartHelper,omitempty" json:"restartHelper,omitempty"`
 
-<<<<<<< HEAD
 	ReversePorts         []*PortMapping   `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty"`
 	Command              []string         `yaml:"command,omitempty" json:"command,omitempty"`
 	Args                 []string         `yaml:"args,omitempty" json:"args,omitempty"`
@@ -756,52 +739,11 @@ type DevContainer struct {
 	Sync                 []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
 	SSH                  *SSH             `yaml:"ssh,omitempty" json:"ssh,omitempty"`
 	ProxyCommands        []*ProxyCommand  `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
-=======
-	// ReversePorts are port mappings to make local ports available inside the container
-	ReversePorts []*PortMapping `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty"`
-	// Command can be used to override the entrypoint of the container
-	Command []string `yaml:"command,omitempty" json:"command,omitempty"`
-	// Args can be used to override the args of the container
-	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
-	// WorkingDir can be used to override the working dir of the container
-	WorkingDir string `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
-	// Resources can be used to override the resource definitions of the container
-	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
-	// Env can be used to add environment variables to the container. DevSpace will
-	// not replace existing environment variables if an environment variable is defined here.
-	Env []EnvVar `yaml:"env,omitempty" json:"env,omitempty"`
-
-	// Terminal allows you to tell DevSpace to open a terminal with screen support to this container
-	Terminal *Terminal `yaml:"terminal,omitempty" json:"terminal,omitempty"`
-	// Logs allows you to tell DevSpace to stream logs from this container to the console
-	Logs *Logs `yaml:"logs,omitempty" json:"logs,omitempty"`
-	// Attach allows you to tell DevSpace to attach to this container
-	Attach *Attach `yaml:"attach,omitempty" json:"attach,omitempty"`
-	// PersistPaths allows you to persist certain paths within this container with a persistent volume claim
-	PersistPaths []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
-	// Sync allows you to sync certain local paths with paths inside the container
-	Sync []*SyncConfig `yaml:"sync,omitempty" json:"sync,omitempty"`
-	// SSH allows you to create an SSH tunnel to this container
-	SSH *SSH `yaml:"ssh,omitempty" json:"ssh,omitempty"`
-	// ProxyCommands allow you to proxy certain local commands to the container
-	ProxyCommands []*ProxyCommand `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
->>>>>>> upstream/master
-}
-
-type RestartHelper struct {
-	// Path defines the path to the restart helper that might be used if certain config
-	// options are enabled
-	Path string `yaml:"path,omitempty" json:"path,omitempty"`
-	// Inject signals DevSpace to inject the restart helper
-	Inject *bool `yaml:"inject,omitempty" json:"inject,omitempty"`
 }
 
 type ProxyCommand struct {
 	Command      string `yaml:"command,omitempty" json:"command,omitempty"`
 	LocalCommand string `yaml:"localCommand,omitempty" json:"localCommand,omitempty"`
-
-	// SkipContainerEnv will not forward the container environment variables to the local command
-	SkipContainerEnv bool `yaml:"skipContainerEnv,omitempty" json:"skipContainerEnv,omitempty"`
 }
 
 type SSH struct {

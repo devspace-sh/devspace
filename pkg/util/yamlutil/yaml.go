@@ -1,65 +1,12 @@
 package yamlutil
 
 import (
-	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
 
 	yaml "gopkg.in/yaml.v3"
 )
-
-// UnmarshalString decodes the given string into an object and returns a prettified string
-func UnmarshalString(data string, out interface{}) error {
-	return Unmarshal([]byte(data), out)
-}
-
-var lineRegEx = regexp.MustCompile(`^line ([0-9]+):`)
-
-func UnmarshalStrict(data []byte, out interface{}) error {
-	decoder := yaml.NewDecoder(bytes.NewReader(data))
-	decoder.KnownFields(true)
-	err := decoder.Decode(out)
-	return prettifyError(data, err)
-}
-
-// Unmarshal decodes the given byte into an object and returns a prettified string
-func Unmarshal(data []byte, out interface{}) error {
-	err := yaml.Unmarshal(data, out)
-	return prettifyError(data, err)
-}
-
-func prettifyError(data []byte, err error) error {
-	// check if type error
-	if typeError, ok := err.(*yaml.TypeError); ok {
-		for i := range typeError.Errors {
-			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!seq", "an array", -1)
-			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!str", "string", -1)
-			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!map", "an object", -1)
-			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!int", "number", -1)
-			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!bool", "boolean", -1)
-
-			// add line to error
-			match := lineRegEx.FindSubmatch([]byte(typeError.Errors[i]))
-			if len(match) > 1 {
-				line, lineErr := strconv.Atoi(string(match[1]))
-				if lineErr == nil {
-					line = line - 1
-					lines := strings.Split(string(data), "\n")
-					if line < len(lines) {
-						typeError.Errors[i] += fmt.Sprintf(" (line %d: %s)", line+1, strings.TrimSpace(lines[line]))
-					}
-				}
-			}
-		}
-	}
-
-	return err
-}
 
 // Convert converts an map[interface{}] to map[string] type
 func Convert(i interface{}) interface{} {

@@ -3,7 +3,6 @@ package reset
 import (
 	"context"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -18,8 +17,6 @@ import (
 
 type podsCmd struct {
 	*flags.GlobalFlags
-
-	Force bool
 
 	log log.Logger
 }
@@ -48,7 +45,6 @@ devspace reset pods
 			return cmd.RunResetPods(f, cobraCmd, args)
 		}}
 
-	podsCmd.Flags().BoolVar(&cmd.Force, "force", false, "If true will force resetting pods even though they might be still used by other DevSpace projects")
 	return podsCmd
 }
 
@@ -106,13 +102,13 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 	ctx = ctx.WithDependencies(dependencies)
 
 	// reset the pods
-	ResetPods(ctx, true, cmd.Force)
+	ResetPods(ctx, true)
 	return nil
 }
 
 // ResetPods deletes the pods created by dev.replacePods
-func ResetPods(ctx *devspacecontext.Context, dependencies, force bool) {
-	resetted := ResetPodsRecursive(ctx, dependencies, force)
+func ResetPods(ctx *devspacecontext.Context, dependencies bool) {
+	resetted := ResetPodsRecursive(ctx, dependencies)
 	if resetted == 0 {
 		ctx.Log.Info("No dev pods to reset found")
 	} else {
@@ -120,18 +116,18 @@ func ResetPods(ctx *devspacecontext.Context, dependencies, force bool) {
 	}
 }
 
-func ResetPodsRecursive(ctx *devspacecontext.Context, dependencies, force bool) int {
+func ResetPodsRecursive(ctx *devspacecontext.Context, dependencies bool) int {
 	resetted := 0
 	if dependencies {
 		for _, d := range ctx.Dependencies {
-			resetted += ResetPodsRecursive(ctx.AsDependency(d), dependencies, force)
+			resetted += ResetPodsRecursive(ctx.AsDependency(d), dependencies)
 		}
 	}
 
 	// create pod replacer
 	podReplacer := podreplace.NewPodReplacer()
 	for _, replacePodCache := range ctx.Config.RemoteCache().ListDevPods() {
-		deleted, err := podReplacer.RevertReplacePod(ctx, &replacePodCache, &deploy.PurgeOptions{ForcePurge: force})
+		deleted, err := podReplacer.RevertReplacePod(ctx, &replacePodCache)
 		if err != nil {
 			ctx.Log.Warnf("Error resetting replaced pod: %v", err)
 		} else if deleted {

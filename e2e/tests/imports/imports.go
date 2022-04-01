@@ -44,16 +44,15 @@ var _ = DevSpaceDescribe("imports", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.RunPipelineCmd{
+		deployCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.RunDefault(f)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// read temp folder

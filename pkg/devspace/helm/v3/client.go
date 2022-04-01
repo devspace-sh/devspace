@@ -50,9 +50,8 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	}
 
 	// Chart settings
-	chartName := ""
 	if helmConfig.Chart.Source != nil {
-		chartName, err = dependencyutil.DownloadDependency(ctx.Context, ctx.WorkingDir, helmConfig.Chart.Source, ctx.Log)
+		chartName, err := dependencyutil.DownloadDependency(ctx.Context, ctx.WorkingDir, helmConfig.Chart.Source, ctx.Log)
 		if err != nil {
 			return nil, err
 		}
@@ -60,8 +59,7 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 		chartName = filepath.Dir(chartName)
 		args = append(args, chartName)
 	} else {
-		var chartRepo string
-		chartName, chartRepo = generic.ChartNameAndRepo(helmConfig)
+		chartName, chartRepo := generic.ChartNameAndRepo(helmConfig)
 		args = append(args, chartName)
 		if chartRepo != "" {
 			args = append(args, "--repo", chartRepo)
@@ -75,15 +73,6 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 		}
 		if helmConfig.Chart.Password != "" {
 			args = append(args, "--password", helmConfig.Chart.Password)
-		}
-	}
-
-	// Update dependencies if needed
-	stat, err := os.Stat(chartName)
-	if err == nil && stat.IsDir() {
-		_, err := c.genericHelm.Exec(ctx.WithWorkingDir(chartName), []string{"dependency", "update"})
-		if err != nil {
-			ctx.Log.Warnf("error running helm dependency update: %v", err)
 		}
 	}
 
@@ -114,63 +103,32 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 }
 
 func (c *client) Template(ctx *devspacecontext.Context, releaseName, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+	cleanup, chartDir, err := c.genericHelm.FetchChart(ctx, helmConfig)
+	if err != nil {
+		return "", err
+	} else if cleanup {
+		defer os.RemoveAll(filepath.Dir(chartDir))
+	}
+
+	if releaseNamespace == "" {
+		releaseNamespace = ctx.KubeClient.Namespace()
+	}
+
 	valuesFile, err := c.genericHelm.WriteValues(values)
 	if err != nil {
 		return "", err
 	}
 	defer os.Remove(valuesFile)
 
-	if releaseNamespace == "" {
-		releaseNamespace = ctx.KubeClient.Namespace()
-	}
-
 	args := []string{
 		"template",
 		releaseName,
+		chartDir,
 		"--namespace",
 		releaseNamespace,
 		"--values",
 		valuesFile,
 	}
-
-	// Chart settings
-	chartName := ""
-	if helmConfig.Chart.Source != nil {
-		chartName, err = dependencyutil.DownloadDependency(ctx.Context, ctx.WorkingDir, helmConfig.Chart.Source, ctx.Log)
-		if err != nil {
-			return "", err
-		}
-
-		chartName = filepath.Dir(chartName)
-		args = append(args, chartName)
-	} else {
-		var chartRepo string
-		chartName, chartRepo = generic.ChartNameAndRepo(helmConfig)
-		args = append(args, chartName)
-		if chartRepo != "" {
-			args = append(args, "--repo", chartRepo)
-			args = append(args, "--repository-config=''")
-		}
-		if helmConfig.Chart.Version != "" {
-			args = append(args, "--version", helmConfig.Chart.Version)
-		}
-		if helmConfig.Chart.Username != "" {
-			args = append(args, "--username", helmConfig.Chart.Username)
-		}
-		if helmConfig.Chart.Password != "" {
-			args = append(args, "--password", helmConfig.Chart.Password)
-		}
-	}
-
-	// Update dependencies if needed
-	stat, err := os.Stat(chartName)
-	if err == nil && stat.IsDir() {
-		_, err := c.genericHelm.Exec(ctx.WithWorkingDir(chartName), []string{"dependency", "update"})
-		if err != nil {
-			ctx.Log.Warnf("error running helm dependency update: %v", err)
-		}
-	}
-
 	args = append(args, helmConfig.TemplateArgs...)
 	result, err := c.genericHelm.Exec(ctx, args)
 	if err != nil {

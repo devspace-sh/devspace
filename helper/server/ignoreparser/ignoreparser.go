@@ -70,11 +70,11 @@ func CompilePaths(excludePaths []string, log log.Logger) (IgnoreParser, error) {
 					if !strings.Contains(p, "**") && !strings.Contains(path.Dir(p), "*") {
 						absoluteNegatePatterns = append(absoluteNegatePatterns, p)
 					} else {
-						log.Warnf("Exclude path '%s' uses a ** or * and thus requires a full initial scan. Please consider using a path in the form of '!/path/to/my/folder/' instead to improve performance", line)
+						log.Warnf("Exclude path '%s' uses a ** or * and thus requires a full initial scan. Please consider using a path in the form of '!/path/to/my/folder/' instead", line)
 						requireFullScan = true
 					}
 				} else {
-					log.Warnf("Exclude path '%s' is not scoped to the directory base and thus requires a full initial scan. Please consider using a path in the form of '!/path/to/my/folder/' instead to improve performance", line)
+					log.Warnf("Exclude path '%s' is not scoped to the directory base and thus requires a full initial scan. Please consider using a path in the form of '!/path/to/my/folder/' instead", line)
 					requireFullScan = true
 				}
 			}

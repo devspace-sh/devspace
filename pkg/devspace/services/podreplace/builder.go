@@ -13,6 +13,7 @@ import (
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/pkg/errors"
@@ -76,9 +77,9 @@ func buildDeployment(ctx *devspacecontext.Context, name string, target runtime.O
 		for _, pvc := range t.Spec.VolumeClaimTemplates {
 			pvcName := pvc.Name
 			if pvcName == "" {
-				pvcName = "data"
+				pvcName = "data-" + t.Name
 			}
-			pvcName += "-" + t.Name + "-0"
+
 			podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, corev1.Volume{
 				Name: "data",
 				VolumeSource: corev1.VolumeSource{
@@ -98,6 +99,12 @@ func buildDeployment(ctx *devspacecontext.Context, name string, target runtime.O
 		return nil, err
 	}
 
+	// replace the image names
+	err = replaceImagesInPodSpec(ctx, &podTemplate.Spec, devPod)
+	if err != nil {
+		return nil, err
+	}
+
 	// apply the patches
 	podTemplate, err = applyPodPatches(podTemplate, devPod)
 	if err != nil {
@@ -106,7 +113,7 @@ func buildDeployment(ctx *devspacecontext.Context, name string, target runtime.O
 
 	// check if terminal and modify pod
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
-		err = modifyDevContainer(ctx, devPod, devContainer, podTemplate)
+		err = modifyDevContainer(devPod, devContainer, podTemplate)
 		if err != nil {
 			return false
 		}
@@ -160,38 +167,33 @@ func buildDeployment(ctx *devspacecontext.Context, name string, target runtime.O
 	return deployment, nil
 }
 
-func modifyDevContainer(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
-	err := replaceImage(ctx, devPod, devContainer, podTemplate)
-	if err != nil {
-		return err
-	}
-
-	err = replaceTerminal(ctx, devPod, devContainer, podTemplate)
+func modifyDevContainer(devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+	err := replaceTerminal(devContainer, podTemplate)
 	if err != nil {
 		return errors.Wrap(err, "replace terminal")
 	}
 
-	err = replaceAttach(ctx, devPod, devContainer, podTemplate)
+	err = replaceAttach(devContainer, podTemplate)
 	if err != nil {
 		return errors.Wrap(err, "replace attach")
 	}
 
-	err = replaceEnv(ctx, devPod, devContainer, podTemplate)
+	err = replaceEnv(devContainer, podTemplate)
 	if err != nil {
 		return errors.Wrap(err, "replace env")
 	}
 
-	err = replaceCommand(ctx, devPod, devContainer, podTemplate)
+	err = replaceCommand(devPod, devContainer, podTemplate)
 	if err != nil {
 		return errors.Wrap(err, "replace entrypoint")
 	}
 
-	err = replaceWorkingDir(ctx, devPod, devContainer, podTemplate)
+	err = replaceWorkingDir(devContainer, podTemplate)
 	if err != nil {
 		return errors.Wrap(err, "replace working dir")
 	}
 
-	err = replaceResources(ctx, devPod, devContainer, podTemplate)
+	err = replaceResources(devContainer, podTemplate)
 	if err != nil {
 		return errors.Wrap(err, "replace resources")
 	}
@@ -199,12 +201,12 @@ func modifyDevContainer(ctx *devspacecontext.Context, devPod *latest.DevPod, dev
 	return nil
 }
 
-func replaceResources(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceResources(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if devContainer.Resources == nil {
 		return nil
 	}
 
-	index, container, err := getPodTemplateContainer(ctx, devPod, devContainer, podTemplate)
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
 	if err != nil {
 		return err
 	}
@@ -225,12 +227,12 @@ func replaceResources(ctx *devspacecontext.Context, devPod *latest.DevPod, devCo
 	return nil
 }
 
-func replaceWorkingDir(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceWorkingDir(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if devContainer.WorkingDir == "" {
 		return nil
 	}
 
-	index, container, err := getPodTemplateContainer(ctx, devPod, devContainer, podTemplate)
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
 	if err != nil {
 		return err
 	}
@@ -240,10 +242,10 @@ func replaceWorkingDir(ctx *devspacecontext.Context, devPod *latest.DevPod, devC
 	return nil
 }
 
-func replaceCommand(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceCommand(devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	// replace with DevSpace helper
-	injectRestartHelper := devContainer.RestartHelper != nil && devContainer.RestartHelper.Inject != nil && *devContainer.RestartHelper.Inject
-	if devContainer.RestartHelper == nil || devContainer.RestartHelper.Inject == nil || *devContainer.RestartHelper.Inject {
+	injectRestartHelper := false
+	if !devContainer.DisableRestartHelper {
 		for _, s := range devContainer.Sync {
 			if s.StartContainer || (s.OnUpload != nil && s.OnUpload.RestartContainer) {
 				injectRestartHelper = true
@@ -251,13 +253,13 @@ func replaceCommand(ctx *devspacecontext.Context, devPod *latest.DevPod, devCont
 		}
 	}
 	if len(devContainer.Command) == 0 && injectRestartHelper {
-		return fmt.Errorf("dev.%s.sync[*].onUpload.restartContainer or dev.%s.restartHelper.inject is true, please specify the entrypoint that should get restarted in dev.%s.command", devPod.Name, devPod.Name, devPod.Name)
+		return fmt.Errorf("dev.%s.sync[*].onUpload.restartContainer is true, please specify the entrypoint that should get restarted in dev.%s.command", devPod.Name, devPod.Name)
 	}
 	if !injectRestartHelper && len(devContainer.Command) == 0 && devContainer.Args == nil {
 		return nil
 	}
 
-	index, container, err := getPodTemplateContainer(ctx, devPod, devContainer, podTemplate)
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
 	if err != nil {
 		return err
 	}
@@ -268,13 +270,7 @@ func replaceCommand(ctx *devspacecontext.Context, devPod *latest.DevPod, devCont
 		if podTemplate.Annotations == nil {
 			podTemplate.Annotations = map[string]string{}
 		}
-
-		restartHelperPath := ""
-		if devContainer.RestartHelper != nil {
-			restartHelperPath = devContainer.RestartHelper.Path
-		}
-
-		restartHelperString, err := restart.LoadRestartHelper(restartHelperPath)
+		restartHelperString, err := restart.LoadRestartHelper(devContainer.RestartHelperPath)
 		if err != nil {
 			return errors.Wrap(err, "load restart helper")
 		}
@@ -328,12 +324,12 @@ func replaceCommand(ctx *devspacecontext.Context, devPod *latest.DevPod, devCont
 	return nil
 }
 
-func replaceEnv(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceEnv(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if len(devContainer.Env) == 0 {
 		return nil
 	}
 
-	index, container, err := getPodTemplateContainer(ctx, devPod, devContainer, podTemplate)
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
 	if err != nil {
 		return err
 	}
@@ -349,12 +345,12 @@ func replaceEnv(ctx *devspacecontext.Context, devPod *latest.DevPod, devContaine
 	return nil
 }
 
-func replaceAttach(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceAttach(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if devContainer.Attach == nil || devContainer.Attach.DisableReplace || (devContainer.Attach.Enabled != nil && !*devContainer.Attach.Enabled) {
 		return nil
 	}
 
-	index, container, err := getPodTemplateContainer(ctx, devPod, devContainer, podTemplate)
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
 	if err != nil {
 		return err
 	}
@@ -368,12 +364,12 @@ func replaceAttach(ctx *devspacecontext.Context, devPod *latest.DevPod, devConta
 	return nil
 }
 
-func replaceTerminal(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceTerminal(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if devContainer.Terminal == nil || devContainer.Terminal.DisableReplace || (devContainer.Terminal.Enabled != nil && !*devContainer.Terminal.Enabled) {
 		return nil
 	}
 
-	index, container, err := getPodTemplateContainer(ctx, devPod, devContainer, podTemplate)
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
 	if err != nil {
 		return err
 	}
@@ -387,31 +383,23 @@ func replaceTerminal(ctx *devspacecontext.Context, devPod *latest.DevPod, devCon
 	return nil
 }
 
-func getPodTemplateContainer(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) (int, *corev1.Container, error) {
-	containerName := devContainer.Container
-	if containerName == "" && len(podTemplate.Spec.Containers) > 1 {
-		containers, err := matchesImageSelector(ctx, podTemplate, devPod)
-		if err != nil {
-			return 0, nil, err
-		} else if len(containers) != 1 {
-			names := []string{}
-			for _, c := range podTemplate.Spec.Containers {
-				names = append(names, c.Name)
-			}
-
-			return 0, nil, fmt.Errorf("couldn't modify pod as multiple containers were found '%s', but no dev.*.container was specified", strings.Join(names, "' '"))
+func getPodTemplateContainer(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) (int, *corev1.Container, error) {
+	if devContainer.Container == "" && len(podTemplate.Spec.Containers) > 1 {
+		names := []string{}
+		for _, c := range podTemplate.Spec.Containers {
+			names = append(names, c.Name)
 		}
 
-		containerName = containers[0]
+		return 0, nil, fmt.Errorf("couldn't modify pod as multiple containers were found %s, but no containerName was specified", strings.Join(names, " "))
 	}
 
 	for i, con := range podTemplate.Spec.Containers {
-		if containerName == "" || con.Name == containerName {
+		if devContainer.Container == "" || con.Name == devContainer.Container {
 			return i, &con, nil
 		}
 	}
 
-	return 0, nil, fmt.Errorf("couldn't find container '%s' in pod", containerName)
+	return 0, nil, fmt.Errorf("couldn't find container %s", devContainer.Container)
 }
 
 func hashConfig(replacePod *latest.DevPod) (string, error) {
@@ -423,23 +411,70 @@ func hashConfig(replacePod *latest.DevPod) (string, error) {
 	return hash.String(string(out)), nil
 }
 
-func replaceImage(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
-	if devContainer.DevImage == "" {
-		return nil
+func replaceImagesInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec, devPod *latest.DevPod) error {
+	var err error
+	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		if devContainer.DevImage == "" {
+			return true
+		}
+		err = replaceImageInPodSpec(ctx, podSpec, devPod.LabelSelector, devPod.ImageSelector, devContainer.Container, devContainer.DevImage)
+		if err != nil {
+			return false
+		}
+		return true
+	})
+
+	return err
+}
+
+func replaceImageInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec, labelSelector map[string]string, imageSelector string, container, replaceImage string) error {
+	if len(podSpec.Containers) == 0 {
+		return fmt.Errorf("no containers in pod spec")
 	}
 
-	index, container, err := getPodTemplateContainer(ctx, devPod, devContainer, podTemplate)
+	imageStr, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsString(ctx.Context, replaceImage, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
 
-	imageStr, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsString(ctx.Context, devContainer.DevImage, ctx.Config, ctx.Dependencies)
-	if err != nil {
-		return err
+	if container != "" {
+		for i := range podSpec.Containers {
+			if podSpec.Containers[i].Name == container {
+				podSpec.Containers[i].Image = imageStr
+				break
+			}
+		}
+	} else if labelSelector != nil {
+		if len(podSpec.Containers) > 1 {
+			return fmt.Errorf("pod spec has more than 1 containers and containerName is an empty string")
+		}
+
+		// exchange image name
+		if len(podSpec.Containers) == 1 {
+			podSpec.Containers[0].Image = imageStr
+		}
+	} else if imageSelector != "" {
+		if len(podSpec.Containers) == 1 {
+			podSpec.Containers[0].Image = imageStr
+		} else {
+			var imageSelectorPtr *imageselector.ImageSelector
+			if imageSelector != "" {
+				imageSelectorPtr, err = runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, replaceImage, ctx.Config, ctx.Dependencies)
+				if err != nil {
+					return err
+				}
+			}
+
+			// exchange image name
+			for i := range podSpec.Containers {
+				if imageSelectorPtr != nil && imageselector.CompareImageNames(imageSelectorPtr.Image, podSpec.Containers[i].Image) {
+					podSpec.Containers[i].Image = imageStr
+					break
+				}
+			}
+		}
 	}
 
-	container.Image = imageStr
-	podTemplate.Spec.Containers[index] = *container
 	return nil
 }
 

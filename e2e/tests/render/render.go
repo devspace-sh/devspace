@@ -37,16 +37,14 @@ var _ = DevSpaceDescribe("build", func() {
 
 		stdout := &Buffer{}
 		// create build command
-		renderCmd := &cmd.RunPipelineCmd{
+		renderCmd := &cmd.RenderCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
-			Pipeline:     "deploy",
-			Render:       true,
-			RenderWriter: stdout,
-			SkipPush:     true,
+			SkipPush: true,
+			Writer:   stdout,
 		}
-		err = renderCmd.RunDefault(f)
+		err = renderCmd.Run(f)
 		framework.ExpectNoError(err)
 		content := strings.TrimSpace(stdout.String()) + "\n"
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "rendered.txt"), content)
@@ -59,16 +57,14 @@ var _ = DevSpaceDescribe("build", func() {
 
 		stdout := &Buffer{}
 		// create build command
-		renderCmd := &cmd.RunPipelineCmd{
+		renderCmd := &cmd.RenderCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
-			SkipPush:     true,
-			Pipeline:     "deploy",
-			Render:       true,
-			RenderWriter: stdout,
+			SkipPush: true,
+			Writer:   stdout,
 		}
-		err = renderCmd.RunDefault(f)
+		err = renderCmd.Run(f)
 		framework.ExpectNoError(err)
 		content := strings.TrimSpace(stdout.String()) + "\n"
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "rendered.txt"), content)

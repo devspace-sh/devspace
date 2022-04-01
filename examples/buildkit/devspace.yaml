@@ -8,7 +8,7 @@ images:
     build:
       buildKit: {}
 deployments:
-  my-deployment:
+  - name: quickstart
     helm:
       componentChart: true
       values:

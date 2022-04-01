@@ -57,7 +57,7 @@ func (r *runtimeResolver) FillRuntimeVariablesWithRebuild(ctx context.Context, h
 	}
 
 	// resolve expressions
-	haystack, err = expression.ResolveAllExpressions(ctx, haystack, r.workingDirectory, nil, nil, config.Variables())
+	haystack, err = expression.ResolveAllExpressions(ctx, haystack, r.workingDirectory, nil, nil)
 	if err != nil {
 		return false, nil, err
 	}

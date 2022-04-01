@@ -79,7 +79,7 @@ type Server struct {
 }
 
 func (s *Server) handler(sess ssh.Session) {
-	cmd, payload, err := s.getCommand(sess)
+	cmd, err := s.getCommand(sess)
 	if err != nil {
 		s.exitWithError(sess, errors.Wrap(err, "construct command"))
 		return
@@ -98,19 +98,9 @@ func (s *Server) handler(sess ssh.Session) {
 	}
 
 	// start shell session
-	if payload.TTY && runtime.GOOS != "windows" {
-		winSizeChan := make(chan ssh.Window, 1)
-		winSizeChan <- ssh.Window{
-			Width:  payload.Width,
-			Height: payload.Height,
-		}
-		err = sshhelper.HandlePTY(sess, ssh.Pty{
-			Term: "xterm",
-			Window: ssh.Window{
-				Width:  payload.Width,
-				Height: payload.Height,
-			},
-		}, winSizeChan, cmd, func(reader io.Reader) io.Reader {
+	ptyReq, winCh, isPty := sess.Pty()
+	if isPty && runtime.GOOS != "windows" {
+		err = sshhelper.HandlePTY(sess, ptyReq, winCh, cmd, func(reader io.Reader) io.Reader {
 			return reader
 		})
 	} else {
@@ -123,19 +113,19 @@ func (s *Server) handler(sess ssh.Session) {
 	s.exitWithError(sess, err)
 }
 
-func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, *types.ProxyCommand, error) {
+func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, error) {
 	var cmd *exec.Cmd
 	rawCommand := sess.RawCommand()
 	if len(rawCommand) == 0 {
-		return nil, nil, fmt.Errorf("command required")
+		return nil, fmt.Errorf("command required")
 	}
 
 	command := &types.ProxyCommand{}
 	err := json.Unmarshal([]byte(rawCommand), &command)
 	if err != nil {
-		return nil, nil, fmt.Errorf("parse command: %v", err)
+		return nil, fmt.Errorf("parse command: %v", err)
 	} else if len(command.Args) == 0 {
-		return nil, nil, fmt.Errorf("command is empty")
+		return nil, fmt.Errorf("command is empty")
 	}
 
 	var reverseCommand *latest.ProxyCommand
@@ -146,7 +136,7 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, *types.ProxyCommand, e
 		}
 	}
 	if reverseCommand == nil {
-		return nil, nil, fmt.Errorf("command not allowed")
+		return nil, fmt.Errorf("command not allowed")
 	}
 
 	c := reverseCommand.Command
@@ -176,11 +166,9 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, *types.ProxyCommand, e
 	}
 
 	s.log.Debugf("run command '%s %s' locally", c, strings.Join(args, " "))
-	if !reverseCommand.SkipContainerEnv {
-		cmd.Env = append(cmd.Env, command.Env...)
-	}
+	cmd.Env = append(cmd.Env, sess.Environ()...)
 	cmd.Env = append(cmd.Env, os.Environ()...)
-	return cmd, command, nil
+	return cmd, nil
 }
 
 func (s *Server) transformPath(originalPath string) string {

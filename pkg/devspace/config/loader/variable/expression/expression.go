@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"mvdan.cc/sh/v3/interp"
 	"os"
 	"os/exec"
@@ -14,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
+	"gopkg.in/yaml.v3"
 )
 
 // ExpressionMatchRegex is the regex to check if a value matches the devspace var format
@@ -42,17 +42,17 @@ func ExcludedPath(path string, excluded, included []*regexp.Regexp) bool {
 	return false
 }
 
-func ResolveAllExpressions(ctx context.Context, preparedConfig interface{}, dir string, exclude, include []*regexp.Regexp, variables map[string]interface{}) (interface{}, error) {
+func ResolveAllExpressions(ctx context.Context, preparedConfig interface{}, dir string, exclude, include []*regexp.Regexp) (interface{}, error) {
 	switch t := preparedConfig.(type) {
 	case string:
-		return ResolveExpressions(ctx, t, dir, variables)
+		return ResolveExpressions(ctx, t, dir)
 	case map[string]interface{}:
 		err := walk.Walk(t, expressionMatchFn, func(path, value string) (interface{}, error) {
 			if ExcludedPath(path, exclude, include) {
 				return value, nil
 			}
 
-			return ResolveExpressions(ctx, value, dir, variables)
+			return ResolveExpressions(ctx, value, dir)
 		})
 		if err != nil {
 			return nil, err
@@ -62,7 +62,7 @@ func ResolveAllExpressions(ctx context.Context, preparedConfig interface{}, dir 
 	case []interface{}:
 		for i := range t {
 			var err error
-			t[i], err = ResolveAllExpressions(ctx, t[i], dir, exclude, include, variables)
+			t[i], err = ResolveAllExpressions(ctx, t[i], dir, exclude, include)
 			if err != nil {
 				return nil, err
 			}
@@ -74,15 +74,10 @@ func ResolveAllExpressions(ctx context.Context, preparedConfig interface{}, dir 
 	return preparedConfig, nil
 }
 
-func ResolveExpressions(ctx context.Context, value, dir string, variables map[string]interface{}) (interface{}, error) {
+func ResolveExpressions(ctx context.Context, value, dir string) (interface{}, error) {
 	matches := ExpressionMatchRegex.FindAllStringSubmatch(value, -1)
 	if len(matches) == 0 {
 		return value, nil
-	}
-
-	vars := map[string]string{}
-	for k, v := range variables {
-		vars[k] = fmt.Sprintf("%v", v)
 	}
 
 	out := value
@@ -93,7 +88,7 @@ func ResolveExpressions(ctx context.Context, value, dir string, variables map[st
 
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
-		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, nil, vars, match[1], os.Args[1:]...)
+		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, nil, nil, match[1], os.Args[1:]...)
 		if err != nil {
 			if len(strings.TrimSpace(stdout.String())) == 0 && len(strings.TrimSpace(stderr.String())) == 0 {
 				if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {
@@ -140,14 +135,14 @@ func ResolveExpressions(ctx context.Context, value, dir string, variables map[st
 
 		// is yaml object?
 		m := map[string]interface{}{}
-		err = yamlutil.Unmarshal([]byte(out), &m)
+		err = yaml.Unmarshal([]byte(out), &m)
 		if err == nil {
 			return m, nil
 		}
 
 		// is yaml array?
 		arr := []interface{}{}
-		err = yamlutil.Unmarshal([]byte(out), &arr)
+		err = yaml.Unmarshal([]byte(out), &arr)
 		if err == nil {
 			return arr, nil
 		}

@@ -57,7 +57,7 @@ func execCommand(ctx context.Context, varName string, definition *latest.Variabl
 		err = command.Command(ctx, dir, writer, stdErrWriter, nil, cmd, args...)
 	}
 	if err != nil {
-		errMsg := "fill variable " + varName + " with command '" + cmd + "': " + err.Error()
+		errMsg := "fill variable " + varName + ": " + err.Error()
 		if len(writer.Bytes()) > 0 {
 			errMsg = errMsg + "\n\nstdout: \n" + writer.String()
 		}

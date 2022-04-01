@@ -1,0 +1,58 @@
+version: v1beta11
+vars:                                # `vars` specifies variables which may be used as ${VAR_NAME} in devspace.yaml
+- name: IMAGE
+  value: loftsh/javascript:latest
+deployments:                         # `deployments` tells DevSpace how to deploy this project
+- name: quickstart-con-1
+  concurrent: true
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+- name: quickstart-con-2
+  concurrent: true
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+- name: quickstart-con-3
+  concurrent: true
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+- name: quickstart-con-4
+  concurrent: true
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+- name: quickstart-con-5
+  concurrent: true
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+- name: quickstart-seq-1
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
