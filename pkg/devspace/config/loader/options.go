@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,7 +28,7 @@ func (co *ConfigOptions) Clone() (*ConfigOptions, error) {
 	}
 
 	newCo := &ConfigOptions{}
-	err = yaml.Unmarshal(out, newCo)
+	err = yamlutil.Unmarshal(out, newCo)
 	if err != nil {
 		return nil, err
 	}

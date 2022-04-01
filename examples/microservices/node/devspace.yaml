@@ -7,10 +7,10 @@ vars:
 images:
   node:
     image: ${IMAGE}
+    rebuildStrategy: ignoreContextChanges
 
 deployments:
   node:
-    updateImageTags: true
     kubectl:
       manifests:
         - kube/*

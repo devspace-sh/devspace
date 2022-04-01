@@ -18,7 +18,6 @@ images:
 
 deployments:
   my-deployment:
-    updateImageTags: true
     kubectl:
       manifests:
       - kube

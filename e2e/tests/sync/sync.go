@@ -51,15 +51,16 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// create a new dev command
-		deployCmd := &cmd.DeployCmd{
+		deployCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
+			Pipeline: "deploy",
 		}
 
 		// run the command
-		err = deployCmd.Run(f)
+		err = deployCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// wait until busybox pod is reachable
@@ -114,14 +115,15 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// deploy app to sync
-		deployCmd := &cmd.DeployCmd{
+		deployCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:     true,
 				Namespace:  ns,
 				ConfigPath: "sync.yaml",
 			},
+			Pipeline: "deploy",
 		}
-		err = deployCmd.Run(f)
+		err = deployCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// interrupt chan for the sync command
@@ -189,12 +191,13 @@ var _ = DevSpaceDescribe("sync", func() {
 		defer cancel()
 
 		// create a new dev command
-		devCmd := &cmd.DevCmd{
+		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Ctx: cancelCtx,
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
 		}
 
 		// start the command
@@ -203,7 +206,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd.Run(f)
+			err = devCmd.RunDefault(f)
 			framework.ExpectNoError(err)
 		}()
 
@@ -287,13 +290,14 @@ var _ = DevSpaceDescribe("sync", func() {
 		defer cancel()
 
 		// create a new dev command
-		devCmd := &cmd.DevCmd{
+		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				ConfigPath: "project1/devspace.yaml",
 				NoWarn:     true,
 				Namespace:  ns,
 			},
-			Ctx: cancelCtx,
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
 		}
 
 		// start the command
@@ -302,7 +306,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd.Run(f)
+			err = devCmd.RunDefault(f)
 			framework.ExpectNoError(err)
 		}()
 
@@ -376,14 +380,15 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// deploy app to sync
-		deployCmd := &cmd.DeployCmd{
+		deployCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:     true,
 				Namespace:  ns,
 				ConfigPath: "watch.yaml",
 			},
+			Pipeline: "deploy",
 		}
-		err = deployCmd.Run(f)
+		err = deployCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// interrupt chan for the sync command
@@ -443,14 +448,15 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// deploy app to sync
-		deployCmd := &cmd.DeployCmd{
+		deployCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:     true,
 				Namespace:  ns,
 				ConfigPath: "no-watch.yaml",
 			},
+			Pipeline: "deploy",
 		}
-		err = deployCmd.Run(f)
+		err = deployCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// sync with no-watch
@@ -491,14 +497,15 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// deploy app to sync
-		deployCmd := &cmd.DeployCmd{
+		deployCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:     true,
 				Namespace:  ns,
 				ConfigPath: "devspace.yaml",
 			},
+			Pipeline: "deploy",
 		}
-		err = deployCmd.Run(f)
+		err = deployCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		// sync with --container and --container-path
@@ -557,14 +564,15 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// deploy app to sync
-		deployCmd := &cmd.DeployCmd{
+		deployCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:     true,
 				Namespace:  ns,
 				ConfigPath: "devspace.yaml",
 			},
+			Pipeline: "deploy",
 		}
-		err = deployCmd.Run(f)
+		err = deployCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		cancelCtx, stop := context.WithCancel(context.Background())

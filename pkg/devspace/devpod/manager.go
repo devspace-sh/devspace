@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/services/podreplace"
 	"github.com/loft-sh/devspace/pkg/util/lockfactory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -29,7 +31,7 @@ type Manager interface {
 	StartMultiple(ctx *devspacecontext.Context, devPods []string, options Options) error
 
 	// Reset will stop the DevPod if it exists and reset the replaced pods
-	Reset(ctx *devspacecontext.Context, name string) error
+	Reset(ctx *devspacecontext.Context, name string, options *deploy.PurgeOptions) error
 
 	// Stop will stop a specific DevPod
 	Stop(ctx *devspacecontext.Context, name string)
@@ -40,9 +42,6 @@ type Manager interface {
 	// Close will close the manager and wait for all dev pods to stop
 	Close()
 
-	// Context returns the context of the DevManager
-	Context() context.Context
-
 	// Wait will wait until all DevPods are stopped
 	Wait() error
 }
@@ -51,15 +50,12 @@ type devPodManager struct {
 	lockFactory lockfactory.LockFactory
 
 	m       sync.Mutex
-	ctx     context.Context
 	cancels []context.CancelFunc
 	devPods map[string]*devPod
 }
 
-func NewManager(ctx context.Context) Manager {
-	ctx, cancel := context.WithCancel(ctx)
+func NewManager(cancel context.CancelFunc) Manager {
 	return &devPodManager{
-		ctx:         ctx,
 		cancels:     []context.CancelFunc{cancel},
 		lockFactory: lockfactory.NewDefaultLockFactory(),
 		devPods:     map[string]*devPod{},
@@ -85,21 +81,18 @@ func (d *devPodManager) Close() {
 	}
 	d.cancels = []context.CancelFunc{}
 	d.m.Unlock()
-	d.Wait()
-}
-
-func (d *devPodManager) Context() context.Context {
-	return d.ctx
+	_ = d.Wait()
 }
 
 func (d *devPodManager) StartMultiple(ctx *devspacecontext.Context, devPods []string, options Options) error {
+	devCtx, _ := values.DevContextFrom(ctx.Context)
 	select {
-	case <-d.ctx.Done():
-		return d.ctx.Err()
+	case <-devCtx.Done():
+		return devCtx.Err()
 	default:
 	}
 
-	cancelCtx, cancel := context.WithCancel(d.ctx)
+	cancelCtx, cancel := context.WithCancel(devCtx)
 	d.m.Lock()
 	d.cancels = append(d.cancels, cancel)
 	d.m.Unlock()
@@ -173,16 +166,17 @@ func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodCo
 	var dp *devPod
 	d.m.Lock()
 	dp = d.devPods[devPodConfig.Name]
-	d.m.Unlock()
-
-	// check if already running
 	if dp != nil {
-		return nil, DevPodAlreadyExists{}
+		select {
+		case <-dp.Done():
+		default:
+			d.m.Unlock()
+			return nil, DevPodAlreadyExists{}
+		}
 	}
 
 	// create a new dev pod
 	dp = newDevPod()
-	d.m.Lock()
 	d.devPods[devPodConfig.Name] = dp
 	d.m.Unlock()
 
@@ -199,7 +193,7 @@ func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodCo
 	return dp, nil
 }
 
-func (d *devPodManager) Reset(ctx *devspacecontext.Context, name string) error {
+func (d *devPodManager) Reset(ctx *devspacecontext.Context, name string, options *deploy.PurgeOptions) error {
 	lock := d.lockFactory.GetLock(name)
 	lock.Lock()
 	defer lock.Unlock()
@@ -207,7 +201,7 @@ func (d *devPodManager) Reset(ctx *devspacecontext.Context, name string) error {
 	d.stop(name)
 	devPod, ok := ctx.Config.RemoteCache().GetDevPod(name)
 	if ok {
-		_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, &devPod)
+		_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, &devPod, options)
 		return err
 	}
 

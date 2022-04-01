@@ -175,7 +175,7 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 		cloned.Vars = append(cloned.Vars, strings.TrimSpace(k)+"="+strings.TrimSpace(v))
 	}
 
-	// Recreate client if necessary
+	// recreate client if necessary
 	client := ctx.KubeClient
 	if dependency.Namespace != "" {
 		if ctx.KubeClient == nil {

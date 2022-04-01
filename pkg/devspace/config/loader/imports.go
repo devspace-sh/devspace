@@ -8,8 +8,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"path/filepath"
 )
@@ -82,7 +82,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		}
 
 		importData := map[string]interface{}{}
-		err = yaml.Unmarshal(fileContent, &importData)
+		err = yamlutil.Unmarshal(fileContent, &importData)
 		if err != nil {
 			return nil, err
 		}

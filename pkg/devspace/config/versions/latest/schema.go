@@ -1,6 +1,7 @@
 package latest
 
 import (
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"strings"
 
 	"encoding/json"
@@ -34,7 +35,7 @@ func NewRaw() *Config {
 func (c *Config) Clone() *Config {
 	out, _ := yaml.Marshal(c)
 	n := &Config{}
-	_ = yaml.Unmarshal(out, n)
+	_ = yamlutil.Unmarshal(out, n)
 	return n
 }
 
@@ -532,7 +533,7 @@ type DeploymentConfig struct {
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 	// UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the
 	// images section with their most recent built tag.
-	UpdateImageTags bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
+	UpdateImageTags *bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
 
 	// Helm tells DevSpace to deploy this deployment via helm
 	Helm *HelmConfig `yaml:"helm,omitempty" json:"helm,omitempty"`
@@ -733,8 +734,6 @@ type HelmConfig struct {
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
 	// UpgradeArgs are additional arguments to pass to `helm upgrade`
 	UpgradeArgs []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
-	// FetchArgs are additional arguments to pass to `helm fetch`
-	FetchArgs []string `yaml:"fetchArgs,omitempty" json:"fetchArgs,omitempty"`
 }
 
 // ChartConfig defines the helm chart options
@@ -817,6 +816,9 @@ type DevContainer struct {
 	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64, but
 	// devspace tries to find out the architecture by itself by looking at the node this container runs on.
 	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
+	// RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
+	// the container and restarting it and is injected via an annotation in the replaced pod.
+	RestartHelper *RestartHelper `yaml:"restartHelper,omitempty" json:"restartHelper,omitempty"`
 
 	// ReversePorts are port mappings to make local ports available inside the container
 	ReversePorts []*PortMapping `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty"`
@@ -831,11 +833,6 @@ type DevContainer struct {
 	// Env can be used to add environment variables to the container. DevSpace will
 	// not replace existing environment variables if an environment variable is defined here.
 	Env []EnvVar `yaml:"env,omitempty" json:"env,omitempty"`
-	// RestartHelperPath defines the path to the restart helper that might be used if certain config
-	// options are enabled
-	RestartHelperPath string `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
-	// DisableRestartHelper signals DevSpace to not inject the restart helper
-	DisableRestartHelper bool `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
 
 	// Terminal allows you to tell DevSpace to open a terminal with screen support to this container
 	Terminal *Terminal `yaml:"terminal,omitempty" json:"terminal,omitempty"`
@@ -853,6 +850,14 @@ type DevContainer struct {
 	ProxyCommands []*ProxyCommand `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
 }
 
+type RestartHelper struct {
+	// Path defines the path to the restart helper that might be used if certain config
+	// options are enabled
+	Path string `yaml:"path,omitempty" json:"path,omitempty"`
+	// Inject signals DevSpace to inject the restart helper
+	Inject *bool `yaml:"inject,omitempty" json:"inject,omitempty"`
+}
+
 type ProxyCommand struct {
 	// Command is the name of the command that should be available in the remote container. DevSpace
 	// will create a small script for that inside the container that redirect command execution to
@@ -862,6 +867,9 @@ type ProxyCommand struct {
 	// LocalCommand can be used to run a different command than specified via the command option. By
 	// default, this will be assumed to be the same as command.
 	LocalCommand string `yaml:"localCommand,omitempty" json:"localCommand,omitempty"`
+
+	// SkipContainerEnv will not forward the container environment variables to the local command
+	SkipContainerEnv bool `yaml:"skipContainerEnv,omitempty" json:"skipContainerEnv,omitempty"`
 }
 
 type SSH struct {

@@ -6,6 +6,7 @@ vars:
 images:
   my-image:
     image: ${IMAGE}
+    rebuildStrategy: ignoreContextChanges
 
 deployments:
   my-deployment:

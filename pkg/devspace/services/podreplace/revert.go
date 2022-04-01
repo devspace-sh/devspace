@@ -3,6 +3,8 @@ package podreplace
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	patch2 "github.com/loft-sh/devspace/pkg/util/patch"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -11,12 +13,36 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"strconv"
+	"strings"
 )
 
-func (p *replacer) RevertReplacePod(ctx *devspacecontext.Context, devPodCache *remotecache.DevPodCache) (bool, error) {
+func (p *replacer) RevertReplacePod(ctx *devspacecontext.Context, devPodCache *remotecache.DevPodCache, options *deploy.PurgeOptions) (bool, error) {
+	if options == nil {
+		options = &deploy.PurgeOptions{}
+	}
+
 	// check if there is a replaced pod in the target namespace
 	ctx.Log.Debug("Try to find replaced pod...")
 
+	// get root name
+	rootName, ok := values.RootNameFrom(ctx.Context)
+	if ok && !options.ForcePurge && len(devPodCache.Projects) > 0 && (len(devPodCache.Projects) > 1 || devPodCache.Projects[0] != rootName) {
+		newProjects := []string{}
+		for _, p := range devPodCache.Projects {
+			if p == rootName {
+				continue
+			}
+
+			newProjects = append(newProjects, p)
+		}
+
+		devPodCache.Projects = newProjects
+		ctx.Log.Infof("Skip reverting dev %s as it is still in use by other DevSpace project(s) '%s'. Run with '--force-purge' to force reverting", devPodCache.Name, strings.Join(devPodCache.Projects, "', '"))
+		ctx.Config.RemoteCache().SetDevPod(devPodCache.Name, *devPodCache)
+		return false, ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
+	}
+
+	// find correct namespace
 	namespace := devPodCache.Namespace
 	if namespace == "" {
 		namespace = ctx.KubeClient.Namespace()

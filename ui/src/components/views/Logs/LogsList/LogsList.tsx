@@ -2,8 +2,6 @@ import React from 'react';
 import { V1PodList, V1ServiceList, V1Pod } from '@kubernetes/client-node';
 import Pod from '../Pod/Pod';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
-import LogsMultiple from '../LogsMultiple/LogsMultiple';
-import { getDeployedImageNames } from 'lib/utils';
 import styles from './LogsList.module.scss';
 import inputStyles from '../../../basic/Input/Input.module.scss';
 import { TerminalCacheInterface } from '../TerminalCache/TerminalCache';
@@ -90,12 +88,6 @@ const LogsList = (props: Props) => {
           onChange={event => setSearchString(event.target.value)}
         />
       </form>
-
-      {getDeployedImageNames(props.devSpaceConfig).length > 0 &&
-        props.devSpaceConfig.kubeNamespace === props.devSpaceConfig.originalKubeNamespace &&
-        props.devSpaceConfig.kubeContext === props.devSpaceConfig.originalKubeContext && (
-          <LogsMultiple selected={props.selected} onSelect={props.onSelect} />
-        )}
       {renderPods(props, searchString)}
     </div>
   </div>

@@ -1,28 +1,6 @@
 import React from 'react';
-import { DevSpaceConfig } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import { V1Pod, V1ContainerStatus, Config } from '@kubernetes/client-node';
 import yaml from 'js-yaml';
-
-export const getDeployedImageNames = (devSpaceConfig: DevSpaceConfig) => {
-  const imageSelector = [];
-  if (devSpaceConfig.config && devSpaceConfig.generatedConfig) {
-    const activeCache = devSpaceConfig.generatedConfig.profiles[devSpaceConfig.profile];
-
-    for (const generatedImageName in activeCache.images) {
-      if (
-        activeCache.images[generatedImageName].imageName &&
-        devSpaceConfig.config.images &&
-        devSpaceConfig.config.images[generatedImageName]
-      ) {
-        imageSelector.push(
-          activeCache.images[generatedImageName].imageName + ':' + activeCache.images[generatedImageName].tag
-        );
-      }
-    }
-  }
-
-  return imageSelector;
-};
 
 export const formatError = (error: any): any => {
   if (!error) {

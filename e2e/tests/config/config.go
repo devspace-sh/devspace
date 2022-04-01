@@ -68,13 +68,14 @@ var _ = DevSpaceDescribe("config", func() {
 			framework.ExpectNoError(err)
 		}()
 
-		printCmd := &cmd.DeployCmd{
+		printCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				Namespace: ns,
 			},
+			Pipeline: "deploy",
 		}
 
-		err = printCmd.Run(f)
+		err = printCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out.txt"), "test-testimage-latest-dep1")
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out2.txt"), "Done")
@@ -1737,7 +1738,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		// check if variables were loaded correctly
 		fmt.Println(config.Variables())
-		framework.ExpectEqual(len(config.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(len(config.Variables()), 4+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(config.LocalCache().ListVars()), 1)
 		test1, _ := config.LocalCache().GetVar("TEST_1")
 		framework.ExpectEqual(test1, "test")
@@ -1766,7 +1767,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// config
-		framework.ExpectEqual(len(config.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(len(config.Variables()), 4+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(config.LocalCache().ListVars()), 2)
 		notUsed, _ = config.LocalCache().GetVar("NOT_USED2")
 		framework.ExpectEqual(notUsed, "test")
@@ -1791,7 +1792,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// check if default config variables were loaded correctly
-		framework.ExpectEqual(len(config.Variables()), 2+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(len(config.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(config.LocalCache().ListVars()), 1)
 		value, _ := config.LocalCache().GetVar("NAME")
 		framework.ExpectEqual(value, "default")
@@ -1807,7 +1808,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// check if custom config variables were loaded correctly
-		framework.ExpectEqual(len(customConfig.Variables()), 2+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(len(customConfig.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(customConfig.LocalCache().ListVars()), 1)
 		value, _ = customConfig.LocalCache().GetVar("NAME")
 		framework.ExpectEqual(value, "custom")

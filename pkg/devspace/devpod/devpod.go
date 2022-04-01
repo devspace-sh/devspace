@@ -3,6 +3,7 @@ package devpod
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/mgutz/ansi"
 	"io"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -221,7 +222,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	} else {
 		devPodCache, ok := ctx.Config.RemoteCache().GetDevPod(devPodConfig.Name)
 		if ok && devPodCache.Deployment != "" {
-			_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, &devPodCache)
+			_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, &devPodCache, &deploy.PurgeOptions{ForcePurge: true})
 			if err != nil {
 				return errors.Wrap(err, "replace pod")
 			}
@@ -538,6 +539,9 @@ func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
 	if len(devContainer.PersistPaths) > 0 {
 		return true
 	}
+	if devContainer.RestartHelper != nil && devContainer.RestartHelper.Inject != nil && *devContainer.RestartHelper.Inject {
+		return true
+	}
 	if devContainer.Terminal != nil && !devContainer.Terminal.DisableReplace && (devContainer.Terminal.Enabled == nil || *devContainer.Terminal.Enabled) {
 		return true
 	}
@@ -553,7 +557,7 @@ func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
 	if devContainer.Args != nil {
 		return true
 	}
-	if !devContainer.DisableRestartHelper {
+	if devContainer.RestartHelper == nil || devContainer.RestartHelper.Inject == nil || *devContainer.RestartHelper.Inject {
 		for _, s := range devContainer.Sync {
 			if s.OnUpload != nil && s.OnUpload.RestartContainer {
 				return true

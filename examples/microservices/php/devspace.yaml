@@ -7,10 +7,10 @@ vars:
 images:
   php:
     image: ${IMAGE}
+    rebuildStrategy: ignoreContextChanges
 
 deployments:
   php:
-    updateImageTags: true
     helm:
       chart:
         name: chart

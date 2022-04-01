@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl"
@@ -14,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"sort"
+	"strings"
 )
 
 // Options describe how the deployments should be deployed
@@ -26,10 +28,14 @@ type Options struct {
 	RenderWriter io.Writer
 }
 
+type PurgeOptions struct {
+	ForcePurge bool `long:"force-purge" description:"Forces purgind of deployments even though they might be still in use by other DevSpace projects"`
+}
+
 // Controller is the main deploying interface
 type Controller interface {
 	Deploy(ctx *devspacecontext.Context, deployments []string, options *Options) error
-	Purge(ctx *devspacecontext.Context, deployments []string) error
+	Purge(ctx *devspacecontext.Context, deployments []string, options *PurgeOptions) error
 }
 
 type controller struct{}
@@ -259,7 +265,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 		if err != nil {
 			return true, err
 		}
-	} else {
+	} else if !options.Render {
 		ctx.Log.Infof("Skipping deployment %s", deployConfig.Name)
 		// Execute skip deploy hook
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{
@@ -274,7 +280,10 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 }
 
 // Purge removes all deployments or a set of deployments from the cluster
-func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) error {
+func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string, options *PurgeOptions) error {
+	if options == nil {
+		options = &PurgeOptions{}
+	}
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
 	}
@@ -285,9 +294,18 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 		return err
 	}
 
+	// Check if root name is defined
+	rootName, ok := values.RootNameFrom(ctx.Context)
+	if !ok {
+		options.ForcePurge = true
+	}
+
 	// Reverse them
 	deploymentCaches := ctx.Config.RemoteCache().ListDeployments()
-	for _, deploymentCache := range deploymentCaches {
+	for i := len(deploymentCaches) - 1; i >= 0; i-- {
+		// Deployment cache
+		deploymentCache := deploymentCaches[i]
+
 		// Check if we should skip deleting deployment
 		if deployments != nil {
 			found := false
@@ -313,6 +331,23 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 			return err
 		}
 
+		// Check if we should skip deletion
+		if !options.ForcePurge && len(deploymentCache.Projects) > 0 && (len(deploymentCache.Projects) > 1 || deploymentCache.Projects[0] != rootName) {
+			newProjects := []string{}
+			for _, p := range deploymentCache.Projects {
+				if p == rootName {
+					continue
+				}
+
+				newProjects = append(newProjects, p)
+			}
+
+			deploymentCache.Projects = newProjects
+			ctx.Log.Infof("Skip purging deployment %s as it is still in use by other DevSpace project(s) '%s'. Run with '--force-purge' to force deletion", deploymentCache.Name, strings.Join(deploymentCache.Projects, "', '"))
+			ctx.Config.RemoteCache().SetDeployment(deploymentCache.Name, deploymentCache)
+			continue
+		}
+
 		// Delete kubectl engine
 		ctx.Log.Info("Deleting deployment " + deploymentCache.Name + "...")
 		if deploymentCache.Kubectl != nil {
@@ -321,7 +356,6 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 			err = helm.Delete(ctx, deploymentCache.Name)
 		} else {
 			ctx.Log.Errorf("error purging: deployment %s has no deployment method", deploymentCache.Name)
-			ctx.Config.RemoteCache().DeleteDeployment(deploymentCache.Name)
 			continue
 		}
 		if err != nil {

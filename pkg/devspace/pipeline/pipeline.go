@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -205,7 +206,10 @@ func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency t
 		pipelineConfig = dependency.Config().Config().Pipelines[executePipeline]
 	}
 
-	dependencyDevPodManager := devpod.NewManager(p.devPodManager.Context())
+	devCtx, _ := values.DevContextFrom(ctx.Context)
+	devCtxCancel, cancelDevCtx := context.WithCancel(devCtx)
+	ctx = ctx.WithContext(values.WithDevContext(ctx.Context, devCtxCancel))
+	dependencyDevPodManager := devpod.NewManager(cancelDevCtx)
 	pip := NewPipeline(dependency.Name(), dependencyDevPodManager, p.dependencyRegistry, pipelineConfig, p.options)
 	pip.(*pipeline).parent = p
 

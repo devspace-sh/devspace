@@ -108,13 +108,12 @@ func NewSync(ctx context.Context, localPath string, options Options) (*Sync, err
 		return nil, errors.Wrap(err, "eval symlinks")
 	}
 
-	if options.ExcludePaths == nil {
-		options.ExcludePaths = []string{}
-	}
-
 	// We exclude the sync log to prevent an endless loop in upstream
-	options.ExcludePaths = append(options.ExcludePaths, ".devspace/")
-	options.ExcludePaths = append(options.ExcludePaths, ".git/")
+	newExcludes := []string{}
+	newExcludes = append(newExcludes, ".devspace/")
+	newExcludes = append(newExcludes, ".git/")
+	newExcludes = append(newExcludes, options.ExcludePaths...)
+	options.ExcludePaths = newExcludes
 
 	// Create sync structure
 	s := &Sync{

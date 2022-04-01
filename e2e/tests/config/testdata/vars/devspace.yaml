@@ -3,7 +3,6 @@ vars:
   - name: TEST_OVERRIDE
     value: devspace.yaml
   - name: NOT_USED
-    value: not_used
   - name: TEST_1
   - name: TEST_2
     command: "echo test2"

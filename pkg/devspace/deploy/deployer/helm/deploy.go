@@ -6,6 +6,8 @@ import (
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"io"
 	"os"
 	"path/filepath"
@@ -133,10 +135,17 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 		}
 
 		deployCache.Helm = helmCache
+		if rootName, ok := values.RootNameFrom(ctx.Context); ok && !stringutil.Contains(deployCache.Projects, rootName) {
+			deployCache.Projects = append(deployCache.Projects, rootName)
+		}
 		ctx.Config.RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
 		return true, nil
 	}
 
+	if rootName, ok := values.RootNameFrom(ctx.Context); ok && !stringutil.Contains(deployCache.Projects, rootName) {
+		deployCache.Projects = append(deployCache.Projects, rootName)
+	}
+	ctx.Config.RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
 	return false, nil
 }
 
@@ -192,7 +201,7 @@ func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, 
 			return false, nil, errors.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
 		}
 
-		if d.DeploymentConfig.UpdateImageTags {
+		if d.DeploymentConfig.UpdateImageTags == nil || *d.DeploymentConfig.UpdateImageTags {
 			redeploy, err := legacy.ReplaceImageNames(overwriteValues, ctx.Config, ctx.Dependencies, nil)
 			if err != nil {
 				return false, nil, err
@@ -213,7 +222,7 @@ func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, 
 			}
 
 			// Replace image names
-			if d.DeploymentConfig.UpdateImageTags {
+			if d.DeploymentConfig.UpdateImageTags == nil || *d.DeploymentConfig.UpdateImageTags {
 				redeploy, err := legacy.ReplaceImageNames(overwriteValuesFromPath, ctx.Config, ctx.Dependencies, nil)
 				if err != nil {
 					return false, nil, err
@@ -228,7 +237,7 @@ func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, 
 	// Load override values from data and merge them
 	if d.DeploymentConfig.Helm.Values != nil {
 		enableLegacy := false
-		if d.DeploymentConfig.UpdateImageTags {
+		if d.DeploymentConfig.UpdateImageTags == nil || *d.DeploymentConfig.UpdateImageTags {
 			enableLegacy = true
 		}
 		redeploy, _, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, enableLegacy).FillRuntimeVariablesWithRebuild(ctx.Context, d.DeploymentConfig.Helm.Values, ctx.Config, ctx.Dependencies)
