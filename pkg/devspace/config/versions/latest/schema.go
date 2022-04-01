@@ -867,6 +867,9 @@ type ProxyCommand struct {
 	// LocalCommand can be used to run a different command than specified via the command option. By
 	// default, this will be assumed to be the same as command.
 	LocalCommand string `yaml:"localCommand,omitempty" json:"localCommand,omitempty"`
+
+	// SkipContainerEnv will not forward the container environment variables to the local command
+	SkipContainerEnv bool `yaml:"skipContainerEnv,omitempty" json:"skipContainerEnv,omitempty"`
 }
 
 type SSH struct {
