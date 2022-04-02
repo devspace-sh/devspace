@@ -138,7 +138,6 @@ DevSpace allows you to use config variables without explicitly defining them as 
 The `source` option of a config variable expects either:
 - `all` means to check environment variables **first** and then ask a question if no env variable is defined (**default**)
 - [`env`](../../configuration/variables/environment.mdx) means to check environment variables **only**
-- #TODO: is this question.mdx file correct?
   [`input`](../../configuration/variables/question.mdx) means to ask the user a question **once** (values will be cached in `.devspace/generated.yaml`)
 - [`command`](../../configuration/variables/command.mdx) means DevSpace will not ask the user a question and instead execute a command to determine the value of the variable.
 :::
