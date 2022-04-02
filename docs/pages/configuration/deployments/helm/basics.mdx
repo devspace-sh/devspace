@@ -202,7 +202,7 @@ deployments:
         name: bitnami/mysql
 ```
 **Explanation:**
-Deploying the above example would roughly be equivalent to this command:
+Deploying the above example is roughly equivalent to this command:
 ```bash
 helm install database bitnami/mysql
 ```
@@ -229,7 +229,7 @@ deployments:
         version: "1.3.1"
 ```
 **Explanation:**
-Deploying the above example would roughly be equivalent to this command:
+Deploying the above example is roughly equivalent to this command:
 ```bash
 helm install database bitnami/mysql --version="1.3.1"
 ```
@@ -247,7 +247,7 @@ deployments:
         repo: https://my-repo.tld/
 ```
 **Explanation:**
-Deploying the above example would roughly be equivalent to this command:
+Deploying the above example is roughly equivalent to this command:
 ```bash
 helm install database custom-chart --repo "https://my-repo.tld/"
 ```
@@ -290,7 +290,7 @@ deployments:
         mysqlDatabase: app_database
 ```
 **Explanation:**
-Deploying the above example would roughly be equivalent to this command:
+Deploying the above example is roughly equivalent to this command:
 ```bash
 helm install database bitnami/mysql --set mysqlRootPassword="$MYSQL_ROOT_PASSWORD" --set mysqlUser="db_user" --set mysqlDatabase="app_database"
 ```
@@ -323,7 +323,7 @@ deployments:
       - mysql/values.production.yaml
 ```
 **Explanation:**
-Deploying the above example would roughly be equivalent to this command:
+Deploying the above example is roughly equivalent to this command:
 ```bash
 helm install database bitnami/mysql -f mysql/values.yaml -f mysql/values.production.yaml
 ```
@@ -350,7 +350,7 @@ deployments:
 ```
 
 **Explanation:**
-Deploying the above example would print the helm output and the `notes.txt` from the bitnami/mysql chart.
+Deploying the above example prints the helm output and the `notes.txt` from the bitnami/mysql chart.
 
 ### `templateArgs`
 The `templateArgs` specifies an array of arguments that will be passed by devspace additionally to the standard arguments to `helm template` during `devspace render`.

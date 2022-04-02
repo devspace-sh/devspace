@@ -93,8 +93,8 @@ dev:
 ```
 **Explanation:**
 - Files in `logs/` and in `more/logs/` would not be synchronized at all.
-- Files in `node_modules/` would only be synchronized from the container to the local filesystem but not the other way around.
-- Files in `tmp/` would only be synchroniyed from the local to the container filesystem but not the other way around.
+- Files in `node_modules/` would only be synchronized from the container to the local filesystem, but not the other way around.
+- Files in `tmp/` would only be synchronized from the local to the container filesystem, but not the other way around.
 
 #### Example: Only Sync Specific Folders
 
@@ -388,8 +388,8 @@ The `initialSync` option expects a string with an initial sync strategy. The fol
 
 #### • `mirrorRemote` mirrors the container files to the local filesystem:
 
-1. deletes all files on the local filesystem that are not existing inside the container
-2. downloads all files which are existing inside the container but are missing on the local filesystem
+1. deletes all files on the local filesystem that do not exist inside the container
+2. downloads all files that exist inside the container, but are missing on the local filesystem
 3. resolves all file conflicts (different content on local filesystem than inside the container) by preferring the file within the container (i.e. all files on the local filesystem will be replaced if they are different than inside the container)
 
 #### • `preferRemote` is like `mirrorRemote` but skips step 1.
@@ -434,8 +434,13 @@ dev:
 With this configuration, `devspace dev` performs the following tasks:
 - DevSpace would start port-forwarding and file synchronzation.
 - Initial sync is started automatically.
+<<<<<<< HEAD
 - The first sync config section synchronizes all files except files within `node_modules/`. This means that during initial sync, all remote files that do not already exist locally are deleted, and other files are updated to the most recent version.
 - The second sync config section only synchronizes files within `node_modules/`. Because of `initialSync: preferRemote`, DevSpace downloads all remote files which are not present on the local filesystem and overrides all local files which are different than the files within the container.
+=======
+- The first sync config section would synchronize all files except files within `node_modules/`. This means that during initial sync, all remote files that are not existing locally would be deleted and other files would be updated to the most recent version.
+- The second sync config section only synchronizes files within `node_modules/`. Because of `initialSync: preferRemote`, DevSpace downloads all remote files which are not present on the local filesystem and overrides all local files that are different than the files within the container.
+>>>>>>> 98a495ad09253bb70af2de316c8e06c60e1216d5
 
 ### `waitInitialSync`
 The `waitInitialSync` option expects a boolean which defines if DevSpace should wait until the initial sync process has terminated before opening the container terminal or the multi-container log streaming.
@@ -463,8 +468,13 @@ dev:
       waitInitialSync: false
 ```
 **Explanation:**
+<<<<<<< HEAD
 With the configuration `devspace dev` the following actions will be taken:
 - DevSpace initiates port-forwarding and file synchronization.
+=======
+With the configuration `devspace dev` does the following:
+- DevSpace starts port-forwarding and file synchronization.
+>>>>>>> 98a495ad09253bb70af2de316c8e06c60e1216d5
 - Initial sync would be started automatically.
 
 - Before the initial sync process is finished, DevSpace starts the log streaming.
@@ -542,7 +552,7 @@ Polling might increase CPU consumption of the container drastically, depending o
 :::
 
 :::info
-If you are using a DevSpace config version below `v1beta10`, polling will be enabled by default, as it was the default syncing method in older DevSpace versions
+If you are using a DevSpace config version below `v1beta10`, polling is enabled by default, as it was the default syncing method in older DevSpace versions.
 :::
 
 ## Useful Commands
@@ -584,9 +594,9 @@ The algorithm roughly works like this:
 
 <br/>
 
-The `tar` command has to be present in the container otherwise `kubectl cp` does not work and the helper binary cannot be injected into the container.
+The `tar` command has to be present in the container, otherwise `kubectl cp` will not work and the helper binary cannot be injected into the container.
 
-Other than that, no server-side component or special container privileges for code synchronization are required, as the sync algorithm runs completely client-only within DevSpace. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
+No server-side component or special container privileges for code synchronization are required, since the sync algorithm runs completely client-only within DevSpace. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
 
 <br/>
 
