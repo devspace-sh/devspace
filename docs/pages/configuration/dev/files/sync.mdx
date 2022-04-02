@@ -389,7 +389,7 @@ The `initialSync` option expects a string with an initial sync strategy. The fol
 #### • `mirrorRemote` mirrors the container files to the local filesystem:
 
 1. deletes all files on the local filesystem that do not exist inside the container
-2. downloads all files which are existing inside the container but are missing on the local filesystem
+2. downloads all files that exist inside the container, but are missing on the local filesystem
 3. resolves all file conflicts (different content on local filesystem than inside the container) by preferring the file within the container (i.e. all files on the local filesystem will be replaced if they are different than inside the container)
 
 #### • `preferRemote` is like `mirrorRemote` but skips step 1.
