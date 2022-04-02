@@ -71,7 +71,7 @@ images:
       snapshotMode: time
 ```
 **Explanation:**
-- The first image `backend` would be built using kaniko and creating full filesystem snapshots.
+- The first image `backend` is built using kaniko and creates full filesystem snapshots.
 - The second image `frontend` would be built using kaniko and calculate filesystem snapthots only based on `mtime`.
 
 
