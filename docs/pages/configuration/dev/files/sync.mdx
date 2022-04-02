@@ -435,7 +435,7 @@ With this configuration, `devspace dev` would do the following:
 - DevSpace would start port-forwarding and file synchronzation.
 - Initial sync is started automatically.
 - The first sync config section would synchronize all files except files within `node_modules/`. This means that during initial sync, all remote files that are not existing locally would be deleted and other files would be updated to the most recent version.
-- The second sync config section would only synchronize files within `node_modules/` and because of `initialSync: preferRemote`, DevSpace would download all remote files which are not present on the local filesystem and override all local files which are different than the files within the container.
+- The second sync config section only synchronizes files within `node_modules/`. Because of `initialSync: preferRemote`, DevSpace downloads all remote files which are not present on the local filesystem and overrides all local files that are different than the files within the container.
 
 ### `waitInitialSync`
 The `waitInitialSync` option expects a boolean which defines if DevSpace should wait until the initial sync process has terminated before opening the container terminal or the multi-container log streaming.
