@@ -584,7 +584,7 @@ The algorithm roughly works like this:
 
 <br/>
 
-The `tar` command has to be present in the container otherwise `kubectl cp` does not work and the helper binary cannot be injected into the container.
+The `tar` command has to be present in the container, otherwise `kubectl cp` will not work and the helper binary cannot be injected into the container.
 
 Other than that, no server-side component or special container privileges for code synchronization are required, as the sync algorithm runs completely client-only within DevSpace. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
 
