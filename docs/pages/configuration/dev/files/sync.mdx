@@ -277,7 +277,7 @@ dev:
 ```
 
 ### `onUpload.exec`
-The `onUpload.exec` option defines command(s) that should be executed after DevSpace uploaded files and folder to the container. DevSpace will make sure that those commands are not executed while initially syncing the state and command execution will also halt any syncing activities.
+The `onUpload.exec` option defines command(s) that should be executed after DevSpace uploaded files and folder to the container. DevSpace will make sure that those commands are not executed while initially syncing the state, and command execution will also halt any syncing activities.
 
 If this is defined together with `onUpload.restartContainer`, DevSpace will make sure that the commands are always executed **before** the container is restarted.
 
