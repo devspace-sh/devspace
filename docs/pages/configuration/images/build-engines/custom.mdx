@@ -28,7 +28,7 @@ images:
 The image `backend` would be built using the command `docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile"` while `${runtime.images.backend.image}` would be replaced with the `image` option (in this case: `john/appbackend`) and `${runtime.images.backend.tag}` would be replaced with the tag generated according to the [tagging schema](../../images/image-definition/tags.mdx).
 
 ### `onChange`
-The `onChange` option expects an array of strings which represent paths to files or folders that should be watched for changes. DevSpace uses these paths and the hash values it stores about these paths for evaluating if an image should be rebuilt or if the image building can be skipped because the context of the image has not changed.
+The `onChange` option expects an array of strings which represent paths to files or folders that should be watched for changes. DevSpace uses these paths, and the hash values it stores about these paths, to evaluate if an image should be rebuilt, or if the image building can be skipped because the context of the image has not changed.
 
 :::info
 It is highly recommended to specify this option when using `custom` as build tool in order to speed up the build process.
