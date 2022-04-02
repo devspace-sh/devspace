@@ -349,7 +349,7 @@ images:
             path: token.json
 ```
 **Explanation:**
-The above configuration would create a kaniko container which mounts the following volumes:
+The above configuration creates a kaniko container which mounts the following volumes:
 - All keys within the ConfigMap `my-configmap` will be mounted as files within the folder `/some/configmap/dir`. The filenames will be the keys within the ConfigMap.
 - The key `aws-token` within the Secret `my-secret` will be mounted as the file `/some/secret/dir/token.json`.
 
