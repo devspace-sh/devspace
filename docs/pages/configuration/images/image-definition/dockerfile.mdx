@@ -30,7 +30,7 @@ images:
 - The first image is built using the Dockerfile in `./Dockerfile` and the context path `./`.
 - The second image is built using the Dockerfile in `./frontend/Dockerfile` and the context path `./frontend/`.
 - Switching the `context` for image `frontend` assures that a statement like `ADD file.txt` or  `COPY file.txt .` in `./frontend/Dockerfile` uses the local file `./frontend/file.txt` instead of `./file.txt`.
-- In this example, it would probably be useful to have a `./.dockerignore` file which ignores the `frontend/` folder when building the first image called `backend`.
+- In this example, it is useful to have a `./.dockerignore` file, which ignores the `frontend/` folder when building the first image called `backend`.
 
 :::note
 See **[Best Practices for Image Building](../../../guides/image-building.mdx)** for details on how to optimize your Dockerfiles and use `.dockerignore` for faster image building.
