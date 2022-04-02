@@ -21,7 +21,7 @@ images:
     custom:
       skipImageArg: true
       command: |-
-        # Also works on windows as this is executed in a golang shell
+        # Also works on windows, as this is executed in a golang shell
         docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
 ```
 **Explanation:**
