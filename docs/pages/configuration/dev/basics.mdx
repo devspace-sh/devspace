@@ -19,7 +19,7 @@ Kubernetes-based development can be useful in the following cases:
 - You want to test your application in a production-like environment
 - You want to debug issues that are hard to reproduce on your local machine
 
-The development experience is very similar to using `docker-compose`, so if you are already familiar on how to develop with `docker-compose`, DevSpace will behave very similar. One of the major benefits of DevSpace versus docker-compose is that DevSpace allows you to develop in any Kubernetes cluster, either locally using minikube, Docker Kubernetes etc. or in any remote Kubernetes cluster.
+The development experience is very similar to using `docker-compose`. If you are already familiar with how to develop with `docker-compose`, DevSpace will behave very similar. One of the benefits of DevSpace versus `docker-compose` is that DevSpace allows you to develop in any Kubernetes cluster, either locally using minikube, Docker Kubernetes etc., or in any remote Kubernetes cluster.
 
 
 ## Start Development Mode
@@ -93,7 +93,7 @@ DevSpace provides two options to develop applications in Kubernetes:
 :::note Multi-Container Log Streaming (default)
 The first option starts your application as defined in your Dockerfile or in your Kubernetes pod definition. After the pods are started, DevSpace streams the logs of all containers that are started with an image that was built during the image building process. Each log line is prefixed with the image name or alternatively with the pod name of the container. Before starting the actual log streaming, DevSpace prints the last 50 log lines of each container by default.
 
-Learn how to [customize which containers should be included in the log stream and how many log lines should be shown in the beginning](../../configuration/development/log-streaming.mdx).
+Learn how to [customize which containers should be included in the log stream and how many log lines should be shown in the beginning](../../configuration/dev/workflow/log-streaming.mdx).
 :::
 
 :::note Terminal Session
@@ -103,7 +103,7 @@ devspace dev -t
 ```
 Instead of starting the multi-container log streaming, you can also start development mode using a terminal session.
 
-Terminal is configurable by [using the `dev.terminal` configuration section](../../configuration/development/terminal.mdx).
+Terminal is configurable by [using the `dev.terminal` configuration section](../../configuration/dev/workflow/terminal.mdx).
 :::
 
 ### 8. Open Links (optional)
@@ -111,7 +111,7 @@ DevSpace iterates over every item in the `dev.open` array defined in the `devspa
 
 <FragmentWorkflowOpenLinks/>
 
-Learn more about [configuring auto-opening links](../../configuration/development/open-links.mdx).
+Learn more about [configuring auto-opening links](../../configuration/dev/workflow/open.mdx).
 
 
 

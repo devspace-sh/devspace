@@ -10,11 +10,11 @@ is_os [os]
 
 ### Example
 
-TODO: Fix example
-
 ```yaml
 pipelines:
   dev:
     run: |-
-      is_os
+      if is_os windows; then
+        echo "Running on Windows!"
+      fi
 ```

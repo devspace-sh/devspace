@@ -1,5 +1,3 @@
-//TODO: Lukas/Fabian, what does this function look like in action?
-
 The function `xargs` allows a user to overwrite current flags and utilities.
 
 ## Usage
@@ -12,11 +10,9 @@ xargs [utility [argument ...]]
 
 ### Example
 
-TODO: Fix example
-
 ```yaml
 pipelines:
   dev:
     run: |-
-      xargs 
+      echo [image1] [image2] | xargs build_images
 ```

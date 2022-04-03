@@ -2,3 +2,43 @@
 title: Function is_dependency
 sidebar_label: is_dependency
 ---
+
+The function `is_dependency` checks whether a given pipeline is a dependency.
+
+## Arguments
+
+None
+
+### Usage
+
+```
+is_dependency
+
+```
+
+### Example
+
+In the `devspace.yaml` of the dependency:
+
+```yaml
+pipelines:
+  deploy:
+    run: |-
+      if is_dependency; then
+        run_default_pipeline deploy
+      else
+        echo "I cannot be executed directly"
+      fi
+```
+
+In `devspace.yaml`:
+
+```yaml
+dependencies:
+  dependency:
+    path: [path/to/dependency/devspace.yaml]
+```
+
+## Flags
+
+None

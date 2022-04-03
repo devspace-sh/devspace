@@ -1,13 +1,13 @@
-TODO: run_watch one-liner description
+The function `run_watch` takes in a path to watch and a subcommand to run on that path.
 
 ## Arguments
 
 ### `--fail-on-error`
 
-If true, the command will fail on an error while running the sub command.
+If true, the command will fail on an error while running the subcommand.
 
 ```
-run_watch --path MY_PATH -- my_command
+run_watch --path [MY_PATH] -- [my_command]
 ```
 
 ### `--path`, `-p`
@@ -19,11 +19,9 @@ The paths to watch. Can be patterns in the form of `./**/my-file.txt`.
 
 ### Example
 
-TODO: Fix example
-
 ```yaml
-pipelines:
-  dev:
-    run: |-
-      run_watch
+commands:
+  # Overwrites dev
+  dev: |-
+    run_watch -p devspace.yaml -p *.go -- devspace run-pipeline dev $@
 ```

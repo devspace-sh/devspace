@@ -17,7 +17,7 @@ Images are configured within the `images` section of the `devspace.yaml`.
   values={[
     { label: 'Docker Hub', value: 'dockerhub', },
     { label: 'Custom Registry', value: 'custom-registry', },
-    { label: 'Custom Tagging', value: 'tagging', }, 
+    { label: 'Custom Tagging', value: 'tagging', },
     { label: 'BuildKit', value: 'buildkit', },
     { label: 'kaniko', value: 'kaniko', },
     { label: 'Build Command', value: 'custom', },
@@ -56,7 +56,7 @@ images:
     # This will be replaced during build time with
     # something like dev-ads13as1-sA4ve. Each hashtag
     # represents a random character.
-    - dev-${devspace.git.commit}-#####  
+    - dev-${devspace.git.commit}-#####
   database:
     image: image.company.tld/appbackend
 ```
@@ -73,7 +73,7 @@ images:
 ```
 
 :::info What is BuildKit?
-[BuildKit](https://github.com/moby/buildkit) is an open-source concurrent, cache-efficient, and Dockerfile-agnostic builder toolkit that lets you build images inside containers that run on top of Kubernetes or in your local docker daemon. To force image building using BuildKit, set `buildKit: {}`. To tell DevSpace to use in cluster building set `buildKit.inCluster: {}` as shown above. Learn more about [configuring BuildKit builds](../../configuration/images/buildkit.mdx).
+[BuildKit](https://github.com/moby/buildkit) is an open-source concurrent, cache-efficient, and Dockerfile-agnostic builder toolkit that lets you build images inside containers that run on top of Kubernetes or in your local docker daemon. To force image building using BuildKit, set `buildKit: {}`. To tell DevSpace to use in cluster building set `buildKit.inCluster: {}` as shown above. Learn more about [configuring BuildKit builds](../../configuration/images/build-engines/buildkit.mdx).
 :::
 
 </TabItem>
@@ -88,7 +88,7 @@ images:
 ```
 
 :::info What is kaniko?
-Kaniko is an open-source tool that lets you build images inside containers that run on top of Kubernetes. DevSpace uses kaniko as automatic fallback if Docker is not installed. To force image building using kaniko, set `kaniko.cache: true` as shown above. Learn more about [configuring kaniko builds](../../configuration/images/kaniko.mdx).
+Kaniko is an open-source tool that lets you build images inside containers that run on top of Kubernetes. DevSpace uses kaniko as automatic fallback if Docker is not installed. To force image building using kaniko, set `kaniko.cache: true` as shown above. Learn more about [configuring kaniko builds](../../configuration/images/build-engines/kaniko.mdx).
 :::
 
 </TabItem>
@@ -127,24 +127,20 @@ The following flags are available for all commands that trigger image building:
 - `-b / --force-build` rebuild all images (even if they could be skipped because context and Dockerfile have not changed since the latest build)
 
 ## Image Building Process
-DevSpace loads the `images` configuration from `devspace.yaml` and builds all images in parallel. The multi-threaded, parallel build process of DevSpace speeds up image building drastically, especially when building many images and using remote build methods. 
+DevSpace loads the `images` configuration from `devspace.yaml` and builds all images in parallel. The multi-threaded, parallel build process of DevSpace speeds up image building drastically, especially when building many images and using remote build methods.
 
 ### 1. Load Dockerfile
-DevSpace loads the contents of the Dockerfile specified in `image[*].dockerfile` (defaults to `./Dockerfile`). 
+DevSpace loads the contents of the Dockerfile specified in `image[*].dockerfile` (defaults to `./Dockerfile`).
 
 :::info Use Relative Paths
 Dockerfile paths used in `dockerfile` should be relative to the `devspace.yaml`.
 :::
 
 ### 2. Override Entrypoint (if needed)
-DevSpace allows you to apply an in-memory override of a Dockerfile's `ENTRYPOINT` by configuring the `entrypoint` option for the image. Similar to the Dockerfile `ENTRYPOINT`, the `images[*].entrypoint` option should be defined as an array. 
-
-:::note Useful for Profiles
-Configuring `ENTRYPOINT` overrides can be particularly useful when defining different [config profiles](../../configuration/profiles/basics.mdx) in your `devspace.yaml`.
-:::
+DevSpace allows you to apply an in-memory override of a Dockerfile's `ENTRYPOINT` by configuring the `entrypoint` option for the image. Similar to the Dockerfile `ENTRYPOINT`, the `images[*].entrypoint` option should be defined as an array.
 
 ### 3. Load Build Context
-DevSpace loads the context to build this image as specified in `context` (defaults to `./`). The context path serves as root directory for Dockerfile statements like `ADD` or `COPY`. 
+DevSpace loads the context to build this image as specified in `context` (defaults to `./`). The context path serves as root directory for Dockerfile statements like `ADD` or `COPY`.
 
 :::info Use Relative Paths
 Context paths used in `context` should be relative to the `devspace.yaml`.
@@ -165,17 +161,17 @@ You can use the `-b / --force-build` flag to tell DevSpace to build all images e
 
 ### 5. Build Image
 DevSpace uses one of the following [build tools](../../configuration/images/basics.mdx) to create an image based on your Dockerfile and the provided context:
-- [`docker`](../../configuration/images/docker.mdx) for building images using a Docker daemon (default, prefers Docker daemon of local Kubernetes clusters)
-- [`kaniko`](../../configuration/images/kaniko.mdx) for building images directly inside Kubernetes (automatic fallback for `docker`)
-- [`custom`](../../configuration/images/custom.mdx) for building images with a custom build command (e.g. for using Google Cloud Build)
+- [`docker`](../../configuration/images/build-engines/docker.mdx) for building images using a Docker daemon (default, prefers Docker daemon of local Kubernetes clusters)
+- [`kaniko`](../../configuration/images/build-engines/kaniko.mdx) for building images directly inside Kubernetes (automatic fallback for `docker`)
+- [`custom`](../../configuration/images/build-engines/custom.mdx) for building images with a custom build command (e.g. for using Google Cloud Build)
 
 ### 6. Tag Image
-DevSpace automatically tags all images after building them using a tagging schema that you can customize using the `tag` option. By default, this option is configured to generate a random string consisting of 5 characters. 
+DevSpace automatically tags all images after building them using a tagging schema that you can customize using the `tag` option. By default, this option is configured to generate a random string consisting of 5 characters.
 
-[Learn more about defining a custom tagging schema.](../../configuration/images/image-tagging.mdx#tags-tagging-schema)
+[Learn more about defining a custom tagging schema.](../../configuration/images/image-definition/tags.mdx)
 
 :::info Tag Replacement
-Before deploying your application, DevSpace will use the newly generated image tags and replace them in-memory in the values for your [Helm charts](../../configuration/deployments/helm-charts.mdx) and [Kubernetes manifests](../../configuration/deployments/kubernetes-manifests.mdx), so they will be deployed using the newest image tag.
+Before deploying your application, DevSpace will use the newly generated image tags and replace them in-memory in the values for your [Helm charts](../../configuration/deployments/helm/basics.mdx) and [Kubernetes manifests](../../configuration/deployments/kubectl/manifests.mdx), so they will be deployed using the newest image tag.
 :::
 
 ### 7. Push Image

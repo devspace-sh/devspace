@@ -2,7 +2,7 @@ The function `is_command` checks if a given argument is a command in DevSpace.
 
 ## Arguments
 
-### `[command]`
+### `[DevSpace command]`
 
 ```
 is_command [command]
@@ -10,11 +10,11 @@ is_command [command]
 
 ### Example
 
-TODO: Fix example
-
 ```yaml
 pipelines:
   dev:
     run: |-
-      is_command
+      if is_command dev; then
+        start_dev --all
+      fi
 ```

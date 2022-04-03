@@ -69,6 +69,7 @@ excludePaths: [] # Do not exclude anything from file synchronization
 ```
 
 #### Example: Exclude Paths from Synchronization
+
 ```yaml {11-19}
 deployments:
  app-backend:
@@ -90,12 +91,13 @@ dev:
       downloadExcludePaths:
       - tmp/
 ```
-**Explanation:**  
+**Explanation:**
 - Files in `logs/` and in `more/logs/` would not be synchronized at all.
-- Files in `node_modules/` would only be synchronized from the container to the local filesystem but not the other way around.
-- Files in `tmp/` would only be synchroniyed from the local to the container filesystem but not the other way around.
+- Files in `node_modules/` would only be synchronized from the container to the local filesystem, but not the other way around.
+- Files in `tmp/` would only be synchronized from the local to the container filesystem, but not the other way around.
 
 #### Example: Only Sync Specific Folders
+
 ```yaml {11-16}
 deployments:
   app-backend:
@@ -114,13 +116,14 @@ dev:
       - '!/my-folder-1/'
       - '!/my-folder-2/'
 ```
-**Explanation:**  
+**Explanation:**
 - All files will be excluded except those in folders `./my-folder-1/` and `./my-folder-2/`
 
 ### `excludeFile`
 The `excludeFile` option expects a path to a file from which the exclude paths can be loaded. Once loaded, the behavior is identical to the `excludePaths` option. This is useful for sharing a common list of exclude paths between many components. The earlier example, [Exclude Paths from Synchronization](#example-exclude-paths-from-synchronization), can be converted to files as follows:
 
 #### Example: Exclude Paths from Synchronization using files
+
 ```yaml {11-15}
 deployments:
  app-backend:
@@ -209,12 +212,12 @@ uploadExcludeFile: "" # Do not load exclude paths from a file
 Sometimes it is useful to execute commands after the sync uploads files/directories between the local filesystem and the container.
 
 :::warning
-Make sure that post-sync commands will **<u>not</u>** trigger a new sync process which could lead to an **endless loop**.
+Make sure that post-sync commands will **<u>not</u>** trigger a new sync process. This could lead to an **endless loop**.
 :::
 
 ### `startContainer`
 
-The `startContainer` option can be used to delay starting a container until sync has finished uploading all files initially. This is very useful if your container entrypoint requires certain files. Needs `command` to be set as otherwise DevSpace doesn't know which command to start.
+The `startContainer` option can be used to delay starting a container until sync has finished uploading all files initially. This is very useful if your container entrypoint requires certain files. This option requires `command` to be set; otherwise, DevSpace will not know which command to start.
 
 #### Example: Enable Container start
 ```yaml
@@ -244,7 +247,7 @@ If multiple sync paths with `startContainer` exist, DevSpace will wait for all t
 The `restartContainer` option expects a boolean which defines if DevSpace should restart the container every time either a single file or even a batch of files have been uploaded to the container using file sync.
 
 :::caution Restart Helper Required
-Setting `restartContainer: true` requires to set `command: ["my", "container", "entrypoint"]`. Otherwise, DevSpace doesn't know which command to restart.
+Setting `restartContainer: true` requires you to also set `command: ["my", "container", "entrypoint"]`. Otherwise, DevSpace will not know which command to restart.
 :::
 
 :::note When not to use this option
@@ -252,6 +255,7 @@ Using `restartContainer: true` is most useful if your application runs based on 
 :::
 
 #### Example: Enable Container Restart
+
 ```yaml {17}
 deployments:
   app-backend:
@@ -273,9 +277,9 @@ dev:
 ```
 
 ### `onUpload.exec`
-The `onUpload.exec` option defines command(s) that should be executed after DevSpace uploaded files and folder to the container. DevSpace will make sure that those commands are not executed while initially syncing the state and command execution will also halt any syncing activities.
+The `onUpload.exec` option defines command(s) that should be executed after DevSpace uploaded files and folder to the container. DevSpace will ensure that those commands are not executed while initially syncing the state, and command execution will also halt any syncing activities.
 
-If this is defined together with `onUpload.restartContainer`, DevSpace will make sure that the commands are always executed **before** the container is restarted. 
+If this is defined together with `onUpload.restartContainer`, DevSpace will ensure that the commands are always executed **before** the container is restarted.
 
 #### Example: Post-Upload Commands
 ```yaml {14-29}
@@ -320,6 +324,7 @@ disableDownload: false # Do not ignore remote container files during synchroniza
 ```
 
 #### Example: Synchronize Local Filesystem Only
+
 ```yaml
 deployments:
   app-backend:
@@ -345,6 +350,7 @@ disableUpload: false # Do not ignore local files during synchronization
 ```
 
 #### Example: Synchronize Remote Container Filesystem Only
+
 ```yaml
 deployments:
   app-backend:
@@ -367,7 +373,7 @@ dev:
 
 ### `noWatch`
 
-If the `noWatch` option is specified, DevSpace will stop syncing after initially comparing and resolving differences. This is useful if you want a one-time sync but then continue doing other steps in your pipeline.
+If the `noWatch` option is specified, DevSpace will stop syncing after initially comparing and resolving differences. This is useful if you want a one-time sync, but then continue doing other steps in your pipeline.
 
 ### `initialSync`
 The `initialSync` option expects a string with an initial sync strategy. The following strategies are available:
@@ -380,10 +386,10 @@ The `initialSync` option expects a string with an initial sync strategy. The fol
 
 #### • `preferLocal` is like `mirrorLocal` but skips step 1.
 
-#### • `mirrorRemote` mirrors the container files to the local filesystem: 
+#### • `mirrorRemote` mirrors the container files to the local filesystem:
 
-1. deletes all files on the local filesystem that are not existing inside the container
-2. downloads all files which are existing inside the container but are missing on the local filesystem
+1. deletes all files on the local filesystem that do not exist inside the container
+2. downloads all files that exist inside the container, but are missing on the local filesystem
 3. resolves all file conflicts (different content on local filesystem than inside the container) by preferring the file within the container (i.e. all files on the local filesystem will be replaced if they are different than inside the container)
 
 #### • `preferRemote` is like `mirrorRemote` but skips step 1.
@@ -405,6 +411,7 @@ initialSync: mirrorLocal
 ```
 
 #### Example: Configuring Initial Sync
+
 ```yaml
 deployments:
   app-backend:
@@ -423,12 +430,17 @@ dev:
     - path: ./node_modules/:/app/node_modules/
       initialSync: preferRemote
 ```
-**Explanation:**  
-With this configuration, `devspace dev` would do the following:
+**Explanation:**
+With this configuration, `devspace dev` performs the following tasks:
 - DevSpace would start port-forwarding and file synchronzation.
-- Initial sync would be started automatically.
+- Initial sync is started automatically.
+<<<<<<< HEAD
+- The first sync config section synchronizes all files except files within `node_modules/`. This means that during initial sync, all remote files that do not already exist locally are deleted, and other files are updated to the most recent version.
+- The second sync config section only synchronizes files within `node_modules/`. Because of `initialSync: preferRemote`, DevSpace downloads all remote files which are not present on the local filesystem and overrides all local files which are different than the files within the container.
+=======
 - The first sync config section would synchronize all files except files within `node_modules/`. This means that during initial sync, all remote files that are not existing locally would be deleted and other files would be updated to the most recent version.
-- The second sync config section would only synchronize files within `node_modules/` and because of `initialSync: preferRemote`, DevSpace would download all remote files which are not present on the local filesystem and override all local files which are different than the files within the container.
+- The second sync config section only synchronizes files within `node_modules/`. Because of `initialSync: preferRemote`, DevSpace downloads all remote files which are not present on the local filesystem and overrides all local files that are different than the files within the container.
+>>>>>>> 98a495ad09253bb70af2de316c8e06c60e1216d5
 
 ### `waitInitialSync`
 The `waitInitialSync` option expects a boolean which defines if DevSpace should wait until the initial sync process has terminated before opening the container terminal or the multi-container log streaming.
@@ -455,11 +467,18 @@ dev:
     - path: ./
       waitInitialSync: false
 ```
-**Explanation:**  
-With the configuration `devspace dev` would do the following:
-- DevSpace would start port-forwarding and file synchronzation.
+**Explanation:**
+<<<<<<< HEAD
+With the configuration `devspace dev` the following actions will be taken:
+- DevSpace initiates port-forwarding and file synchronization.
+=======
+With the configuration `devspace dev` does the following:
+- DevSpace starts port-forwarding and file synchronization.
+>>>>>>> 98a495ad09253bb70af2de316c8e06c60e1216d5
 - Initial sync would be started automatically.
+
 - Before the initial sync process is finished, DevSpace starts the log streaming.
+
 
 <br/>
 
@@ -474,6 +493,7 @@ By default, the file synchronization algorithm uses the maximum bandwidth possib
 :::
 
 #### Example: Limiting Network Bandwidth
+
 ```yaml
 deployments:
   app-backend:
@@ -491,9 +511,9 @@ dev:
         download: 200 # 200 KB/s
         upload: 100   # 100 KB/s
 ```
-**Explanation:**  
-- Downloading files from the container to the local filesystem would be limited to a transfer speed of `200 KB/s`.
-- Upload files from the local filesystem to the container would be limited to a transfer speed of `100 KB/s`.
+**Explanation:**
+- Downloading files from the container to the local filesystem is limited to a transfer speed of `200 KB/s`.
+- Upload files from the local filesystem to the container is limited to a transfer speed of `100 KB/s`.
 
 ### `bandwidthLimits.upload`
 The `bandwidthLimits.upload` option expects an integer representing the max file upload speed in KB/s, e.g. `upload: 100` would limit the file sync to a upload speed of `100 KB/s`.
@@ -509,7 +529,7 @@ By default, the file synchronization algorithm uses the maximum bandwidth possib
 
 ### `polling`
 
-Polling specifies if the DevSpace helper should traverse over all watched files and folders periodically in the container to identify file changes. By default, DevSpace will use [inotify](https://man7.org/linux/man-pages/man7/inotify.7.html) to detect changes which is more efficient, however sometimes it might be unsupported or not feasible in certain situations, in which polling might be preferred.
+Polling specifies if the DevSpace helper should traverse over all watched files and folders periodically in the container to identify file changes. By default, DevSpace uses [inotify](https://man7.org/linux/man-pages/man7/inotify.7.html) to detect changes. This can be more efficient, however, sometimes it might be unsupported or not feasible in certain situations, in which case, polling might be preferred.
 
 ```yaml
 deployments:
@@ -532,7 +552,7 @@ Polling might increase CPU consumption of the container drastically, depending o
 :::
 
 :::info
-If you are using a DevSpace config version below `v1beta10`, polling will be enabled by default, as it was the default syncing method in older DevSpace versions 
+If you are using a DevSpace config version below `v1beta10`, polling is enabled by default, as it was the default syncing method in older DevSpace versions.
 :::
 
 ## Useful Commands
@@ -574,9 +594,9 @@ The algorithm roughly works like this:
 
 <br/>
 
-The `tar` command has to be present in the container otherwise `kubectl cp` does not work and the helper binary cannot be injected into the container.  
+The `tar` command has to be present in the container, otherwise `kubectl cp` will not work and the helper binary cannot be injected into the container.
 
-Other than that, no server-side component or special container privileges for code synchronization are required, as the sync algorithm runs completely client-only within DevSpace. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
+No server-side component or special container privileges for code synchronization are required, since the sync algorithm runs completely client-only within DevSpace. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
 
 <br/>
 
