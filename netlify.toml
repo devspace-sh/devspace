@@ -10,9 +10,6 @@
     # Build docs
     yarn build
 
-    # Delete fragments folder
-    rm -r $OUT_DIR/fragments
-
     # Move files to build/docs/
     mkdir -p tmp-$TARGET_OUT_DIR
     mv $OUT_DIR/* tmp-$TARGET_OUT_DIR

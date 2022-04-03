@@ -366,6 +366,7 @@ module.exports = {
         }
       ],
     },
+    "plugins/basics",
     {
       type: 'link',
       label: '↗️ Component Chart',
