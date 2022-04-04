@@ -870,6 +870,9 @@ type ProxyCommand struct {
 
 	// SkipContainerEnv will not forward the container environment variables to the local command
 	SkipContainerEnv bool `yaml:"skipContainerEnv,omitempty" json:"skipContainerEnv,omitempty"`
+
+	// Env are extra environment variables to set for the command
+	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 }
 
 type SSH struct {

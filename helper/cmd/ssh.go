@@ -13,6 +13,7 @@ import (
 
 // SSHCmd holds the ssh cmd flags
 type SSHCmd struct {
+	HostKey        string
 	AuthorizedKeys string
 	Address        string
 }
@@ -28,6 +29,7 @@ func NewSSHCmd() *cobra.Command {
 	}
 
 	sshCmd.Flags().StringVar(&cmd.Address, "address", fmt.Sprintf(":%d", helperssh.DefaultPort), "Address to listen to")
+	sshCmd.Flags().StringVar(&cmd.HostKey, "host-key", "", "Base64 encoded host key to use")
 	sshCmd.Flags().StringVar(&cmd.AuthorizedKeys, "authorized-key", "", "Base64 encoded authorized keys to use")
 	return sshCmd
 }
@@ -52,7 +54,16 @@ func (cmd *SSHCmd) Run(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	server, err := helperssh.NewServer(cmd.Address, keys)
+	hostKey := []byte{}
+	if len(cmd.HostKey) > 0 {
+		var err error
+		hostKey, err = base64.StdEncoding.DecodeString(cmd.HostKey)
+		if err != nil {
+			return fmt.Errorf("decode host key")
+		}
+	}
+
+	server, err := helperssh.NewServer(cmd.Address, hostKey, keys)
 	if err != nil {
 		return err
 	}

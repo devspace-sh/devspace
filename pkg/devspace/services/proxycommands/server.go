@@ -180,6 +180,9 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, *types.ProxyCommand, e
 		cmd.Env = append(cmd.Env, command.Env...)
 	}
 	cmd.Env = append(cmd.Env, os.Environ()...)
+	for k, v := range reverseCommand.Env {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
 	return cmd, command, nil
 }
 

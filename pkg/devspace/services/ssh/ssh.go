@@ -160,6 +160,12 @@ func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, sshHost strin
 		return err
 	}
 
+	// get host key
+	hostKey, err := getHostKey()
+	if err != nil {
+		return errors.Wrap(err, "generate host key")
+	}
+
 	// get public key
 	publicKey, err := getPublicKey()
 	if err != nil {
@@ -167,7 +173,7 @@ func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, sshHost strin
 	}
 
 	// get command
-	command := []string{inject.DevSpaceHelperContainerPath, "ssh", "--authorized-key", publicKey}
+	command := []string{inject.DevSpaceHelperContainerPath, "ssh", "--authorized-key", publicKey, "--host-key", hostKey}
 	if addr != "" {
 		command = append(command, "--address", addr)
 	}
