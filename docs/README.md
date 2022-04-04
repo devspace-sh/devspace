@@ -16,30 +16,38 @@ yarn start
 ```
 This command starts a local development server and open up a browser window. Most changes are reflected live without having to restart the server.
 
-### Generate Config Reference (devspace.yaml)
+### Production Build
+```
+yarn build
+```
+This command generates static content into the `build` directory and can be served using any static contents hosting service.
+
+### Create New Major Version
 ```bash
-cd ../ # main project directory
-
-# JSON Schema:
-go run ./hack/docs/config/reference.go >docs/schemas/config-jsonschema.json
-
-# Open API Spec:
-go run ./hack/docs/config/reference.go true >docs/schemas/config-openapi.json
+yarn run docusaurus docs:version 5.x
 ```
 
 ### Generate CLI Reference
 ```bash
 cd ../ # main project directory
-go run ./hack/gen-docs.go
+go run ./docs/hack/cli/main.go
 ```
 
-### Create Version
+### Generate Partials For Config (devspace.yaml)
 ```bash
-yarn run docusaurus docs:version 5.x
+cd ../ # main project directory
+
+go run ./docs/hack/config/partials/main.go
 ```
 
-### Build
+
+### Generate Schema For Config (devspace.yaml)
+```bash
+cd ../ # main project directory
+
+# JSON Schema:
+go run ./docs/hack/config/schema/main.go >docs/schemas/config-jsonschema.json
+
+# Open API Spec:
+go run ./docs/hack/config/schema/main.go true >docs/schemas/config-openapi.json
 ```
-yarn build
-```
-This command generates static content into the `build` directory and can be served using any static contents hosting service.

@@ -2,24 +2,25 @@ package commands
 
 import (
 	"fmt"
+	"strings"
+
 	flags "github.com/jessevdk/go-flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 // BuildImagesOptions describe how images should be build
 type BuildImagesOptions struct {
 	build.Options
 
+	All bool `long:"all" description:"Build all images"`
+
 	Set       []string `long:"set" description:"Set configuration"`
 	SetString []string `long:"set-string" description:"Set configuration as string"`
 	From      []string `long:"from" description:"Reuse an existing configuration"`
 	FromFile  []string `long:"from-file" description:"Reuse an existing configuration from a file"`
-
-	All bool `long:"all" description:"Build all images"`
 }
 
 func BuildImages(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
