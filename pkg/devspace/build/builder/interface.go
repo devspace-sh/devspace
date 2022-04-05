@@ -6,6 +6,6 @@ import (
 
 // Interface defines methods for builders docker, kaniko and custom
 type Interface interface {
-	ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool) (bool, error)
-	Build(ctx *devspacecontext.Context) error
+	ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) (bool, error)
+	Build(ctx devspacecontext.Context) error
 }

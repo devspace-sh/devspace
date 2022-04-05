@@ -26,7 +26,7 @@ func NewUploadHook() RemoteHook {
 
 type remoteUploadHook struct{}
 
-func (r *remoteUploadHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error {
+func (r *remoteUploadHook) ExecuteRemotely(ctx devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error {
 	containerPath := "."
 	if hook.Upload.ContainerPath != "" {
 		containerPath = hook.Upload.ContainerPath
@@ -36,19 +36,19 @@ func (r *remoteUploadHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *l
 		localPath = hook.Upload.LocalPath
 	}
 
-	ctx.Log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
-	ctx.Log.Infof("Copy local '%s' -> container '%s'", localPath, containerPath)
+	ctx.Log().Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
+	ctx.Log().Infof("Copy local '%s' -> container '%s'", localPath, containerPath)
 	// Make sure the target folder exists
 	destDir := path.Dir(containerPath)
 	if len(destDir) > 0 {
-		_, stderr, err := ctx.KubeClient.ExecBuffered(ctx.Context, podContainer.Pod, podContainer.Container.Name, []string{"mkdir", "-p", destDir}, nil)
+		_, stderr, err := ctx.KubeClient().ExecBuffered(ctx.Context(), podContainer.Pod, podContainer.Container.Name, []string{"mkdir", "-p", destDir}, nil)
 		if err != nil {
 			return errors.Errorf("error in container '%s/%s/%s': %v: %s", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err, string(stderr))
 		}
 	}
 
 	// Upload the files
-	err := upload(ctx.Context, ctx.KubeClient, podContainer.Pod, podContainer.Container.Name, localPath, containerPath)
+	err := upload(ctx.Context(), ctx.KubeClient(), podContainer.Pod, podContainer.Container.Name, localPath, containerPath)
 	if err != nil {
 		return errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
 	}

@@ -7,6 +7,7 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/pkg/errors"
+	"mvdan.cc/sh/v3/expand"
 	"strings"
 )
 
@@ -14,8 +15,8 @@ type RunPipelineOptions struct {
 	types.PipelineOptions
 }
 
-func RunPipelines(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-	ctx.Log.Debugf("run_pipelines %s", strings.Join(args, " "))
+func RunPipelines(ctx devspacecontext.Context, pipeline types.Pipeline, args []string, environ expand.Environ) error {
+	ctx.Log().Debugf("run_pipelines %s", strings.Join(args, " "))
 	options := &RunPipelineOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
@@ -28,7 +29,7 @@ func RunPipelines(ctx *devspacecontext.Context, pipeline types.Pipeline, args []
 			continue
 		}
 
-		pipelineConfig, ok := ctx.Config.Config().Pipelines[arg]
+		pipelineConfig, ok := ctx.Config().Config().Pipelines[arg]
 		if !ok {
 			return fmt.Errorf("couldn't find pipeline %s", arg)
 		}
@@ -39,5 +40,6 @@ func RunPipelines(ctx *devspacecontext.Context, pipeline types.Pipeline, args []
 		return fmt.Errorf("no pipeline to run specified")
 	}
 
+	options.Environ = environ
 	return pipeline.StartNewPipelines(ctx, pipelines, options.PipelineOptions)
 }

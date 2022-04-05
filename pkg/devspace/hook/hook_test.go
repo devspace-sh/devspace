@@ -25,7 +25,7 @@ func TestHookWithoutExecution(t *testing.T) {
 		&remotecache.RemoteCache{},
 		map[string]interface{}{},
 		constants.DefaultConfigPath)
-	err := ExecuteHooks(devspacecontext.NewContext(context.Background(), log.Discard).WithConfig(conf), nil)
+	err := ExecuteHooks(devspacecontext.NewContext(context.Background(), nil, log.Discard).WithConfig(conf), nil)
 	if err != nil {
 		t.Fatalf("Failed to execute 0 hooks with error: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestHookWithoutExecution(t *testing.T) {
 		&remotecache.RemoteCache{},
 		map[string]interface{}{},
 		constants.DefaultConfigPath)
-	err = ExecuteHooks(devspacecontext.NewContext(context.Background(), log.Discard).WithConfig(conf), nil)
+	err = ExecuteHooks(devspacecontext.NewContext(context.Background(), nil, log.Discard).WithConfig(conf), nil)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook without when with error: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestHookWithoutExecution(t *testing.T) {
 		map[string]interface{}{},
 		constants.DefaultConfigPath)
 
-	err = ExecuteHooks(devspacecontext.NewContext(context.Background(), log.Discard).WithConfig(conf), nil)
+	err = ExecuteHooks(devspacecontext.NewContext(context.Background(), nil, log.Discard).WithConfig(conf), nil)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook without When.Before and When.After with error: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestHookWithExecution(t *testing.T) {
 		map[string]interface{}{},
 		constants.DefaultConfigPath)
 
-	err := ExecuteHooks(devspacecontext.NewContext(context.Background(), log.Discard).WithConfig(conf), nil)
+	err := ExecuteHooks(devspacecontext.NewContext(context.Background(), nil, log.Discard).WithConfig(conf), nil)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook with empty When.After: %v", err)
 	}

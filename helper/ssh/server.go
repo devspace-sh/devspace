@@ -17,7 +17,7 @@ import (
 
 var DefaultPort = 8022
 
-func NewServer(addr string, keys []ssh.PublicKey) (*Server, error) {
+func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey) (*Server, error) {
 	shell, err := getShell()
 	if err != nil {
 		return nil, err
@@ -62,6 +62,13 @@ func NewServer(addr string, keys []ssh.PublicKey) (*Server, error) {
 				"sftp": SftpHandler,
 			},
 		},
+	}
+
+	if len(hostKey) > 0 {
+		err = server.sshServer.SetOption(ssh.HostKeyPEM(hostKey))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	server.sshServer.Handler = server.handler

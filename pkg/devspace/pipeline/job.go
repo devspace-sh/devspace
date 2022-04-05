@@ -1,12 +1,10 @@
 package pipeline
 
 import (
-	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/pipelinehandler"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
@@ -19,10 +17,22 @@ import (
 type Job struct {
 	Pipeline types.Pipeline
 	Config   *latest.Pipeline
-	ExtraEnv map[string]string
 
 	m sync.Mutex
 	t *tomb.Tomb
+}
+
+func (j *Job) Done() <-chan struct{} {
+	j.m.Lock()
+	defer j.m.Unlock()
+
+	if j.t != nil {
+		return j.t.Dead()
+	}
+
+	done := make(chan struct{})
+	close(done)
+	return done
 }
 
 func (j *Job) Terminated() bool {
@@ -49,29 +59,25 @@ func (j *Job) Stop() error {
 	return t.Wait()
 }
 
-func (j *Job) Run(ctx *devspacecontext.Context) error {
+func (j *Job) Run(ctx devspacecontext.Context, environ expand.Environ) error {
 	if ctx.IsDone() {
-		return ctx.Context.Err()
+		return ctx.Context().Err()
 	}
 
 	j.m.Lock()
-	if j.t != nil && !j.t.Terminated() {
-		j.m.Unlock()
-		return fmt.Errorf("already running, please stop before rerunning")
-	}
-	ctx, j.t = ctx.WithNewTomb()
+	ctx = ctx.WithContext(j.t.Context(ctx.Context()))
 	t := j.t
 	j.m.Unlock()
 
 	t.Go(func() error {
 		// start the actual job
 		done := t.NotifyGo(func() error {
-			return j.execute(ctx, t)
+			return j.execute(ctx, t, environ)
 		})
 
 		// wait until job is dying
 		select {
-		case <-ctx.Context.Done():
+		case <-ctx.Context().Done():
 			return nil
 		case <-done:
 		}
@@ -87,15 +93,15 @@ func (j *Job) Run(ctx *devspacecontext.Context) error {
 	return t.Wait()
 }
 
-func (j *Job) execute(ctx *devspacecontext.Context, parent *tomb.Tomb) error {
-	ctx = ctx.WithLogger(ctx.Log)
+func (j *Job) execute(ctx devspacecontext.Context, parent *tomb.Tomb, environ expand.Environ) error {
+	ctx = ctx.WithLogger(ctx.Log())
 	stdoutReader, stdoutWriter := io.Pipe()
 	defer stdoutWriter.Close()
 
 	parent.Go(func() error {
 		s := scanner.NewScanner(stdoutReader)
 		for s.Scan() {
-			ctx.Log.Info(s.Text())
+			ctx.Log().Info(s.Text())
 		}
 		return nil
 	})
@@ -106,21 +112,12 @@ func (j *Job) execute(ctx *devspacecontext.Context, parent *tomb.Tomb) error {
 	parent.Go(func() error {
 		s := scanner.NewScanner(stderrReader)
 		for s.Scan() {
-			ctx.Log.Warn(s.Text())
+			ctx.Log().Warn(s.Text())
 		}
 		return nil
 	})
 
 	handler := pipelinehandler.NewPipelineExecHandler(ctx, stdoutWriter, stderrWriter, j.Pipeline)
-	_, err := engine.ExecutePipelineShellCommand(ctx.Context, j.Config.Run, os.Args[1:], ctx.WorkingDir, j.Config.ContinueOnError, stdoutWriter, stderrWriter, os.Stdin, j.getEnv(ctx), handler)
+	_, err := engine.ExecutePipelineShellCommand(ctx.Context(), j.Config.Run, os.Args[1:], ctx.WorkingDir(), j.Config.ContinueOnError, stdoutWriter, stderrWriter, os.Stdin, environ, handler)
 	return err
-}
-
-func (j *Job) getEnv(ctx *devspacecontext.Context) expand.Environ {
-	envMap := map[string]string{}
-	for k, v := range j.ExtraEnv {
-		envMap[k] = v
-	}
-
-	return env.NewVariableEnvProvider(ctx.Config, ctx.Dependencies, envMap)
 }

@@ -92,7 +92,7 @@ func TestRender(t *testing.T) {
 			remotecache.NewCache("", "test"),
 			map[string]interface{}{},
 			constants.DefaultConfigPath)
-		devCtx := devspacecontext.NewContext(context.TODO(), log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
+		devCtx := devspacecontext.NewContext(context.TODO(), nil, log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
 		err := controller.Deploy(devCtx, testCase.deploymentNames, testCase.options)
 
 		if testCase.expectedErr == "" {
@@ -200,7 +200,7 @@ func TestDeploy(t *testing.T) {
 			remotecache.NewCache("", "test"),
 			map[string]interface{}{},
 			constants.DefaultConfigPath)
-		devCtx := devspacecontext.NewContext(context.TODO(), log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
+		devCtx := devspacecontext.NewContext(context.TODO(), nil, log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
 		err := controller.Deploy(devCtx, testCase.deploymentNames, testCase.options)
 
 		if testCase.expectedErr == "" {
@@ -271,7 +271,7 @@ func TestPurge(t *testing.T) {
 			remotecache.NewCache("", "test"),
 			map[string]interface{}{},
 			constants.DefaultConfigPath)
-		devCtx := devspacecontext.NewContext(context.TODO(), log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
+		devCtx := devspacecontext.NewContext(context.TODO(), nil, log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
 		err := controller.Purge(devCtx, testCase.deploymentNames, &PurgeOptions{})
 
 		assert.NilError(t, err)

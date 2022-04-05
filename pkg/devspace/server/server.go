@@ -34,14 +34,14 @@ type Server struct {
 const DefaultPort = 8090
 
 // NewServer creates a new server from the given parameters
-func NewServer(ctx *devspacecontext.Context, host string, ignoreDownloadError bool, forcePort *int, pipeline types.Pipeline) (*Server, error) {
+func NewServer(ctx devspacecontext.Context, host string, ignoreDownloadError bool, forcePort *int, pipeline types.Pipeline) (*Server, error) {
 	path, err := downloadUI()
 	if err != nil {
 		if !ignoreDownloadError {
 			return nil, errors.Wrap(err, "download ui")
 		}
 
-		ctx.Log.Warnf("Couldn't download ui: %v", err)
+		ctx.Log().Warnf("Couldn't download ui: %v", err)
 	}
 
 	// Find an open port
@@ -94,7 +94,7 @@ func (s *Server) ListenAndServe() error {
 }
 
 type handler struct {
-	ctx      *devspacecontext.Context
+	ctx      devspacecontext.Context
 	pipeline types.Pipeline
 
 	kubeContexts     map[string]string
@@ -120,7 +120,7 @@ type forward struct {
 	podUUID string
 }
 
-func newHandler(ctx *devspacecontext.Context, path string, pipeline types.Pipeline) (*handler, error) { // Get kube config
+func newHandler(ctx devspacecontext.Context, path string, pipeline types.Pipeline) (*handler, error) { // Get kube config
 	kubeConfig, err := kubeconfig.NewLoader().LoadConfig().RawConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "load kube config")
@@ -218,17 +218,17 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	retConfig := &returnConfig{
 		AnalyticsEnabled: h.analyticsEnabled,
 		Profile:          profile,
-		WorkingDirectory: h.ctx.WorkingDir,
+		WorkingDirectory: h.ctx.WorkingDir(),
 		KubeContexts:     h.kubeContexts,
 	}
-	if h.ctx.Config != nil {
-		retConfig.RawConfig = h.ctx.Config.Raw()
-		retConfig.Config = h.ctx.Config.Config()
-		retConfig.LocalCache = h.ctx.Config.LocalCache()
+	if h.ctx.Config() != nil {
+		retConfig.RawConfig = h.ctx.Config().Raw()
+		retConfig.Config = h.ctx.Config().Config()
+		retConfig.LocalCache = h.ctx.Config().LocalCache()
 	}
-	if h.ctx.KubeClient != nil {
-		retConfig.KubeNamespace = h.ctx.KubeClient.Namespace()
-		retConfig.KubeContext = h.ctx.KubeClient.CurrentContext()
+	if h.ctx.KubeClient() != nil {
+		retConfig.KubeNamespace = h.ctx.KubeClient().Namespace()
+		retConfig.KubeContext = h.ctx.KubeClient().CurrentContext()
 	}
 
 	s, err := yaml.Marshal(retConfig)
@@ -266,14 +266,14 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	options := &kubectl.GenericRequestOptions{Resource: resource[0]}
 
 	// Kube Context
-	kubeContext := h.ctx.KubeClient.CurrentContext()
+	kubeContext := h.ctx.KubeClient().CurrentContext()
 	context, ok := r.URL.Query()["context"]
 	if ok && len(context) == 1 && context[0] != "" {
 		kubeContext = context[0]
 	}
 
 	// Namespace
-	kubeNamespace := h.ctx.KubeClient.Namespace()
+	kubeNamespace := h.ctx.KubeClient().Namespace()
 	namespace, ok := r.URL.Query()["namespace"]
 	if ok && len(namespace) == 1 && namespace[0] != "" {
 		kubeNamespace = namespace[0]
@@ -301,7 +301,7 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	// check client cache
 	client, err := h.getClientFromCache(kubeContext, kubeNamespace)
 	if err != nil {
-		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
+		h.ctx.Log().Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -310,7 +310,7 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	out, err := client.GenericRequest(r.Context(), options)
 	if err != nil {
 		if strings.Index(err.Error(), "request: unknown") != 0 {
-			h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
+			h.ctx.Log().Errorf("Error in %s: %v", r.URL.String(), err)
 		}
 
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -94,7 +94,7 @@ func TestStatus(t *testing.T) {
 		kubeClient := &fakekube.Client{
 			Client: kube,
 		}
-		devCtx := devspacecontext.NewContext(context.Background(), log.NewFakeLogger()).WithKubeClient(kubeClient)
+		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithKubeClient(kubeClient)
 		status, err := deployer.Status(devCtx)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

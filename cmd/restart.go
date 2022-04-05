@@ -88,7 +88,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 		}
 
 		// Create context
-		ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+		ctx := devspacecontext.NewContext(context.Background(), nil, cmd.log).
 			WithKubeClient(client)
 
 		return restartContainer(ctx, targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, nil, cmd.Namespace, cmd.Pod).WithPick(cmd.Pick))
@@ -120,7 +120,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 	}
 
 	// Create context
-	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+	ctx := devspacecontext.NewContext(context.Background(), config.Variables(), cmd.log).
 		WithConfig(config).
 		WithKubeClient(client)
 
@@ -139,7 +139,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 
 	// restart containers
 	restarts := 0
-	for _, devPod := range ctx.Config.Config().Dev {
+	for _, devPod := range ctx.Config().Config().Dev {
 		if cmd.Name != "" && devPod.Name != cmd.Name {
 			continue
 		}
@@ -167,7 +167,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 		// create target selector options
 		var imageSelector []string
 		if devPod.ImageSelector != "" {
-			imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, devPod.ImageSelector, ctx.Config, ctx.Dependencies)
+			imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), true).FillRuntimeVariablesAsImageSelector(ctx.Context(), devPod.ImageSelector, ctx.Config(), ctx.Dependencies())
 			if err != nil {
 				return err
 			}
@@ -191,23 +191,23 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 	return nil
 }
 
-func restartContainer(ctx *devspacecontext.Context, options targetselector.Options) error {
+func restartContainer(ctx devspacecontext.Context, options targetselector.Options) error {
 	options = options.WithWait(false)
-	container, err := targetselector.NewTargetSelector(options).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	container, err := targetselector.NewTargetSelector(options).SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return errors.Errorf("Error selecting pod: %v", err)
 	}
 
-	err = inject.InjectDevSpaceHelper(ctx.Context, ctx.KubeClient, container.Pod, container.Container.Name, "", ctx.Log)
+	err = inject.InjectDevSpaceHelper(ctx.Context(), ctx.KubeClient(), container.Pod, container.Container.Name, "", ctx.Log())
 	if err != nil {
 		return errors.Wrap(err, "inject devspace helper")
 	}
 
-	stdOut, stdErr, err := ctx.KubeClient.ExecBuffered(ctx.Context, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "restart"}, nil)
+	stdOut, stdErr, err := ctx.KubeClient().ExecBuffered(ctx.Context(), container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "restart"}, nil)
 	if err != nil {
 		return fmt.Errorf("error restarting container %s in pod %s/%s: %s %s => %v", container.Container.Name, container.Pod.Namespace, container.Pod.Name, string(stdOut), string(stdErr), err)
 	}
 
-	ctx.Log.Donef("Successfully restarted container %s in pod %s/%s", container.Container.Name, container.Pod.Namespace, container.Pod.Name)
+	ctx.Log().Donef("Successfully restarted container %s in pod %s/%s", container.Container.Name, container.Pod.Namespace, container.Pod.Name)
 	return nil
 }

@@ -57,7 +57,7 @@ func LoadConfigWithOptionsAndResolve(f factory.Factory, client kubectl.Client, c
 	}
 
 	// set devspacecontext
-	ctx := devspacecontext.NewContext(context.Background(), log).WithConfig(loadedConfig)
+	ctx := devspacecontext.NewContext(context.Background(), loadedConfig.Variables(), log).WithConfig(loadedConfig)
 
 	// resolve dependencies
 	dependencies, err := dependency.NewManager(ctx, configOptions).ResolveAll(ctx, resolveOptions)

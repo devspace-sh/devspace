@@ -61,7 +61,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 			},
 		},
 	}
-	exists1, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache1, &remotecache.RemoteCache{}, nil, "")), client)
+	exists1, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, nil, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache1, &remotecache.RemoteCache{}, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,7 +75,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 			},
 		},
 	}
-	exists2, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache2, &remotecache.RemoteCache{}, nil, "")), client)
+	exists2, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, nil, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache2, &remotecache.RemoteCache{}, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -89,7 +89,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 			},
 		},
 	}
-	exists3, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache3, &remotecache.RemoteCache{}, nil, "")), client)
+	exists3, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, nil, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache3, &remotecache.RemoteCache{}, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -103,7 +103,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 			},
 		},
 	}
-	exists4, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache4, &remotecache.RemoteCache{}, nil, "")), client)
+	exists4, err := helper.IsImageAvailableLocally(devspacecontext.NewContext(ctx, nil, log.Discard).WithConfig(config.NewConfig(nil, nil, latest.NewRaw(), cache4, &remotecache.RemoteCache{}, nil, "")), client)
 	if err != nil {
 		t.Error(err)
 	}

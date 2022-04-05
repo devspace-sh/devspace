@@ -77,25 +77,7 @@ devspace --dependency my-dependency run any-command --any-command-flag
 
 	if rawConfig != nil && rawConfig.CommandsConfig != nil {
 		for _, cmd := range rawConfig.CommandsConfig.Commands {
-			description := cmd.Description
-			if description == "" {
-				description = "Runs command: " + cmd.Command
-			}
-			if len(description) > 64 {
-				if len(description) > 64 {
-					description = description[:61] + "..."
-				}
-			}
-			runCmd.AddCommand(&cobra.Command{
-				Use:                cmd.Name,
-				Short:              description,
-				Long:               description,
-				Args:               cobra.ArbitraryArgs,
-				DisableFlagParsing: true,
-				RunE: func(cobraCmd *cobra.Command, args []string) error {
-					return cobraCmd.Parent().RunE(cobraCmd, args)
-				},
-			})
+			runCmd.AddCommand(NewOverwriteCmd(f, globalFlags, cmd, rawConfig.Resolver.ResolvedVariables()))
 		}
 	}
 	runCmd.Flags().StringVar(&cmd.Dependency, "dependency", "", "Run a command from a specific dependency")
@@ -142,7 +124,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
-		config, err := configLoader.LoadWithCache(context.Background(), ctx.Config.LocalCache(), nil, configOptions, f.GetLog())
+		config, err := configLoader.LoadWithCache(context.Background(), ctx.Config().LocalCache(), nil, configOptions, f.GetLog())
 		if err != nil {
 			return err
 		}
@@ -159,20 +141,20 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 		}
 
 		ctx = ctx.AsDependency(dep)
-		commandConfig, err := findCommand(ctx.Config, args[0])
+		commandConfig, err := findCommand(ctx.Config(), args[0])
 		if err != nil {
 			return err
 		}
 
-		return executeCommandWithAfter(ctx.Context, commandConfig, args[1:], ctx.Config.Variables(), ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log)
+		return executeCommandWithAfter(ctx.Context(), commandConfig, args[1:], ctx.Config().Variables(), ctx.WorkingDir(), cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log())
 	}
 
-	commandConfig, err := findCommand(ctx.Config, args[0])
+	commandConfig, err := findCommand(ctx.Config(), args[0])
 	if err != nil {
 		return err
 	}
 
-	return executeCommandWithAfter(ctx.Context, commandConfig, args[1:], ctx.Config.Variables(), ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log)
+	return executeCommandWithAfter(ctx.Context(), commandConfig, args[1:], ctx.Config().Variables(), ctx.WorkingDir(), cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log())
 }
 
 func findCommand(config config.Config, name string) (*latest.CommandConfig, error) {
@@ -249,7 +231,7 @@ func ParseArgs(cobraCmd *cobra.Command, globalFlags *flags.GlobalFlags, log log.
 }
 
 // LoadCommandsConfig loads the commands config
-func LoadCommandsConfig(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log log.Logger) (*devspacecontext.Context, error) {
+func LoadCommandsConfig(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log log.Logger) (devspacecontext.Context, error) {
 	// load generated
 	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
@@ -263,7 +245,7 @@ func LoadCommandsConfig(configLoader loader.ConfigLoader, configOptions *loader.
 	}
 
 	// create context
-	return devspacecontext.NewContext(context.Background(), log).
+	return devspacecontext.NewContext(context.Background(), commandsInterface.Variables(), log).
 		WithConfig(commandsInterface), nil
 }
 

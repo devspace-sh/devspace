@@ -37,7 +37,7 @@ type Factory interface {
 	NewHelmClient(log log.Logger) (types.Client, error)
 
 	// NewDependencyManager creates a new dependency manager
-	NewDependencyManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager
+	NewDependencyManager(ctx devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager
 
 	// NewDockerClient creates a new docker API client
 	NewDockerClient(ctx context.Context, log log.Logger) (docker.Client, error)
@@ -99,7 +99,7 @@ func (f *DefaultFactoryImpl) GetLog() log.Logger {
 }
 
 // NewDependencyManager implements interface
-func (f *DefaultFactoryImpl) NewDependencyManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager {
+func (f *DefaultFactoryImpl) NewDependencyManager(ctx devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager {
 	return dependency.NewManager(ctx, configOptions)
 }
 

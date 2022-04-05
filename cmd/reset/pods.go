@@ -94,7 +94,7 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 	}
 
 	// create devspace context
-	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+	ctx := devspacecontext.NewContext(context.Background(), conf.Variables(), cmd.log).
 		WithConfig(conf).
 		WithKubeClient(client)
 
@@ -111,29 +111,29 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 }
 
 // ResetPods deletes the pods created by dev.replacePods
-func ResetPods(ctx *devspacecontext.Context, dependencies, force bool) {
+func ResetPods(ctx devspacecontext.Context, dependencies, force bool) {
 	resetted := ResetPodsRecursive(ctx, dependencies, force)
 	if resetted == 0 {
-		ctx.Log.Info("No dev pods to reset found")
+		ctx.Log().Info("No dev pods to reset found")
 	} else {
-		ctx.Log.Donef("Successfully reset %d pods", resetted)
+		ctx.Log().Donef("Successfully reset %d pods", resetted)
 	}
 }
 
-func ResetPodsRecursive(ctx *devspacecontext.Context, dependencies, force bool) int {
+func ResetPodsRecursive(ctx devspacecontext.Context, dependencies, force bool) int {
 	resetted := 0
 	if dependencies {
-		for _, d := range ctx.Dependencies {
+		for _, d := range ctx.Dependencies() {
 			resetted += ResetPodsRecursive(ctx.AsDependency(d), dependencies, force)
 		}
 	}
 
 	// create pod replacer
 	podReplacer := podreplace.NewPodReplacer()
-	for _, replacePodCache := range ctx.Config.RemoteCache().ListDevPods() {
+	for _, replacePodCache := range ctx.Config().RemoteCache().ListDevPods() {
 		deleted, err := podReplacer.RevertReplacePod(ctx, &replacePodCache, &deploy.PurgeOptions{ForcePurge: force})
 		if err != nil {
-			ctx.Log.Warnf("Error resetting replaced pod: %v", err)
+			ctx.Log().Warnf("Error resetting replaced pod: %v", err)
 		} else if deleted {
 			resetted++
 		}

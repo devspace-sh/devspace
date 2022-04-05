@@ -29,18 +29,23 @@ type CreateDeploymentsOptions struct {
 	All bool `long:"all" description:"Deploy all deployments"`
 }
 
-func CreateDeployments(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string, stdout io.Writer) error {
-	ctx.Log.Debugf("create_deployments %s", strings.Join(args, " "))
+func CreateDeployments(ctx devspacecontext.Context, pipeline types.Pipeline, args []string, stdout io.Writer) error {
+	ctx.Log().Debugf("create_deployments %s", strings.Join(args, " "))
+	err := pipeline.Exclude(ctx)
+	if err != nil {
+		return err
+	}
+
 	options := &CreateDeploymentsOptions{
 		Options: pipeline.Options().DeployOptions,
 	}
-	args, err := flags.ParseArgs(options, args)
+	args, err = flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}
 
 	if options.All {
-		deployments := ctx.Config.Config().Deployments
+		deployments := ctx.Config().Config().Deployments
 		for deployment := range deployments {
 			ctx, err = applySetValues(ctx, "deployments", deployment, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
@@ -54,7 +59,7 @@ func CreateDeployments(ctx *devspacecontext.Context, pipeline types.Pipeline, ar
 				return err
 			}
 
-			if ctx.Config.Config().Deployments == nil || ctx.Config.Config().Deployments[deployment] == nil {
+			if ctx.Config().Config().Deployments == nil || ctx.Config().Config().Deployments[deployment] == nil {
 				return fmt.Errorf("couldn't find deployment %v", deployment)
 			}
 		}
@@ -68,12 +73,12 @@ func CreateDeployments(ctx *devspacecontext.Context, pipeline types.Pipeline, ar
 	return deploy.NewController().Deploy(ctx, args, &options.Options)
 }
 
-func applySetValues(ctx *devspacecontext.Context, name, objName string, set, setString, from, fromFiles []string) (*devspacecontext.Context, error) {
+func applySetValues(ctx devspacecontext.Context, name, objName string, set, setString, from, fromFiles []string) (devspacecontext.Context, error) {
 	if len(set) == 0 && len(setString) == 0 && len(from) == 0 {
 		return ctx, nil
 	}
 
-	rawConfigOriginal := ctx.Config.RawBeforeConversion()
+	rawConfigOriginal := ctx.Config().RawBeforeConversion()
 	rawConfig := map[string]interface{}{}
 	err := util.Convert(rawConfigOriginal, &rawConfig)
 	if err != nil {
@@ -149,19 +154,19 @@ func applySetValues(ctx *devspacecontext.Context, name, objName string, set, set
 	}
 
 	rawConfig[name].(map[string]interface{})[objName] = mapObj
-	latestConfig, err := loader.Convert(rawConfig, ctx.Log)
+	latestConfig, err := loader.Convert(rawConfig, ctx.Log())
 	if err != nil {
 		return nil, err
 	}
 
 	return ctx.WithConfig(config.NewConfig(
-		ctx.Config.Raw(),
+		ctx.Config().Raw(),
 		rawConfig,
 		latestConfig,
-		ctx.Config.LocalCache(),
-		ctx.Config.RemoteCache(),
-		ctx.Config.Variables(),
-		ctx.Config.Path(),
+		ctx.Config().LocalCache(),
+		ctx.Config().RemoteCache(),
+		ctx.Config().Variables(),
+		ctx.Config().Path(),
 	)), nil
 }
 

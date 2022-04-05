@@ -7,10 +7,10 @@ import (
 
 // Client is the client interface for helm
 type Client interface {
-	InstallChart(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (*Release, error)
-	Template(ctx *devspacecontext.Context, releaseName, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (string, error)
-	DeleteRelease(ctx *devspacecontext.Context, releaseName string, releaseNamespace string) error
-	ListReleases(ctx *devspacecontext.Context, releaseNamespace string) ([]*Release, error)
+	InstallChart(ctx devspacecontext.Context, releaseName string, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (*Release, error)
+	Template(ctx devspacecontext.Context, releaseName, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (string, error)
+	DeleteRelease(ctx devspacecontext.Context, releaseName string, releaseNamespace string) error
+	ListReleases(ctx devspacecontext.Context, releaseNamespace string) ([]*Release, error)
 }
 
 // Release is the helm release struct

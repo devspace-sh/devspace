@@ -30,7 +30,7 @@ type localCommandHook struct {
 	Stderr io.Writer
 }
 
-func (l *localCommandHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig, cmdExtraEnv map[string]string) error {
+func (l *localCommandHook) Execute(ctx devspacecontext.Context, hook *latest.HookConfig, cmdExtraEnv map[string]string) error {
 	// Create extra env variables
 	osArgsBytes, err := json.Marshal(os.Args)
 	if err != nil {
@@ -39,16 +39,16 @@ func (l *localCommandHook) Execute(ctx *devspacecontext.Context, hook *latest.Ho
 	extraEnv := map[string]string{
 		OsArgsEnv: string(osArgsBytes),
 	}
-	if ctx.KubeClient != nil {
-		extraEnv[KubeContextEnv] = ctx.KubeClient.CurrentContext()
-		extraEnv[KubeNamespaceEnv] = ctx.KubeClient.Namespace()
+	if ctx.KubeClient() != nil {
+		extraEnv[KubeContextEnv] = ctx.KubeClient().CurrentContext()
+		extraEnv[KubeNamespaceEnv] = ctx.KubeClient().Namespace()
 	}
 	for k, v := range cmdExtraEnv {
 		extraEnv[k] = v
 	}
 
 	// resolve hook command and args
-	hookCommand, hookArgs, err := ResolveCommand(ctx.Context, hook.Command, hook.Args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
+	hookCommand, hookArgs, err := ResolveCommand(ctx.Context(), hook.Command, hook.Args, ctx.WorkingDir(), ctx.Config(), ctx.Dependencies())
 	if err != nil {
 		return err
 	}
@@ -58,17 +58,17 @@ func (l *localCommandHook) Execute(ctx *devspacecontext.Context, hook *latest.Ho
 	stderr := &bytes.Buffer{}
 	defer func() {
 		if hook.Name != "" {
-			ctx.Config.SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
-			ctx.Config.SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
+			ctx.Config().SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
+			ctx.Config().SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
 		}
 	}()
 
 	if hook.Args == nil {
-		return engine.ExecuteSimpleShellCommand(ctx.Context, ctx.WorkingDir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand)
+		return engine.ExecuteSimpleShellCommand(ctx.Context(), ctx.WorkingDir(), io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand)
 	}
 
 	// else we execute it directly
-	return command.CommandWithEnv(ctx.Context, ctx.WorkingDir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand, hookArgs...)
+	return command.CommandWithEnv(ctx.Context(), ctx.WorkingDir(), io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand, hookArgs...)
 }
 
 func ResolveCommand(ctx context.Context, command string, args []string, dir string, config config.Config, dependencies []types.Dependency) (string, []string, error) {

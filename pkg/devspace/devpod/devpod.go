@@ -68,22 +68,22 @@ func newDevPod() *devPod {
 	}
 }
 
-func (d *devPod) Start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, options Options) error {
+func (d *devPod) Start(ctx devspacecontext.Context, devPodConfig *latest.DevPod, options Options) error {
 	d.m.Lock()
 	if d.cancel != nil {
 		d.m.Unlock()
 		return errors.Errorf("dev pod is already running, please stop it before starting")
 	}
 
-	d.cancelCtx, d.cancel = context.WithCancel(ctx.Context)
+	d.cancelCtx, d.cancel = context.WithCancel(ctx.Context())
 	ctx = ctx.WithContext(d.cancelCtx)
 	d.m.Unlock()
 
 	// log devpod to console if debug
-	if ctx.Log.GetLevel() == logrus.DebugLevel {
+	if ctx.Log().GetLevel() == logrus.DebugLevel {
 		out, err := yaml.Marshal(devPodConfig)
 		if err == nil {
-			ctx.Log.Debugf("DevPod Config: \n%s\n", string(out))
+			ctx.Log().Debugf("DevPod Config: \n%s\n", string(out))
 		}
 	}
 
@@ -117,20 +117,20 @@ func (d *devPod) Stop() {
 	<-d.done
 }
 
-func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, options Options) error {
+func (d *devPod) startWithRetry(ctx devspacecontext.Context, devPodConfig *latest.DevPod, options Options) error {
 	t := &tomb.Tomb{}
 
-	go func(ctx *devspacecontext.Context) {
+	go func(ctx devspacecontext.Context) {
 		// wait for parent context cancel
 		// or that the DevPod is done
 		select {
-		case <-ctx.Context.Done():
+		case <-ctx.Context().Done():
 		case <-t.Dead():
 		}
 
 		if ctx.IsDone() {
 			<-t.Dead()
-			ctx.Log.Debugf("Stopped dev %s", devPodConfig.Name)
+			ctx.Log().Debugf("Stopped dev %s", devPodConfig.Name)
 			close(d.done)
 			return
 		}
@@ -145,34 +145,34 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 		if selectedPod != nil {
 			shouldRestart := false
 			err := wait.PollImmediateUntil(time.Second, func() (bool, error) {
-				pod, err := ctx.KubeClient.KubeClient().CoreV1().Pods(selectedPod.Pod.Namespace).Get(ctx.Context, selectedPod.Pod.Name, metav1.GetOptions{})
+				pod, err := ctx.KubeClient().KubeClient().CoreV1().Pods(selectedPod.Pod.Namespace).Get(ctx.Context(), selectedPod.Pod.Name, metav1.GetOptions{})
 				if err != nil {
 					if kerrors.IsNotFound(err) {
-						ctx.Log.Debugf("Restart dev %s because pod isn't found anymore", devPodConfig.Name)
+						ctx.Log().Debugf("Restart dev %s because pod isn't found anymore", devPodConfig.Name)
 						shouldRestart = true
 						return true, nil
 					}
 
 					// this case means there might be problems with internet
-					ctx.Log.Debugf("error trying to retrieve pod: %v", err)
+					ctx.Log().Debugf("error trying to retrieve pod: %v", err)
 					return false, nil
 				} else if pod.DeletionTimestamp != nil {
-					ctx.Log.Debugf("Restart dev %s because pod is terminating", devPodConfig.Name)
+					ctx.Log().Debugf("Restart dev %s because pod is terminating", devPodConfig.Name)
 					shouldRestart = true
 					return true, nil
 				}
 
 				return true, nil
-			}, ctx.Context.Done())
+			}, ctx.Context().Done())
 			if err != nil {
-				ctx.Log.Errorf("error restarting dev: %v", err)
+				ctx.Log().Errorf("error restarting dev: %v", err)
 			} else if shouldRestart {
 				d.restart(ctx, devPodConfig, options)
 				return
 			}
 		}
 
-		ctx.Log.Debugf("Stopped dev %s", devPodConfig.Name)
+		ctx.Log().Debugf("Stopped dev %s", devPodConfig.Name)
 		d.m.Lock()
 		d.err = t.Err()
 		d.m.Unlock()
@@ -180,7 +180,7 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 	}(ctx)
 
 	// Create a new tomb and run it
-	tombCtx := t.Context(ctx.Context)
+	tombCtx := t.Context(ctx.Context())
 	ctx = ctx.WithContext(tombCtx)
 	<-t.NotifyGo(func() error {
 		return d.start(ctx, devPodConfig, options, t)
@@ -192,7 +192,7 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 	return nil
 }
 
-func (d *devPod) restart(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, options Options) {
+func (d *devPod) restart(ctx devspacecontext.Context, devPodConfig *latest.DevPod, options Options) {
 	for {
 		err := d.startWithRetry(ctx, devPodConfig, options)
 		if err != nil {
@@ -200,9 +200,9 @@ func (d *devPod) restart(ctx *devspacecontext.Context, devPodConfig *latest.DevP
 				return
 			}
 
-			ctx.Log.Infof("Restart dev %s because of: %v", devPodConfig.Name, err)
+			ctx.Log().Infof("Restart dev %s because of: %v", devPodConfig.Name, err)
 			select {
-			case <-ctx.Context.Done():
+			case <-ctx.Context().Done():
 				return
 			case <-time.After(time.Second * 10):
 				continue
@@ -213,7 +213,7 @@ func (d *devPod) restart(ctx *devspacecontext.Context, devPodConfig *latest.DevP
 	}
 }
 
-func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, opts Options, parent *tomb.Tomb) error {
+func (d *devPod) start(ctx devspacecontext.Context, devPodConfig *latest.DevPod, opts Options, parent *tomb.Tomb) error {
 	// check first if we need to replace the pod
 	if !opts.DisablePodReplace && needPodReplace(devPodConfig) {
 		err := podreplace.NewPodReplacer().ReplacePod(ctx, devPodConfig)
@@ -221,7 +221,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 			return errors.Wrap(err, "replace pod")
 		}
 	} else {
-		devPodCache, ok := ctx.Config.RemoteCache().GetDevPod(devPodConfig.Name)
+		devPodCache, ok := ctx.Config().RemoteCache().GetDevPod(devPodConfig.Name)
 		if ok && devPodCache.Deployment != "" {
 			_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, &devPodCache, &deploy.PurgeOptions{ForcePurge: true})
 			if err != nil {
@@ -232,7 +232,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 
 	var imageSelector []string
 	if devPodConfig.ImageSelector != "" {
-		imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, devPodConfig.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), true).FillRuntimeVariablesAsImageSelector(ctx.Context(), devPodConfig.ImageSelector, ctx.Config(), ctx.Dependencies())
 		if err != nil {
 			return err
 		}
@@ -241,17 +241,17 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	}
 
 	// wait for pod to be ready
-	ctx.Log.Infof("Waiting for pod to become ready...")
+	ctx.Log().Infof("Waiting for pod to become ready...")
 	options := targetselector.NewEmptyOptions().
 		ApplyConfigParameter("", devPodConfig.LabelSelector, imageSelector, devPodConfig.Namespace, "").
 		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 500)).
 		WithSkipInitContainers(true)
 	var err error
-	selectedPod, err := targetselector.NewTargetSelector(options).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	selectedPod, err := targetselector.NewTargetSelector(options).SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return errors.Wrap(err, "waiting for pod to become ready")
 	}
-	ctx.Log.Infof("Selected %s (%s)", ansi.Color(fmt.Sprintf("%s:%s", selectedPod.Pod.Name, selectedPod.Container.Name), "yellow+b"), ansi.Color("pod:container", "white+b"))
+	ctx.Log().Infof("Selected %s (%s)", ansi.Color(fmt.Sprintf("%s:%s", selectedPod.Pod.Name, selectedPod.Container.Name), "yellow+b"), ansi.Color("pod:container", "white+b"))
 
 	// set selected pod
 	d.m.Lock()
@@ -260,19 +260,19 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 
 	// Run dev.open configs
 	if !opts.DisableOpen {
-		ctx := ctx.WithLogger(ctx.Log.WithPrefixColor("open  ", "yellow+b"))
+		ctx := ctx.WithLogger(ctx.Log().WithPrefixColor("open  ", "yellow+b"))
 		for _, openConfig := range devPodConfig.Open {
 			if openConfig.URL != "" {
 				url := openConfig.URL
-				ctx.Log.Infof("Opening '%s' as soon as application will be started", openConfig.URL)
+				ctx.Log().Infof("Opening '%s' as soon as application will be started", openConfig.URL)
 				parent.Go(func() error {
 					now := time.Now()
 					for time.Since(now) < openMaxWait {
 						select {
-						case <-ctx.Context.Done():
+						case <-ctx.Context().Done():
 							return nil
 						case <-time.After(time.Second):
-							err := tryOpen(ctx.Context, url, ctx.Log)
+							err := tryOpen(ctx.Context(), url, ctx.Log())
 							if err == nil {
 								return nil
 							}
@@ -339,8 +339,8 @@ func tryOpen(ctx context.Context, url string, log logpkg.Logger) error {
 	return fmt.Errorf("not reachable")
 }
 
-func (d *devPod) startLogs(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, selectedPod *selector.SelectedPodContainer, parent *tomb.Tomb) error {
-	ctx = ctx.WithLogger(ctx.Log.WithPrefixColor("logs  ", "yellow+b"))
+func (d *devPod) startLogs(ctx devspacecontext.Context, devPodConfig *latest.DevPod, selectedPod *selector.SelectedPodContainer, parent *tomb.Tomb) error {
+	ctx = ctx.WithLogger(ctx.Log().WithPrefixColor("logs  ", "yellow+b"))
 	loader.EachDevContainer(devPodConfig, func(devContainer *latest.DevContainer) bool {
 		if devContainer.Logs == nil || (devContainer.Logs.Enabled != nil && !*devContainer.Logs.Enabled) {
 			return true
@@ -384,7 +384,7 @@ func (d *devPod) getTerminalDevContainer(devPodConfig *latest.DevPod) *latest.De
 	return devContainer
 }
 
-func (d *devPod) startAttach(ctx *devspacecontext.Context, devContainer *latest.DevContainer, opts Options, selectedPod *selector.SelectedPodContainer, parent *tomb.Tomb) error {
+func (d *devPod) startAttach(ctx devspacecontext.Context, devContainer *latest.DevContainer, opts Options, selectedPod *selector.SelectedPodContainer, parent *tomb.Tomb) error {
 	parent.Go(func() error {
 		id, err := logpkg.AcquireGlobalSilence()
 		if err != nil {
@@ -393,7 +393,7 @@ func (d *devPod) startAttach(ctx *devspacecontext.Context, devContainer *latest.
 		defer logpkg.ReleaseGlobalSilence(id)
 
 		// make sure the global log is silent
-		ctx = ctx.WithLogger(ctx.Log.WithPrefixColor("attach ", "yellow+b"))
+		ctx = ctx.WithLogger(ctx.Log().WithPrefixColor("attach ", "yellow+b"))
 		err = attach.StartAttach(
 			ctx,
 			devContainer,
@@ -424,7 +424,7 @@ func (d *devPod) startAttach(ctx *devspacecontext.Context, devContainer *latest.
 	return nil
 }
 
-func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *latest.DevContainer, opts Options, selectedPod *selector.SelectedPodContainer, parent *tomb.Tomb) error {
+func (d *devPod) startTerminal(ctx devspacecontext.Context, devContainer *latest.DevContainer, opts Options, selectedPod *selector.SelectedPodContainer, parent *tomb.Tomb) error {
 	parent.Go(func() error {
 		id, err := logpkg.AcquireGlobalSilence()
 		if err != nil {
@@ -433,7 +433,7 @@ func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *lates
 		defer logpkg.ReleaseGlobalSilence(id)
 
 		// make sure the global log is silent
-		ctx = ctx.WithLogger(ctx.Log.WithPrefixColor("term  ", "yellow+b"))
+		ctx = ctx.WithLogger(ctx.Log().WithPrefixColor("term  ", "yellow+b"))
 		err = terminal.StartTerminal(
 			ctx,
 			devContainer,
@@ -464,7 +464,7 @@ func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *lates
 	return nil
 }
 
-func (d *devPod) startServices(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, opts Options, parent *tomb.Tomb) error {
+func (d *devPod) startServices(ctx devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, opts Options, parent *tomb.Tomb) error {
 	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{}, "devCommand:before:sync", "dev.beforeSync", "devCommand:before:portForwarding", "dev.beforePortForwarding")
 	if pluginErr != nil {
 		return pluginErr
@@ -477,7 +477,7 @@ func (d *devPod) startServices(ctx *devspacecontext.Context, devPod *latest.DevP
 		}
 
 		// add prefix
-		ctx := ctx.WithLogger(ctx.Log.WithPrefixColor("sync  ", "yellow+b"))
+		ctx := ctx.WithLogger(ctx.Log().WithPrefixColor("sync  ", "yellow+b"))
 		err := sync.StartSync(ctx, devPod, selector, parent)
 		return err
 	})
@@ -488,21 +488,21 @@ func (d *devPod) startServices(ctx *devspacecontext.Context, devPod *latest.DevP
 			return nil
 		}
 
-		ctx := ctx.WithLogger(ctx.Log.WithPrefixColor("ports ", "yellow+b"))
+		ctx := ctx.WithLogger(ctx.Log().WithPrefixColor("ports ", "yellow+b"))
 		return portforwarding.StartPortForwarding(ctx, devPod, selector, parent)
 	})
 
 	// Start SSH
 	sshDone := parent.NotifyGo(func() error {
 		// add ssh prefix
-		ctx := ctx.WithLogger(ctx.Log.WithPrefixColor("ssh   ", "yellow+b"))
+		ctx := ctx.WithLogger(ctx.Log().WithPrefixColor("ssh   ", "yellow+b"))
 		return ssh.StartSSH(ctx, devPod, selector, parent)
 	})
 
 	// Start Reverse Commands
 	reverseCommandsDone := parent.NotifyGo(func() error {
 		// add proxy prefix
-		ctx := ctx.WithLogger(ctx.Log.WithPrefixColor("proxy ", "yellow+b"))
+		ctx := ctx.WithLogger(ctx.Log().WithPrefixColor("proxy ", "yellow+b"))
 		return proxycommands.StartProxyCommands(ctx, devPod, selector, parent)
 	})
 

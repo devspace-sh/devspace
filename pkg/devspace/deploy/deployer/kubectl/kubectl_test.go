@@ -95,7 +95,7 @@ func TestNew(t *testing.T) {
 			testCase.deployConfig = &latest.DeploymentConfig{}
 		}
 
-		devCtx := devspacecontext.NewContext(context.Background(), log.NewFakeLogger()).WithKubeClient(testCase.kubeClient)
+		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithKubeClient(testCase.kubeClient)
 		deployer, err := New(devCtx, testCase.deployConfig)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -166,7 +166,7 @@ func TestRender(t *testing.T) {
 			map[string]interface{}{},
 			constants.DefaultConfigPath)
 
-		devCtx := devspacecontext.NewContext(context.Background(), log.NewFakeLogger()).WithConfig(conf)
+		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithConfig(conf)
 
 		reader, writer := io.Pipe()
 		defer reader.Close()
@@ -220,7 +220,7 @@ func TestStatus(t *testing.T) {
 			Manifests: testCase.manifests,
 		}
 
-		devCtx := devspacecontext.NewContext(context.Background(), log.NewFakeLogger())
+		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger())
 
 		status, err := deployer.Status(devCtx)
 
@@ -289,7 +289,7 @@ func TestDelete(t *testing.T) {
 			map[string]interface{}{},
 			constants.DefaultConfigPath)
 
-		devCtx := devspacecontext.NewContext(context.Background(), log.NewFakeLogger()).WithConfig(conf)
+		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithConfig(conf)
 
 		err := Delete(devCtx, deployer.DeploymentConfig.Name)
 		if testCase.expectedErr == "" {
@@ -388,7 +388,7 @@ func TestDeploy(t *testing.T) {
 			map[string]interface{}{},
 			constants.DefaultConfigPath)
 
-		devCtx := devspacecontext.NewContext(context.Background(), log.NewFakeLogger()).WithConfig(conf)
+		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithConfig(conf)
 
 		deployed, err := deployer.Deploy(devCtx, false)
 
@@ -486,7 +486,7 @@ func TestGetReplacedManifest(t *testing.T) {
 			map[string]interface{}{},
 			constants.DefaultConfigPath)
 
-		devCtx := devspacecontext.NewContext(context.Background(), log.NewFakeLogger()).WithConfig(conf)
+		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithConfig(conf)
 
 		shouldRedeploy, replacedManifest, _, err := deployer.getReplacedManifest(devCtx, testCase.manifest)
 

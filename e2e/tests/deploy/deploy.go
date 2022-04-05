@@ -2,7 +2,9 @@ package deploy
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"os"
+	"path/filepath"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -103,6 +105,14 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectError(err)
 		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "test4", metav1.GetOptions{})
 		framework.ExpectError(err)
+
+		// check if remote cache was deleted
+		client, err := kubectl.NewClientFromContext(kubeClient.Client().CurrentContext(), ns, false, kubeClient.Client().KubeConfigLoader())
+		framework.ExpectNoError(err)
+		config, _, err := framework.LoadConfig(f, client, filepath.Join(tempDir, "devspace.yaml"))
+		framework.ExpectNoError(err)
+		_, ok := config.RemoteCache().GetDeployment("test1")
+		framework.ExpectEqual(ok, false)
 	})
 
 	ginkgo.It("should deploy helm application", func() {

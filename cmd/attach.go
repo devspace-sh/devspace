@@ -96,11 +96,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// create the context
-	ctx := &devspacecontext.Context{
-		Context:    context.Background(),
-		KubeClient: client,
-		Log:        log,
-	}
+	ctx := devspacecontext.NewContext(context.Background(), nil, log).WithKubeClient(client)
 
 	// Execute plugin hook
 	err = hook.ExecuteHooks(ctx, nil, "attach")

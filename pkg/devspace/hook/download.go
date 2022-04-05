@@ -28,7 +28,7 @@ func NewDownloadHook() RemoteHook {
 
 type remoteDownloadHook struct{}
 
-func (r *remoteDownloadHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error {
+func (r *remoteDownloadHook) ExecuteRemotely(ctx devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error {
 	containerPath := "."
 	if hook.Download.ContainerPath != "" {
 		containerPath = hook.Download.ContainerPath
@@ -39,8 +39,8 @@ func (r *remoteDownloadHook) ExecuteRemotely(ctx *devspacecontext.Context, hook 
 	}
 	localPath = ctx.ResolvePath(localPath)
 
-	ctx.Log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
-	ctx.Log.Infof("Copy container '%s' -> local '%s'", containerPath, localPath)
+	ctx.Log().Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
+	ctx.Log().Infof("Copy container '%s' -> local '%s'", containerPath, localPath)
 	// Make sure the target folder exists
 	destDir := path.Dir(localPath)
 	if len(destDir) > 0 {
@@ -48,7 +48,7 @@ func (r *remoteDownloadHook) ExecuteRemotely(ctx *devspacecontext.Context, hook 
 	}
 
 	// Download the files
-	err := download(ctx.Context, ctx.KubeClient, podContainer.Pod, podContainer.Container.Name, localPath, containerPath, ctx.Log)
+	err := download(ctx.Context(), ctx.KubeClient(), podContainer.Pod, podContainer.Container.Name, localPath, containerPath, ctx.Log())
 	if err != nil {
 		return errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
 	}

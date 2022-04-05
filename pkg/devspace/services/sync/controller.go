@@ -32,7 +32,7 @@ import (
 )
 
 type Controller interface {
-	Start(ctx *devspacecontext.Context, options *Options, parent *tomb.Tomb) error
+	Start(ctx devspacecontext.Context, options *Options, parent *tomb.Tomb) error
 }
 
 func NewController() Controller {
@@ -55,7 +55,7 @@ type Options struct {
 	Verbose bool
 }
 
-func (c *controller) Start(ctx *devspacecontext.Context, options *Options, parent *tomb.Tomb) error {
+func (c *controller) Start(ctx devspacecontext.Context, options *Options, parent *tomb.Tomb) error {
 	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 		"sync_config": options.SyncConfig,
 	}, hook.EventsForSingle("start:sync", options.Name).With("sync.start")...)
@@ -79,7 +79,7 @@ func (c *controller) Start(ctx *devspacecontext.Context, options *Options, paren
 	return nil
 }
 
-func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Options, parent *tomb.Tomb) error {
+func (c *controller) startWithWait(ctx devspacecontext.Context, options *Options, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -119,8 +119,8 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 
 	// should wait for initial sync?
 	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync {
-		ctx.Log.Info("Waiting for initial sync to complete")
-		defer ctx.Log.Info("Initial sync completed")
+		ctx.Log().Info("Waiting for initial sync to complete")
+		defer ctx.Log().Info("Initial sync completed")
 		var (
 			uploadDone   = false
 			downloadDone = false
@@ -144,7 +144,7 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 				uploadDone = true
 			case <-onInitDownloadDone:
 				downloadDone = true
-			case <-ctx.Context.Done():
+			case <-ctx.Context().Done():
 				client.Stop(nil)
 				pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 					"sync_config": options.SyncConfig,
@@ -164,7 +164,7 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 				return nil
 			}
 			if uploadDone && downloadDone {
-				ctx.Log.Debugf("Initial sync took: %s", time.Since(started))
+				ctx.Log().Debugf("Initial sync took: %s", time.Since(started))
 				break
 			}
 		}
@@ -180,7 +180,7 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 	if options.RestartOnError {
 		parent.Go(func() error {
 			select {
-			case <-ctx.Context.Done():
+			case <-ctx.Context().Done():
 				syncStop(ctx, client, options, parent)
 			case err = <-onError:
 				if ctx.IsDone() {
@@ -192,8 +192,8 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 					"ERROR":       err,
 				}, hook.EventsForSingle("restart:sync", options.Name).With("sync.restart")...)
 
-				ctx.Log.Errorf("Restarting because: %v", err)
-				shouldExit := PrintPodError(ctx.Context, ctx.KubeClient, pod.Pod, ctx.Log)
+				ctx.Log().Errorf("Restarting because: %v", err)
+				shouldExit := PrintPodError(ctx.Context(), ctx.KubeClient(), pod.Pod, ctx.Log())
 				if shouldExit {
 					syncStop(ctx, client, options, parent)
 					return nil
@@ -211,7 +211,7 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 						select {
 						case <-time.After(time.Second * 15):
 							continue
-						case <-ctx.Context.Done():
+						case <-ctx.Context().Done():
 							syncStop(ctx, client, options, parent)
 							return nil
 						}
@@ -229,17 +229,17 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 	return nil
 }
 
-func syncStop(ctx *devspacecontext.Context, syncClient *sync.Sync, options *Options, parent *tomb.Tomb) {
+func syncStop(ctx devspacecontext.Context, syncClient *sync.Sync, options *Options, parent *tomb.Tomb) {
 	syncClient.Stop(nil)
 	syncDone(ctx, options, parent)
 }
 
-func syncDone(ctx *devspacecontext.Context, options *Options, parent *tomb.Tomb) {
+func syncDone(ctx devspacecontext.Context, options *Options, parent *tomb.Tomb) {
 	parent.Kill(nil)
 	hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
 		"sync_config": options.SyncConfig,
 	}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
-	ctx.Log.Debugf("Stopped sync %s", options.SyncConfig.Path)
+	ctx.Log().Debugf("Stopped sync %s", options.SyncConfig.Path)
 }
 
 func PrintPodError(ctx context.Context, kubeClient kubectl.Client, pod *v1.Pod, log logpkg.Logger) bool {
@@ -265,17 +265,17 @@ func PrintPodError(ctx context.Context, kubeClient kubectl.Client, pod *v1.Pod, 
 	return false
 }
 
-func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error) (*sync.Sync, *selector.SelectedPodContainer, error) {
+func (c *controller) startSync(ctx devspacecontext.Context, options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error) (*sync.Sync, *selector.SelectedPodContainer, error) {
 	var (
 		syncConfig = options.SyncConfig
 	)
 
-	container, err := options.Selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	container, err := options.Selector.SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error selecting container")
 	}
 
-	ctx.Log.Debug("Starting sync...")
+	ctx.Log().Debug("Starting sync...")
 	syncClient, err := c.initClient(ctx, container.Pod, options.Arch, container.Container.Name, syncConfig, options.Starter, options.Verbose, options.SyncLog)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "start sync")
@@ -288,7 +288,7 @@ func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, o
 
 	localPath, remotePath, err := ParseSyncPath(syncConfig.Path)
 	if err == nil {
-		ctx.Log.Donef("Sync started on: %s", ansi.Color(fmt.Sprintf("%s <-> %s", localPath, remotePath), "white+b"))
+		ctx.Log().Donef("Sync started on: %s", ansi.Color(fmt.Sprintf("%s <-> %s", localPath, remotePath), "white+b"))
 	}
 
 	return syncClient, container, nil
@@ -317,7 +317,7 @@ func ParseSyncPath(path string) (localPath string, remotePath string, err error)
 	return splitted[0], splitted[1], nil
 }
 
-func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch, container string, syncConfig *latest.SyncConfig, starter sync.DelayedContainerStarter, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
+func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, container string, syncConfig *latest.SyncConfig, starter sync.DelayedContainerStarter, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
 	localPath, containerPath, err := ParseSyncPath(syncConfig.Path)
 	if err != nil {
 		return nil, err
@@ -339,7 +339,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 		}
 	}
 
-	err = inject.InjectDevSpaceHelper(ctx.Context, ctx.KubeClient, pod, container, arch, customLog)
+	err = inject.InjectDevSpaceHelper(ctx.Context(), ctx.KubeClient(), pod, container, arch, customLog)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +361,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 		Polling:              syncConfig.Polling,
 		Starter:              starter,
 		ResolveCommand: func(command string, args []string) (string, []string, error) {
-			return hook.ResolveCommand(ctx.Context, command, args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
+			return hook.ResolveCommand(ctx.Context(), command, args, ctx.WorkingDir(), ctx.Config(), ctx.Dependencies())
 		},
 	}
 
@@ -433,7 +433,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 		options.UploadBatchArgs = syncConfig.OnUpload.ExecRemote.OnBatch.Args
 	}
 
-	syncClient, err := sync.NewSync(ctx.Context, localPath, options)
+	syncClient, err := sync.NewSync(ctx.Context(), localPath, options)
 	if err != nil {
 		return nil, errors.Wrap(err, "create sync")
 	}
@@ -472,7 +472,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 	upStdoutReader, upStdoutWriter := io.Pipe()
 
 	go func() {
-		err := StartStream(ctx.Context, ctx.KubeClient, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, true, options.Log)
+		err := StartStream(ctx.Context(), ctx.KubeClient(), pod, container, upstreamArgs, upStdinReader, upStdoutWriter, true, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -500,7 +500,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 	downStdoutReader, downStdoutWriter := io.Pipe()
 
 	go func() {
-		err := StartStream(ctx.Context, ctx.KubeClient, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, true, options.Log)
+		err := StartStream(ctx.Context(), ctx.KubeClient(), pod, container, downstreamArgs, downStdinReader, downStdoutWriter, true, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}

@@ -39,6 +39,6 @@ func NewFakeController(config *latest.Config) build.Controller {
 }
 
 // Build builds the images
-func (f *FakeController) Build(ctx *devspacecontext.Context, images []string, options *build.Options) error {
+func (f *FakeController) Build(ctx devspacecontext.Context, images []string, options *build.Options) error {
 	return nil
 }

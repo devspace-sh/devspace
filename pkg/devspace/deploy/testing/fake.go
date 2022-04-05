@@ -15,11 +15,11 @@ func NewFakeController(config *latest.Config) deploy.Controller {
 }
 
 // Deploy deploys the deployments
-func (f *FakeController) Deploy(ctx *devspacecontext.Context, deployments []string, options *deploy.Options) error {
+func (f *FakeController) Deploy(ctx devspacecontext.Context, deployments []string, options *deploy.Options) error {
 	return nil
 }
 
 // Purge purges the deployments
-func (f *FakeController) Purge(ctx *devspacecontext.Context, deployments []string, options *deploy.PurgeOptions) error {
+func (f *FakeController) Purge(ctx devspacecontext.Context, deployments []string, options *deploy.PurgeOptions) error {
 	return nil
 }

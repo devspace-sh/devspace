@@ -144,6 +144,28 @@ type Pipeline struct {
 	Run string `yaml:"run,omitempty" json:"run,omitempty"`
 }
 
+func (p *Pipeline) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	pipelineString := ""
+	err := unmarshal(&pipelineString)
+	if err != nil {
+		m := map[string]interface{}{}
+		err := unmarshal(m)
+		if err != nil {
+			return err
+		}
+
+		out, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(out, p)
+	}
+
+	p.Run = pipelineString
+	return nil
+}
+
 type RequireConfig struct {
 	// DevSpace specifies the DevSpace version constraint that is needed to use this config
 	DevSpace string `yaml:"devspace,omitempty" json:"devspace,omitempty"`
@@ -871,6 +893,9 @@ type ProxyCommand struct {
 
 	// SkipContainerEnv will not forward the container environment variables to the local command
 	SkipContainerEnv bool `yaml:"skipContainerEnv,omitempty" json:"skipContainerEnv,omitempty"`
+
+	// Env are extra environment variables to set for the command
+	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 }
 
 type SSH struct {
@@ -1356,6 +1381,9 @@ type CommandConfig struct {
 
 	// Description describes what the command is doing and can be seen in `devspace list commands`
 	Description string `yaml:"description,omitempty" json:"description,omitempty"`
+}
+
+type CommandFlag struct {
 }
 
 func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {

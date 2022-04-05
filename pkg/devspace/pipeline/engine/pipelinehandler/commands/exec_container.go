@@ -21,10 +21,10 @@ type ExecContainerOptions struct {
 	Timeout     int64  `long:"timeout" description:"The timeout to wait. Defaults to 5 minutes"`
 }
 
-func ExecContainer(ctx *devspacecontext.Context, args []string) error {
-	hc := interp.HandlerCtx(ctx.Context)
+func ExecContainer(ctx devspacecontext.Context, args []string) error {
+	hc := interp.HandlerCtx(ctx.Context())
 	options := &ExecContainerOptions{
-		Namespace: ctx.KubeClient.Namespace(),
+		Namespace: ctx.KubeClient().Namespace(),
 	}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
@@ -37,18 +37,18 @@ func ExecContainer(ctx *devspacecontext.Context, args []string) error {
 		return fmt.Errorf("usage: exec_container [--image-selector|--label-selector] COMMAND")
 	}
 
-	logger := ctx.Log.ErrorStreamOnly()
+	logger := ctx.Log().ErrorStreamOnly()
 	selectorOptions := targetselector.NewOptionsFromFlags(options.Container, options.LabelSelector, []string{options.ImageSelector}, options.Namespace, "")
 	if options.Timeout != 0 {
 		selectorOptions = selectorOptions.WithTimeout(options.Timeout)
 	}
 	selectorOptions.WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 100))
-	selectedContainer, err := targetselector.NewTargetSelector(selectorOptions).SelectSingleContainer(ctx.Context, ctx.KubeClient, logger)
+	selectedContainer, err := targetselector.NewTargetSelector(selectorOptions).SelectSingleContainer(ctx.Context(), ctx.KubeClient(), logger)
 	if err != nil {
 		return err
 	}
 
-	return ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+	return ctx.KubeClient().ExecStream(ctx.Context(), &kubectl.ExecStreamOptions{
 		Pod:         selectedContainer.Pod,
 		Container:   selectedContainer.Container.Name,
 		Command:     args,

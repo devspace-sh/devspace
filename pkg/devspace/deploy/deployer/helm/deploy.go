@@ -25,7 +25,7 @@ import (
 )
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (bool, error) {
+func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bool, error) {
 	var (
 		releaseName = d.DeploymentConfig.Name
 		chartPath   = d.DeploymentConfig.Helm.Chart.Name
@@ -34,7 +34,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 
 	releaseNamespace := d.DeploymentConfig.Namespace
 	if releaseNamespace == "" {
-		releaseNamespace = ctx.KubeClient.Namespace()
+		releaseNamespace = ctx.KubeClient().Namespace()
 	}
 
 	// Hash the chart directory if there is any
@@ -50,7 +50,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 	}
 
 	// Ensure deployment config is there
-	deployCache, _ := ctx.Config.RemoteCache().GetDeployment(d.DeploymentConfig.Name)
+	deployCache, _ := ctx.Config().RemoteCache().GetDeployment(d.DeploymentConfig.Name)
 
 	// Check values files for changes
 	helmOverridesHash := ""
@@ -77,7 +77,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 
 	// Get HelmClient if necessary
 	if d.Helm == nil {
-		d.Helm, err = helm.NewClient(ctx.Log)
+		d.Helm, err = helm.NewClient(ctx.Log())
 		if err != nil {
 			return false, errors.Errorf("Error creating helm client: %v", err)
 		}
@@ -136,21 +136,21 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 		}
 
 		deployCache.Helm = helmCache
-		if rootName, ok := values.RootNameFrom(ctx.Context); ok && !stringutil.Contains(deployCache.Projects, rootName) {
+		if rootName, ok := values.RootNameFrom(ctx.Context()); ok && !stringutil.Contains(deployCache.Projects, rootName) {
 			deployCache.Projects = append(deployCache.Projects, rootName)
 		}
-		ctx.Config.RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
+		ctx.Config().RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
 		return true, nil
 	}
 
-	if rootName, ok := values.RootNameFrom(ctx.Context); ok && !stringutil.Contains(deployCache.Projects, rootName) {
+	if rootName, ok := values.RootNameFrom(ctx.Context()); ok && !stringutil.Contains(deployCache.Projects, rootName) {
 		deployCache.Projects = append(deployCache.Projects, rootName)
 	}
-	ctx.Config.RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
+	ctx.Config().RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
 	return false, nil
 }
 
-func (d *DeployConfig) internalDeploy(ctx *devspacecontext.Context, overwriteValues map[string]interface{}, out io.Writer) (*types.Release, error) {
+func (d *DeployConfig) internalDeploy(ctx devspacecontext.Context, overwriteValues map[string]interface{}, out io.Writer) (*types.Release, error) {
 	var (
 		releaseName      = d.DeploymentConfig.Name
 		releaseNamespace = d.DeploymentConfig.Namespace
@@ -166,9 +166,9 @@ func (d *DeployConfig) internalDeploy(ctx *devspacecontext.Context, overwriteVal
 		return nil, nil
 	}
 
-	ctx.Log.Infof("Deploying chart %s (%s) with helm...", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name)
+	ctx.Log().Infof("Deploying chart %s (%s) with helm...", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name)
 	valuesOut, _ := yaml.Marshal(overwriteValues)
-	ctx.Log.Debugf("Deploying chart with values:\n %v\n", string(valuesOut))
+	ctx.Log().Debugf("Deploying chart with values:\n %v\n", string(valuesOut))
 
 	// Deploy chart
 	appRelease, err := d.Helm.InstallChart(ctx, releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
@@ -178,15 +178,15 @@ func (d *DeployConfig) internalDeploy(ctx *devspacecontext.Context, overwriteVal
 
 	// Print revision
 	if appRelease != nil {
-		ctx.Log.Donef("Deployed helm chart (Release revision: %s)", appRelease.Revision)
+		ctx.Log().Donef("Deployed helm chart (Release revision: %s)", appRelease.Revision)
 	} else {
-		ctx.Log.Done("Deployed helm chart")
+		ctx.Log().Done("Deployed helm chart")
 	}
 
 	return appRelease, nil
 }
 
-func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, map[string]interface{}, error) {
+func (d *DeployConfig) getDeploymentValues(ctx devspacecontext.Context) (bool, map[string]interface{}, error) {
 	var (
 		chartPath       = d.DeploymentConfig.Helm.Chart.Name
 		chartValuesPath = ctx.ResolvePath(filepath.Join(chartPath, "values.yaml"))
@@ -203,7 +203,7 @@ func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, 
 		}
 
 		if d.DeploymentConfig.UpdateImageTags == nil || *d.DeploymentConfig.UpdateImageTags {
-			redeploy, err := legacy.ReplaceImageNames(overwriteValues, ctx.Config, ctx.Dependencies, nil)
+			redeploy, err := legacy.ReplaceImageNames(overwriteValues, ctx.Config(), ctx.Dependencies(), nil)
 			if err != nil {
 				return false, nil, err
 			}
@@ -219,12 +219,12 @@ func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, 
 			overwriteValuesFromPath := map[string]interface{}{}
 			err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValuesFromPath)
 			if err != nil {
-				ctx.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
+				ctx.Log().Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
 			}
 
 			// Replace image names
 			if d.DeploymentConfig.UpdateImageTags == nil || *d.DeploymentConfig.UpdateImageTags {
-				redeploy, err := legacy.ReplaceImageNames(overwriteValuesFromPath, ctx.Config, ctx.Dependencies, nil)
+				redeploy, err := legacy.ReplaceImageNames(overwriteValuesFromPath, ctx.Config(), ctx.Dependencies(), nil)
 				if err != nil {
 					return false, nil, err
 				}
@@ -241,7 +241,7 @@ func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, 
 		if d.DeploymentConfig.UpdateImageTags == nil || *d.DeploymentConfig.UpdateImageTags {
 			enableLegacy = true
 		}
-		redeploy, _, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, enableLegacy).FillRuntimeVariablesWithRebuild(ctx.Context, d.DeploymentConfig.Helm.Values, ctx.Config, ctx.Dependencies)
+		redeploy, _, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), enableLegacy).FillRuntimeVariablesWithRebuild(ctx.Context(), d.DeploymentConfig.Helm.Values, ctx.Config(), ctx.Dependencies())
 		if err != nil {
 			return false, nil, err
 		}

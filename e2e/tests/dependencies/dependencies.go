@@ -42,6 +42,36 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		kubeClient, err = kube.NewKubeHelper()
 	})
 
+	ginkgo.It("should wait for dependencies", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/wait")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dependencies")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command and start it
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Pipeline: "dev",
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out.txt"), `dep3
+dep2
+dep2
+wait
+`)
+	})
+
 	ginkgo.It("should not purge common dependency", func() {
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/purge")
 		framework.ExpectNoError(err)

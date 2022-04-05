@@ -1,0 +1,14 @@
+version: v2beta1
+name: wait
+
+dependencies:
+  dep1:
+    path: dep1.yaml
+  dep2:
+    path: dep2.yaml
+
+pipelines:
+  dev: |-
+    run_dependency_pipelines --all
+    echo "wait" >> out.txt
+
