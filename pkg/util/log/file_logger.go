@@ -94,16 +94,6 @@ func OverrideRuntimeErrorHandler(discard bool) {
 	})
 }
 
-func (f *fileLogger) logSinks(level logrus.Level, message string) {
-	for _, s := range f.sinks {
-		if level == logrus.PanicLevel || level == logrus.FatalLevel {
-			s.Print(logrus.ErrorLevel, message)
-		} else {
-			s.Print(level, message)
-		}
-	}
-}
-
 func (f *fileLogger) addPrefixes(message string) string {
 	prefix := ""
 	for _, p := range f.prefixes {

@@ -2,7 +2,10 @@ package loader
 
 import (
 	"fmt"
+
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
+
+	"strings"
 
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -11,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
-	"strings"
 )
 
 // ValidInitialSyncStrategy checks if strategy is valid

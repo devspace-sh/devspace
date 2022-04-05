@@ -116,9 +116,7 @@ func (d *DiscardLogger) WithSink(log Logger) Logger {
 	return d
 }
 
-func (d *DiscardLogger) AddSink(log Logger) {
-	return
-}
+func (d *DiscardLogger) AddSink(log Logger) {}
 
 func (d *DiscardLogger) WithPrefix(prefix string) Logger {
 	return d

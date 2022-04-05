@@ -46,7 +46,7 @@ func NewSymlink(upstream *upstream, symlinkPath, targetPath string, isDir bool, 
 	}
 
 	symlink.watcher = notify.NewTree()
-	symlink.watcher.Watch(targetPath, symlink.events, func(path string) bool {
+	_ = symlink.watcher.Watch(targetPath, symlink.events, func(path string) bool {
 		if ignoreMatcher == nil || ignoreMatcher.RequireFullScan() {
 			return false
 		}

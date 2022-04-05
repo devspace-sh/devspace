@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"context"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -42,7 +43,7 @@ func TestDeleteImage(t *testing.T) {
 		}
 
 		if testCase.deletedImageName != "" {
-			response, err = client.DeleteImageByName(testCase.deletedImageName, &log.FakeLogger{})
+			response, err = client.DeleteImageByName(context.Background(), testCase.deletedImageName, &log.FakeLogger{})
 		}
 
 		if !testCase.expectedErr {

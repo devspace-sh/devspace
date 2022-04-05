@@ -3,9 +3,6 @@ package log
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/env"
-	"github.com/loft-sh/devspace/pkg/util/hash"
-	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,6 +10,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/env"
+	"github.com/loft-sh/devspace/pkg/util/hash"
+	"github.com/loft-sh/devspace/pkg/util/scanner"
 
 	"github.com/acarl005/stripansi"
 	goansi "github.com/k0kubun/go-ansi"
@@ -54,7 +55,7 @@ type Format int
 const (
 	TextFormat Format = iota
 	TimeFormat Format = iota
-	JsonFormat Format = iota
+	JSONFormat Format = iota
 	RawFormat  Format = iota
 )
 
@@ -302,7 +303,7 @@ func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 			}
 			_, _ = stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
 			_, _ = stream.Write([]byte(message))
-		} else if s.format == JsonFormat {
+		} else if s.format == JSONFormat {
 			s.writeJSON(message, fnInformation.logLevel)
 		}
 	}
@@ -501,7 +502,7 @@ func (s *StreamLogger) write(level logrus.Level, message []byte) (int, error) {
 		n   int
 		err error
 	)
-	if s.format == JsonFormat {
+	if s.format == JSONFormat {
 		s.writeJSON(string(message), logrus.InfoLevel)
 		n = len(message)
 	} else {

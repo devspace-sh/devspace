@@ -581,7 +581,7 @@ func getProjectName() (string, string, error) {
 	gitRemote, err := command.Output(context.TODO(), "", "git", "config", "--get", "remote.origin.url")
 	if err == nil {
 		sep := "/"
-		projectParts := strings.Split(string(regexp.MustCompile("^.*?://[^/]+?/([^.]+)(\\.git)?").ReplaceAll(gitRemote, []byte("$1"))), sep)
+		projectParts := strings.Split(string(regexp.MustCompile(`^.*?://[^/]+?/([^.]+)(\.git)?`).ReplaceAll(gitRemote, []byte("$1"))), sep)
 		partsLen := len(projectParts)
 		if partsLen > 1 {
 			projectNamespace = strings.Join(projectParts[0:partsLen-1], sep)
@@ -675,21 +675,6 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 
 	devConfig.Terminal = &latest.Terminal{
 		Command: "./" + startScriptName,
-	}
-
-	// Determine language
-	language, err := languageHandler.GetLanguage()
-	if err != nil {
-		return err
-	}
-
-	if language == "java" {
-		stat, err := os.Stat("build.gradle")
-		if err == nil && !stat.IsDir() {
-			language += "-gradle"
-		} else {
-			language += "-maven"
-		}
 	}
 
 	devImage, err := languageHandler.GetDevImage()

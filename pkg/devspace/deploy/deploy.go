@@ -2,6 +2,10 @@ package deploy
 
 import (
 	"fmt"
+	"io"
+	"sort"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
@@ -13,9 +17,6 @@ import (
 	kubectlclient "github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
-	"io"
-	"sort"
-	"strings"
 )
 
 // Options describe how the deployments should be deployed
@@ -43,33 +44,6 @@ type controller struct{}
 // NewController creates a new image build controller
 func NewController() Controller {
 	return &controller{}
-}
-
-func (c *controller) getDeployClient(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig) (deployer.Interface, error) {
-	var (
-		deployClient deployer.Interface
-		err          error
-	)
-	if deployConfig.Kubectl != nil {
-		deployClient, err = kubectl.New(ctx, deployConfig)
-		if err != nil {
-			return nil, errors.Errorf("error render: deployment %s error: %v", deployConfig.Name, err)
-		}
-	} else if deployConfig.Helm != nil {
-		// Get helm client
-		helmClient, err := helmclient.NewClient(ctx.Log)
-		if err != nil {
-			return nil, err
-		}
-
-		deployClient, err = helm.New(ctx, helmClient, deployConfig)
-		if err != nil {
-			return nil, errors.Errorf("error render: deployment %s error: %v", deployConfig.Name, err)
-		}
-	} else {
-		return nil, errors.Errorf("error render: deployment %s has no deployment method", deployConfig.Name)
-	}
-	return deployClient, nil
 }
 
 // Deploy deploys all deployments in the config
@@ -350,6 +324,7 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string, o
 
 		// Delete kubectl engine
 		ctx.Log.Info("Deleting deployment " + deploymentCache.Name + "...")
+
 		if deploymentCache.Kubectl != nil {
 			err = kubectl.Delete(ctx, deploymentCache.Name)
 		} else if deploymentCache.Helm != nil {

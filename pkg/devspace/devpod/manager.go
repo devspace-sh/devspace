@@ -2,6 +2,8 @@ package devpod
 
 import (
 	"context"
+	"sync"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
@@ -11,7 +13,6 @@ import (
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"sync"
 )
 
 type Options struct {

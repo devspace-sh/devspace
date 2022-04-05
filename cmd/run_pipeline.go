@@ -3,6 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"strings"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -33,11 +38,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"io"
-	"io/ioutil"
 	"k8s.io/client-go/kubernetes/fake"
-	"os"
-	"strings"
 )
 
 // RunPipelineCmd holds the command flags
@@ -71,8 +72,8 @@ type RunPipelineCmd struct {
 	Ctx          context.Context
 	RenderWriter io.Writer
 
-	configLoader loader.ConfigLoader
-	log          log.Logger
+	// configLoader loader.ConfigLoader
+	log log.Logger
 }
 
 func (cmd *RunPipelineCmd) AddFlags(command *cobra.Command) {

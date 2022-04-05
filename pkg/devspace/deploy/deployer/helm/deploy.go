@@ -1,6 +1,10 @@
 package helm
 
 import (
+	"io"
+	"os"
+	"path/filepath"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
@@ -8,9 +12,6 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
-	"io"
-	"os"
-	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 
