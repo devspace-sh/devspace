@@ -27,7 +27,7 @@ type waitHook struct {
 	printWarning sync.Once
 }
 
-func (r *waitHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig, extraEnv map[string]string) error {
+func (r *waitHook) Execute(ctx devspacecontext.Context, hook *latest.HookConfig, extraEnv map[string]string) error {
 	if ctx.KubeClient == nil {
 		return errors.Errorf("Cannot execute hook '%s': kube client is not initialized", ansi.Color(hookName(hook), "white+b"))
 	}
@@ -37,12 +37,12 @@ func (r *waitHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig
 		err            error
 	)
 	if hook.Container.ImageSelector != "" {
-		if ctx.Config == nil || ctx.Config.LocalCache() == nil {
+		if ctx.Config == nil || ctx.Config().LocalCache() == nil {
 			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(hookName(hook), "white+b"))
 		}
 
 		if hook.Container.ImageSelector != "" {
-			imageSelector, err := runtime.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, hook.Container.ImageSelector, ctx.Config, ctx.Dependencies)
+			imageSelector, err := runtime.NewRuntimeResolver(ctx.WorkingDir(), true).FillRuntimeVariablesAsImageSelector(ctx.Context(), hook.Container.ImageSelector, ctx.Config(), ctx.Dependencies())
 			if err != nil {
 				return err
 			}
@@ -51,12 +51,12 @@ func (r *waitHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig
 		}
 	}
 
-	err = r.execute(ctx.Context, hook, ctx.KubeClient, imageSelectors, ctx.Log)
+	err = r.execute(ctx.Context(), hook, ctx.KubeClient(), imageSelectors, ctx.Log())
 	if err != nil {
 		return err
 	}
 
-	ctx.Log.Donef("Hook '%s' successfully executed", ansi.Color(hookName(hook), "white+b"))
+	ctx.Log().Donef("Hook '%s' successfully executed", ansi.Color(hookName(hook), "white+b"))
 	return nil
 }
 

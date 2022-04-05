@@ -27,8 +27,8 @@ import (
 )
 
 // StartSSH starts the ssh functionality
-func StartSSH(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
-	if ctx == nil || ctx.Config == nil || ctx.Config.Config() == nil {
+func StartSSH(ctx devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
+	if ctx == nil || ctx.Config == nil || ctx.Config().Config() == nil {
 		return fmt.Errorf("DevSpace config is nil")
 	}
 
@@ -53,13 +53,13 @@ func StartSSH(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targ
 	return nil
 }
 
-func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest.SSH, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func startSSH(ctx devspacecontext.Context, name, arch string, sshConfig *latest.SSH, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
 
 	// configure ssh host
-	sshHost := name + "." + ctx.Config.Config().Name + ".devspace"
+	sshHost := name + "." + ctx.Config().Config().Name + ".devspace"
 	if sshConfig.LocalHostname != "" {
 		sshHost = sshConfig.LocalHostname
 	}
@@ -76,7 +76,7 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 		sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
 		hosts, err := ParseDevSpaceHosts(sshConfigPath)
 		if err != nil {
-			ctx.Log.Debugf("error parsing %s: %v", sshConfigPath, err)
+			ctx.Log().Debugf("error parsing %s: %v", sshConfigPath, err)
 		} else {
 			for _, h := range hosts {
 				if h.Host == sshHost {
@@ -86,30 +86,30 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 		}
 
 		if port == 0 {
-			port, err = GetInstance(ctx.Log).LockPort()
+			port, err = GetInstance(ctx.Log()).LockPort()
 			if err != nil {
 				return errors.Wrap(err, "find port")
 			}
 
 			// update ssh config
-			err = configureSSHConfig(sshHost, strconv.Itoa(port), ctx.Log)
+			err = configureSSHConfig(sshHost, strconv.Itoa(port), ctx.Log())
 			if err != nil {
 				return errors.Wrap(err, "update ssh config")
 			}
 		}
 	} else {
-		err = GetInstance(ctx.Log).LockSpecificPort(port)
+		err = GetInstance(ctx.Log()).LockSpecificPort(port)
 		if err != nil {
 			return errors.Wrap(err, "find port")
 		}
 
 		// update ssh config
-		err = configureSSHConfig(sshHost, strconv.Itoa(port), ctx.Log)
+		err = configureSSHConfig(sshHost, strconv.Itoa(port), ctx.Log())
 		if err != nil {
 			return errors.Wrap(err, "update ssh config")
 		}
 	}
-	defer GetInstance(ctx.Log).ReleasePort(port)
+	defer GetInstance(ctx.Log()).ReleasePort(port)
 
 	// get a local port
 	// get remote port
@@ -141,13 +141,13 @@ func startSSH(ctx *devspacecontext.Context, name, arch string, sshConfig *latest
 	return startSSHWithRestart(ctx, arch, sshConfig.RemoteAddress, sshHost, selector, parent)
 }
 
-func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, sshHost string, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func startSSHWithRestart(ctx devspacecontext.Context, arch, addr, sshHost string, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
 
 	// find target container
-	container, err := selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	container, err := selector.SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return errors.Wrap(err, "error selecting container")
 	} else if container == nil {
@@ -155,7 +155,7 @@ func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, sshHost strin
 	}
 
 	// make sure the DevSpace helper binary is injected
-	err = inject.InjectDevSpaceHelper(ctx.Context, ctx.KubeClient, container.Pod, container.Container.Name, arch, ctx.Log)
+	err = inject.InjectDevSpaceHelper(ctx.Context(), ctx.KubeClient(), container.Pod, container.Container.Name, arch, ctx.Log())
 	if err != nil {
 		return err
 	}
@@ -180,12 +180,12 @@ func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, sshHost strin
 
 	// start ssh server
 	parent.Go(func() error {
-		writer := ctx.Log.Writer(logrus.DebugLevel, false)
+		writer := ctx.Log().Writer(logrus.DebugLevel, false)
 		defer writer.Close()
 		for !ctx.IsDone() {
 			buffer := &bytes.Buffer{}
 			multiWriter := io.MultiWriter(writer, buffer)
-			err = ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+			err = ctx.KubeClient().ExecStream(ctx.Context(), &kubectl.ExecStreamOptions{
 				Pod:         container.Pod,
 				Container:   container.Container.Name,
 				Command:     command,
@@ -195,32 +195,32 @@ func startSSHWithRestart(ctx *devspacecontext.Context, arch, addr, sshHost strin
 			})
 			if err != nil {
 				select {
-				case <-ctx.Context.Done():
+				case <-ctx.Context().Done():
 					return nil
 				case <-time.After(time.Second * 2):
 					// check if context is done
 					if exitError, ok := err.(kubectlExec.CodeExitError); ok {
 						if terminal.IsUnexpectedExitCode(exitError.Code) {
-							ctx.Log.Warnf("restarting ssh process because: %s %v", buffer.String(), err)
+							ctx.Log().Warnf("restarting ssh process because: %s %v", buffer.String(), err)
 							continue
 						}
 
 						return fmt.Errorf("ssh server failed: %s %v", buffer.String(), err)
 					}
 
-					ctx.Log.Warnf("restarting ssh process because: %s %v", buffer.String(), err)
+					ctx.Log().Warnf("restarting ssh process because: %s %v", buffer.String(), err)
 					continue
 				}
 			}
 
 			// seems like the ssh process is still running
-			<-ctx.Context.Done()
+			<-ctx.Context().Done()
 			return nil
 		}
 
 		return nil
 	})
 
-	ctx.Log.Donef("Use '%s' to connect via SSH", ansi.Color(fmt.Sprintf("ssh %s", sshHost), "white+b"))
+	ctx.Log().Donef("Use '%s' to connect via SSH", ansi.Color(fmt.Sprintf("ssh %s", sshHost), "white+b"))
 	return nil
 }

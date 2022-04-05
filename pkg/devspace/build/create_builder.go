@@ -16,7 +16,7 @@ import (
 )
 
 // createBuilder creates a new builder
-func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName string, imageConf *latest.Image, imageTags []string, options *Options) (builder.Interface, error) {
+func (c *controller) createBuilder(ctx devspacecontext.Context, imageConfigName string, imageConf *latest.Image, imageTags []string, options *Options) (builder.Interface, error) {
 	var err error
 	var bldr builder.Interface
 
@@ -55,23 +55,23 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 				return nil, errors.Wrap(err, "get current context")
 			}
 		} else {
-			kubeContext = ctx.KubeClient.CurrentContext()
+			kubeContext = ctx.KubeClient().CurrentContext()
 		}
 
-		dockerClient, err := dockerclient.NewClientWithMinikube(ctx.Context, kubeContext, preferMinikube, ctx.Log)
+		dockerClient, err := dockerclient.NewClientWithMinikube(ctx.Context(), kubeContext, preferMinikube, ctx.Log())
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker client: %v", err)
 		}
 
 		// Check if docker daemon is running
-		_, err = dockerClient.Ping(ctx.Context)
+		_, err = dockerClient.Ping(ctx.Context())
 		if err != nil {
 			if imageConf.Docker != nil && imageConf.Docker.DisableFallback != nil && *imageConf.Docker.DisableFallback {
 				return nil, errors.Errorf("Couldn't reach docker daemon: %v. Is the docker daemon running?", err)
 			}
 
 			// Fallback to kaniko
-			ctx.Log.Infof("Couldn't find a running docker daemon. Will fallback to kaniko")
+			ctx.Log().Infof("Couldn't find a running docker daemon. Will fallback to kaniko")
 			return c.createBuilder(ctx, imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTags, options)
 		}
 
@@ -88,18 +88,18 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 			return nil, err
 		}
 
-		dockerClient, err := dockerclient.NewClient(ctx.Context, ctx.Log)
+		dockerClient, err := dockerclient.NewClient(ctx.Context(), ctx.Log())
 		if err == nil {
-			if imageConf.Kaniko != nil && imageConf.Kaniko.Namespace != "" && ctx.KubeClient.Namespace() != imageConf.Kaniko.Namespace {
+			if imageConf.Kaniko != nil && imageConf.Kaniko.Namespace != "" && ctx.KubeClient().Namespace() != imageConf.Kaniko.Namespace {
 				err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, imageConf.Kaniko.Namespace, registryURL)
 				if err != nil {
-					ctx.Log.Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
+					ctx.Log().Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
 				}
 			}
 
-			err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, ctx.KubeClient.Namespace(), registryURL)
+			err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, ctx.KubeClient().Namespace(), registryURL)
 			if err != nil {
-				ctx.Log.Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
+				ctx.Log().Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
 			}
 		}
 	}

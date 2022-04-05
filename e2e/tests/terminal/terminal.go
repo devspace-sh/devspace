@@ -132,7 +132,7 @@ sleep 1000000
 				return false, nil
 			}
 
-			podName = lines[0]
+			podName = strings.TrimSpace(lines[0])
 			return true, nil
 		})
 		framework.ExpectNoError(err)
@@ -163,7 +163,7 @@ sleep 1000000
 				return false, nil
 			}
 
-			newPodName := lines[len(lines)-2]
+			newPodName := strings.TrimSpace(lines[len(lines)-2])
 			if newPodName != podName {
 				podName = newPodName
 				return true, nil

@@ -7,9 +7,9 @@ import (
 
 // Interface defines the common interface used for the deployment methods
 type Interface interface {
-	Status(ctx *devspacecontext.Context) (*StatusResult, error)
-	Deploy(ctx *devspacecontext.Context, forceDeploy bool) (bool, error)
-	Render(ctx *devspacecontext.Context, out io.Writer) error
+	Status(ctx devspacecontext.Context) (*StatusResult, error)
+	Deploy(ctx devspacecontext.Context, forceDeploy bool) (bool, error)
+	Render(ctx devspacecontext.Context, out io.Writer) error
 }
 
 // StatusResult holds the status of a deployment

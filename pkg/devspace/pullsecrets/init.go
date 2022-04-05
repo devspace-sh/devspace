@@ -17,12 +17,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (r *client) EnsurePullSecret(ctx *devspacecontext.Context, dockerClient docker.Client, namespace, registryURL string) error {
+func (r *client) EnsurePullSecret(ctx devspacecontext.Context, dockerClient docker.Client, namespace, registryURL string) error {
 	pullSecret := &latest.PullSecretConfig{Registry: registryURL}
 
 	// try to find in pull secrets
-	if ctx.Config != nil && ctx.Config.Config() != nil {
-		for _, ps := range ctx.Config.Config().PullSecrets {
+	if ctx.Config != nil && ctx.Config().Config() != nil {
+		for _, ps := range ctx.Config().Config().PullSecrets {
 			if ps.Registry == registryURL {
 				pullSecret = ps
 				break
@@ -33,7 +33,7 @@ func (r *client) EnsurePullSecret(ctx *devspacecontext.Context, dockerClient doc
 	return r.ensurePullSecret(ctx, dockerClient, namespace, pullSecret)
 }
 
-func (r *client) ensurePullSecret(ctx *devspacecontext.Context, dockerClient docker.Client, namespace string, pullSecretConf *latest.PullSecretConfig) error {
+func (r *client) ensurePullSecret(ctx devspacecontext.Context, dockerClient docker.Client, namespace string, pullSecretConf *latest.PullSecretConfig) error {
 	displayRegistryURL := pullSecretConf.Registry
 	if displayRegistryURL == "" {
 		displayRegistryURL = "hub.docker.com"
@@ -42,7 +42,7 @@ func (r *client) ensurePullSecret(ctx *devspacecontext.Context, dockerClient doc
 		pullSecretConf.Secret = GetRegistryAuthSecretName(pullSecretConf.Registry)
 	}
 
-	ctx.Log.Info("Ensuring image pull secret for registry: " + displayRegistryURL + "...")
+	ctx.Log().Info("Ensuring image pull secret for registry: " + displayRegistryURL + "...")
 	err := r.createPullSecret(ctx, dockerClient, pullSecretConf)
 	if err != nil {
 		return errors.Errorf("failed to create pull secret for registry: %v", err)
@@ -66,7 +66,7 @@ func (r *client) ensurePullSecret(ctx *devspacecontext.Context, dockerClient doc
 }
 
 // EnsurePullSecrets creates the image pull secrets
-func (r *client) EnsurePullSecrets(ctx *devspacecontext.Context, dockerClient docker.Client, pullSecrets []string) (err error) {
+func (r *client) EnsurePullSecrets(ctx devspacecontext.Context, dockerClient docker.Client, pullSecrets []string) (err error) {
 	defer func() {
 		if err != nil {
 			// execute on error pull secrets hooks
@@ -89,13 +89,13 @@ func (r *client) EnsurePullSecrets(ctx *devspacecontext.Context, dockerClient do
 	}
 
 	// create pull secrets
-	for _, pullSecretConf := range ctx.Config.Config().PullSecrets {
+	for _, pullSecretConf := range ctx.Config().Config().PullSecrets {
 		if len(pullSecrets) > 0 && !stringutil.Contains(pullSecrets, pullSecretConf.Name) {
 			continue
 		}
 
-		ctx := ctx.WithLogger(ctx.Log.WithPrefix("pullsecret:" + pullSecretConf.Name + " "))
-		err = r.ensurePullSecret(ctx, dockerClient, ctx.KubeClient.Namespace(), pullSecretConf)
+		ctx := ctx.WithLogger(ctx.Log().WithPrefix("pullsecret:" + pullSecretConf.Name + " "))
+		err = r.ensurePullSecret(ctx, dockerClient, ctx.KubeClient().Namespace(), pullSecretConf)
 		if err != nil {
 			return err
 		}
@@ -112,20 +112,20 @@ func (r *client) EnsurePullSecrets(ctx *devspacecontext.Context, dockerClient do
 	return nil
 }
 
-func (r *client) addPullSecretsToServiceAccount(ctx *devspacecontext.Context, namespace, pullSecretName string, serviceAccount string) error {
+func (r *client) addPullSecretsToServiceAccount(ctx devspacecontext.Context, namespace, pullSecretName string, serviceAccount string) error {
 	if serviceAccount == "" {
 		serviceAccount = "default"
 	}
 
 	err := wait.PollImmediate(time.Second, time.Second*30, func() (bool, error) {
 		// Get default service account
-		sa, err := ctx.KubeClient.KubeClient().CoreV1().ServiceAccounts(namespace).Get(ctx.Context, serviceAccount, metav1.GetOptions{})
+		sa, err := ctx.KubeClient().KubeClient().CoreV1().ServiceAccounts(namespace).Get(ctx.Context(), serviceAccount, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				return false, nil
 			}
 
-			ctx.Log.Errorf("Couldn't retrieve service account '%s' in namespace '%s': %v", serviceAccount, namespace, err)
+			ctx.Log().Errorf("Couldn't retrieve service account '%s' in namespace '%s': %v", serviceAccount, namespace, err)
 			return false, err
 		}
 
@@ -139,7 +139,7 @@ func (r *client) addPullSecretsToServiceAccount(ctx *devspacecontext.Context, na
 		}
 		if !found {
 			sa.ImagePullSecrets = append(sa.ImagePullSecrets, v1.LocalObjectReference{Name: pullSecretName})
-			_, err := ctx.KubeClient.KubeClient().CoreV1().ServiceAccounts(namespace).Update(ctx.Context, sa, metav1.UpdateOptions{})
+			_, err := ctx.KubeClient().KubeClient().CoreV1().ServiceAccounts(namespace).Update(ctx.Context(), sa, metav1.UpdateOptions{})
 			if err != nil {
 				if kerrors.IsConflict(err) {
 					return false, nil
@@ -158,11 +158,11 @@ func (r *client) addPullSecretsToServiceAccount(ctx *devspacecontext.Context, na
 	return nil
 }
 
-func (r *client) createPullSecret(ctx *devspacecontext.Context, dockerClient docker.Client, pullSecret *latest.PullSecretConfig) error {
+func (r *client) createPullSecret(ctx devspacecontext.Context, dockerClient docker.Client, pullSecret *latest.PullSecretConfig) error {
 	username := pullSecret.Username
 	password := pullSecret.Password
 	if username == "" && password == "" && dockerClient != nil {
-		authConfig, _ := dockerClient.GetAuthConfig(ctx.Context, pullSecret.Registry, true)
+		authConfig, _ := dockerClient.GetAuthConfig(ctx.Context(), pullSecret.Registry, true)
 		if authConfig != nil {
 			username = authConfig.Username
 			password = authConfig.Password
@@ -176,7 +176,7 @@ func (r *client) createPullSecret(ctx *devspacecontext.Context, dockerClient doc
 
 	if username != "" && password != "" {
 		err := r.CreatePullSecret(ctx, &PullSecretOptions{
-			Namespace:       ctx.KubeClient.Namespace(),
+			Namespace:       ctx.KubeClient().Namespace(),
 			RegistryURL:     pullSecret.Registry,
 			Username:        username,
 			PasswordOrToken: password,

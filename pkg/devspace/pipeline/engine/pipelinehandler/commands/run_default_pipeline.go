@@ -10,10 +10,10 @@ import (
 	"mvdan.cc/sh/v3/interp"
 )
 
-type NewHandlerFn func(ctx *devspacecontext.Context, stdout, stderr io.Writer, pipeline types.Pipeline) enginetypes.ExecHandler
+type NewHandlerFn func(ctx devspacecontext.Context, stdout, stderr io.Writer, pipeline types.Pipeline) enginetypes.ExecHandler
 
-func RunDefaultPipeline(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string, newHandler NewHandlerFn) error {
-	hc := interp.HandlerCtx(ctx.Context)
+func RunDefaultPipeline(ctx devspacecontext.Context, pipeline types.Pipeline, args []string, newHandler NewHandlerFn) error {
+	hc := interp.HandlerCtx(ctx.Context())
 	if len(args) != 1 {
 		return fmt.Errorf("usage: run_default_pipeline [pipeline]")
 	}
@@ -23,6 +23,6 @@ func RunDefaultPipeline(ctx *devspacecontext.Context, pipeline types.Pipeline, a
 		return err
 	}
 
-	_, err = engine.ExecutePipelineShellCommand(ctx.Context, defaultPipeline.Run, nil, hc.Dir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, newHandler(ctx, hc.Stdout, hc.Stderr, pipeline))
+	_, err = engine.ExecutePipelineShellCommand(ctx.Context(), defaultPipeline.Run, nil, hc.Dir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, newHandler(ctx, hc.Stdout, hc.Stderr, pipeline))
 	return err
 }

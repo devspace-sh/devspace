@@ -20,8 +20,8 @@ type EnsurePullSecretsOptions struct {
 	All bool `long:"all" description:"Ensure all pull secrets"`
 }
 
-func EnsurePullSecrets(ctx *devspacecontext.Context, args []string) error {
-	ctx.Log.Debugf("ensure_pull_secrets %s", strings.Join(args, " "))
+func EnsurePullSecrets(ctx devspacecontext.Context, args []string) error {
+	ctx.Log().Debugf("ensure_pull_secrets %s", strings.Join(args, " "))
 	options := &EnsurePullSecretsOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
@@ -29,7 +29,7 @@ func EnsurePullSecrets(ctx *devspacecontext.Context, args []string) error {
 	}
 
 	if options.All {
-		pullSecrets := ctx.Config.Config().PullSecrets
+		pullSecrets := ctx.Config().Config().PullSecrets
 		if len(pullSecrets) == 0 {
 			return nil
 		}
@@ -47,7 +47,7 @@ func EnsurePullSecrets(ctx *devspacecontext.Context, args []string) error {
 				return err
 			}
 
-			if ctx.Config.Config().PullSecrets == nil || ctx.Config.Config().PullSecrets[pullSecret] == nil {
+			if ctx.Config().Config().PullSecrets == nil || ctx.Config().Config().PullSecrets[pullSecret] == nil {
 				return fmt.Errorf("couldn't find pull secret %v", pullSecret)
 			}
 		}
@@ -55,9 +55,9 @@ func EnsurePullSecrets(ctx *devspacecontext.Context, args []string) error {
 		return fmt.Errorf("either specify 'ensure_pull_secrets --all' or 'ensure_pull_secrets pullSecret1 pullSecret2'")
 	}
 
-	dockerClient, err := docker.NewClient(ctx.Context, ctx.Log)
+	dockerClient, err := docker.NewClient(ctx.Context(), ctx.Log())
 	if err != nil {
-		ctx.Log.Debugf("Error creating docker client: %v", err)
+		ctx.Log().Debugf("Error creating docker client: %v", err)
 		dockerClient = nil
 	}
 

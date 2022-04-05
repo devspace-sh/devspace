@@ -29,13 +29,13 @@ type Options struct {
 }
 
 type PurgeOptions struct {
-	ForcePurge bool `long:"force-purge" description:"Forces purgind of deployments even though they might be still in use by other DevSpace projects"`
+	ForcePurge bool `long:"force-purge" description:"Forces purging of deployments even though they might be still in use by other DevSpace projects"`
 }
 
 // Controller is the main deploying interface
 type Controller interface {
-	Deploy(ctx *devspacecontext.Context, deployments []string, options *Options) error
-	Purge(ctx *devspacecontext.Context, deployments []string, options *PurgeOptions) error
+	Deploy(ctx devspacecontext.Context, deployments []string, options *Options) error
+	Purge(ctx devspacecontext.Context, deployments []string, options *PurgeOptions) error
 }
 
 type controller struct{}
@@ -45,7 +45,7 @@ func NewController() Controller {
 	return &controller{}
 }
 
-func (c *controller) getDeployClient(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig) (deployer.Interface, error) {
+func (c *controller) getDeployClient(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (deployer.Interface, error) {
 	var (
 		deployClient deployer.Interface
 		err          error
@@ -57,7 +57,7 @@ func (c *controller) getDeployClient(ctx *devspacecontext.Context, deployConfig 
 		}
 	} else if deployConfig.Helm != nil {
 		// Get helm client
-		helmClient, err := helmclient.NewClient(ctx.Log)
+		helmClient, err := helmclient.NewClient(ctx.Log())
 		if err != nil {
 			return nil, err
 		}
@@ -73,15 +73,15 @@ func (c *controller) getDeployClient(ctx *devspacecontext.Context, deployConfig 
 }
 
 // Deploy deploys all deployments in the config
-func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, options *Options) error {
-	config := ctx.Config.Config()
+func (c *controller) Deploy(ctx devspacecontext.Context, deployments []string, options *Options) error {
+	config := ctx.Config().Config()
 	event := "deploy"
 	if options.Render {
 		event = "render"
 	}
 
 	if options.SkipDeploy {
-		ctx.Log.Debugf("Skip deploy because of --skip-deploy")
+		ctx.Log().Debugf("Skip deploy because of --skip-deploy")
 		return nil
 	}
 
@@ -139,7 +139,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 		)
 		for i, deployConfig := range concurrentDeployments {
 			go func(deployConfig *latest.DeploymentConfig, deployNumber int) {
-				wasDeployed, err := c.deployOne(ctx.WithLogger(ctx.Log.WithPrefix("deploy:"+deployConfig.Name+" ")), deployConfig, options)
+				wasDeployed, err := c.deployOne(ctx.WithLogger(ctx.Log().WithPrefix("deploy:"+deployConfig.Name+" ")), deployConfig, options)
 				if err != nil {
 					errChan <- err
 				} else {
@@ -149,7 +149,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 		}
 
 		if len(concurrentDeployments) > 0 {
-			ctx.Log.Debugf("Deploying %d deployments concurrently...", len(concurrentDeployments))
+			ctx.Log().Debugf("Deploying %d deployments concurrently...", len(concurrentDeployments))
 
 			// Wait for concurrent deployments to complete before starting sequential deployments.
 			for i := 0; i < len(concurrentDeployments); i++ {
@@ -157,20 +157,20 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 				case err := <-errChan:
 					return err
 				case <-deployedChan:
-					ctx.Log.Debugf("Deploying %d deployments concurrently", len(concurrentDeployments)-i-1)
+					ctx.Log().Debugf("Deploying %d deployments concurrently", len(concurrentDeployments)-i-1)
 				}
 			}
 		}
 
 		for _, deployConfig := range sequentialDeployments {
-			logsDeploy := ctx.Log.WithPrefix("deploy:" + deployConfig.Name + " ")
+			logsDeploy := ctx.Log().WithPrefix("deploy:" + deployConfig.Name + " ")
 			_, err := c.deployOne(ctx.WithLogger(logsDeploy), deployConfig, options)
 			if err != nil {
 				return err
 			}
 		}
 
-		err = ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
+		err = ctx.Config().RemoteCache().Save(ctx.Context(), ctx.KubeClient())
 		if err != nil {
 			return err
 		}
@@ -185,7 +185,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 	return nil
 }
 
-func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig, options *Options) (bool, error) {
+func (c *controller) deployOne(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig, options *Options) (bool, error) {
 	event := "deploy"
 	if options.Render {
 		event = "render"
@@ -198,7 +198,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 	)
 
 	if !options.Render && deployConfig.Namespace != "" {
-		err = kubectlclient.EnsureNamespace(ctx.Context, ctx.KubeClient, deployConfig.Namespace, ctx.Log)
+		err = kubectlclient.EnsureNamespace(ctx.Context(), ctx.KubeClient(), deployConfig.Namespace, ctx.Log())
 		if err != nil {
 			return false, err
 		}
@@ -213,7 +213,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 		method = "kubectl"
 	} else if deployConfig.Helm != nil {
 		// Get helm client
-		helmClient, err := helmclient.NewClient(ctx.Log)
+		helmClient, err := helmclient.NewClient(ctx.Log())
 		if err != nil {
 			return true, err
 		}
@@ -256,7 +256,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 	}
 
 	if wasDeployed {
-		ctx.Log.Donef("Successfully deployed %s with %s", ansi.Color(deployConfig.Name, "white+b"), ansi.Color(method, "white+b"))
+		ctx.Log().Donef("Successfully deployed %s with %s", ansi.Color(deployConfig.Name, "white+b"), ansi.Color(method, "white+b"))
 		// Execute after deployment deploy hook
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{
 			"DEPLOY_NAME":   deployConfig.Name,
@@ -266,7 +266,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 			return true, err
 		}
 	} else if !options.Render {
-		ctx.Log.Infof("Skipping deployment %s", deployConfig.Name)
+		ctx.Log().Infof("Skipping deployment %s", deployConfig.Name)
 		// Execute skip deploy hook
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{
 			"DEPLOY_NAME":   deployConfig.Name,
@@ -280,7 +280,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 }
 
 // Purge removes all deployments or a set of deployments from the cluster
-func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string, options *PurgeOptions) error {
+func (c *controller) Purge(ctx devspacecontext.Context, deployments []string, options *PurgeOptions) error {
 	if options == nil {
 		options = &PurgeOptions{}
 	}
@@ -295,13 +295,13 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string, o
 	}
 
 	// Check if root name is defined
-	rootName, ok := values.RootNameFrom(ctx.Context)
+	rootName, ok := values.RootNameFrom(ctx.Context())
 	if !ok {
 		options.ForcePurge = true
 	}
 
 	// Reverse them
-	deploymentCaches := ctx.Config.RemoteCache().ListDeployments()
+	deploymentCaches := ctx.Config().RemoteCache().ListDeployments()
 	for i := len(deploymentCaches) - 1; i >= 0; i-- {
 		// Deployment cache
 		deploymentCache := deploymentCaches[i]
@@ -320,7 +320,7 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string, o
 				continue
 			}
 		}
-		ctx := ctx.WithLogger(ctx.Log.WithPrefix("purge:" + deploymentCache.Name + " "))
+		ctx := ctx.WithLogger(ctx.Log().WithPrefix("purge:" + deploymentCache.Name + " "))
 
 		// Execute before deployment purge hook
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{
@@ -343,19 +343,19 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string, o
 			}
 
 			deploymentCache.Projects = newProjects
-			ctx.Log.Infof("Skip purging deployment %s as it is still in use by other DevSpace project(s) '%s'. Run with '--force-purge' to force deletion", deploymentCache.Name, strings.Join(deploymentCache.Projects, "', '"))
-			ctx.Config.RemoteCache().SetDeployment(deploymentCache.Name, deploymentCache)
+			ctx.Log().Infof("Skip purging deployment %s as it is still in use by other DevSpace project(s) '%s'. Run with '--force-purge' to force deletion", deploymentCache.Name, strings.Join(deploymentCache.Projects, "', '"))
+			ctx.Config().RemoteCache().SetDeployment(deploymentCache.Name, deploymentCache)
 			continue
 		}
 
 		// Delete kubectl engine
-		ctx.Log.Info("Deleting deployment " + deploymentCache.Name + "...")
+		ctx.Log().Info("Deleting deployment " + deploymentCache.Name + "...")
 		if deploymentCache.Kubectl != nil {
 			err = kubectl.Delete(ctx, deploymentCache.Name)
 		} else if deploymentCache.Helm != nil {
 			err = helm.Delete(ctx, deploymentCache.Name)
 		} else {
-			ctx.Log.Errorf("error purging: deployment %s has no deployment method", deploymentCache.Name)
+			ctx.Log().Errorf("error purging: deployment %s has no deployment method", deploymentCache.Name)
 			continue
 		}
 		if err != nil {
@@ -369,7 +369,7 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string, o
 				return hookErr
 			}
 
-			ctx.Log.Warnf("Error deleting deployment %s: %v", deploymentCache.Name, err)
+			ctx.Log().Warnf("Error deleting deployment %s: %v", deploymentCache.Name, err)
 		} else {
 			err = hook.ExecuteHooks(ctx, map[string]interface{}{
 				"DEPLOY_NAME":   deploymentCache.Name,
@@ -380,10 +380,10 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string, o
 			}
 		}
 
-		ctx.Log.Donef("Successfully deleted deployment %s", deploymentCache.Name)
+		ctx.Log().Donef("Successfully deleted deployment %s", deploymentCache.Name)
 	}
 
-	err = ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
+	err = ctx.Config().RemoteCache().Save(ctx.Context(), ctx.KubeClient())
 	if err != nil {
 		return err
 	}

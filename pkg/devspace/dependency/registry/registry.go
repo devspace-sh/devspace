@@ -26,10 +26,10 @@ type DependencyRegistry interface {
 
 	// MarkDependencyExcluded excludes the dependency if it wasn't already for the run
 	// and returns if the dependency was excluded before
-	MarkDependencyExcluded(ctx *devspacecontext.Context, dependencyName string, forceLeader bool) (bool, error)
+	MarkDependencyExcluded(ctx devspacecontext.Context, dependencyName string, forceLeader bool) (bool, error)
 
 	// MarkDependenciesExcluded same as MarkDependencyExcluded but for multiple dependencies
-	MarkDependenciesExcluded(ctx *devspacecontext.Context, dependencyNames []string, forceLeader bool) (map[string]bool, error)
+	MarkDependenciesExcluded(ctx devspacecontext.Context, dependencyNames []string, forceLeader bool) (map[string]bool, error)
 
 	// SetServer sets the target server
 	SetServer(server string)
@@ -66,7 +66,7 @@ func (d *dependencyRegistry) ForceExclude(dependencyName string) {
 	d.excludedDependencies[dependencyName] = true
 }
 
-func (d *dependencyRegistry) MarkDependencyExcluded(ctx *devspacecontext.Context, dependencyName string, forceLeader bool) (bool, error) {
+func (d *dependencyRegistry) MarkDependencyExcluded(ctx devspacecontext.Context, dependencyName string, forceLeader bool) (bool, error) {
 	excluded, err := d.MarkDependenciesExcluded(ctx, []string{dependencyName}, forceLeader)
 	if err != nil {
 		return false, err
@@ -75,7 +75,7 @@ func (d *dependencyRegistry) MarkDependencyExcluded(ctx *devspacecontext.Context
 	return excluded[dependencyName], nil
 }
 
-func (d *dependencyRegistry) MarkDependenciesExcluded(ctx *devspacecontext.Context, dependencyNames []string, forceLeader bool) (map[string]bool, error) {
+func (d *dependencyRegistry) MarkDependenciesExcluded(ctx devspacecontext.Context, dependencyNames []string, forceLeader bool) (map[string]bool, error) {
 	d.excludedDependenciesLock.Lock()
 	defer d.excludedDependenciesLock.Unlock()
 
@@ -114,7 +114,7 @@ func (d *dependencyRegistry) MarkDependenciesExcluded(ctx *devspacecontext.Conte
 	return retMap, nil
 }
 
-func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, dependencyNames []string, forceLeader bool, retries int) (map[string]bool, error) {
+func (d *dependencyRegistry) excludeDependencies(ctx devspacecontext.Context, dependencyNames []string, forceLeader bool, retries int) (map[string]bool, error) {
 	retMap := map[string]bool{}
 	if len(dependencyNames) == 0 {
 		return retMap, nil
@@ -122,11 +122,11 @@ func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, d
 
 	encoded, _ := yaml.Marshal(&ownership{
 		Server: d.server,
-		RunID:  ctx.RunID,
+		RunID:  ctx.RunID(),
 	})
 
 	// check configmap if the dependency is excluded
-	configMap, err := ctx.KubeClient.KubeClient().CoreV1().ConfigMaps(ctx.KubeClient.Namespace()).Get(ctx.Context, configMapName, metav1.GetOptions{})
+	configMap, err := ctx.KubeClient().KubeClient().CoreV1().ConfigMaps(ctx.KubeClient().Namespace()).Get(ctx.Context(), configMapName, metav1.GetOptions{})
 	if err != nil {
 		if !kerrors.IsNotFound(err) {
 			return nil, err
@@ -135,7 +135,7 @@ func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, d
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      configMapName,
-				Namespace: ctx.KubeClient.Namespace(),
+				Namespace: ctx.KubeClient().Namespace(),
 			},
 			Data: map[string]string{},
 		}
@@ -144,7 +144,7 @@ func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, d
 			retMap[dependencyName] = true
 		}
 
-		_, err = ctx.KubeClient.KubeClient().CoreV1().ConfigMaps(ctx.KubeClient.Namespace()).Create(ctx.Context, configMap, metav1.CreateOptions{})
+		_, err = ctx.KubeClient().KubeClient().CoreV1().ConfigMaps(ctx.KubeClient().Namespace()).Create(ctx.Context(), configMap, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				if retries == 0 {
@@ -175,13 +175,13 @@ func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, d
 		payload := &ownership{}
 		err = yaml.Unmarshal([]byte(configMap.Data[dependencyName]), payload)
 		if err != nil {
-			ctx.Log.Debugf("error decoding ownership from configmap: %v", err)
+			ctx.Log().Debugf("error decoding ownership from configmap: %v", err)
 			configMap.Data[dependencyName] = string(encoded)
 			retMap[dependencyName] = true
 			shouldUpdate = true
 			continue
 		} else if payload.Server == "" || payload.RunID == "" {
-			ctx.Log.Debugf("server or run id missing in configmap payload")
+			ctx.Log().Debugf("server or run id missing in configmap payload")
 			configMap.Data[dependencyName] = string(encoded)
 			retMap[dependencyName] = true
 			shouldUpdate = true
@@ -189,7 +189,7 @@ func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, d
 		}
 
 		// check if we self have ownership of the dependency
-		if payload.RunID == ctx.RunID {
+		if payload.RunID == ctx.RunID() {
 			continue
 		}
 
@@ -203,14 +203,14 @@ func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, d
 		}
 
 		// try pinging the other instance
-		pingCtx, pingCancel := context.WithTimeout(ctx.Context, time.Second*2)
+		pingCtx, pingCancel := context.WithTimeout(ctx.Context(), time.Second*2)
 		pinged, err := d.interProcess.Ping(pingCtx, payload.Server, &PingPayload{
 			RunID: payload.RunID,
 		})
 		pingCancel()
 		if !pinged || err != nil {
 			if err != nil {
-				ctx.Log.Debugf("error pinging server: %v", err)
+				ctx.Log().Debugf("error pinging server: %v", err)
 			}
 			failedPings[payload.Server] = true
 			configMap.Data[dependencyName] = string(encoded)
@@ -221,7 +221,7 @@ func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, d
 
 		// check if we should take over
 		if forceLeader {
-			excludeCtx, excludeCancel := context.WithTimeout(ctx.Context, time.Second*10)
+			excludeCtx, excludeCancel := context.WithTimeout(ctx.Context(), time.Second*10)
 			allowed, err := d.interProcess.ExcludeDependency(excludeCtx, payload.Server, &ExcludePayload{
 				RunID:          payload.RunID,
 				DependencyName: dependencyName,
@@ -229,7 +229,7 @@ func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, d
 			excludeCancel()
 			if err != nil || allowed {
 				if err != nil {
-					ctx.Log.Debugf("error taking over dependency: %v", err)
+					ctx.Log().Debugf("error taking over dependency: %v", err)
 				}
 
 				configMap.Data[dependencyName] = string(encoded)
@@ -242,7 +242,7 @@ func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, d
 
 	// check if we should update the configmap
 	if shouldUpdate {
-		_, err = ctx.KubeClient.KubeClient().CoreV1().ConfigMaps(ctx.KubeClient.Namespace()).Update(ctx.Context, configMap, metav1.UpdateOptions{})
+		_, err = ctx.KubeClient().KubeClient().CoreV1().ConfigMaps(ctx.KubeClient().Namespace()).Update(ctx.Context(), configMap, metav1.UpdateOptions{})
 		if err != nil {
 			if kerrors.IsConflict(err) {
 				if retries == 0 {

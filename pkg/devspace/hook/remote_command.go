@@ -29,8 +29,8 @@ type remoteCommandHook struct {
 	Stderr io.Writer
 }
 
-func (r *remoteCommandHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error {
-	hookCommand, hookArgs, err := ResolveCommand(ctx.Context, hook.Command, hook.Args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
+func (r *remoteCommandHook) ExecuteRemotely(ctx devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error {
+	hookCommand, hookArgs, err := ResolveCommand(ctx.Context(), hook.Command, hook.Args, ctx.WorkingDir(), ctx.Config(), ctx.Dependencies())
 	if err != nil {
 		return err
 	}
@@ -45,13 +45,13 @@ func (r *remoteCommandHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *
 	once := hook.Container.Once != nil && *hook.Container.Once
 	if once {
 		// check whether hook has previously executed
-		hookExecuted, err := hasHookExecuted(ctx.Context, hookCommand, hookArgs, podContainer, ctx.KubeClient)
+		hookExecuted, err := hasHookExecuted(ctx.Context(), hookCommand, hookArgs, podContainer, ctx.KubeClient())
 		if err != nil {
 			return errors.Errorf("error checking whether hook has executed '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
 		}
 
 		if hookExecuted {
-			ctx.Log.Infof("Skip hook '%s' because it is configured to run once", ansi.Color(hookName(hook), "white+b"))
+			ctx.Log().Infof("Skip hook '%s' because it is configured to run once", ansi.Color(hookName(hook), "white+b"))
 			return nil
 		}
 	}
@@ -61,13 +61,13 @@ func (r *remoteCommandHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *
 	stderr := &bytes.Buffer{}
 	defer func() {
 		if hook.Name != "" {
-			ctx.Config.SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
-			ctx.Config.SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
+			ctx.Config().SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
+			ctx.Config().SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
 		}
 	}()
 
-	ctx.Log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
-	err = ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+	ctx.Log().Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
+	err = ctx.KubeClient().ExecStream(ctx.Context(), &kubectl.ExecStreamOptions{
 		Pod:       podContainer.Pod,
 		Container: podContainer.Container.Name,
 		Command:   cmd,
@@ -80,7 +80,7 @@ func (r *remoteCommandHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *
 
 	if once {
 		// record hook execution
-		err := recordHookExecuted(ctx.Context, hookCommand, hookArgs, podContainer, ctx.KubeClient)
+		err := recordHookExecuted(ctx.Context(), hookCommand, hookArgs, podContainer, ctx.KubeClient())
 		if err != nil {
 			return errors.Errorf("error recording hook execution %s in container '%s/%s/%s': %v", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
 		}

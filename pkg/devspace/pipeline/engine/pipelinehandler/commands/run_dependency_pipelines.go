@@ -18,8 +18,8 @@ type RunDependencyPipelinesOptions struct {
 	All bool `long:"all" description:"Deploy all dependencies"`
 }
 
-func RunDependencyPipelines(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-	ctx.Log.Debugf("run_dependency_pipelines %s", strings.Join(args, " "))
+func RunDependencyPipelines(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	ctx.Log().Debugf("run_dependency_pipelines %s", strings.Join(args, " "))
 	options := &RunDependencyPipelinesOptions{
 		DependencyOptions: pipeline.Options().DependencyOptions,
 	}
@@ -31,7 +31,7 @@ func RunDependencyPipelines(ctx *devspacecontext.Context, pipeline types.Pipelin
 	duplicates := map[string]bool{}
 	deployDependencies := []types2.Dependency{}
 	if options.All {
-		deployDependencies = ctx.Dependencies
+		deployDependencies = ctx.Dependencies()
 	} else if len(args) > 0 {
 		for _, arg := range args {
 			if duplicates[arg] {
@@ -40,7 +40,7 @@ func RunDependencyPipelines(ctx *devspacecontext.Context, pipeline types.Pipelin
 
 			duplicates[arg] = true
 			found := false
-			for _, dep := range ctx.Dependencies {
+			for _, dep := range ctx.Dependencies() {
 				if dep.Name() == arg {
 					deployDependencies = append(deployDependencies, dep)
 					found = true

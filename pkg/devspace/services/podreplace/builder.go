@@ -29,7 +29,7 @@ var (
 	mode = int32(0777)
 )
 
-func buildDeployment(ctx *devspacecontext.Context, name string, target runtime.Object, devPod *latest.DevPod) (*appsv1.Deployment, error) {
+func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Object, devPod *latest.DevPod) (*appsv1.Deployment, error) {
 	configHash, err := hashConfig(devPod)
 	if err != nil {
 		return nil, errors.Wrap(err, "hash config")
@@ -152,15 +152,15 @@ func buildDeployment(ctx *devspacecontext.Context, name string, target runtime.O
 	}
 
 	// make sure labels etc are there
-	if ctx.Log.GetLevel() == logrus.DebugLevel {
+	if ctx.Log().GetLevel() == logrus.DebugLevel {
 		out, _ := yaml.Marshal(podTemplate)
-		ctx.Log.Debugf("Replaced pod spec: \n%v\n", string(out))
+		ctx.Log().Debugf("Replaced pod spec: \n%v\n", string(out))
 	}
 
 	return deployment, nil
 }
 
-func modifyDevContainer(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func modifyDevContainer(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	err := replaceImage(ctx, devPod, devContainer, podTemplate)
 	if err != nil {
 		return err
@@ -199,7 +199,7 @@ func modifyDevContainer(ctx *devspacecontext.Context, devPod *latest.DevPod, dev
 	return nil
 }
 
-func replaceResources(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceResources(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if devContainer.Resources == nil {
 		return nil
 	}
@@ -225,7 +225,7 @@ func replaceResources(ctx *devspacecontext.Context, devPod *latest.DevPod, devCo
 	return nil
 }
 
-func replaceWorkingDir(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceWorkingDir(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if devContainer.WorkingDir == "" {
 		return nil
 	}
@@ -240,7 +240,7 @@ func replaceWorkingDir(ctx *devspacecontext.Context, devPod *latest.DevPod, devC
 	return nil
 }
 
-func replaceCommand(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	// replace with DevSpace helper
 	injectRestartHelper := devContainer.RestartHelper != nil && devContainer.RestartHelper.Inject != nil && *devContainer.RestartHelper.Inject
 	if devContainer.RestartHelper == nil || devContainer.RestartHelper.Inject == nil || *devContainer.RestartHelper.Inject {
@@ -328,7 +328,7 @@ func replaceCommand(ctx *devspacecontext.Context, devPod *latest.DevPod, devCont
 	return nil
 }
 
-func replaceEnv(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceEnv(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if len(devContainer.Env) == 0 {
 		return nil
 	}
@@ -349,7 +349,7 @@ func replaceEnv(ctx *devspacecontext.Context, devPod *latest.DevPod, devContaine
 	return nil
 }
 
-func replaceAttach(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceAttach(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if devContainer.Attach == nil || devContainer.Attach.DisableReplace || (devContainer.Attach.Enabled != nil && !*devContainer.Attach.Enabled) {
 		return nil
 	}
@@ -368,7 +368,7 @@ func replaceAttach(ctx *devspacecontext.Context, devPod *latest.DevPod, devConta
 	return nil
 }
 
-func replaceTerminal(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceTerminal(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if devContainer.Terminal == nil || devContainer.Terminal.DisableReplace || (devContainer.Terminal.Enabled != nil && !*devContainer.Terminal.Enabled) {
 		return nil
 	}
@@ -387,7 +387,7 @@ func replaceTerminal(ctx *devspacecontext.Context, devPod *latest.DevPod, devCon
 	return nil
 }
 
-func getPodTemplateContainer(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) (int, *corev1.Container, error) {
+func getPodTemplateContainer(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) (int, *corev1.Container, error) {
 	containerName := devContainer.Container
 	if containerName == "" && len(podTemplate.Spec.Containers) > 1 {
 		containers, err := matchesImageSelector(ctx, podTemplate, devPod)
@@ -423,7 +423,7 @@ func hashConfig(replacePod *latest.DevPod) (string, error) {
 	return hash.String(string(out)), nil
 }
 
-func replaceImage(ctx *devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+func replaceImage(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	if devContainer.DevImage == "" {
 		return nil
 	}
@@ -433,7 +433,7 @@ func replaceImage(ctx *devspacecontext.Context, devPod *latest.DevPod, devContai
 		return err
 	}
 
-	imageStr, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsString(ctx.Context, devContainer.DevImage, ctx.Config, ctx.Dependencies)
+	imageStr, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), true).FillRuntimeVariablesAsString(ctx.Context(), devContainer.DevImage, ctx.Config(), ctx.Dependencies())
 	if err != nil {
 		return err
 	}
@@ -443,9 +443,9 @@ func replaceImage(ctx *devspacecontext.Context, devPod *latest.DevPod, devContai
 	return nil
 }
 
-func hashImageSelector(ctx *devspacecontext.Context, replacePod *latest.DevPod) (string, error) {
+func hashImageSelector(ctx devspacecontext.Context, replacePod *latest.DevPod) (string, error) {
 	if replacePod.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), true).FillRuntimeVariablesAsImageSelector(ctx.Context(), replacePod.ImageSelector, ctx.Config(), ctx.Dependencies())
 		if err != nil {
 			return "", err
 		} else if imageSelector == nil {

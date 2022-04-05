@@ -17,7 +17,7 @@ import (
 // Manager can update, build, deploy and purge dependencies.
 type Manager interface {
 	// ResolveAll resolves all dependencies and returns them
-	ResolveAll(ctx *devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error)
+	ResolveAll(ctx devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error)
 }
 
 type manager struct {
@@ -25,7 +25,7 @@ type manager struct {
 }
 
 // NewManager creates a new instance of the interface Manager
-func NewManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) Manager {
+func NewManager(ctx devspacecontext.Context, configOptions *loader.ConfigOptions) Manager {
 	return &manager{
 		resolver: NewResolver(ctx, configOptions),
 	}
@@ -36,8 +36,8 @@ type ResolveOptions struct {
 	Dependencies     []string
 }
 
-func (m *manager) ResolveAll(ctx *devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error) {
-	dependencies, err := m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, "Resolve", func(ctx *devspacecontext.Context, dependency *Dependency) error {
+func (m *manager) ResolveAll(ctx devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error) {
+	dependencies, err := m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, "Resolve", func(ctx devspacecontext.Context, dependency *Dependency) error {
 		return nil
 	})
 	if err != nil {
@@ -56,8 +56,8 @@ type BuildOptions struct {
 	Verbose          bool
 }
 
-func (m *manager) handleDependencies(ctx *devspacecontext.Context, skipDependencies, filterDependencies []string, actionName string, action func(ctx *devspacecontext.Context, dependency *Dependency) error) ([]types.Dependency, error) {
-	if ctx.Config == nil || ctx.Config.Config() == nil || len(ctx.Config.Config().Dependencies) == 0 {
+func (m *manager) handleDependencies(ctx devspacecontext.Context, skipDependencies, filterDependencies []string, actionName string, action func(ctx devspacecontext.Context, dependency *Dependency) error) ([]types.Dependency, error) {
+	if ctx.Config() == nil || ctx.Config().Config() == nil || len(ctx.Config().Config().Dependencies) == 0 {
 		return nil, nil
 	}
 
@@ -93,12 +93,12 @@ func (m *manager) handleDependencies(ctx *devspacecontext.Context, skipDependenc
 }
 
 func (m *manager) executeDependenciesRecursive(
-	ctx *devspacecontext.Context,
+	ctx devspacecontext.Context,
 	base string,
 	dependencies []types.Dependency,
 	skipDependencies, filterDependencies []string,
 	actionName string,
-	action func(ctx *devspacecontext.Context, dependency *Dependency) error,
+	action func(ctx devspacecontext.Context, dependency *Dependency) error,
 	executedDependenciesIDs map[string]bool,
 ) ([]types.Dependency, error) {
 	// Execute all dependencies
@@ -158,7 +158,7 @@ func (m *manager) executeDependenciesRecursive(
 		if !foundDependency(dependencyName, filterDependencies) {
 			continue
 		} else if skipDependency(dependencyName, skipDependencies) {
-			ctx.Log.Infof("Skip dependency %s", dependencyName)
+			ctx.Log().Infof("Skip dependency %s", dependencyName)
 			continue
 		}
 

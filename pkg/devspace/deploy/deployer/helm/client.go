@@ -36,8 +36,8 @@ type DeployConfig struct {
 }
 
 // New creates a new helm deployment client
-func New(ctx *devspacecontext.Context, helmClient helmtypes.Client, deployConfig *latest.DeploymentConfig) (deployer.Interface, error) {
-	ctx.Config = config2.Ensure(ctx.Config)
+func New(ctx devspacecontext.Context, helmClient helmtypes.Client, deployConfig *latest.DeploymentConfig) (deployer.Interface, error) {
+	ctx = ctx.WithConfig(config2.Ensure(ctx.Config()))
 
 	// Exchange chart
 	if deployConfig.Helm.Chart == nil || (deployConfig.Helm.Chart.Name == DevSpaceChartConfig.Name && deployConfig.Helm.Chart.RepoURL == DevSpaceChartConfig.RepoURL) {
@@ -77,13 +77,13 @@ func New(ctx *devspacecontext.Context, helmClient helmtypes.Client, deployConfig
 }
 
 // Delete deletes the deployment
-func Delete(ctx *devspacecontext.Context, deploymentName string) error {
-	deploymentCache, ok := ctx.Config.RemoteCache().GetDeployment(deploymentName)
+func Delete(ctx devspacecontext.Context, deploymentName string) error {
+	deploymentCache, ok := ctx.Config().RemoteCache().GetDeployment(deploymentName)
 	if !ok || deploymentCache.Helm == nil || deploymentCache.Helm.Release == "" || deploymentCache.Helm.ReleaseNamespace == "" {
 		return nil
 	}
 
-	helmClient, err := helm.NewClient(ctx.Log)
+	helmClient, err := helm.NewClient(ctx.Log())
 	if err != nil {
 		return errors.Wrap(err, "new helm client")
 	}
@@ -93,6 +93,5 @@ func Delete(ctx *devspacecontext.Context, deploymentName string) error {
 		return err
 	}
 
-	// Delete from cache
 	return nil
 }

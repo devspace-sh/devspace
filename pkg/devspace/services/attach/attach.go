@@ -20,22 +20,22 @@ import (
 )
 
 // StartAttachFromCMD opens a new terminal
-func StartAttachFromCMD(ctx *devspacecontext.Context, selector targetselector.TargetSelector) error {
-	container, err := selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+func StartAttachFromCMD(ctx devspacecontext.Context, selector targetselector.TargetSelector) error {
+	container, err := selector.SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return err
 	}
 
 	if !container.Container.TTY || !container.Container.Stdin {
-		ctx.Log.Warnf("To be able to interact with the container its options tty (currently `%t`) and stdin (currently `%t`) must both be `true`", container.Container.TTY, container.Container.Stdin)
+		ctx.Log().Warnf("To be able to interact with the container its options tty (currently `%t`) and stdin (currently `%t`) must both be `true`", container.Container.TTY, container.Container.Stdin)
 	}
 
-	ctx.Log.Infof("Attaching to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
-	ctx.Log.Info("If you don't see a command prompt, try pressing enter.")
+	ctx.Log().Infof("Attaching to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
+	ctx.Log().Info("If you don't see a command prompt, try pressing enter.")
 
 	done := make(chan error)
 	go func() {
-		done <- ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+		done <- ctx.KubeClient().ExecStream(ctx.Context(), &kubectl.ExecStreamOptions{
 			Pod:         container.Pod,
 			Container:   container.Container.Name,
 			TTY:         container.Container.TTY,
@@ -48,7 +48,7 @@ func StartAttachFromCMD(ctx *devspacecontext.Context, selector targetselector.Ta
 
 	// wait until either client has finished or we got interrupted
 	select {
-	case <-ctx.Context.Done():
+	case <-ctx.Context().Done():
 		<-done
 		return nil
 	case err := <-done:
@@ -58,7 +58,7 @@ func StartAttachFromCMD(ctx *devspacecontext.Context, selector targetselector.Ta
 
 // StartAttach opens a new terminal
 func StartAttach(
-	ctx *devspacecontext.Context,
+	ctx devspacecontext.Context,
 	devContainer *latest.DevContainer,
 	selector targetselector.TargetSelector,
 	stdout io.Writer,
@@ -73,9 +73,9 @@ func StartAttach(
 				return
 			}
 
-			ctx.Log.Infof("Restarting because: %s", err)
+			ctx.Log().Infof("Restarting because: %s", err)
 			select {
-			case <-ctx.Context.Done():
+			case <-ctx.Context().Done():
 				return
 			case <-time.After(time.Second * 3):
 			}
@@ -83,25 +83,25 @@ func StartAttach(
 			return
 		}
 
-		ctx.Log.Debugf("Stopped attach")
+		ctx.Log().Debugf("Stopped attach")
 	}()
 
 	before := log.GetBaseInstance().GetLevel()
 	log.GetBaseInstance().SetLevel(logrus.PanicLevel)
 	defer log.GetBaseInstance().SetLevel(before)
 
-	container, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	container, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return err
 	}
 
-	ctx.Log.Infof("Attaching to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
+	ctx.Log().Infof("Attaching to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
 	errChan := make(chan error)
 	parent.Go(func() error {
 		interruptpkg.Global.Stop()
 		defer interruptpkg.Global.Start()
 
-		errChan <- ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+		errChan <- ctx.KubeClient().ExecStream(ctx.Context(), &kubectl.ExecStreamOptions{
 			Pod:         container.Pod,
 			Container:   container.Container.Name,
 			TTY:         container.Container.TTY,
@@ -114,7 +114,7 @@ func StartAttach(
 	})
 
 	select {
-	case <-ctx.Context.Done():
+	case <-ctx.Context().Done():
 		<-errChan
 		return nil
 	case err = <-errChan:

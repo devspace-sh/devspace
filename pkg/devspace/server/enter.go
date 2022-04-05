@@ -18,14 +18,14 @@ import (
 
 func (h *handler) enter(w http.ResponseWriter, r *http.Request) {
 	// Kube Context
-	kubeContext := h.ctx.KubeClient.CurrentContext()
+	kubeContext := h.ctx.KubeClient().CurrentContext()
 	context, ok := r.URL.Query()["context"]
 	if ok && len(context) == 1 && context[0] != "" {
 		kubeContext = context[0]
 	}
 
 	// Namespace
-	kubeNamespace := h.ctx.KubeClient.Namespace()
+	kubeNamespace := h.ctx.KubeClient().Namespace()
 	namespace, ok := r.URL.Query()["namespace"]
 	if ok && len(namespace) == 1 && namespace[0] != "" {
 		kubeNamespace = namespace[0]
@@ -61,14 +61,14 @@ func (h *handler) enter(w http.ResponseWriter, r *http.Request) {
 	// Create kubectl client
 	client, err := h.getClientFromCache(kubeContext, kubeNamespace)
 	if err != nil {
-		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
+		h.ctx.Log().Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		h.ctx.Log.Errorf("Error upgrading connection: %v", err)
+		h.ctx.Log().Errorf("Error upgrading connection: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -94,7 +94,7 @@ func (h *handler) enter(w http.ResponseWriter, r *http.Request) {
 		Stderr:            stream,
 	})
 	if err != nil {
-		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
+		h.ctx.Log().Errorf("Error in %s: %v", r.URL.String(), err)
 		websocketError(ws, err)
 		return
 	}

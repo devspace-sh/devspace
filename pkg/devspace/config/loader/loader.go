@@ -76,6 +76,10 @@ type configLoader struct {
 
 // NewConfigLoader creates a new config loader with the given options
 func NewConfigLoader(configPath string) (ConfigLoader, error) {
+	if configPath == "" {
+		configPath = os.Getenv("DEVSPACE_CONFIG")
+	}
+
 	absPath, err := filepath.Abs(ConfigPath(configPath))
 	if err != nil {
 		return nil, err

@@ -17,8 +17,8 @@ type StopDevOptions struct {
 	All bool `long:"all" description:"Stop all dev configurations"`
 }
 
-func StopDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-	ctx.Log.Debugf("stop_dev %s", strings.Join(args, " "))
+func StopDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	ctx.Log().Debugf("stop_dev %s", strings.Join(args, " "))
 	options := &StopDevOptions{
 		PurgeOptions: pipeline.Options().PurgeOptions,
 	}
@@ -31,8 +31,8 @@ func StopDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []strin
 	if options.All {
 		// loop over all pods in dev manager
 		for _, a := range devManager.List() {
-			ctx = ctx.WithLogger(ctx.Log.WithPrefix("dev:" + a + " "))
-			ctx.Log.Infof("Stopping dev %s", a)
+			ctx = ctx.WithLogger(ctx.Log().WithPrefix("dev:" + a + " "))
+			ctx.Log().Infof("Stopping dev %s", a)
 			err = devManager.Reset(ctx, a, &options.PurgeOptions)
 			if err != nil {
 				return err
@@ -40,9 +40,9 @@ func StopDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []strin
 		}
 
 		// loop over all in cache
-		for _, a := range ctx.Config.RemoteCache().ListDevPods() {
-			ctx = ctx.WithLogger(ctx.Log.WithPrefix("dev:" + a.Name + " "))
-			ctx.Log.Infof("Stopping dev %s", a.Name)
+		for _, a := range ctx.Config().RemoteCache().ListDevPods() {
+			ctx = ctx.WithLogger(ctx.Log().WithPrefix("dev:" + a.Name + " "))
+			ctx.Log().Infof("Stopping dev %s", a.Name)
 			err = devManager.Reset(ctx, a.Name, &options.PurgeOptions)
 			if err != nil {
 				return err
@@ -50,8 +50,8 @@ func StopDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []strin
 		}
 	} else if len(args) > 0 {
 		for _, a := range args {
-			ctx = ctx.WithLogger(ctx.Log.WithPrefix("dev:" + a + " "))
-			ctx.Log.Infof("Stopping dev %s", a)
+			ctx = ctx.WithLogger(ctx.Log().WithPrefix("dev:" + a + " "))
+			ctx.Log().Infof("Stopping dev %s", a)
 			err = devManager.Reset(ctx, a, &options.PurgeOptions)
 			if err != nil {
 				return err

@@ -34,7 +34,7 @@ type PipelineOptions struct {
 
 type Pipeline interface {
 	// Run runs the main pipeline
-	Run(ctx *devspacecontext.Context) error
+	Run(ctx devspacecontext.Context) error
 
 	// DevPodManager retrieves the used dev pod manager
 	DevPodManager() devpod.Manager
@@ -67,9 +67,9 @@ type Pipeline interface {
 	// StartNewPipelines starts sub pipelines in this pipeline. It is ensured
 	// that each pipeline can only be run once at the same time and otherwise
 	// will fail to start.
-	StartNewPipelines(ctx *devspacecontext.Context, pipelines []*latest.Pipeline, options PipelineOptions) error
+	StartNewPipelines(ctx devspacecontext.Context, pipelines []*latest.Pipeline, options PipelineOptions) error
 
 	// StartNewDependencies starts dependency pipelines in this pipeline. It is ensured
 	// that each pipeline will only run once ever and will otherwise be skipped.
-	StartNewDependencies(ctx *devspacecontext.Context, dependencies []types2.Dependency, options DependencyOptions) error
+	StartNewDependencies(ctx devspacecontext.Context, dependencies []types2.Dependency, options DependencyOptions) error
 }

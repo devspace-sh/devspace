@@ -121,13 +121,13 @@ func (p *pipeline) Dependencies() map[string]types.Pipeline {
 	return children
 }
 
-func (p *pipeline) Run(ctx *devspacecontext.Context) error {
+func (p *pipeline) Run(ctx devspacecontext.Context) error {
 	return p.executeJob(ctx, p.main)
 }
 
-func (p *pipeline) StartNewDependencies(ctx *devspacecontext.Context, dependencies []types2.Dependency, options types.DependencyOptions) error {
+func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencies []types2.Dependency, options types.DependencyOptions) error {
 	// mark all commands from here that they are running within a dependency
-	ctx = ctx.WithContext(values.WithDependency(ctx.Context, true))
+	ctx = ctx.WithContext(values.WithDependency(ctx.Context(), true))
 	dependencyNames := []string{}
 	for _, dependency := range dependencies {
 		dependencyNames = append(dependencyNames, dependency.Name())
@@ -141,13 +141,13 @@ func (p *pipeline) StartNewDependencies(ctx *devspacecontext.Context, dependenci
 	deployDependencies := []types2.Dependency{}
 	for _, dependency := range dependencies {
 		if len(options.Only) > 0 && !stringutil.Contains(options.Only, dependency.Name()) {
-			ctx.Log.Debugf("Skipping dependency %s because it was excluded", dependency.Name())
+			ctx.Log().Debugf("Skipping dependency %s because it was excluded", dependency.Name())
 			continue
 		} else if stringutil.Contains(options.Exclude, dependency.Name()) {
-			ctx.Log.Debugf("Skipping dependency %s because it was excluded", dependency.Name())
+			ctx.Log().Debugf("Skipping dependency %s because it was excluded", dependency.Name())
 			continue
 		} else if !deployableDependencies[dependency.Name()] {
-			ctx.Log.Infof("Skipping dependency %s as it was either already deployed or is currently in use by another DevSpace instance in the same namespace", dependency.Name())
+			ctx.Log().Infof("Skipping dependency %s as it was either already deployed or is currently in use by another DevSpace instance in the same namespace", dependency.Name())
 			continue
 		}
 
@@ -181,7 +181,7 @@ func (p *pipeline) StartNewDependencies(ctx *devspacecontext.Context, dependenci
 	return t.Wait()
 }
 
-func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency types2.Dependency, options types.DependencyOptions) error {
+func (p *pipeline) startNewDependency(ctx devspacecontext.Context, dependency types2.Dependency, options types.DependencyOptions) error {
 	// find the dependency pipeline to execute
 	executePipeline := options.Pipeline
 	if executePipeline == "" {
@@ -206,9 +206,9 @@ func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency t
 		pipelineConfig = dependency.Config().Config().Pipelines[executePipeline]
 	}
 
-	devCtx, _ := values.DevContextFrom(ctx.Context)
+	devCtx, _ := values.DevContextFrom(ctx.Context())
 	devCtxCancel, cancelDevCtx := context.WithCancel(devCtx)
-	ctx = ctx.WithContext(values.WithDevContext(ctx.Context, devCtxCancel))
+	ctx = ctx.WithContext(values.WithDevContext(ctx.Context(), devCtxCancel))
 	dependencyDevPodManager := devpod.NewManager(cancelDevCtx)
 	pip := NewPipeline(dependency.Name(), dependencyDevPodManager, p.dependencyRegistry, pipelineConfig, p.options)
 	pip.(*pipeline).parent = p
@@ -217,19 +217,19 @@ func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency t
 	p.dependencies[dependency.Name()] = pip
 	p.m.Unlock()
 
-	if streamLogger, ok := ctx.Log.(*log.StreamLogger); !ok || streamLogger.GetFormat() != log.RawFormat {
-		ctx = ctx.WithLogger(ctx.Log.WithPrefix(dependency.Name() + " "))
+	if streamLogger, ok := ctx.Log().(*log.StreamLogger); !ok || streamLogger.GetFormat() != log.RawFormat {
+		ctx = ctx.WithLogger(ctx.Log().WithPrefix(dependency.Name() + " "))
 	}
 	return pip.Run(ctx.AsDependency(dependency))
 }
 
-func (p *pipeline) StartNewPipelines(ctx *devspacecontext.Context, pipelines []*latest.Pipeline, options types.PipelineOptions) error {
+func (p *pipeline) StartNewPipelines(ctx devspacecontext.Context, pipelines []*latest.Pipeline, options types.PipelineOptions) error {
 	if options.Background {
 		for _, configPipeline := range pipelines {
 			go func(configPipeline *latest.Pipeline) {
 				err := p.startNewPipeline(ctx, configPipeline, randutil.GenerateRandomString(5), options)
 				if err != nil {
-					ctx.Log.Errorf("starting pipeline %s has failed: %v", configPipeline.Name, err)
+					ctx.Log().Errorf("starting pipeline %s has failed: %v", configPipeline.Name, err)
 				}
 			}(configPipeline)
 		}
@@ -261,7 +261,7 @@ func (p *pipeline) StartNewPipelines(ctx *devspacecontext.Context, pipelines []*
 	return t.Wait()
 }
 
-func (p *pipeline) startNewPipeline(ctx *devspacecontext.Context, configPipeline *latest.Pipeline, id string, options types.PipelineOptions) error {
+func (p *pipeline) startNewPipeline(ctx devspacecontext.Context, configPipeline *latest.Pipeline, id string, options types.PipelineOptions) error {
 	// parse env
 	envMap := map[string]string{}
 	for _, s := range options.Env {
@@ -322,7 +322,7 @@ func (p *pipeline) removeJob(j *Job, id string) {
 	}
 }
 
-func (p *pipeline) executeJob(ctx *devspacecontext.Context, j *Job) error {
+func (p *pipeline) executeJob(ctx devspacecontext.Context, j *Job) error {
 	// don't start jobs on a cancelled context
 	if ctx.IsDone() {
 		return nil

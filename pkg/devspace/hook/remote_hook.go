@@ -16,7 +16,7 @@ import (
 
 // RemoteHook is a hook that is executed in a container
 type RemoteHook interface {
-	ExecuteRemotely(ctx *devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error
+	ExecuteRemotely(ctx devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error
 }
 
 func NewRemoteHook(hook RemoteHook) Hook {
@@ -38,7 +38,7 @@ type remoteHook struct {
 	WaitingStrategy targetselector.WaitingStrategy
 }
 
-func (r *remoteHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig, extraEnv map[string]string) error {
+func (r *remoteHook) Execute(ctx devspacecontext.Context, hook *latest.HookConfig, extraEnv map[string]string) error {
 	if ctx.KubeClient == nil {
 		return errors.Errorf("Cannot execute hook '%s': kube client is not initialized", ansi.Color(hookName(hook), "white+b"))
 	}
@@ -48,12 +48,12 @@ func (r *remoteHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConf
 		err            error
 	)
 	if hook.Container.ImageSelector != "" {
-		if ctx.Config == nil || ctx.Config.LocalCache() == nil {
+		if ctx.Config == nil || ctx.Config().LocalCache() == nil {
 			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(hookName(hook), "white+b"))
 		}
 
 		if hook.Container.ImageSelector != "" {
-			imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, hook.Container.ImageSelector, ctx.Config, ctx.Dependencies)
+			imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), true).FillRuntimeVariablesAsImageSelector(ctx.Context(), hook.Container.ImageSelector, ctx.Config(), ctx.Dependencies())
 			if err != nil {
 				return err
 			}
@@ -66,13 +66,13 @@ func (r *remoteHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConf
 	if err != nil {
 		return err
 	} else if !executed {
-		ctx.Log.Infof("Skip hook '%s', because no running containers were found", ansi.Color(hookName(hook), "white+b"))
+		ctx.Log().Infof("Skip hook '%s', because no running containers were found", ansi.Color(hookName(hook), "white+b"))
 	}
 
 	return nil
 }
 
-func (r *remoteHook) execute(ctx *devspacecontext.Context, hook *latest.HookConfig, imageSelector []imageselector.ImageSelector) (bool, error) {
+func (r *remoteHook) execute(ctx devspacecontext.Context, hook *latest.HookConfig, imageSelector []imageselector.ImageSelector) (bool, error) {
 	labelSelector := ""
 	if len(hook.Container.LabelSelector) > 0 {
 		labelSelector = labels.Set(hook.Container.LabelSelector).String()
@@ -85,7 +85,7 @@ func (r *remoteHook) execute(ctx *devspacecontext.Context, hook *latest.HookConf
 
 	wait := false
 	if hook.Container.Wait == nil || *hook.Container.Wait {
-		ctx.Log.Infof("Waiting for running containers for hook '%s'", ansi.Color(hookName(hook), "white+b"))
+		ctx.Log().Infof("Waiting for running containers for hook '%s'", ansi.Color(hookName(hook), "white+b"))
 		wait = true
 	}
 
@@ -96,7 +96,7 @@ func (r *remoteHook) execute(ctx *devspacecontext.Context, hook *latest.HookConf
 		WithWaitingStrategy(r.WaitingStrategy)
 
 	// select container
-	podContainer, err := targetselector.NewTargetSelector(targetSelectorOptions).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	podContainer, err := targetselector.NewTargetSelector(targetSelectorOptions).SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		if _, ok := err.(*targetselector.NotFoundErr); ok {
 			return false, nil

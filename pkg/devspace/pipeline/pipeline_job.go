@@ -6,12 +6,10 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/pipelinehandler"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"io"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"sync"
 )
@@ -49,9 +47,9 @@ func (j *Job) Stop() error {
 	return t.Wait()
 }
 
-func (j *Job) Run(ctx *devspacecontext.Context) error {
+func (j *Job) Run(ctx devspacecontext.Context) error {
 	if ctx.IsDone() {
-		return ctx.Context.Err()
+		return ctx.Context().Err()
 	}
 
 	j.m.Lock()
@@ -71,7 +69,7 @@ func (j *Job) Run(ctx *devspacecontext.Context) error {
 
 		// wait until job is dying
 		select {
-		case <-ctx.Context.Done():
+		case <-ctx.Context().Done():
 			return nil
 		case <-done:
 		}
@@ -87,15 +85,15 @@ func (j *Job) Run(ctx *devspacecontext.Context) error {
 	return t.Wait()
 }
 
-func (j *Job) execute(ctx *devspacecontext.Context, parent *tomb.Tomb) error {
-	ctx = ctx.WithLogger(ctx.Log)
+func (j *Job) execute(ctx devspacecontext.Context, parent *tomb.Tomb) error {
+	ctx = ctx.WithLogger(ctx.Log())
 	stdoutReader, stdoutWriter := io.Pipe()
 	defer stdoutWriter.Close()
 
 	parent.Go(func() error {
 		s := scanner.NewScanner(stdoutReader)
 		for s.Scan() {
-			ctx.Log.Info(s.Text())
+			ctx.Log().Info(s.Text())
 		}
 		return nil
 	})
@@ -106,21 +104,12 @@ func (j *Job) execute(ctx *devspacecontext.Context, parent *tomb.Tomb) error {
 	parent.Go(func() error {
 		s := scanner.NewScanner(stderrReader)
 		for s.Scan() {
-			ctx.Log.Warn(s.Text())
+			ctx.Log().Warn(s.Text())
 		}
 		return nil
 	})
 
 	handler := pipelinehandler.NewPipelineExecHandler(ctx, stdoutWriter, stderrWriter, j.Pipeline)
-	_, err := engine.ExecutePipelineShellCommand(ctx.Context, j.Config.Run, os.Args[1:], ctx.WorkingDir, j.Config.ContinueOnError, stdoutWriter, stderrWriter, os.Stdin, j.getEnv(ctx), handler)
+	_, err := engine.ExecutePipelineShellCommand(ctx.Context(), j.Config.Run, os.Args[1:], ctx.WorkingDir(), j.Config.ContinueOnError, stdoutWriter, stderrWriter, os.Stdin, ctx.Environ(), handler)
 	return err
-}
-
-func (j *Job) getEnv(ctx *devspacecontext.Context) expand.Environ {
-	envMap := map[string]string{}
-	for k, v := range j.ExtraEnv {
-		envMap[k] = v
-	}
-
-	return env.NewVariableEnvProvider(ctx.Config, ctx.Dependencies, envMap)
 }

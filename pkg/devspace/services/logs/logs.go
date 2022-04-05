@@ -13,14 +13,14 @@ import (
 )
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
-func StartLogsWithWriter(ctx *devspacecontext.Context, selector targetselector.TargetSelector, follow bool, tail int64, writer io.Writer) error {
-	container, err := selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+func StartLogsWithWriter(ctx devspacecontext.Context, selector targetselector.TargetSelector, follow bool, tail int64, writer io.Writer) error {
+	container, err := selector.SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return err
 	}
 
-	ctx.Log.Infof("Printing logs of pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
-	reader, err := ctx.KubeClient.Logs(ctx.Context, container.Pod.Namespace, container.Pod.Name, container.Container.Name, false, &tail, follow)
+	ctx.Log().Infof("Printing logs of pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
+	reader, err := ctx.KubeClient().Logs(ctx.Context(), container.Pod.Namespace, container.Pod.Name, container.Container.Name, false, &tail, follow)
 	if err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func StartLogsWithWriter(ctx *devspacecontext.Context, selector targetselector.T
 
 // StartLogs print the logs and then attaches to the container
 func StartLogs(
-	ctx *devspacecontext.Context,
+	ctx devspacecontext.Context,
 	devContainer *latest.DevContainer,
 	selector targetselector.TargetSelector,
 ) (err error) {
@@ -42,9 +42,9 @@ func StartLogs(
 				return
 			}
 
-			ctx.Log.Infof("Restarting because: %s", err)
+			ctx.Log().Infof("Restarting because: %s", err)
 			select {
-			case <-ctx.Context.Done():
+			case <-ctx.Context().Done():
 				return
 			case <-time.After(time.Second * 3):
 			}
@@ -52,10 +52,10 @@ func StartLogs(
 			return
 		}
 
-		ctx.Log.Debugf("Stopped logs")
+		ctx.Log().Debugf("Stopped logs")
 	}()
 
-	containerObj, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	containerObj, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func StartLogs(
 		lines = devContainer.Logs.LastLines
 	}
 
-	reader, err := ctx.KubeClient.Logs(ctx.Context, containerObj.Pod.Namespace, containerObj.Pod.Name, containerObj.Container.Name, false, &lines, true)
+	reader, err := ctx.KubeClient().Logs(ctx.Context(), containerObj.Pod.Namespace, containerObj.Pod.Name, containerObj.Container.Name, false, &lines, true)
 	if err != nil {
 		return err
 	}
@@ -75,9 +75,9 @@ func StartLogs(
 		s := scanner.NewScanner(reader)
 		for s.Scan() {
 			if devContainer.Container != "" {
-				ctx.Log.Info(devContainer.Container + ": " + s.Text())
+				ctx.Log().Info(devContainer.Container + ": " + s.Text())
 			} else {
-				ctx.Log.Info(s.Text())
+				ctx.Log().Info(s.Text())
 			}
 		}
 
@@ -85,7 +85,7 @@ func StartLogs(
 	}()
 
 	select {
-	case <-ctx.Context.Done():
+	case <-ctx.Context().Done():
 		_ = reader.Close()
 		<-errChan
 		return nil

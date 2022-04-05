@@ -19,8 +19,8 @@ import (
 var DefaultRemotePort = 10567
 
 // StartProxyCommands starts the reverse commands functionality
-func StartProxyCommands(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
-	if ctx == nil || ctx.Config == nil || ctx.Config.Config() == nil {
+func StartProxyCommands(ctx devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
+	if ctx == nil || ctx.Config == nil || ctx.Config().Config() == nil {
 		return fmt.Errorf("DevSpace config is nil")
 	}
 
@@ -45,18 +45,18 @@ func StartProxyCommands(ctx *devspacecontext.Context, devPod *latest.DevPod, sel
 	return nil
 }
 
-func startProxyCommands(ctx *devspacecontext.Context, devContainer *latest.DevContainer, name, arch string, reverseCommands []*latest.ProxyCommand, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func startProxyCommands(ctx devspacecontext.Context, devContainer *latest.DevContainer, name, arch string, reverseCommands []*latest.ProxyCommand, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
 
 	// get a local port
-	port, err := ssh.GetInstance(ctx.Log).LockPort()
+	port, err := ssh.GetInstance(ctx.Log()).LockPort()
 	if err != nil {
 		return errors.Wrap(err, "find port")
 	}
 
-	defer ssh.GetInstance(ctx.Log).ReleasePort(port)
+	defer ssh.GetInstance(ctx.Log()).ReleasePort(port)
 
 	// get remote port
 	defaultRemotePort := DefaultRemotePort
@@ -76,13 +76,13 @@ func startProxyCommands(ctx *devspacecontext.Context, devContainer *latest.DevCo
 	return startLocalSSH(ctx, selector, devContainer, reverseCommands, fmt.Sprintf(":%d", port), parent)
 }
 
-func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetSelector, devContainer *latest.DevContainer, reverseCommands []*latest.ProxyCommand, addr string, parent *tomb.Tomb) error {
+func startLocalSSH(ctx devspacecontext.Context, selector targetselector.TargetSelector, devContainer *latest.DevContainer, reverseCommands []*latest.ProxyCommand, addr string, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
 
 	// find target container
-	container, err := selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	container, err := selector.SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return errors.Wrap(err, "error selecting container")
 	} else if container == nil {
@@ -107,7 +107,7 @@ func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetS
 
 	// execute configure command in container
 	command := []string{inject.DevSpaceHelperContainerPath, "proxy-commands", "configure", "--public-key", base64.StdEncoding.EncodeToString([]byte(publicKey)), "--private-key", base64.StdEncoding.EncodeToString([]byte(privateKey)), "--commands", strings.Join(commandsToReplace, ",")}
-	stdout, stderr, err := ctx.KubeClient.ExecBuffered(ctx.Context, container.Pod, container.Container.Name, command, nil)
+	stdout, stderr, err := ctx.KubeClient().ExecBuffered(ctx.Context(), container.Pod, container.Container.Name, command, nil)
 	if err != nil {
 		return fmt.Errorf("error setting up proxy commands in container: %s %s %v", string(stdout), string(stderr), err)
 	}
@@ -130,9 +130,9 @@ func startLocalSSH(ctx *devspacecontext.Context, selector targetselector.TargetS
 	}
 
 	// start local ssh server
-	sshServer := NewReverseCommandsServer(ctx.WorkingDir, containerWorkingDir, addr, keys, reverseCommands, ctx.Log)
+	sshServer := NewReverseCommandsServer(ctx.WorkingDir(), containerWorkingDir, addr, keys, reverseCommands, ctx.Log())
 	parent.Go(func() error {
-		return sshServer.ListenAndServe(ctx.Context)
+		return sshServer.ListenAndServe(ctx.Context())
 	})
 	return nil
 }

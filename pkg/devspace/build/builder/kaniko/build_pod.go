@@ -51,7 +51,7 @@ var defaultResources = &availableResources{
 	EphemeralStorage: resource.MustParse("10Gi"),
 }
 
-func (b *Builder) getBuildPod(ctx *devspacecontext.Context, buildID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
+func (b *Builder) getBuildPod(ctx devspacecontext.Context, buildID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
 	kanikoOptions := b.helper.ImageConf.Kaniko
 
 	registryURL, err := pullsecrets.GetRegistryFromImageName(b.FullImageName)
@@ -218,7 +218,7 @@ func (b *Builder) getBuildPod(ctx *devspacecontext.Context, buildID string, opti
 			Labels: map[string]string{
 				"devspace-build":    "true",
 				"devspace-build-id": buildID,
-				"devspace-pid":      ctx.RunID,
+				"devspace-pid":      ctx.RunID(),
 			},
 		},
 		Spec: k8sv1.PodSpec{
@@ -362,8 +362,8 @@ func (b *Builder) getBuildPod(ctx *devspacecontext.Context, buildID string, opti
 }
 
 // Determine available resources (This is only necessary in the devspace cloud)
-func (b *Builder) getAvailableResources(ctx *devspacecontext.Context) (*availableResources, error) {
-	quota, err := ctx.KubeClient.KubeClient().CoreV1().ResourceQuotas(b.BuildNamespace).Get(ctx.Context, devspaceQuota, metav1.GetOptions{})
+func (b *Builder) getAvailableResources(ctx devspacecontext.Context) (*availableResources, error) {
+	quota, err := ctx.KubeClient().KubeClient().CoreV1().ResourceQuotas(b.BuildNamespace).Get(ctx.Context(), devspaceQuota, metav1.GetOptions{})
 	if err != nil {
 		return nil, nil
 	}
@@ -389,7 +389,7 @@ func (b *Builder) getAvailableResources(ctx *devspacecontext.Context) (*availabl
 	}
 
 	// Get limitrange
-	limitrange, err := ctx.KubeClient.KubeClient().CoreV1().LimitRanges(b.BuildNamespace).Get(ctx.Context, devspaceLimitRange, metav1.GetOptions{})
+	limitrange, err := ctx.KubeClient().KubeClient().CoreV1().LimitRanges(b.BuildNamespace).Get(ctx.Context(), devspaceLimitRange, metav1.GetOptions{})
 	if err != nil {
 		return availableResources, nil
 	}

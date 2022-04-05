@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/sirupsen/logrus"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -19,56 +18,56 @@ import (
 )
 
 // PipelineCommands are commands that can only be run within a pipeline and have special functionality in there
-var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error{
-	"xargs": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		hc := interp.HandlerCtx(devCtx.Context)
-		return basichandlercommands.XArgs(devCtx.Context, args, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, pipeline))
+var PipelineCommands = map[string]func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error{
+	"xargs": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		hc := interp.HandlerCtx(devCtx.Context())
+		return basichandlercommands.XArgs(devCtx.Context(), args, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, pipeline))
 	},
-	"exec_container": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"exec_container": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.ExecContainer(devCtx, args)
 	},
-	"get_image": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"get_image": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.GetImage(devCtx, args)
 	},
-	"run_default_pipeline": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"run_default_pipeline": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunDefaultPipeline(devCtx, pipeline, args, NewPipelineExecHandler)
 	},
-	"run_watch": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		hc := interp.HandlerCtx(devCtx.Context)
-		return basichandlercommands.RunWatch(devCtx.Context, args, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, pipeline), devCtx.Log)
+	"run_watch": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		hc := interp.HandlerCtx(devCtx.Context())
+		return basichandlercommands.RunWatch(devCtx.Context(), args, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, pipeline), devCtx.Log())
 	},
-	"run_pipelines": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"run_pipelines": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunPipelines(devCtx, pipeline, args)
 	},
-	"build_images": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"build_images": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.BuildImages(devCtx, pipeline, args)
 	},
-	"create_deployments": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		hc := interp.HandlerCtx(devCtx.Context)
+	"create_deployments": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		hc := interp.HandlerCtx(devCtx.Context())
 		return commands.CreateDeployments(devCtx, pipeline, args, hc.Stdout)
 	},
-	"purge_deployments": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"purge_deployments": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.PurgeDeployments(devCtx, pipeline, args)
 	},
-	"start_dev": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"start_dev": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.StartDev(devCtx, pipeline, args)
 	},
-	"stop_dev": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"stop_dev": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.StopDev(devCtx, pipeline, args)
 	},
-	"run_dependency_pipelines": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"run_dependency_pipelines": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunDependencyPipelines(devCtx, pipeline, args)
 	},
-	"ensure_pull_secrets": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"ensure_pull_secrets": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.EnsurePullSecrets(devCtx, args)
 	},
-	"is_dependency": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		return commands.IsDependency(devCtx.Context, args)
+	"is_dependency": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.IsDependency(devCtx.Context(), args)
 	},
-	"get_config_value": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"get_config_value": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.GetConfigValue(devCtx, args)
 	},
-	"select_pod": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"select_pod": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.SelectPod(devCtx, args)
 	},
 }
@@ -87,7 +86,7 @@ func init() {
 	}
 }
 
-func NewPipelineExecHandler(ctx *devspacecontext.Context, stdout, stderr io.Writer, pipeline types.Pipeline) enginetypes.ExecHandler {
+func NewPipelineExecHandler(ctx devspacecontext.Context, stdout, stderr io.Writer, pipeline types.Pipeline) enginetypes.ExecHandler {
 	return &execHandler{
 		ctx:      ctx,
 		stdout:   stdout,
@@ -99,7 +98,7 @@ func NewPipelineExecHandler(ctx *devspacecontext.Context, stdout, stderr io.Writ
 }
 
 type execHandler struct {
-	ctx      *devspacecontext.Context
+	ctx      devspacecontext.Context
 	stdout   io.Writer
 	stderr   io.Writer
 	pipeline types.Pipeline
@@ -128,19 +127,19 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 	hc := interp.HandlerCtx(ctx)
 	devCtx := e.ctx.WithContext(ctx).WithWorkingDir(hc.Dir)
 	if e.stdout != nil && e.stderr != nil && e.stdout == hc.Stdout && e.stderr == hc.Stderr {
-		devCtx = devCtx.WithLogger(e.ctx.Log)
+		devCtx = devCtx.WithLogger(e.ctx.Log())
 	} else {
 		devCtx = devCtx.WithLogger(log.NewStreamLoggerWithFormat(hc.Stdout, hc.Stderr, logrus.InfoLevel, log.RawFormat))
 	}
 
 	// check if it's a function first
-	if devCtx.Config.Config().Functions != nil {
-		commandPayload, ok := devCtx.Config.Config().Functions[command]
-		if ok {
-			_, err := engine.ExecutePipelineShellCommand(devCtx.Context, commandPayload, args, hc.Dir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, e.pipeline))
-			return true, err
-		}
-	}
+	//if devCtx.Config().Config().Functions != nil {
+	//	commandPayload, ok := devCtx.Config().Config().Functions[command]
+	//	if ok {
+	//		_, err := engine.ExecutePipelineShellCommand(devCtx.Context(), commandPayload, args, hc.Dir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, e.pipeline))
+	//		return true, err
+	//	}
+	//}
 
 	// resolve pipeline commands
 	pipelineCommand, ok := PipelineCommands[command]

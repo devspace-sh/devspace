@@ -41,7 +41,7 @@ func NewBuilder(imageConfigName string, imageConf *latest.Image, imageTags []str
 }
 
 // ShouldRebuild implements interface
-func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool) (bool, error) {
+func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) (bool, error) {
 	if b.imageConf.Custom.OnChange == nil || len(b.imageConf.Custom.OnChange) == 0 {
 		return true, nil
 	}
@@ -72,34 +72,34 @@ func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool)
 	}
 	customFilesHash = hash.String(customFilesHash)
 
-	imageCache, _ := ctx.Config.LocalCache().GetImageCache(b.imageConfigName)
+	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.imageConfigName)
 
 	// only rebuild Docker image when Dockerfile or context has changed since latest build
 	mustRebuild := forceRebuild || b.imageConf.RebuildStrategy == latest.RebuildStrategyAlways || imageCache.Tag == "" || imageCache.ImageConfigHash != imageConfigHash || imageCache.CustomFilesHash != customFilesHash
 
 	imageCache.ImageConfigHash = imageConfigHash
 	imageCache.CustomFilesHash = customFilesHash
-	ctx.Config.LocalCache().SetImageCache(b.imageConfigName, imageCache)
+	ctx.Config().LocalCache().SetImageCache(b.imageConfigName, imageCache)
 
 	return mustRebuild, nil
 }
 
 // Build implements interface
-func (b *Builder) Build(ctx *devspacecontext.Context) error {
+func (b *Builder) Build(ctx devspacecontext.Context) error {
 	// Build arguments
 	args := []string{}
 
 	// resolve command
 	if len(b.imageTags) > 0 {
 		key := fmt.Sprintf("images.%s", b.imageConfigName)
-		ctx.Config.SetRuntimeVariable(key, b.imageConf.Image+":"+b.imageTags[0])
-		ctx.Config.SetRuntimeVariable(key+".image", b.imageConf.Image)
-		ctx.Config.SetRuntimeVariable(key+".tag", b.imageTags[0])
+		ctx.Config().SetRuntimeVariable(key, b.imageConf.Image+":"+b.imageTags[0])
+		ctx.Config().SetRuntimeVariable(key+".image", b.imageConf.Image)
+		ctx.Config().SetRuntimeVariable(key+".tag", b.imageTags[0])
 	}
 
 	// loop over args
 	for i := range b.imageConf.Custom.Args {
-		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, b.imageConf.Custom.Args[i], ctx.Config, ctx.Dependencies)
+		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir(), false).FillRuntimeVariablesAsString(ctx.Context(), b.imageConf.Custom.Args[i], ctx.Config(), ctx.Dependencies())
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 
 	// append the rest
 	for i := range b.imageConf.Custom.AppendArgs {
-		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, b.imageConf.Custom.AppendArgs[i], ctx.Config, ctx.Dependencies)
+		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir(), false).FillRuntimeVariablesAsString(ctx.Context(), b.imageConf.Custom.AppendArgs[i], ctx.Config(), ctx.Dependencies())
 		if err != nil {
 			return err
 		}
@@ -147,34 +147,34 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	}
 
 	// resolve command and args
-	commandPath, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, commandPath, ctx.Config, ctx.Dependencies)
+	commandPath, err := runtime.NewRuntimeResolver(ctx.WorkingDir(), false).FillRuntimeVariablesAsString(ctx.Context(), commandPath, ctx.Config(), ctx.Dependencies())
 	if err != nil {
 		return err
 	}
 
 	// Determine output writer
 	var writer io.WriteCloser
-	if ctx.Log == logpkg.GetInstance() {
+	if ctx.Log() == logpkg.GetInstance() {
 		writer = logpkg.WithNopCloser(stdout)
 	} else {
-		writer = ctx.Log.Writer(logrus.InfoLevel, false)
+		writer = ctx.Log().Writer(logrus.InfoLevel, false)
 	}
 	defer writer.Close()
 
-	ctx.Log.Infof("Build %s:%s with custom command", b.imageConf.Image, b.imageTags[0])
-	ctx.Log.Debugf("Build %s:%s with custom command '%s %s' in working dir %s", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "), ctx.WorkingDir)
+	ctx.Log().Infof("Build %s:%s with custom command", b.imageConf.Image, b.imageTags[0])
+	ctx.Log().Debugf("Build %s:%s with custom command '%s %s' in working dir %s", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "), ctx.WorkingDir)
 	if len(args) == 0 {
-		err = engine.ExecuteSimpleShellCommand(ctx.Context, ctx.WorkingDir, writer, writer, nil, nil, commandPath, args...)
+		err = engine.ExecuteSimpleShellCommand(ctx.Context(), ctx.WorkingDir(), writer, writer, nil, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}
 	} else {
-		err = command.Command(ctx.Context, ctx.WorkingDir, writer, writer, nil, commandPath, args...)
+		err = command.Command(ctx.Context(), ctx.WorkingDir(), writer, writer, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}
 	}
 
-	ctx.Log.Done("Done processing image '" + b.imageConf.Image + "'")
+	ctx.Log().Done("Done processing image '" + b.imageConf.Image + "'")
 	return nil
 }

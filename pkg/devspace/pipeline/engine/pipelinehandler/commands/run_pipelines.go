@@ -14,8 +14,8 @@ type RunPipelineOptions struct {
 	types.PipelineOptions
 }
 
-func RunPipelines(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-	ctx.Log.Debugf("run_pipelines %s", strings.Join(args, " "))
+func RunPipelines(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	ctx.Log().Debugf("run_pipelines %s", strings.Join(args, " "))
 	options := &RunPipelineOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
@@ -28,7 +28,7 @@ func RunPipelines(ctx *devspacecontext.Context, pipeline types.Pipeline, args []
 			continue
 		}
 
-		pipelineConfig, ok := ctx.Config.Config().Pipelines[arg]
+		pipelineConfig, ok := ctx.Config().Config().Pipelines[arg]
 		if !ok {
 			return fmt.Errorf("couldn't find pipeline %s", arg)
 		}

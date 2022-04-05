@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -161,18 +161,196 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 
 	// set command in context
 	cmd.Ctx = values.WithCommand(cmd.Ctx, commandName)
-	configOptions := cmd.ToConfigOptions()
-	ctx, err := cmd.prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, false)
+	options := cmd.BuildOptions(cmd.ToConfigOptions())
+	ctx, err := initialize(cmd.Ctx, f, false, options, cmd.log)
 	if err != nil {
 		return err
 	}
 
 	return runWithHooks(ctx, hookName, func() error {
-		return cmd.runPipeline(ctx, f, configOptions)
+		return runPipeline(ctx, true, options)
 	})
 }
 
-func runWithHooks(ctx *devspacecontext.Context, command string, fn func() error) (err error) {
+type CommandOptions struct {
+	flags.GlobalFlags
+	types.Options
+
+	ConfigOptions *loader.ConfigOptions
+
+	Pipeline string
+	Terminal bool
+	ShowUI   bool
+	UIPort   int
+}
+
+func initialize(ctx context.Context, f factory.Factory, allowFailingKubeClient bool, options *CommandOptions, logger log.Logger) (devspacecontext.Context, error) {
+	// start file logging
+	log.StartFileLogging()
+
+	// create a temporary folder for us to use
+	tempFolder, err := ioutil.TempDir("", "devspace-")
+	if err != nil {
+		return nil, errors.Wrap(err, "create temporary folder")
+	}
+
+	// add temp folder to context
+	ctx = values.WithTempFolder(ctx, tempFolder)
+
+	// set config root
+	configLoader, err := f.NewConfigLoader(options.ConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
+	if err != nil {
+		return nil, err
+	} else if !configExists {
+		return nil, errors.New(message.ConfigNotFound)
+	}
+
+	// create kubectl client
+	client, err := f.NewKubeClientFromContext(options.KubeContext, options.Namespace)
+	if err != nil {
+		if allowFailingKubeClient {
+			logger.Warnf("Unable to create new kubectl client: %v", err)
+			logger.Warn("Using fake client to render resources")
+			logger.WriteString(logrus.WarnLevel, "\n")
+
+			kube := fake.NewSimpleClientset()
+			client = &fakekube.Client{
+				Client: kube,
+			}
+		} else {
+			return nil, errors.Errorf("error creating Kubernetes client: %v. Please make sure you have a valid Kubernetes context that points to a working Kubernetes cluster. If in doubt, please check if the following command works locally: `kubectl get namespaces`", err)
+		}
+	}
+
+	// load generated config
+	localCache, err := configLoader.LoadLocalCache()
+	if err != nil {
+		return nil, errors.Errorf("error loading local cache: %v", err)
+	}
+
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = kubectl.CheckKubeContext(client, localCache, options.NoWarn, options.SwitchContext, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	// load config
+	configInterface, err := configLoader.LoadWithCache(ctx, localCache, client, options.ConfigOptions, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	// add root name to context
+	ctx = values.WithRootName(ctx, configInterface.Config().Name)
+
+	// adjust config
+	err = adjustConfig(configInterface, options, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	// create devspace context
+	devCtx := devspacecontext.NewContext(ctx, configInterface.Variables(), logger).
+		WithConfig(configInterface).
+		WithKubeClient(client)
+
+	// create namespace if necessary
+	if !options.DeployOptions.Render {
+		err := kubectl.EnsureNamespace(devCtx.Context(), devCtx.KubeClient(), devCtx.KubeClient().Namespace(), devCtx.Log())
+		if err != nil {
+			return nil, errors.Errorf("unable to create namespace: %v", err)
+		}
+	}
+
+	// print config
+	if devCtx.Log().GetLevel() == logrus.DebugLevel {
+		out, _ := yaml.Marshal(devCtx.Config().Config())
+		devCtx.Log().Debugf("Use config:\n%s\n", string(out))
+	}
+
+	// resolve dependencies
+	dependencies, err := f.NewDependencyManager(devCtx, options.ConfigOptions).ResolveAll(devCtx, dependency.ResolveOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "deploy dependencies")
+	}
+	devCtx = devCtx.WithDependencies(dependencies)
+
+	// update last used kube context & save generated yaml
+	err = updateLastKubeContext(devCtx)
+	if err != nil {
+		return nil, errors.Wrap(err, "update last kube context")
+	}
+
+	return devCtx, nil
+}
+
+func updateLastKubeContext(ctx devspacecontext.Context) error {
+	// Update generated if we deploy the application
+	if ctx.Config != nil && ctx.Config().LocalCache() != nil {
+		ctx.Config().LocalCache().SetLastContext(&localcache.LastContextConfig{
+			Context:   ctx.KubeClient().CurrentContext(),
+			Namespace: ctx.KubeClient().Namespace(),
+		})
+
+		err := ctx.Config().LocalCache().Save()
+		if err != nil {
+			return errors.Wrap(err, "save generated")
+		}
+	}
+
+	return nil
+}
+
+func adjustConfig(conf config2.Config, options *CommandOptions, log log.Logger) error {
+	// check if terminal is enabled
+	c := conf.Config()
+	if options.Terminal {
+		if len(c.Dev) == 0 {
+			return errors.New("No dev config available in DevSpace config")
+		}
+
+		devNames := make([]string, 0, len(c.Dev))
+		for k := range c.Dev {
+			devNames = append(devNames, k)
+		}
+
+		// if only one image exists, use it, otherwise show image picker
+		devName := ""
+		if len(devNames) == 1 {
+			devName = devNames[0]
+		} else {
+			var err error
+			devName, err = log.Question(&survey.QuestionOptions{
+				Question: "Where do you want to open a terminal to?",
+				Options:  devNames,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		// adjust dev config
+		for k := range c.Dev {
+			if k == devName {
+				if c.Dev[devName].Terminal == nil {
+					c.Dev[devName].Terminal = &latest.Terminal{}
+				}
+				c.Dev[devName].Terminal.Enabled = ptr.Bool(true)
+			} else {
+				c.Dev[devName].Terminal = nil
+			}
+		}
+	}
+
+	return nil
+}
+
+func runWithHooks(ctx devspacecontext.Context, command string, fn func() error) (err error) {
 	err = hook.ExecuteHooks(ctx, nil, command+":before:execute")
 	if err != nil {
 		return err
@@ -180,7 +358,7 @@ func runWithHooks(ctx *devspacecontext.Context, command string, fn func() error)
 
 	defer func() {
 		// delete temp folder
-		deleteTempFolder(ctx.Context, ctx.Log)
+		deleteTempFolder(ctx.Context(), ctx.Log())
 
 		// execute hooks
 		if err != nil {
@@ -192,7 +370,7 @@ func runWithHooks(ctx *devspacecontext.Context, command string, fn func() error)
 
 	return interrupt.Global.Run(fn, func() {
 		// delete temp folder
-		deleteTempFolder(ctx.Context, ctx.Log)
+		deleteTempFolder(ctx.Context(), ctx.Log())
 
 		// execute hooks
 		hook.LogExecuteHooks(ctx, nil, command+":interrupt")
@@ -210,8 +388,9 @@ func deleteTempFolder(ctx context.Context, log log.Logger) {
 	}
 }
 
-func (cmd *RunPipelineCmd) BuildOptions(configOptions *loader.ConfigOptions) *PipelineOptions {
-	return &PipelineOptions{
+func (cmd *RunPipelineCmd) BuildOptions(configOptions *loader.ConfigOptions) *CommandOptions {
+	return &CommandOptions{
+		GlobalFlags: *cmd.GlobalFlags,
 		Options: types.Options{
 			BuildOptions: build.Options{
 				Tags:                      cmd.Tags,
@@ -237,132 +416,18 @@ func (cmd *RunPipelineCmd) BuildOptions(configOptions *loader.ConfigOptions) *Pi
 			},
 		},
 		ConfigOptions: configOptions,
+		Terminal:      cmd.Terminal,
 		Pipeline:      cmd.Pipeline,
 		ShowUI:        cmd.ShowUI,
 	}
 }
 
-func (cmd *RunPipelineCmd) runPipeline(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
-	return runPipeline(ctx, f, true, cmd.BuildOptions(configOptions))
-}
-
-func (cmd *RunPipelineCmd) prepare(ctx context.Context, f factory.Factory, configOptions *loader.ConfigOptions, globalFlags *flags.GlobalFlags, allowFailingKubeClient bool) (*devspacecontext.Context, error) {
-	// start file logging
-	log.StartFileLogging()
-
-	// create a temporary folder for us to use
-	tempFolder, err := ioutil.TempDir("", "devspace-")
-	if err != nil {
-		return nil, errors.Wrap(err, "create temporary folder")
-	}
-
-	// add temp folder to context
-	ctx = values.WithTempFolder(ctx, tempFolder)
-
-	// set config root
-	configLoader, err := f.NewConfigLoader(globalFlags.ConfigPath)
-	if err != nil {
-		return nil, err
-	}
-	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
-	if err != nil {
-		return nil, err
-	} else if !configExists {
-		return nil, errors.New(message.ConfigNotFound)
-	}
-
-	// create kubectl client
-	client, err := f.NewKubeClientFromContext(globalFlags.KubeContext, globalFlags.Namespace)
-	if err != nil {
-		if allowFailingKubeClient {
-			cmd.log.Warnf("Unable to create new kubectl client: %v", err)
-			cmd.log.Warn("Using fake client to render resources")
-			cmd.log.WriteString(logrus.WarnLevel, "\n")
-
-			kube := fake.NewSimpleClientset()
-			client = &fakekube.Client{
-				Client: kube,
-			}
-		} else {
-			return nil, errors.Errorf("error creating Kubernetes client: %v. Please make sure you have a valid Kubernetes context that points to a working Kubernetes cluster. If in doubt, please check if the following command works locally: `kubectl get namespaces`", err)
-		}
-	}
-
-	// load generated config
-	localCache, err := configLoader.LoadLocalCache()
-	if err != nil {
-		return nil, errors.Errorf("error loading local cache: %v", err)
-	}
-
-	// If the current kube context or namespace is different than old,
-	// show warnings and reset kube client if necessary
-	client, err = kubectl.CheckKubeContext(client, localCache, globalFlags.NoWarn, globalFlags.SwitchContext, cmd.log)
-	if err != nil {
-		return nil, err
-	}
-
-	// load config
-	configInterface, err := configLoader.LoadWithCache(ctx, localCache, client, configOptions, cmd.log)
-	if err != nil {
-		return nil, err
-	}
-
-	// add root name to context
-	ctx = values.WithRootName(ctx, configInterface.Config().Name)
-
-	// adjust config
-	err = cmd.adjustConfig(configInterface)
-	if err != nil {
-		return nil, err
-	}
-
-	// create devspace context
-	return devspacecontext.NewContext(ctx, cmd.log).
-		WithConfig(configInterface).
-		WithKubeClient(client), nil
-}
-
-type PipelineOptions struct {
-	types.Options
-
-	ConfigOptions *loader.ConfigOptions
-	Pipeline      string
-	ShowUI        bool
-	UIPort        int
-}
-
-func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bool, options *PipelineOptions) error {
-	// create namespace if necessary
-	if !options.DeployOptions.Render {
-		err := kubectl.EnsureNamespace(ctx.Context, ctx.KubeClient, ctx.KubeClient.Namespace(), ctx.Log)
-		if err != nil {
-			return errors.Errorf("unable to create namespace: %v", err)
-		}
-	}
-
-	// print config
-	if ctx.Log.GetLevel() == logrus.DebugLevel {
-		out, _ := yaml.Marshal(ctx.Config.Config())
-		ctx.Log.Debugf("Use config:\n%s\n", string(out))
-	}
-
-	// resolve dependencies
-	dependencies, err := f.NewDependencyManager(ctx, options.ConfigOptions).ResolveAll(ctx, dependency.ResolveOptions{})
-	if err != nil {
-		return errors.Wrap(err, "deploy dependencies")
-	}
-	ctx = ctx.WithDependencies(dependencies)
-
-	// update last used kube context & save generated yaml
-	err = updateLastKubeContext(ctx)
-	if err != nil {
-		return errors.Wrap(err, "update last kube context")
-	}
-
+func runPipeline(ctx devspacecontext.Context, forceLeader bool, options *CommandOptions) error {
 	var configPipeline *latest.Pipeline
-	if ctx.Config.Config().Pipelines != nil && ctx.Config.Config().Pipelines[options.Pipeline] != nil {
-		configPipeline = ctx.Config.Config().Pipelines[options.Pipeline]
+	if ctx.Config().Config().Pipelines != nil && ctx.Config().Config().Pipelines[options.Pipeline] != nil {
+		configPipeline = ctx.Config().Config().Pipelines[options.Pipeline]
 	} else {
+		var err error
 		configPipeline, err = types.GetDefaultPipeline(options.Pipeline)
 		if err != nil {
 			return err
@@ -372,12 +437,12 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 	// marshal pipeline
 	configPipelineBytes, err := yaml.Marshal(configPipeline)
 	if err == nil {
-		ctx.Log.Debugf("Run pipeline:\n%s\n", string(configPipelineBytes))
+		ctx.Log().Debugf("Run pipeline:\n%s\n", string(configPipelineBytes))
 	}
 
 	// create dev context
-	devCtxCancel, cancelDevCtx := context.WithCancel(ctx.Context)
-	ctx = ctx.WithContext(values.WithDevContext(ctx.Context, devCtxCancel))
+	devCtxCancel, cancelDevCtx := context.WithCancel(ctx.Context())
+	ctx = ctx.WithContext(values.WithDevContext(ctx.Context(), devCtxCancel))
 
 	// create a new base dev pod manager
 	devPodManager := devpod.NewManager(cancelDevCtx)
@@ -387,7 +452,7 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 	dependencyRegistry := registry.NewDependencyRegistry(options.DeployOptions.Render)
 
 	// get deploy pipeline
-	pipe := pipeline.NewPipeline(ctx.Config.Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
+	pipe := pipeline.NewPipeline(ctx.Config().Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
 
 	// start ui & open
 	serv, err := dev.UI(ctx, options.UIPort, options.ShowUI, pipe)
@@ -397,77 +462,33 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 	dependencyRegistry.SetServer("http://" + serv.Server.Addr)
 
 	// exclude ourselves
-	couldExclude, err := dependencyRegistry.MarkDependencyExcluded(ctx, ctx.Config.Config().Name, forceLeader)
+	couldExclude, err := dependencyRegistry.MarkDependencyExcluded(ctx, ctx.Config().Config().Name, forceLeader)
 	if err != nil {
 		return err
 	} else if !couldExclude {
-		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace instance active in the current namespace right now that uses the same project name (%s)", strings.Join(os.Args, " "), ctx.Config.Config().Name)
+		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace instance active in the current namespace right now that uses the same project name (%s)", strings.Join(os.Args, " "), ctx.Config().Config().Name)
 	}
-	ctx.Log.Debugf("Marked project excluded: %v", ctx.Config.Config().Name)
+	ctx.Log().Debugf("Marked project excluded: %v", ctx.Config().Config().Name)
 
 	// get a stdout writer
-	stdoutWriter := ctx.Log.Writer(ctx.Log.GetLevel(), true)
+	stdoutWriter := ctx.Log().Writer(ctx.Log().GetLevel(), true)
 	defer stdoutWriter.Close()
 
 	// get a stderr writer
-	stderrWriter := ctx.Log.Writer(logrus.WarnLevel, true)
+	stderrWriter := ctx.Log().Writer(logrus.WarnLevel, true)
 	defer stderrWriter.Close()
 
 	// start pipeline
-	err = pipe.Run(ctx.WithLogger(log.NewStreamLoggerWithFormat(stdoutWriter, stderrWriter, ctx.Log.GetLevel(), log.TimeFormat)))
+	err = pipe.Run(ctx.WithLogger(log.NewStreamLoggerWithFormat(stdoutWriter, stderrWriter, ctx.Log().GetLevel(), log.TimeFormat)))
 	if err != nil {
 		return err
 	}
-	ctx.Log.Debugf("Wait for dev to finish")
+	ctx.Log().Debugf("Wait for dev to finish")
 
 	// wait for dev
 	err = pipe.WaitDev()
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (cmd *RunPipelineCmd) adjustConfig(conf config.Config) error {
-	// check if terminal is enabled
-	c := conf.Config()
-	if cmd.Terminal {
-		if len(c.Dev) == 0 {
-			return errors.New("No dev config available in DevSpace config")
-		}
-
-		devNames := make([]string, 0, len(c.Dev))
-		for k := range c.Dev {
-			devNames = append(devNames, k)
-		}
-
-		// if only one image exists, use it, otherwise show image picker
-		devName := ""
-		if len(devNames) == 1 {
-			devName = devNames[0]
-		} else {
-			var err error
-			devName, err = cmd.log.Question(&survey.QuestionOptions{
-				Question: "Where do you want to open a terminal to?",
-				Options:  devNames,
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		// adjust dev config
-		for k := range c.Dev {
-			if k == devName {
-				if c.Dev[devName].Terminal == nil {
-					c.Dev[devName].Terminal = &latest.Terminal{}
-				}
-				c.Dev[devName].Terminal.Enabled = ptr.Bool(true)
-			} else {
-				c.Dev[devName].Terminal = nil
-			}
-		}
 	}
 
 	return nil
@@ -484,21 +505,4 @@ func defaultStdStreams(stdout io.Writer, stderr io.Writer, stdin io.Reader) (io.
 		stdin = os.Stdin
 	}
 	return stdout, stderr, stdin
-}
-
-func updateLastKubeContext(ctx *devspacecontext.Context) error {
-	// Update generated if we deploy the application
-	if ctx.Config != nil && ctx.Config.LocalCache() != nil {
-		ctx.Config.LocalCache().SetLastContext(&localcache.LastContextConfig{
-			Context:   ctx.KubeClient.CurrentContext(),
-			Namespace: ctx.KubeClient.Namespace(),
-		})
-
-		err := ctx.Config.LocalCache().Save()
-		if err != nil {
-			return errors.Wrap(err, "save generated")
-		}
-	}
-
-	return nil
 }

@@ -9,7 +9,7 @@ import (
 )
 
 // Status gets the status of the deployment
-func (d *DeployConfig) Status(ctx *devspacecontext.Context) (*deployer.StatusResult, error) {
+func (d *DeployConfig) Status(ctx devspacecontext.Context) (*deployer.StatusResult, error) {
 	var (
 		deployTargetStr = d.getDeployTarget()
 		err             error
@@ -17,14 +17,14 @@ func (d *DeployConfig) Status(ctx *devspacecontext.Context) (*deployer.StatusRes
 
 	if d.Helm == nil {
 		// Get HelmClient
-		d.Helm, err = helm.NewClient(ctx.Log)
+		d.Helm, err = helm.NewClient(ctx.Log())
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Get all releases
-	releases, err := d.Helm.ListReleases(ctx, ctx.KubeClient.Namespace())
+	releases, err := d.Helm.ListReleases(ctx, ctx.KubeClient().Namespace())
 	if err != nil {
 		return &deployer.StatusResult{
 			Name:   d.DeploymentConfig.Name,

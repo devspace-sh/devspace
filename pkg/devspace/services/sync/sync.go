@@ -14,16 +14,16 @@ import (
 )
 
 // StartSyncFromCmd starts a new sync from command
-func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.TargetSelector, name string, syncConfig *latest.SyncConfig, noWatch bool) error {
+func StartSyncFromCmd(ctx devspacecontext.Context, selector targetselector.TargetSelector, name string, syncConfig *latest.SyncConfig, noWatch bool) error {
 	ctx, parent := ctx.WithNewTomb()
 	options := &Options{
 		Name:           name,
 		SyncConfig:     syncConfig,
 		Selector:       selector,
 		RestartOnError: true,
-		SyncLog:        ctx.Log,
+		SyncLog:        ctx.Log(),
 
-		Verbose: ctx.Log.GetLevel() == logrus.DebugLevel,
+		Verbose: ctx.Log().GetLevel() == logrus.DebugLevel,
 	}
 
 	// Start the tomb
@@ -31,7 +31,7 @@ func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.Targ
 		// this is needed as otherwise the context
 		// is cancelled alongside the tomb
 		parent.Go(func() error {
-			<-ctx.Context.Done()
+			<-ctx.Context().Done()
 			return nil
 		})
 
@@ -54,15 +54,15 @@ func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.Targ
 	select {
 	case <-parent.Dead():
 		return parent.Err()
-	case <-ctx.Context.Done():
+	case <-ctx.Context().Done():
 		_ = parent.Wait()
 		return nil
 	}
 }
 
 // StartSync starts the syncing functionality
-func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
-	if ctx == nil || ctx.Config == nil || ctx.Config.Config() == nil {
+func StartSync(ctx devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
+	if ctx == nil || ctx.Config == nil || ctx.Config().Config() == nil {
 		return fmt.Errorf("DevSpace config is nil")
 	}
 
@@ -85,7 +85,7 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 			var cancel context.CancelFunc
 			if s.NoWatch {
 				var cancelCtx context.Context
-				cancelCtx, cancel = context.WithCancel(syncCtx.Context)
+				cancelCtx, cancel = context.WithCancel(syncCtx.Context())
 				syncCtx = syncCtx.WithContext(cancelCtx)
 			}
 			initDone := parent.NotifyGo(func() error {
@@ -114,7 +114,7 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 	return nil
 }
 
-func startSync(ctx *devspacecontext.Context, name, arch string, syncConfig *latest.SyncConfig, selector targetselector.TargetSelector, starter sync.DelayedContainerStarter, parent *tomb.Tomb) error {
+func startSync(ctx devspacecontext.Context, name, arch string, syncConfig *latest.SyncConfig, selector targetselector.TargetSelector, starter sync.DelayedContainerStarter, parent *tomb.Tomb) error {
 	// set options
 	options := &Options{
 		Name:       name,
@@ -124,12 +124,12 @@ func startSync(ctx *devspacecontext.Context, name, arch string, syncConfig *late
 		Starter:    starter,
 
 		RestartOnError: true,
-		Verbose:        ctx.Log.GetLevel() == logrus.DebugLevel,
+		Verbose:        ctx.Log().GetLevel() == logrus.DebugLevel,
 	}
 
 	// should we print the logs?
-	if syncConfig.PrintLogs || ctx.Log.GetLevel() == logrus.DebugLevel {
-		options.SyncLog = ctx.Log
+	if syncConfig.PrintLogs || ctx.Log().GetLevel() == logrus.DebugLevel {
+		options.SyncLog = ctx.Log()
 	} else {
 		options.SyncLog = logpkg.GetDevPodFileLogger(name)
 	}

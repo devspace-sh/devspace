@@ -46,11 +46,10 @@ func NewOverwriteCmd(f factory.Factory, globalFlags *flags.GlobalFlags, command 
 	}
 
 	runCmd := &cobra.Command{
-		Use:                command.Name,
-		DisableFlagParsing: true,
-		Short:              description,
-		Long:               longDescription,
-		Args:               cobra.ArbitraryArgs,
+		Use:   command.Name,
+		Short: description,
+		Long:  longDescription,
+		Args:  cobra.ArbitraryArgs,
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			args, err := ParseArgs(cobraCmd, cmd.GlobalFlags, f.GetLog())
 			if err != nil {
@@ -61,10 +60,11 @@ func NewOverwriteCmd(f factory.Factory, globalFlags *flags.GlobalFlags, command 
 			return cmd.Run(f, args)
 		},
 	}
+	runCmd.DisableFlagParsing = true
 	return runCmd
 }
 
 func (cmd *OverwriteCmd) Run(f factory.Factory, args []string) error {
-	devCtx := devspacecontext.NewContext(context.Background(), f.GetLog())
-	return executeCommandWithAfter(devCtx.Context, cmd.Command, args, cmd.Variables, devCtx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin, devCtx.Log)
+	devCtx := devspacecontext.NewContext(context.Background(), cmd.Variables, f.GetLog())
+	return executeCommandWithAfter(devCtx.Context(), cmd.Command, args, cmd.Variables, devCtx.WorkingDir(), cmd.Stdout, cmd.Stderr, os.Stdin, devCtx.Log())
 }

@@ -6,7 +6,7 @@ import (
 )
 
 // Render runs a `helm template`
-func (d *DeployConfig) Render(ctx *devspacecontext.Context, out io.Writer) error {
+func (d *DeployConfig) Render(ctx devspacecontext.Context, out io.Writer) error {
 	_, deployValues, err := d.getDeploymentValues(ctx)
 	if err != nil {
 		return err

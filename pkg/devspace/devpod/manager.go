@@ -28,13 +28,13 @@ type Options struct {
 
 type Manager interface {
 	// StartMultiple will start multiple or all dev pods
-	StartMultiple(ctx *devspacecontext.Context, devPods []string, options Options) error
+	StartMultiple(ctx devspacecontext.Context, devPods []string, options Options) error
 
 	// Reset will stop the DevPod if it exists and reset the replaced pods
-	Reset(ctx *devspacecontext.Context, name string, options *deploy.PurgeOptions) error
+	Reset(ctx devspacecontext.Context, name string, options *deploy.PurgeOptions) error
 
 	// Stop will stop a specific DevPod
-	Stop(ctx *devspacecontext.Context, name string)
+	Stop(ctx devspacecontext.Context, name string)
 
 	// List lists the currently active dev pods
 	List() []string
@@ -84,8 +84,8 @@ func (d *devPodManager) Close() {
 	_ = d.Wait()
 }
 
-func (d *devPodManager) StartMultiple(ctx *devspacecontext.Context, devPods []string, options Options) error {
-	devCtx, _ := values.DevContextFrom(ctx.Context)
+func (d *devPodManager) StartMultiple(ctx devspacecontext.Context, devPods []string, options Options) error {
+	devCtx, _ := values.DevContextFrom(ctx.Context())
 	select {
 	case <-devCtx.Done():
 		return devCtx.Err()
@@ -99,8 +99,8 @@ func (d *devPodManager) StartMultiple(ctx *devspacecontext.Context, devPods []st
 	ctx = ctx.WithContext(cancelCtx)
 
 	initChans := []chan struct{}{}
-	errors := make(chan error, len(ctx.Config.Config().Dev))
-	for devPodName, devPod := range ctx.Config.Config().Dev {
+	errors := make(chan error, len(ctx.Config().Config().Dev))
+	for devPodName, devPod := range ctx.Config().Config().Dev {
 		if len(devPods) > 0 && !stringutil.Contains(devPods, devPodName) {
 			continue
 		}
@@ -158,7 +158,7 @@ func (d *devPodManager) Wait() error {
 	return utilerrors.NewAggregate(errors)
 }
 
-func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodConfig *latest.DevPod, options Options) (*devPod, error) {
+func (d *devPodManager) Start(originalContext devspacecontext.Context, devPodConfig *latest.DevPod, options Options) (*devPod, error) {
 	lock := d.lockFactory.GetLock(devPodConfig.Name)
 	lock.Lock()
 	defer lock.Unlock()
@@ -182,7 +182,7 @@ func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodCo
 
 	// create a DevPod logger
 	prefix := "dev:" + devPodConfig.Name + " "
-	unionLogger := originalContext.Log.WithPrefix(prefix).WithSink(logpkg.GetDevPodFileLogger(prefix))
+	unionLogger := originalContext.Log().WithPrefix(prefix).WithSink(logpkg.GetDevPodFileLogger(prefix))
 
 	// start the dev pod
 	err := dp.Start(originalContext.WithLogger(unionLogger), devPodConfig, options)
@@ -193,13 +193,13 @@ func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodCo
 	return dp, nil
 }
 
-func (d *devPodManager) Reset(ctx *devspacecontext.Context, name string, options *deploy.PurgeOptions) error {
+func (d *devPodManager) Reset(ctx devspacecontext.Context, name string, options *deploy.PurgeOptions) error {
 	lock := d.lockFactory.GetLock(name)
 	lock.Lock()
 	defer lock.Unlock()
 
 	d.stop(name)
-	devPod, ok := ctx.Config.RemoteCache().GetDevPod(name)
+	devPod, ok := ctx.Config().RemoteCache().GetDevPod(name)
 	if ok {
 		_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, &devPod, options)
 		return err
@@ -208,7 +208,7 @@ func (d *devPodManager) Reset(ctx *devspacecontext.Context, name string, options
 	return nil
 }
 
-func (d *devPodManager) Stop(ctx *devspacecontext.Context, name string) {
+func (d *devPodManager) Stop(ctx devspacecontext.Context, name string) {
 	lock := d.lockFactory.GetLock(name)
 	lock.Lock()
 	defer lock.Unlock()

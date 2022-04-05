@@ -23,7 +23,7 @@ import (
 
 // ResolverInterface defines the resolver interface that takes dependency configs and resolves them
 type ResolverInterface interface {
-	Resolve(ctx *devspacecontext.Context) ([]types.Dependency, error)
+	Resolve(ctx devspacecontext.Context) ([]types.Dependency, error)
 }
 
 // Resolver implements the resolver interface
@@ -37,19 +37,19 @@ type resolver struct {
 }
 
 // NewResolver creates a new resolver for resolving dependencies
-func NewResolver(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) ResolverInterface {
+func NewResolver(ctx devspacecontext.Context, configOptions *loader.ConfigOptions) ResolverInterface {
 	return &resolver{
-		DependencyGraph: graph.NewGraph(graph.NewNode(ctx.Config.Config().Name, &Dependency{name: ctx.Config.Config().Name, root: true})),
+		DependencyGraph: graph.NewGraph(graph.NewNode(ctx.Config().Config().Name, &Dependency{name: ctx.Config().Config().Name, root: true})),
 
-		BaseConfig: ctx.Config.Config(),
-		BaseCache:  ctx.Config.LocalCache(),
+		BaseConfig: ctx.Config().Config(),
+		BaseCache:  ctx.Config().LocalCache(),
 
 		ConfigOptions: configOptions,
 	}
 }
 
 // Resolve implements interface
-func (r *resolver) Resolve(ctx *devspacecontext.Context) ([]types.Dependency, error) {
+func (r *resolver) Resolve(ctx devspacecontext.Context) ([]types.Dependency, error) {
 	currentWorkingDirectory, err := os.Getwd()
 	if err != nil {
 		return nil, errors.Wrap(err, "get current working directory")
@@ -80,12 +80,12 @@ func (r *resolver) Resolve(ctx *devspacecontext.Context) ([]types.Dependency, er
 	return children, nil
 }
 
-func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, parentConfigName string, currentDependency *Dependency, dependencies []*latest.DependencyConfig) error {
+func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, parentConfigName string, currentDependency *Dependency, dependencies []*latest.DependencyConfig) error {
 	if currentDependency != nil {
 		currentDependency.children = []types.Dependency{}
 	}
 	for _, dependencyConfig := range dependencies {
-		dependencyConfigPath, err := util.DownloadDependency(ctx.Context, basePath, dependencyConfig.Source, ctx.Log)
+		dependencyConfigPath, err := util.DownloadDependency(ctx.Context(), basePath, dependencyConfig.Source, ctx.Log())
 		if err != nil {
 			return err
 		}
@@ -97,7 +97,7 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 		if n, ok := r.DependencyGraph.Nodes[dependencyConfig.Name]; ok {
 			child = n.Data.(*Dependency)
 			if child.Config().Path() != dependencyConfigPath {
-				ctx.Log.Warnf("Seems like you have multiple dependencies with name %s, but they use different source settings (%s != %s). This can lead to unexpected results and you should make sure that the devspace.yaml name is unique across your dependencies or that you use the dependencies.overrideName option", child.name, child.Config().Path(), dependencyConfigPath)
+				ctx.Log().Warnf("Seems like you have multiple dependencies with name %s, but they use different source settings (%s != %s). This can lead to unexpected results and you should make sure that the devspace.yaml name is unique across your dependencies or that you use the dependencies.overrideName option", child.name, child.Config().Path(), dependencyConfigPath)
 			}
 
 			err := r.DependencyGraph.AddEdge(parentConfigName, dependencyConfig.Name)
@@ -106,7 +106,7 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 					return err
 				}
 
-				ctx.Log.Debugf(err.Error())
+				ctx.Log().Debugf(err.Error())
 			}
 		} else {
 			child, err = r.resolveDependency(ctx, dependencyConfigPath, dependencyConfig.Name, dependencyConfig)
@@ -148,7 +148,7 @@ func transformMap(depMap map[string]*latest.DependencyConfig) []*latest.Dependen
 	return dependencies
 }
 
-func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyConfigPath, dependencyName string, dependency *latest.DependencyConfig) (*Dependency, error) {
+func (r *resolver) resolveDependency(ctx devspacecontext.Context, dependencyConfigPath, dependencyName string, dependency *latest.DependencyConfig) (*Dependency, error) {
 	// clone config options
 	cloned, err := r.ConfigOptions.Clone()
 	if err != nil {
@@ -167,7 +167,7 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 	}
 
 	if dependency.OverwriteVars {
-		for k, v := range ctx.Config.Variables() {
+		for k, v := range ctx.Config().Variables() {
 			cloned.Vars = append(cloned.Vars, strings.TrimSpace(k)+"="+strings.TrimSpace(fmt.Sprintf("%v", v)))
 		}
 	}
@@ -176,12 +176,12 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 	}
 
 	// recreate client if necessary
-	client := ctx.KubeClient
+	client := ctx.KubeClient()
 	if dependency.Namespace != "" {
-		if ctx.KubeClient == nil {
+		if ctx.KubeClient() == nil {
 			client, err = kubectl.NewClientFromContext("", dependency.Namespace, false, kubeconfig.NewLoader())
 		} else {
-			client, err = kubectl.NewClientFromContext(client.CurrentContext(), dependency.Namespace, false, ctx.KubeClient.KubeConfigLoader())
+			client, err = kubectl.NewClientFromContext(client.CurrentContext(), dependency.Namespace, false, ctx.KubeClient().KubeConfigLoader())
 		}
 		if err != nil {
 			return nil, errors.Wrap(err, "create new client")
@@ -196,7 +196,7 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 			return err
 		}
 
-		dConfigWrapper, err = configLoader.Load(ctx.Context, client, cloned, ctx.Log)
+		dConfigWrapper, err = configLoader.Load(ctx.Context(), client, cloned, ctx.Log())
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", dependencyName))
 		}
@@ -209,7 +209,7 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 
 	// set parsed variables in parent config
 	if dependency.OverwriteVars {
-		baseVars := ctx.Config.Variables()
+		baseVars := ctx.Config().Variables()
 		for k, v := range dConfigWrapper.Variables() {
 			_, ok := baseVars[k]
 			if !ok {

@@ -35,7 +35,7 @@ type Options struct {
 
 // Controller is the main building interface
 type Controller interface {
-	Build(ctx *devspacecontext.Context, images []string, options *Options) error
+	Build(ctx devspacecontext.Context, images []string, options *Options) error
 }
 
 type controller struct{}
@@ -46,22 +46,22 @@ func NewController() Controller {
 }
 
 // Build builds all images
-func (c *controller) Build(ctx *devspacecontext.Context, images []string, options *Options) error {
+func (c *controller) Build(ctx devspacecontext.Context, images []string, options *Options) error {
 	var (
 		builtImages = make(map[string]types.ImageNameTag)
 
 		// Parallel build
 		errChan   = make(chan error)
 		cacheChan = make(chan imageNameAndTag)
-		conf      = ctx.Config.Config()
+		conf      = ctx.Config().Config()
 	)
 
 	// Check if we have at least 1 image to build
 	if options.SkipBuild {
-		ctx.Log.Debugf("Skip building because of --skip-build")
+		ctx.Log().Debugf("Skip building because of --skip-build")
 		return nil
 	} else if len(conf.Images) == 0 {
-		ctx.Log.Debugf("Skip building because no images are defined")
+		ctx.Log().Debugf("Skip building because no images are defined")
 		return nil
 	}
 
@@ -88,7 +88,7 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 
 	imagesToBuild := 0
 	for key, imageConf := range conf.Images {
-		ctx := ctx.WithLogger(ctx.Log.WithPrefix("build:" + key + " "))
+		ctx := ctx.WithLogger(ctx.Log().WithPrefix("build:" + key + " "))
 		if len(images) > 0 && !stringutil.Contains(images, key) {
 			continue
 		}
@@ -159,7 +159,7 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 			if pluginErr != nil {
 				return pluginErr
 			}
-			ctx.Log.Infof("Skip building image '%s'", imageConfigName)
+			ctx.Log().Infof("Skip building image '%s'", imageConfigName)
 			continue
 		}
 
@@ -182,14 +182,14 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 			}
 
 			// Update cache
-			imageCache, _ := ctx.Config.LocalCache().GetImageCache(imageConfigName)
+			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
 			if imageCache.Tag == imageTags[0] {
-				ctx.Log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTags[0])
+				ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTags[0])
 			}
 
 			imageCache.ImageName = imageName
 			imageCache.Tag = imageTags[0]
-			ctx.Config.LocalCache().SetImageCache(imageConfigName, imageCache)
+			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 
 			// Track built images
 			builtImages[imageConfigName] = types.ImageNameTag{
@@ -220,7 +220,7 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 			}
 
 			imagesToBuild++
-			go func(ctx *devspacecontext.Context) {
+			go func(ctx devspacecontext.Context) {
 				// Build the image
 				err := builder.Build(ctx)
 				if err != nil {
@@ -266,7 +266,7 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 	}
 
 	// merge built images
-	alreadyBuiltImages, ok := ctx.Config.GetRuntimeVariable(constants.BuiltImagesKey)
+	alreadyBuiltImages, ok := ctx.Config().GetRuntimeVariable(constants.BuiltImagesKey)
 	if ok {
 		alreadyBuiltImagesMap, ok := alreadyBuiltImages.(map[string]types.ImageNameTag)
 		if ok {
@@ -281,10 +281,10 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 		}
 	}
 
-	ctx.Config.SetRuntimeVariable(constants.BuiltImagesKey, builtImages)
+	ctx.Config().SetRuntimeVariable(constants.BuiltImagesKey, builtImages)
 
 	if len(builtImages) > 0 {
-		err := ctx.Config.LocalCache().Save()
+		err := ctx.Config().LocalCache().Save()
 		if err != nil {
 			return err
 		}
@@ -292,23 +292,23 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 	return nil
 }
 
-func (c *controller) waitForBuild(ctx *devspacecontext.Context, errChan <-chan error, cacheChan <-chan imageNameAndTag, builtImages map[string]types.ImageNameTag) error {
+func (c *controller) waitForBuild(ctx devspacecontext.Context, errChan <-chan error, cacheChan <-chan imageNameAndTag, builtImages map[string]types.ImageNameTag) error {
 	select {
 	case err := <-errChan:
 		return err
 	case done := <-cacheChan:
-		ctx := ctx.WithLogger(ctx.Log.WithPrefix("build:" + done.imageConfigName + " "))
-		ctx.Log.Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
+		ctx := ctx.WithLogger(ctx.Log().WithPrefix("build:" + done.imageConfigName + " "))
+		ctx.Log().Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
 
 		// Update cache
-		imageCache, _ := ctx.Config.LocalCache().GetImageCache(done.imageConfigName)
+		imageCache, _ := ctx.Config().LocalCache().GetImageCache(done.imageConfigName)
 		if imageCache.Tag == done.imageTag {
-			ctx.Log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
+			ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
 		}
 
 		imageCache.ImageName = done.imageName
 		imageCache.Tag = done.imageTag
-		ctx.Config.LocalCache().SetImageCache(done.imageConfigName, imageCache)
+		ctx.Config().LocalCache().SetImageCache(done.imageConfigName, imageCache)
 
 		// Track built images
 		builtImages[done.imageConfigName] = types.ImageNameTag{

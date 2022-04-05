@@ -21,7 +21,7 @@ import (
 
 // StartTerminalFromCMD opens a new terminal
 func StartTerminalFromCMD(
-	ctx *devspacecontext.Context,
+	ctx devspacecontext.Context,
 	selector targetselector.TargetSelector,
 	command []string,
 	wait,
@@ -32,12 +32,12 @@ func StartTerminalFromCMD(
 	stderr io.Writer,
 	stdin io.Reader,
 ) (int, error) {
-	container, err := selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	container, err := selector.SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return 0, err
 	}
 
-	ctx.Log.Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
+	ctx.Log().Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
 	done := make(chan error)
 	go func() {
 		done <- startTerminal(ctx, command, !screen, screenSession, stdout, stderr, stdin, container)
@@ -45,7 +45,7 @@ func StartTerminalFromCMD(
 
 	// wait until either client has finished or we got interrupted
 	select {
-	case <-ctx.Context.Done():
+	case <-ctx.Context().Done():
 		<-done
 		return 0, nil
 	case err = <-done:
@@ -59,15 +59,15 @@ func StartTerminalFromCMD(
 				// 128 - Invalid argument to exit
 				// 130 - Script terminated by Control-C
 				if restart && IsUnexpectedExitCode(exitError.Code) {
-					ctx.Log.WriteString(logrus.InfoLevel, "\n")
-					ctx.Log.Infof("Restarting because: %s", err)
+					ctx.Log().WriteString(logrus.InfoLevel, "\n")
+					ctx.Log().Infof("Restarting because: %s", err)
 					return StartTerminalFromCMD(ctx, selector, command, wait, restart, screen, screenSession, stdout, stderr, stdin)
 				}
 
 				return exitError.Code, nil
 			} else if restart {
-				ctx.Log.WriteString(logrus.InfoLevel, "\n")
-				ctx.Log.Infof("Restarting because: %s", err)
+				ctx.Log().WriteString(logrus.InfoLevel, "\n")
+				ctx.Log().Infof("Restarting because: %s", err)
 				return StartTerminalFromCMD(ctx, selector, command, wait, restart, screen, screenSession, stdout, stderr, stdin)
 			}
 
@@ -80,7 +80,7 @@ func StartTerminalFromCMD(
 
 // StartTerminal opens a new terminal
 func StartTerminal(
-	ctx *devspacecontext.Context,
+	ctx devspacecontext.Context,
 	devContainer *latest.DevContainer,
 	selector targetselector.TargetSelector,
 	stdout io.Writer,
@@ -95,9 +95,9 @@ func StartTerminal(
 				return
 			}
 
-			ctx.Log.Infof("Restarting because: %s", err)
+			ctx.Log().Infof("Restarting because: %s", err)
 			select {
-			case <-ctx.Context.Done():
+			case <-ctx.Context().Done():
 				return
 			case <-time.After(time.Second * 3):
 			}
@@ -105,16 +105,16 @@ func StartTerminal(
 			return
 		}
 
-		ctx.Log.Debugf("Stopped terminal")
+		ctx.Log().Debugf("Stopped terminal")
 	}()
 
 	command := getCommand(devContainer)
-	container, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	container, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return err
 	}
 
-	ctx.Log.Infof("Opening shell to %s:%s (pod:container)", ansi.Color(container.Container.Name, "white+b"), ansi.Color(container.Pod.Name, "white+b"))
+	ctx.Log().Infof("Opening shell to %s:%s (pod:container)", ansi.Color(container.Container.Name, "white+b"), ansi.Color(container.Pod.Name, "white+b"))
 	errChan := make(chan error)
 	parent.Go(func() error {
 		errChan <- startTerminal(ctx, command, devContainer.Terminal.DisableScreen, "dev", stdout, stderr, stdin, container)
@@ -122,7 +122,7 @@ func StartTerminal(
 	})
 
 	select {
-	case <-ctx.Context.Done():
+	case <-ctx.Context().Done():
 		<-errChan
 		return nil
 	case err = <-errChan:
@@ -155,7 +155,7 @@ func StartTerminal(
 }
 
 func startTerminal(
-	ctx *devspacecontext.Context,
+	ctx devspacecontext.Context,
 	command []string,
 	disableScreen bool,
 	screenSession string,
@@ -170,8 +170,8 @@ func startTerminal(
 	// try to install screen
 	useScreen := false
 	if term.IsTerminal(stdin) && !disableScreen {
-		ctx.Log.Debugf("Installing screen in container...")
-		bufferStdout, bufferStderr, err := ctx.KubeClient.ExecBuffered(ctx.Context, container.Pod, container.Container.Name, []string{
+		ctx.Log().Debugf("Installing screen in container...")
+		bufferStdout, bufferStderr, err := ctx.KubeClient().ExecBuffered(ctx.Context(), container.Pod, container.Container.Name, []string{
 			"sh",
 			"-c",
 			`if ! command -v screen; then
@@ -197,7 +197,7 @@ else
 fi`,
 		}, nil)
 		if err != nil {
-			ctx.Log.Debugf("Error installing screen: %s %s %v", string(bufferStdout), string(bufferStderr), err)
+			ctx.Log().Debugf("Error installing screen: %s %s %v", string(bufferStdout), string(bufferStderr), err)
 		} else {
 			useScreen = true
 		}
@@ -208,11 +208,11 @@ fi`,
 		command = newCommand
 	}
 
-	ctx.Log.Debugf("Starting terminal...")
+	ctx.Log().Debugf("Starting terminal...")
 
 	before := log.GetBaseInstance().GetLevel()
 	log.GetBaseInstance().SetLevel(logrus.PanicLevel)
-	err := ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+	err := ctx.KubeClient().ExecStream(ctx.Context(), &kubectl.ExecStreamOptions{
 		Pod:         container.Pod,
 		Container:   container.Container.Name,
 		Command:     command,
@@ -224,7 +224,7 @@ fi`,
 	})
 	log.GetBaseInstance().SetLevel(before)
 	if err != nil {
-		ctx.Log.Debugf("error executing stream: %v", err)
+		ctx.Log().Debugf("error executing stream: %v", err)
 	}
 
 	return err

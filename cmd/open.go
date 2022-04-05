@@ -134,7 +134,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	}
 
 	// create devspace context
-	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+	ctx := devspacecontext.NewContext(context.Background(), nil, cmd.log).
 		WithKubeClient(client)
 
 	// Execute plugin hook
@@ -282,8 +282,8 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 	return nil
 }
 
-func (cmd *OpenCmd) openLocal(ctx *devspacecontext.Context, domain string) error {
-	_, servicePort, serviceLabels, err := cmd.getService(ctx.KubeClient, ctx.KubeClient.Namespace(), domain, true)
+func (cmd *OpenCmd) openLocal(ctx devspacecontext.Context, domain string) error {
+	_, servicePort, serviceLabels, err := cmd.getService(ctx.KubeClient(), ctx.KubeClient().Namespace(), domain, true)
 	if err != nil {
 		return errors.Errorf("Unable to get service: %v", err)
 	}

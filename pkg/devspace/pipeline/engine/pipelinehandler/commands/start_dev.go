@@ -23,8 +23,8 @@ type StartDevOptions struct {
 	All bool `long:"all" description:"Start all dev configurations"`
 }
 
-func StartDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-	ctx.Log.Debugf("start_dev %s", strings.Join(args, " "))
+func StartDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	ctx.Log().Debugf("start_dev %s", strings.Join(args, " "))
 	options := &StartDevOptions{
 		Options: pipeline.Options().DevOptions,
 	}
@@ -34,7 +34,7 @@ func StartDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []stri
 	}
 
 	if options.All {
-		for devConfig := range ctx.Config.Config().Dev {
+		for devConfig := range ctx.Config().Config().Dev {
 			ctx, err = applySetValues(ctx, "dev", devConfig, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
@@ -47,7 +47,7 @@ func StartDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []stri
 				return err
 			}
 
-			if ctx.Config.Config().Dev == nil || ctx.Config.Config().Dev[devConfig] == nil {
+			if ctx.Config().Config().Dev == nil || ctx.Config().Config().Dev[devConfig] == nil {
 				return fmt.Errorf("couldn't find dev %v", devConfig)
 			}
 		}

@@ -1360,6 +1360,9 @@ type CommandConfig struct {
 	Description string `yaml:"description,omitempty" json:"description,omitempty"`
 }
 
+type CommandFlag struct {
+}
+
 func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	commandString := ""
 	err := unmarshal(&commandString)

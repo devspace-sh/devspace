@@ -17,8 +17,8 @@ func (h *handler) ping(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if t.RunID != h.ctx.RunID {
-		http.Error(w, fmt.Sprintf(h.ctx.RunID), http.StatusConflict)
+	if t.RunID != h.ctx.RunID() {
+		http.Error(w, fmt.Sprintf(h.ctx.RunID()), http.StatusConflict)
 		return
 	}
 }
@@ -32,7 +32,7 @@ func (h *handler) excludeDependency(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if h.pipeline == nil || t.RunID != h.ctx.RunID {
+	if h.pipeline == nil || t.RunID != h.ctx.RunID() {
 		// we allow this here as apparently the request targeted a wrong server
 		return
 	}
@@ -46,7 +46,7 @@ func (h *handler) excludeDependency(w http.ResponseWriter, req *http.Request) {
 	// try to find the dependency name and kill it
 	dep := findDependency(h.pipeline, t.DependencyName)
 	if dep != nil {
-		h.ctx.Log.Debugf("stopping dependency %v", t.DependencyName)
+		h.ctx.Log().Debugf("stopping dependency %v", t.DependencyName)
 		err = dep.Close()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error stopping dependency: %v", err), http.StatusInternalServerError)

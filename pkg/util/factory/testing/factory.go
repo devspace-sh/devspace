@@ -71,7 +71,7 @@ func (f *Factory) GetLog() log.Logger {
 }
 
 // NewDependencyManager implements interface
-func (f *Factory) NewDependencyManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager {
+func (f *Factory) NewDependencyManager(ctx devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager {
 	return f.DependencyManager
 }
 
