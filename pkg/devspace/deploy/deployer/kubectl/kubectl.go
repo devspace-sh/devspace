@@ -2,6 +2,9 @@ package kubectl
 
 import (
 	"context"
+	"io"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -9,8 +12,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/sirupsen/logrus"
-	"io"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/util/downloader"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"

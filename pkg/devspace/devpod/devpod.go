@@ -3,15 +3,16 @@ package devpod
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy"
-	"github.com/mgutz/ansi"
 	"io"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"net/http"
 	"os"
 	syncpkg "sync"
+
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	"github.com/mgutz/ansi"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
@@ -318,7 +319,12 @@ func tryOpen(ctx context.Context, url string, log logpkg.Logger) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}()
+
 	if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
 		select {
 		case <-ctx.Done():

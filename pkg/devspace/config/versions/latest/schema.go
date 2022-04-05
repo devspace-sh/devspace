@@ -1,8 +1,9 @@
 package latest
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 
 	"encoding/json"
 
@@ -100,7 +101,7 @@ type Config struct {
 	Commands map[string]*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty"`
 
 	// Require defines what DevSpace, plugins and command versions are required to use this config and if a condition is not
-	// fullfilled, DevSpace will fail.
+	// fulfilled, DevSpace will fail.
 	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
 
 	// Dependencies are sub devspace projects that lie in a local folder or remote git repository that can be executed

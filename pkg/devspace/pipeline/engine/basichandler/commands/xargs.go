@@ -3,13 +3,14 @@ package commands
 import (
 	"context"
 	"errors"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"io/ioutil"
-	"mvdan.cc/sh/v3/interp"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
+	"mvdan.cc/sh/v3/interp"
 )
 
-var xArgsUsage = errors.New(`usage: xargs [utility [argument ...]]`)
+var errXArgsUsage = errors.New(`usage: xargs [utility [argument ...]]`)
 
 type XArgsOptions struct {
 	Delimiter string
@@ -24,7 +25,7 @@ func XArgs(ctx context.Context, args []string, handler types.ExecHandler) error 
 	if err != nil {
 		return err
 	} else if len(args) == 0 {
-		return xArgsUsage
+		return errXArgsUsage
 	}
 
 	hc := interp.HandlerCtx(ctx)
@@ -57,14 +58,14 @@ func parseXArgsOptions(args []string, options *XArgsOptions) ([]string, error) {
 			switch arg {
 			case "d", "-delimiter":
 				if i+1 == len(args) {
-					return nil, xArgsUsage
+					return nil, errXArgsUsage
 				}
 
 				i++
 				startAt++
 				options.Delimiter = args[i]
 			default:
-				return nil, xArgsUsage
+				return nil, errXArgsUsage
 			}
 
 			continue

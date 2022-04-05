@@ -2,8 +2,10 @@ package env
 
 import (
 	"fmt"
+	enginetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"mvdan.cc/sh/v3/expand"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -13,14 +15,9 @@ type Provider interface {
 }
 
 func NewVariableEnvProvider(envVars map[string]string) Provider {
-	env := os.Environ()
-	for k, v := range envVars {
-		env = append(env, k+"="+v)
-	}
-
-	return &provider{
-		listProvider: expand.ListEnviron(env...),
-	}
+	p := &provider{}
+	p.Set(envVars)
+	return p
 }
 
 type provider struct {
@@ -36,15 +33,17 @@ func (p *provider) Set(envVars map[string]string) {
 
 	env := os.Environ()
 	for k, v := range envVars {
-		env = append(env, k+"="+v)
+		key := strings.ReplaceAll(k, enginetypes.DotReplacement, ".")
+		env = append(env, key+"="+v)
 	}
-	p.listProvider = expand.ListEnviron()
+	p.listProvider = expand.ListEnviron(env...)
 }
 
 func (p *provider) Get(name string) expand.Variable {
 	p.m.Lock()
 	defer p.m.Unlock()
 
+	name = strings.ReplaceAll(name, enginetypes.DotReplacement, ".")
 	return p.listProvider.Get(name)
 }
 

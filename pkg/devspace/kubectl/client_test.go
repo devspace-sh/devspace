@@ -149,15 +149,10 @@ func TestCheckKubeContext(t *testing.T) {
 	ns1 := "n1"
 	ns2 := "ns2"
 
-	generatedConfig := &localcache.Config{
-		ActiveProfile: "someProfile",
-		Profiles: map[string]*localcache.CacheConfig{
-			"someProfile": {
-				LastContext: &localcache.LastContextConfig{
-					Context:   context1,
-					Namespace: ns1,
-				},
-			},
+	localCache := &localcache.LocalCache{
+		LastContext: &localcache.LastContextConfig{
+			Context:   context1,
+			Namespace: ns1,
 		},
 	}
 
@@ -213,7 +208,7 @@ func TestCheckKubeContext(t *testing.T) {
 
 		// checking kubeContext and reseting the client
 		isTerminalIn = true
-		client, err = client.CheckKubeContext(generatedConfig, false, fakeLogger)
+		client, err = CheckKubeContext(client, localCache, false, false, fakeLogger)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -227,18 +222,12 @@ func TestCheckKubeContextNamespace(t *testing.T) {
 	ns1 := "n1"
 	ns2 := "ns2"
 
-	generatedConfig := &localcache.Config{
-		ActiveProfile: "someProfile",
-		Profiles: map[string]*localcache.CacheConfig{
-			"someProfile": {
-				LastContext: &localcache.LastContextConfig{
-					Context:   context1,
-					Namespace: ns1,
-				},
-			},
+	localCache := &localcache.LocalCache{
+		LastContext: &localcache.LastContextConfig{
+			Context:   context1,
+			Namespace: ns1,
 		},
 	}
-
 	clusters := make(map[string]*api.Cluster)
 	clusters["cluster1"] = &api.Cluster{
 		Server: "server1",
@@ -272,7 +261,7 @@ func TestCheckKubeContextNamespace(t *testing.T) {
 		fakeLogger.SetAnswer(n)
 		// checking kubeContext and reseting the client
 		isTerminalIn = true
-		client, err = client.CheckKubeContext(generatedConfig, false, fakeLogger)
+		client, err = CheckKubeContext(client, localCache, false, false, fakeLogger)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -2,15 +2,16 @@ package dependencies
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"io/ioutil"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -135,7 +136,7 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectNoError(err)
 
 		// make sure the dependencies are correctly deployed
-		deploy, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "my-deployment", metav1.GetOptions{})
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "my-deployment", metav1.GetOptions{})
 		framework.ExpectError(err)
 
 		// check if replica set exists & pod got replaced correctly

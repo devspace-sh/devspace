@@ -107,10 +107,7 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 	// check if terminal and modify pod
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
 		err = modifyDevContainer(ctx, devPod, devContainer, podTemplate)
-		if err != nil {
-			return false
-		}
-		return true
+		return err == nil
 	})
 	if err != nil {
 		return nil, err

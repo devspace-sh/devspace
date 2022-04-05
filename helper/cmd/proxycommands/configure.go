@@ -1,14 +1,15 @@
-package proxy_commands
+package proxycommands
 
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/loft-sh/devspace/helper/util/stderrlog"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 var (

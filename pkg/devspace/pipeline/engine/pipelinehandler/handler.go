@@ -37,7 +37,8 @@ var PipelineCommands = map[string]func(devCtx devspacecontext.Context, pipeline 
 		return basichandlercommands.RunWatch(devCtx.Context(), args, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, pipeline), devCtx.Log())
 	},
 	"run_pipelines": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		return commands.RunPipelines(devCtx, pipeline, args)
+		hc := interp.HandlerCtx(devCtx.Context())
+		return commands.RunPipelines(devCtx, pipeline, args, hc.Env)
 	},
 	"build_images": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.BuildImages(devCtx, pipeline, args)

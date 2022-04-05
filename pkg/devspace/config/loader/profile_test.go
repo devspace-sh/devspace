@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -42,19 +43,19 @@ func TestTransformPath(t *testing.T) {
 type testCase struct {
 	in       map[string]interface{}
 	expected map[string]interface{}
-	profile  map[string]interface{}
+	profile  latest.ProfileConfig
 }
 
 func TestPatches(t *testing.T) {
 	testCases := map[string]*testCase{
 		"patch with path": {
-			profile: map[string]interface{}{
-				"name": "test",
-				"patches": []interface{}{
-					map[string]interface{}{
-						"op":   "add",
-						"path": "dev.ports",
-						"value": map[string]interface{}{
+			profile: latest.ProfileConfig{
+				Name: "test",
+				Patches: []*latest.PatchConfig{
+					{
+						Operation: "add",
+						Path:      "dev.ports",
+						Value: map[string]interface{}{
 							"imageName": "myImage",
 						},
 					},
@@ -83,13 +84,13 @@ func TestPatches(t *testing.T) {
 			},
 		},
 		"patch with extended matching": {
-			profile: map[string]interface{}{
-				"name": "test",
-				"patches": []interface{}{
-					map[string]interface{}{
-						"op":    "add",
-						"path":  "dev.ports.imageName=test.containerName",
-						"value": "myContainer",
+			profile: latest.ProfileConfig{
+				Name: "test",
+				Patches: []*latest.PatchConfig{
+					{
+						Operation: "add",
+						Path:      "dev.ports.imageName=test.containerName",
+						Value:     "myContainer",
 					},
 				},
 			},
@@ -114,12 +115,12 @@ func TestPatches(t *testing.T) {
 			},
 		},
 		"skip remove patch when no match": {
-			profile: map[string]interface{}{
-				"name": "test",
-				"patches": []interface{}{
-					map[string]interface{}{
-						"op":   "remove",
-						"path": "dev.ports.imageName=test.containerName",
+			profile: latest.ProfileConfig{
+				Name: "test",
+				Patches: []*latest.PatchConfig{
+					{
+						Operation: "remove",
+						Path:      "dev.ports.imageName=test.containerName",
 					},
 				},
 			},
@@ -143,13 +144,13 @@ func TestPatches(t *testing.T) {
 			},
 		},
 		"add patch when replace patch has no match": {
-			profile: map[string]interface{}{
-				"name": "test",
-				"patches": []interface{}{
-					map[string]interface{}{
-						"op":   "replace",
-						"path": "dev.ports",
-						"value": []interface{}{
+			profile: latest.ProfileConfig{
+				Name: "test",
+				Patches: []*latest.PatchConfig{
+					{
+						Operation: "replace",
+						Path:      "dev.ports",
+						Value: []interface{}{
 							map[string]interface{}{
 								"imageName": "test",
 							},
@@ -171,13 +172,13 @@ func TestPatches(t *testing.T) {
 			},
 		},
 		"add patch appends to array without suffix": {
-			profile: map[string]interface{}{
-				"name": "test",
-				"patches": []interface{}{
-					map[string]interface{}{
-						"op":   "add",
-						"path": "dev.ports",
-						"value": map[string]interface{}{
+			profile: latest.ProfileConfig{
+				Name: "test",
+				Patches: []*latest.PatchConfig{
+					{
+						Operation: "add",
+						Path:      "dev.ports",
+						Value: map[string]interface{}{
 							"imageName": "test",
 						},
 					},
@@ -199,13 +200,13 @@ func TestPatches(t *testing.T) {
 			},
 		},
 		"test with wildcard match": {
-			profile: map[string]interface{}{
-				"name": "test",
-				"patches": []interface{}{
-					map[string]interface{}{
-						"op":    "add",
-						"path":  "dev.ports.*.containerName",
-						"value": "myContainer",
+			profile: latest.ProfileConfig{
+				Name: "test",
+				Patches: []*latest.PatchConfig{
+					{
+						Operation: "add",
+						Path:      "dev.ports.*.containerName",
+						Value:     "myContainer",
 					},
 				},
 			},
@@ -240,7 +241,7 @@ func TestPatches(t *testing.T) {
 
 	// Run test cases
 	for index, testCase := range testCases {
-		newConfig, err := ApplyPatches(testCase.in, testCase.profile)
+		newConfig, err := ApplyPatches(testCase.in, &testCase.profile)
 		if err != nil {
 			t.Errorf("Error: %v", err)
 		}

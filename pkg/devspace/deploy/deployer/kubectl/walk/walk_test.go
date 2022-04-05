@@ -12,14 +12,14 @@ func TestWalk(t *testing.T) {
 	// Input yaml
 	input := `
 test:
-  image: appendtag
-  test: []
+    image: appendtag
+    test: []
 test2:
-  image: dontreplaceme
-  test3:
-  - test4:
-      test5:
-      image: replaceme
+    image: dontreplaceme
+    test3:
+    - test4:
+        test5:
+        image: replaceme
 `
 	inputObj := make(map[string]interface{})
 	err := yaml.Unmarshal([]byte(input), inputObj)
@@ -47,15 +47,14 @@ test2:
 
 	// Output yaml
 	expected := `test:
-  image: appendtag:test
-  test: []
+    image: appendtag:test
+    test: []
 test2:
-  image: dontreplaceme
-  test3:
-  - test4:
-      image: replaced
-      test5: null
+    image: dontreplaceme
+    test3:
+        - test4:
+            image: replaced
+            test5: null
 `
-
 	assert.Equal(t, string(output), expected)
 }

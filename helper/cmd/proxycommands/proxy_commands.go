@@ -1,4 +1,4 @@
-package proxy_commands
+package proxycommands
 
 import (
 	"github.com/spf13/cobra"
