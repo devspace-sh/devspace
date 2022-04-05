@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"strings"
 	"sync"
@@ -167,7 +168,7 @@ func (p *pipeline) Dependencies() map[string]types.Pipeline {
 }
 
 func (p *pipeline) Run(ctx devspacecontext.Context) error {
-	return p.executeJob(ctx, p.main)
+	return p.executeJob(ctx, p.main, ctx.Environ())
 }
 
 func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencies []types2.Dependency, options types.DependencyOptions) error {
@@ -193,12 +194,14 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 			continue
 		} else if !deployableDependencies[dependency.Name()] {
 			ctx.Log().Infof("Skipping dependency %s as it was either already deployed or is currently in use by another DevSpace instance in the same namespace", dependency.Name())
+
 			continue
 		}
 
 		deployDependencies = append(deployDependencies, dependency)
 	}
 
+	// Start sequentially
 	if options.Sequential {
 		for _, dependency := range deployDependencies {
 			err := p.startNewDependency(ctx, dependency, options)
@@ -307,29 +310,14 @@ func (p *pipeline) StartNewPipelines(ctx devspacecontext.Context, pipelines []*l
 }
 
 func (p *pipeline) startNewPipeline(ctx devspacecontext.Context, configPipeline *latest.Pipeline, id string, options types.PipelineOptions) error {
-	// parse env
-	envMap := map[string]string{}
-	for _, s := range options.Env {
-		if s == "" {
-			continue
-		}
-
-		splitted := strings.Split(s, "=")
-		if len(splitted) <= 1 {
-			return fmt.Errorf("invalid environment variable format. Has to be KEY=VALUE")
-		}
-
-		envMap[splitted[0]] = strings.Join(splitted[1:], "=")
-	}
-
 	// exchange job if it's not alive anymore
-	j, err := p.createJob(configPipeline, envMap, id)
+	j, err := p.createJob(configPipeline, id)
 	if err != nil {
 		return err
 	}
 	defer p.removeJob(j, id)
 
-	err = p.executeJob(ctx, j)
+	err = p.executeJob(ctx, j, options.Environ)
 	if err != nil {
 		return err
 	}
@@ -337,7 +325,7 @@ func (p *pipeline) startNewPipeline(ctx devspacecontext.Context, configPipeline 
 	return nil
 }
 
-func (p *pipeline) createJob(configPipeline *latest.Pipeline, envMap map[string]string, id string) (job *Job, err error) {
+func (p *pipeline) createJob(configPipeline *latest.Pipeline, id string) (job *Job, err error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
@@ -349,7 +337,6 @@ func (p *pipeline) createJob(configPipeline *latest.Pipeline, envMap map[string]
 	j = &Job{
 		Pipeline: p,
 		Config:   configPipeline,
-		ExtraEnv: envMap,
 	}
 	p.jobs[id] = j
 	return j, nil
@@ -367,13 +354,13 @@ func (p *pipeline) removeJob(j *Job, id string) {
 	}
 }
 
-func (p *pipeline) executeJob(ctx devspacecontext.Context, j *Job) error {
+func (p *pipeline) executeJob(ctx devspacecontext.Context, j *Job, environ expand.Environ) error {
 	// don't start jobs on a cancelled context
 	if ctx.IsDone() {
 		return nil
 	}
 
-	err := j.Run(ctx)
+	err := j.Run(ctx, environ)
 	if err != nil {
 		return err
 	}

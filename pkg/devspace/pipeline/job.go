@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"io"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"sync"
 )
@@ -17,7 +18,6 @@ import (
 type Job struct {
 	Pipeline types.Pipeline
 	Config   *latest.Pipeline
-	ExtraEnv map[string]string
 
 	m sync.Mutex
 	t *tomb.Tomb
@@ -47,7 +47,7 @@ func (j *Job) Stop() error {
 	return t.Wait()
 }
 
-func (j *Job) Run(ctx devspacecontext.Context) error {
+func (j *Job) Run(ctx devspacecontext.Context, environ expand.Environ) error {
 	if ctx.IsDone() {
 		return ctx.Context().Err()
 	}
@@ -64,7 +64,7 @@ func (j *Job) Run(ctx devspacecontext.Context) error {
 	t.Go(func() error {
 		// start the actual job
 		done := t.NotifyGo(func() error {
-			return j.execute(ctx, t)
+			return j.execute(ctx, t, environ)
 		})
 
 		// wait until job is dying
@@ -85,7 +85,7 @@ func (j *Job) Run(ctx devspacecontext.Context) error {
 	return t.Wait()
 }
 
-func (j *Job) execute(ctx devspacecontext.Context, parent *tomb.Tomb) error {
+func (j *Job) execute(ctx devspacecontext.Context, parent *tomb.Tomb, environ expand.Environ) error {
 	ctx = ctx.WithLogger(ctx.Log())
 	stdoutReader, stdoutWriter := io.Pipe()
 	defer stdoutWriter.Close()
@@ -110,6 +110,6 @@ func (j *Job) execute(ctx devspacecontext.Context, parent *tomb.Tomb) error {
 	})
 
 	handler := pipelinehandler.NewPipelineExecHandler(ctx, stdoutWriter, stderrWriter, j.Pipeline)
-	_, err := engine.ExecutePipelineShellCommand(ctx.Context(), j.Config.Run, os.Args[1:], ctx.WorkingDir(), j.Config.ContinueOnError, stdoutWriter, stderrWriter, os.Stdin, ctx.Environ(), handler)
+	_, err := engine.ExecutePipelineShellCommand(ctx.Context(), j.Config.Run, os.Args[1:], ctx.WorkingDir(), j.Config.ContinueOnError, stdoutWriter, stderrWriter, os.Stdin, environ, handler)
 	return err
 }

@@ -15,7 +15,6 @@ type GlobalFlags struct {
 	Namespace                string
 	KubeContext              string
 	Profiles                 []string
-	ProfileRefresh           bool
 	DisableProfileActivation bool
 	SwitchContext            bool
 	ConfigPath               string
@@ -33,7 +32,6 @@ func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 	return &loader.ConfigOptions{
 		OverrideName:             gf.OverrideName,
 		Profiles:                 profiles,
-		ProfileRefresh:           gf.ProfileRefresh,
 		DisableProfileActivation: gf.DisableProfileActivation,
 		Vars:                     gf.Vars,
 	}
@@ -52,7 +50,6 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devspace log output except panics & fatals")
 
 	flags.StringSliceVarP(&globalFlags.Profiles, "profile", "p", []string{}, "The DevSpace profiles to apply. Multiple profiles are applied in the order they are specified")
-	flags.BoolVar(&globalFlags.ProfileRefresh, "profile-refresh", false, "If true will pull and re-download profile parent sources")
 	flags.BoolVar(&globalFlags.DisableProfileActivation, "disable-profile-activation", false, "If true will ignore all profile activations")
 	flags.BoolVarP(&globalFlags.SwitchContext, "switch-context", "s", false, "Switches and uses the last kube context and namespace that was used to deploy the DevSpace project")
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")

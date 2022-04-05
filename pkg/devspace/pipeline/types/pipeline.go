@@ -8,6 +8,7 @@ import (
 	types2 "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
+	"mvdan.cc/sh/v3/expand"
 )
 
 type Options struct {
@@ -27,9 +28,10 @@ type DependencyOptions struct {
 
 // PipelineOptions describe how pipelines should be run
 type PipelineOptions struct {
-	Env        []string `long:"env" description:"Pass the following environment variable to the pipelines"`
-	Background bool     `long:"background" description:"Run the pipeline in the background"`
-	Sequential bool     `long:"sequential" description:"Run pipelines one after another"`
+	Background bool `long:"background" description:"Run the pipeline in the background"`
+	Sequential bool `long:"sequential" description:"Run pipelines one after another"`
+
+	Environ expand.Environ
 }
 
 type Pipeline interface {

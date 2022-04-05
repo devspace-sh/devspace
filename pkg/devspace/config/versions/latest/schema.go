@@ -143,6 +143,28 @@ type Pipeline struct {
 	Run string `yaml:"run,omitempty" json:"run,omitempty"`
 }
 
+func (p *Pipeline) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	pipelineString := ""
+	err := unmarshal(&pipelineString)
+	if err != nil {
+		m := map[string]interface{}{}
+		err := unmarshal(m)
+		if err != nil {
+			return err
+		}
+
+		out, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(out, p)
+	}
+
+	p.Run = pipelineString
+	return nil
+}
+
 type RequireConfig struct {
 	// DevSpace specifies the DevSpace version constraint that is needed to use this config
 	DevSpace string `yaml:"devspace,omitempty" json:"devspace,omitempty"`
