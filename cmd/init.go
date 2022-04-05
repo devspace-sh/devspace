@@ -490,6 +490,13 @@ func (cmd *InitCmd) initDockerCompose(f factory.Factory, composePath string) err
 		return err
 	}
 
+	projectName, _, err := getProjectName()
+	if err != nil {
+		return err
+	}
+
+	project.Name = projectName
+
 	// Prompt user for entrypoints for each container with sync folders.
 	for idx, service := range project.Services {
 		localPaths := compose.GetServiceSyncPaths(project, service)

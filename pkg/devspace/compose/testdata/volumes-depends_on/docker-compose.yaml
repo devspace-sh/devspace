@@ -1,10 +1,12 @@
 services:
   db:
     image: loft.sh/mysql-server:8.0.19
+    entrypoint: tail -f /dev/null
     volumes:
       - ./cache:/tmp/cache
   backend:
     image: rails:latest
+    entrypoint: tail -f /dev/null
     depends_on:
     - db
     volumes:

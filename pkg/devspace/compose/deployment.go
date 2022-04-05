@@ -38,41 +38,43 @@ func (cb *configBuilder) AddDeployment(dockerCompose *composetypes.Project, serv
 	}
 
 	ports := []interface{}{}
-	if len(service.Ports) > 0 {
-		for _, port := range service.Ports {
-			var protocol string
-			switch port.Protocol {
-			case "tcp":
-				protocol = string(v1.ProtocolTCP)
-			case "udp":
-				protocol = string(v1.ProtocolUDP)
-			default:
-				return fmt.Errorf("invalid protocol %s", port.Protocol)
-			}
-
-			if port.Published == 0 {
-				cb.log.Warnf("Unassigned port ranges are not supported: %s", port.Target)
-				continue
-			}
-
-			ports = append(ports, map[string]interface{}{
-				"port":          int(port.Published),
-				"containerPort": int(port.Target),
-				"protocol":      protocol,
-			})
+	for _, port := range service.Ports {
+		var protocol string
+		switch port.Protocol {
+		case "tcp":
+			protocol = string(v1.ProtocolTCP)
+		case "udp":
+			protocol = string(v1.ProtocolUDP)
+		default:
+			return fmt.Errorf("invalid protocol %s", port.Protocol)
 		}
+
+		// fmt.Println(port.Published)
+		if port.Published == "" {
+			cb.log.Warnf("Unassigned ports are not supported: %s", port.Target)
+			continue
+		}
+
+		portNumber, err := strconv.Atoi(port.Published)
+		if err != nil {
+			return err
+		}
+
+		ports = append(ports, map[string]interface{}{
+			"port":          portNumber,
+			"containerPort": int(port.Target),
+			"protocol":      protocol,
+		})
 	}
 
-	if len(service.Expose) > 0 {
-		for _, port := range service.Expose {
-			intPort, err := strconv.Atoi(port)
-			if err != nil {
-				return fmt.Errorf("expected integer for port number: %s", err.Error())
-			}
-			ports = append(ports, map[string]interface{}{
-				"port": intPort,
-			})
+	for _, port := range service.Expose {
+		intPort, err := strconv.Atoi(port)
+		if err != nil {
+			return fmt.Errorf("expected integer for port number: %s", err.Error())
 		}
+		ports = append(ports, map[string]interface{}{
+			"port": intPort,
+		})
 	}
 
 	if len(ports) > 0 {

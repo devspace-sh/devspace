@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	composetypes "github.com/compose-spec/compose-go/types"
@@ -15,14 +16,20 @@ func (cb *configBuilder) AddDev(service composetypes.ServiceConfig) error {
 
 	devPorts := []*latest.PortMapping{}
 	for _, port := range service.Ports {
+
 		portMapping := &latest.PortMapping{}
 
-		if port.Published == 0 {
+		if port.Published == "" {
 			cb.log.Warnf("Unassigned port ranges are not supported: %s", port.Target)
 			continue
 		}
 
-		if port.Published != port.Target {
+		portNumber, err := strconv.Atoi(port.Published)
+		if err != nil {
+			return err
+		}
+
+		if portNumber != int(port.Target) {
 			portMapping.Port = fmt.Sprint(port.Published) + ":" + fmt.Sprint(port.Target)
 		} else {
 			portMapping.Port = fmt.Sprint(port.Published)

@@ -1,9 +1,12 @@
 package compose
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	composeloader "github.com/compose-spec/compose-go/loader"
 	composetypes "github.com/compose-spec/compose-go/types"
@@ -47,6 +50,19 @@ func LoadDockerComposeProject(path string) (*composetypes.Project, error) {
 		return nil, err
 	}
 
+	// Expand service ports
+	for idx, service := range project.Services {
+		ports := []composetypes.ServicePortConfig{}
+		for _, port := range service.Ports {
+			expandedPorts, err := expandPublishedPortRange(port)
+			if err != nil {
+				return nil, err
+			}
+			ports = append(ports, expandedPorts...)
+		}
+		project.Services[idx].Ports = ports
+	}
+
 	return project, nil
 }
 
@@ -69,7 +85,6 @@ func NewComposeManager(project *composetypes.Project) ComposeManager {
 }
 
 func (cm *composeManager) Load(log log.Logger) error {
-
 	dependentsMap, err := calculateDependentsMap(cm.project)
 	if err != nil {
 		return err
@@ -186,4 +201,38 @@ func calculateDependentsMap(dockerCompose *composetypes.Project) (map[string][]s
 		return nil
 	})
 	return tree, err
+}
+
+func expandPublishedPortRange(port composetypes.ServicePortConfig) ([]composetypes.ServicePortConfig, error) {
+	if !strings.Contains(port.Published, "-") {
+		return []composetypes.ServicePortConfig{port}, nil
+	}
+
+	publishedRange := strings.Split(port.Published, "-")
+	if len(publishedRange) > 2 {
+		return nil, fmt.Errorf("invalid port range")
+	}
+
+	begin, err := strconv.Atoi(publishedRange[0])
+	if err != nil {
+		return nil, fmt.Errorf("invalid port range %s: beginning value must be numeric", port.Published)
+	}
+
+	end, err := strconv.Atoi(publishedRange[1])
+	if err != nil {
+		return nil, fmt.Errorf("invalid port range %s: end value must be numeric", port.Published)
+	}
+
+	var portConfigs []composetypes.ServicePortConfig
+	for i := begin; i <= end; i++ {
+		portConfigs = append(portConfigs, composetypes.ServicePortConfig{
+			HostIP:    port.HostIP,
+			Protocol:  port.Protocol,
+			Target:    port.Target,
+			Published: strconv.Itoa(i),
+			Mode:      "ingress",
+		})
+	}
+
+	return portConfigs, nil
 }

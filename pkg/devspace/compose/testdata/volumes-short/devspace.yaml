@@ -28,7 +28,7 @@ deployments:
             volume:
               name: volume-2
               readOnly: false
-          - containerPath: /etc/configs/
+          - containerPath: /etc/configs
             volume:
               name: volume-3
               readOnly: false
@@ -57,5 +57,5 @@ dev:
         startContainer: true
       - path: ./cache:/tmp/cache
         startContainer: true
-      - path: ${devspace.userHome}/configs:/etc/configs/
+      - path: ${devspace.userHome}/configs:/etc/configs
         startContainer: true
