@@ -21,7 +21,7 @@ func (f *Client) UpdateRepos() error {
 }
 
 // DeleteRelease deletes a helm release and optionally purges it
-func (f *Client) DeleteRelease(ctx devspacecontext.Context, releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
+func (f *Client) DeleteRelease(ctx devspacecontext.Context, releaseName string, releaseNamespace string) error {
 	for i, release := range f.Releases {
 		if release.Name == releaseName {
 			f.Releases = append(f.Releases[:i], f.Releases[i+1:]...)
@@ -32,7 +32,7 @@ func (f *Client) DeleteRelease(ctx devspacecontext.Context, releaseName string, 
 }
 
 // ListReleases lists all helm Releases
-func (f *Client) ListReleases(ctx devspacecontext.Context, helmConfig *latest.HelmConfig) ([]*types.Release, error) {
+func (f *Client) ListReleases(ctx devspacecontext.Context, releaseNamespace string) ([]*types.Release, error) {
 	return f.Releases, nil
 }
 

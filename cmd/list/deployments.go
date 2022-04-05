@@ -121,7 +121,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 					continue
 				}
 
-				deployClient, err = deployHelm.New(ctx, helmClient, deployConfig)
+				deployClient, err = deployHelm.New(helmClient, deployConfig)
 				if err != nil {
 					logger.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue

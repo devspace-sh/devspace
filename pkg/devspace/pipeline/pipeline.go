@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/tomb"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"mvdan.cc/sh/v3/expand"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -35,6 +38,7 @@ func NewPipeline(name string, devPodManager devpod.Manager, dependencyRegistry r
 	pip.main = &Job{
 		Pipeline: pip,
 		Config:   config,
+		t:        &tomb.Tomb{},
 	}
 	return pip
 }
@@ -58,6 +62,10 @@ type pipeline struct {
 	jobs map[string]*Job
 }
 
+func (p *pipeline) Done() <-chan struct{} {
+	return p.main.Done()
+}
+
 func (p *pipeline) Exclude(ctx devspacecontext.Context) error {
 	// get parent
 	if p.Parent() != nil {
@@ -66,7 +74,7 @@ func (p *pipeline) Exclude(ctx devspacecontext.Context) error {
 			parent = parent.Parent()
 		}
 
-		return p.Exclude(ctx)
+		return parent.Exclude(ctx)
 	}
 
 	// make sure we are locked
@@ -193,8 +201,13 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 			ctx.Log().Debugf("Skipping dependency %s because it was excluded", dependency.Name())
 			continue
 		} else if !deployableDependencies[dependency.Name()] {
-			ctx.Log().Infof("Skipping dependency %s as it was either already deployed or is currently in use by another DevSpace instance in the same namespace", dependency.Name())
-
+			// search for dependency pipeline and wait
+			if p.dependencyRegistry.OwnedDependency(dependency.Name()) {
+				ctx.Log().Infof("Skipping dependency %s as it was already deployed", dependency.Name())
+				waitForDependency(ctx.Context(), p, dependency.Name(), ctx.Log())
+			} else {
+				ctx.Log().Infof("Skipping dependency %s as it is currently in use by another DevSpace instance in the same namespace", dependency.Name())
+			}
 			continue
 		}
 
@@ -227,6 +240,52 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 	})
 
 	return t.Wait()
+}
+
+func waitForDependency(ctx context.Context, start types.Pipeline, dependencyName string, log log.Logger) {
+	// get top level pipeline
+	for start.Parent() != nil {
+		start = start.Parent()
+	}
+
+	// now traverse through all dependencies
+	if start.Name() == dependencyName {
+		return
+	}
+
+	// try to find the dependency
+	var pipeline types.Pipeline
+	err := wait.PollImmediateWithContext(ctx, time.Millisecond*10, time.Second, func(_ context.Context) (bool, error) {
+		pipeline = findDependencies(start, dependencyName)
+		return pipeline != nil, nil
+	})
+	if err != nil {
+		log.Debugf("error finding dependency: %v", err)
+	}
+
+	// wait for dependency
+	if pipeline != nil {
+		log.Infof("Waiting for dependency '%s' to finish...", dependencyName)
+		select {
+		case <-pipeline.Done():
+		case <-ctx.Done():
+		}
+	}
+}
+
+func findDependencies(start types.Pipeline, dependencyName string) types.Pipeline {
+	for key, pipe := range start.Dependencies() {
+		if key == dependencyName {
+			return pipe
+		}
+
+		found := findDependencies(pipe, dependencyName)
+		if found != nil {
+			return found
+		}
+	}
+
+	return nil
 }
 
 func (p *pipeline) startNewDependency(ctx devspacecontext.Context, dependency types2.Dependency, options types.DependencyOptions) error {
@@ -337,6 +396,7 @@ func (p *pipeline) createJob(configPipeline *latest.Pipeline, id string) (job *J
 	j = &Job{
 		Pipeline: p,
 		Config:   configPipeline,
+		t:        &tomb.Tomb{},
 	}
 	p.jobs[id] = j
 	return j, nil

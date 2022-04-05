@@ -74,7 +74,7 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 
 	// Check if image is present in local repository
 	if !rebuild && err == nil {
-		if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
 			found, err := b.helper.IsImageAvailableLocally(ctx, b.client)
 			if !found && err == nil {
 				imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
@@ -105,7 +105,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+	if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
 		b.skipPush = true
 	}
 

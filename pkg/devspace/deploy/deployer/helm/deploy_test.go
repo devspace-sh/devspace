@@ -124,7 +124,7 @@ func TestDeploy(t *testing.T) {
 			map[string]interface{}{},
 			constants.DefaultConfigPath)
 
-		devCtx := devspacecontext.NewContext(context.Background(), log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
+		devCtx := devspacecontext.NewContext(context.Background(), nil, log.Discard).WithKubeClient(kubeClient).WithConfig(conf)
 		deployed, err := deployer.Deploy(devCtx, testCase.forceDeploy)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

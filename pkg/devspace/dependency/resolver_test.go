@@ -212,7 +212,7 @@ func TestResolver(t *testing.T) {
 			map[string]interface{}{},
 			constants.DefaultConfigPath)
 
-		devCtx := devspacecontext.NewContext(context.Background(), log.NewFakeLogger()).WithConfig(conf).WithKubeClient(kubeClient)
+		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithConfig(conf).WithKubeClient(kubeClient)
 
 		testResolver := NewResolver(devCtx, &loader.ConfigOptions{})
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)

@@ -20,7 +20,7 @@ var DefaultRemotePort = 10567
 
 // StartProxyCommands starts the reverse commands functionality
 func StartProxyCommands(ctx devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
-	if ctx == nil || ctx.Config == nil || ctx.Config().Config() == nil {
+	if ctx == nil || ctx.Config() == nil || ctx.Config().Config() == nil {
 		return fmt.Errorf("DevSpace config is nil")
 	}
 

@@ -66,6 +66,9 @@ type Pipeline interface {
 	// project like my-microservice etc.
 	Name() string
 
+	// Done returns a channel that is closed when the pipeline is done running
+	Done() <-chan struct{}
+
 	// WaitDev waits for the dependency dev managers as well current
 	// dev pod manager to be finished
 	WaitDev() error

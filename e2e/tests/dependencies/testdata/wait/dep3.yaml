@@ -1,0 +1,9 @@
+version: v2beta1
+name: dep3
+
+pipelines:
+  deploy: |-
+    sleep 1
+    echo "dep3" >> out.txt
+    
+

@@ -31,6 +31,9 @@ type DependencyRegistry interface {
 	// MarkDependenciesExcluded same as MarkDependencyExcluded but for multiple dependencies
 	MarkDependenciesExcluded(ctx devspacecontext.Context, dependencyNames []string, forceLeader bool) (map[string]bool, error)
 
+	// OwnedDependency signals if we are the owner of the dependency
+	OwnedDependency(dependencyName string) bool
+
 	// SetServer sets the target server
 	SetServer(server string)
 }
@@ -40,6 +43,7 @@ func NewDependencyRegistry(mock bool) DependencyRegistry {
 		mock:                 mock,
 		interProcess:         NewInterProcessCommunicator(),
 		excludedDependencies: map[string]bool{},
+		ownedDependencies:    map[string]bool{},
 	}
 }
 
@@ -50,6 +54,14 @@ type dependencyRegistry struct {
 
 	excludedDependenciesLock sync.Mutex
 	excludedDependencies     map[string]bool
+	ownedDependencies        map[string]bool
+}
+
+func (d *dependencyRegistry) OwnedDependency(dependencyName string) bool {
+	d.excludedDependenciesLock.Lock()
+	defer d.excludedDependenciesLock.Unlock()
+
+	return d.ownedDependencies[dependencyName]
 }
 
 func (d *dependencyRegistry) SetServer(server string) {
@@ -109,6 +121,11 @@ func (d *dependencyRegistry) MarkDependenciesExcluded(ctx devspacecontext.Contex
 		}
 
 		d.excludedDependencies[dependencyName] = true
+	}
+
+	// now mark the dependencies we have excluded
+	for dependencyName := range retMap {
+		d.ownedDependencies[dependencyName] = true
 	}
 
 	return retMap, nil

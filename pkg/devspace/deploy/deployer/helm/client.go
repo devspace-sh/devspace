@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/assets"
-	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
@@ -36,9 +35,7 @@ type DeployConfig struct {
 }
 
 // New creates a new helm deployment client
-func New(ctx devspacecontext.Context, helmClient helmtypes.Client, deployConfig *latest.DeploymentConfig) (deployer.Interface, error) {
-	ctx = ctx.WithConfig(config2.Ensure(ctx.Config()))
-
+func New(helmClient helmtypes.Client, deployConfig *latest.DeploymentConfig) (deployer.Interface, error) {
 	// Exchange chart
 	if deployConfig.Helm.Chart == nil || (deployConfig.Helm.Chart.Name == DevSpaceChartConfig.Name && deployConfig.Helm.Chart.RepoURL == DevSpaceChartConfig.RepoURL) {
 		// extract component chart if possible

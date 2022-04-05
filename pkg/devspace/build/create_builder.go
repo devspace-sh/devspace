@@ -28,7 +28,7 @@ func (c *controller) createBuilder(ctx devspacecontext.Context, imageConfigName 
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
 	} else if imageConf.Docker == nil && imageConf.Kaniko != nil {
-		if ctx.KubeClient == nil {
+		if ctx.KubeClient() == nil {
 			// Create kubectl client if not specified
 			kubeClient, err := kubectl.NewDefaultClient()
 			if err != nil {
@@ -49,7 +49,7 @@ func (c *controller) createBuilder(ctx devspacecontext.Context, imageConfigName 
 		}
 
 		kubeContext := ""
-		if ctx.KubeClient == nil {
+		if ctx.KubeClient() == nil {
 			kubeContext, err = kubeconfig.NewLoader().GetCurrentContext()
 			if err != nil {
 				return nil, errors.Wrap(err, "get current context")
@@ -82,7 +82,7 @@ func (c *controller) createBuilder(ctx devspacecontext.Context, imageConfigName 
 	}
 
 	// create image pull secret if possible
-	if ctx.KubeClient != nil && (imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret) {
+	if ctx.KubeClient() != nil && (imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret) {
 		registryURL, err := pullsecrets.GetRegistryFromImageName(imageConf.Image)
 		if err != nil {
 			return nil, err

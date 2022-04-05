@@ -62,7 +62,7 @@ func StartSyncFromCmd(ctx devspacecontext.Context, selector targetselector.Targe
 
 // StartSync starts the syncing functionality
 func StartSync(ctx devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
-	if ctx == nil || ctx.Config == nil || ctx.Config().Config() == nil {
+	if ctx == nil || ctx.Config() == nil || ctx.Config().Config() == nil {
 		return fmt.Errorf("DevSpace config is nil")
 	}
 

@@ -21,7 +21,7 @@ func (r *client) EnsurePullSecret(ctx devspacecontext.Context, dockerClient dock
 	pullSecret := &latest.PullSecretConfig{Registry: registryURL}
 
 	// try to find in pull secrets
-	if ctx.Config != nil && ctx.Config().Config() != nil {
+	if ctx.Config() != nil && ctx.Config().Config() != nil {
 		for _, ps := range ctx.Config().Config().PullSecrets {
 			if ps.Registry == registryURL {
 				pullSecret = ps

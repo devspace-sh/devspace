@@ -69,8 +69,6 @@ type RunPipelineCmd struct {
 	// used for testing to allow interruption
 	Ctx          context.Context
 	RenderWriter io.Writer
-
-	configLoader loader.ConfigLoader
 	log          log.Logger
 }
 

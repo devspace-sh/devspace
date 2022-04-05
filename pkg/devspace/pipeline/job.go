@@ -1,7 +1,6 @@
 package pipeline
 
 import (
-	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
@@ -21,6 +20,19 @@ type Job struct {
 
 	m sync.Mutex
 	t *tomb.Tomb
+}
+
+func (j *Job) Done() <-chan struct{} {
+	j.m.Lock()
+	defer j.m.Unlock()
+
+	if j.t != nil {
+		return j.t.Dead()
+	}
+
+	done := make(chan struct{})
+	close(done)
+	return done
 }
 
 func (j *Job) Terminated() bool {
@@ -53,11 +65,7 @@ func (j *Job) Run(ctx devspacecontext.Context, environ expand.Environ) error {
 	}
 
 	j.m.Lock()
-	if j.t != nil && !j.t.Terminated() {
-		j.m.Unlock()
-		return fmt.Errorf("already running, please stop before rerunning")
-	}
-	ctx, j.t = ctx.WithNewTomb()
+	ctx = ctx.WithContext(j.t.Context(ctx.Context()))
 	t := j.t
 	j.m.Unlock()
 

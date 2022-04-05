@@ -143,7 +143,7 @@ func (b *BuildHelper) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bo
 
 	// Okay this check verifies if the previous deploy context was local kubernetes context where we didn't push the image and now have a kubernetes context where we probably push
 	// or use another docker client (e.g. minikube <-> docker-desktop)
-	if !mustRebuild && ctx.KubeClient != nil && ctx.Config().LocalCache().GetLastContext() != nil && ctx.Config().LocalCache().GetLastContext().Context != ctx.KubeClient().CurrentContext() && kubectl.IsLocalKubernetes(ctx.Config().LocalCache().GetLastContext().Context) {
+	if !mustRebuild && ctx.KubeClient() != nil && ctx.Config().LocalCache().GetLastContext() != nil && ctx.Config().LocalCache().GetLastContext().Context != ctx.KubeClient().CurrentContext() && kubectl.IsLocalKubernetes(ctx.Config().LocalCache().GetLastContext().Context) {
 		mustRebuild = true
 		ctx.Log().Infof("Rebuild image %s because previous build was local kubernetes", imageCache.ImageName)
 	}

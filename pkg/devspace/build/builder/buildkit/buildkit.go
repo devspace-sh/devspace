@@ -67,7 +67,7 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 
 	// Check if image is present in local repository
 	if !rebuild && err == nil && b.helper.ImageConf.BuildKit.InCluster == nil {
-		if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
 			dockerClient, err := dockerpkg.NewClientWithMinikube(ctx.Context(), ctx.KubeClient().CurrentContext(), b.helper.ImageConf.BuildKit.PreferMinikube == nil || *b.helper.ImageConf.BuildKit.PreferMinikube, ctx.Log())
 			if err != nil {
 				return false, err
@@ -117,13 +117,13 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+	if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
 		b.skipPush = true
 	}
 
 	// Should we use the minikube docker daemon?
 	useMinikubeDocker := false
-	if ctx.KubeClient != nil && ctx.KubeClient().CurrentContext() == "minikube" && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube) {
+	if ctx.KubeClient() != nil && ctx.KubeClient().CurrentContext() == "minikube" && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube) {
 		useMinikubeDocker = true
 	}
 

@@ -192,7 +192,7 @@ func (c *controller) deployOne(ctx devspacecontext.Context, deployConfig *latest
 			return true, err
 		}
 
-		deployClient, err = helm.New(ctx, helmClient, deployConfig)
+		deployClient, err = helm.New(helmClient, deployConfig)
 		if err != nil {
 			return true, errors.Errorf("error deploying: deployment %s error: %v", deployConfig.Name, err)
 		}

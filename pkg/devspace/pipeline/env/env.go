@@ -24,7 +24,6 @@ type provider struct {
 	m sync.Mutex
 
 	listProvider expand.Environ
-	workingDir   string
 }
 
 func (p *provider) Set(envVars map[string]string) {

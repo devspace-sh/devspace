@@ -221,12 +221,12 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 		WorkingDirectory: h.ctx.WorkingDir(),
 		KubeContexts:     h.kubeContexts,
 	}
-	if h.ctx.Config != nil {
+	if h.ctx.Config() != nil {
 		retConfig.RawConfig = h.ctx.Config().Raw()
 		retConfig.Config = h.ctx.Config().Config()
 		retConfig.LocalCache = h.ctx.Config().LocalCache()
 	}
-	if h.ctx.KubeClient != nil {
+	if h.ctx.KubeClient() != nil {
 		retConfig.KubeNamespace = h.ctx.KubeClient().Namespace()
 		retConfig.KubeContext = h.ctx.KubeClient().CurrentContext()
 	}

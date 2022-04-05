@@ -39,7 +39,7 @@ func (l *localCommandHook) Execute(ctx devspacecontext.Context, hook *latest.Hoo
 	extraEnv := map[string]string{
 		OsArgsEnv: string(osArgsBytes),
 	}
-	if ctx.KubeClient != nil {
+	if ctx.KubeClient() != nil {
 		extraEnv[KubeContextEnv] = ctx.KubeClient().CurrentContext()
 		extraEnv[KubeNamespaceEnv] = ctx.KubeClient().Namespace()
 	}

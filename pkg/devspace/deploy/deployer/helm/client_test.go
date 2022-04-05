@@ -62,7 +62,7 @@ func TestDelete(t *testing.T) {
 		}
 
 		cg := config.NewConfig(map[string]interface{}{}, map[string]interface{}{}, latest.NewRaw(), localcache.New(""), testCase.cache, map[string]interface{}{}, constants.DefaultConfigsPath)
-		devContext := devspacecontext.NewContext(context.Background(), log.Discard).WithConfig(cg).WithKubeClient(kubeClient)
+		devContext := devspacecontext.NewContext(context.Background(), nil, log.Discard).WithConfig(cg).WithKubeClient(kubeClient)
 
 		err := Delete(devContext, testCase.deployment)
 		if testCase.expectedErr == "" {

@@ -379,8 +379,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}, deleteBuildPod)
 	if err != nil {
 		// Delete all build pods on error
-
-		labelSelector := fmt.Sprintf("devspace-pid=%s", ctx.RunID)
+		labelSelector := fmt.Sprintf("devspace-pid=%s", ctx.RunID())
 		pods, getErr := ctx.KubeClient().KubeClient().CoreV1().Pods(b.BuildNamespace).List(ctx.Context(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})

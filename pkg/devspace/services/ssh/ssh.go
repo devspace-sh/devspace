@@ -28,7 +28,7 @@ import (
 
 // StartSSH starts the ssh functionality
 func StartSSH(ctx devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
-	if ctx == nil || ctx.Config == nil || ctx.Config().Config() == nil {
+	if ctx == nil || ctx.Config() == nil || ctx.Config().Config() == nil {
 		return fmt.Errorf("DevSpace config is nil")
 	}
 

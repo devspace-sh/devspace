@@ -18,7 +18,7 @@ func (h *handler) ping(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if t.RunID != h.ctx.RunID() {
-		http.Error(w, fmt.Sprintf(h.ctx.RunID()), http.StatusConflict)
+		http.Error(w, h.ctx.RunID(), http.StatusConflict)
 		return
 	}
 }

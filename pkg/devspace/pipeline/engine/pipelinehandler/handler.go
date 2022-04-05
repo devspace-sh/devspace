@@ -3,6 +3,7 @@ package pipelinehandler
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"io"
 
 	"github.com/sirupsen/logrus"
@@ -134,13 +135,13 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 	}
 
 	// check if it's a function first
-	//if devCtx.Config().Config().Functions != nil {
-	//	commandPayload, ok := devCtx.Config().Config().Functions[command]
-	//	if ok {
-	//		_, err := engine.ExecutePipelineShellCommand(devCtx.Context(), commandPayload, args, hc.Dir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, e.pipeline))
-	//		return true, err
-	//	}
-	//}
+	if devCtx.Config().Config().Functions != nil {
+		commandPayload, ok := devCtx.Config().Config().Functions[command]
+		if ok {
+			_, err := engine.ExecutePipelineShellCommand(devCtx.Context(), commandPayload, args, hc.Dir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, e.pipeline))
+			return true, err
+		}
+	}
 
 	// resolve pipeline commands
 	pipelineCommand, ok := PipelineCommands[command]
