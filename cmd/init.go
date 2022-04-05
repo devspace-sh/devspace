@@ -61,6 +61,8 @@ const (
 
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
+	*flags.GlobalFlags
+
 	// Flags
 	Reconfigure bool
 	Dockerfile  string
@@ -72,7 +74,8 @@ type InitCmd struct {
 // NewInitCmd creates a new init command
 func NewInitCmd(f factory.Factory) *cobra.Command {
 	cmd := &InitCmd{
-		log: f.GetLog(),
+		log:         f.GetLog(),
+		GlobalFlags: globalFlags,
 	}
 
 	initCmd := &cobra.Command{
@@ -201,7 +204,7 @@ func (cmd *InitCmd) initDevspace(f factory.Factory, configLoader loader.ConfigLo
 	var config *latest.Config
 
 	// create kubectl client
-	client, err := f.NewKubeClientFromContext(globalFlags.KubeContext, globalFlags.Namespace)
+	client, err := f.NewKubeClientFromContext(cmd.GlobalFlags.KubeContext, cmd.GlobalFlags.Namespace)
 	if err == nil {
 		configInterface, err := configLoader.Load(context.TODO(), client, &loader.ConfigOptions{}, cmd.log)
 		if err == nil {
@@ -728,6 +731,7 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 			Silent:     true,
 			ConfigPath: renderPath,
 		},
+		Pipeline:     "deploy",
 		SkipPush:     true,
 		SkipBuild:    true,
 		Render:       true,

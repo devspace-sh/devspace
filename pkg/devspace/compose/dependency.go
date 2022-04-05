@@ -42,7 +42,7 @@ func (cb *configBuilder) AddDependencies(dockerCompose *composetypes.Project, se
 
 		cb.config.Dependencies[depName] = &latest.DependencyConfig{
 			Source: &latest.SourceConfig{
-				Path: filepath.Join(relativePath, fileName),
+				Path: filepath.ToSlash(filepath.Join(relativePath, fileName)),
 			},
 		}
 	}
