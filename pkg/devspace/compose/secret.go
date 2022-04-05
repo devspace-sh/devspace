@@ -8,7 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
-func (cb *configBuilder) AddSecret(dockerCompose composetypes.Project, service composetypes.ServiceConfig) error {
+func (cb *configBuilder) AddSecret(dockerCompose *composetypes.Project, service composetypes.ServiceConfig) error {
 	var pipelines map[string]*latest.Pipeline
 	for secretName, secret := range dockerCompose.Secrets {
 		if pipelines == nil {

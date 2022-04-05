@@ -7,16 +7,15 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
-func (cb *configBuilder) AddImage(dockerCompose composetypes.Project, service composetypes.ServiceConfig) error {
+func (cb *configBuilder) AddImage(dockerCompose *composetypes.Project, service composetypes.ServiceConfig) error {
 	build := service.Build
 	if build == nil {
 		cb.config.Images = nil
 		return nil
 	}
 
-	currentDir := filepath.Join(dockerCompose.WorkingDir, cb.workingDir)
 	contextDir := filepath.Join(dockerCompose.WorkingDir, build.Context)
-	context, err := filepath.Rel(currentDir, contextDir)
+	context, err := filepath.Rel(cb.workingDir, contextDir)
 	if err != nil {
 		return err
 	}
@@ -26,7 +25,7 @@ func (cb *configBuilder) AddImage(dockerCompose composetypes.Project, service co
 		context = ""
 	}
 
-	dockerfile, err := filepath.Rel(currentDir, filepath.Join(dockerCompose.WorkingDir, build.Context, build.Dockerfile))
+	dockerfile, err := filepath.Rel(cb.workingDir, filepath.Join(dockerCompose.WorkingDir, build.Context, build.Dockerfile))
 	if err != nil {
 		return err
 	}

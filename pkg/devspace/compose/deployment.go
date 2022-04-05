@@ -12,7 +12,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func (cb *configBuilder) AddDeployment(dockerCompose composetypes.Project, service composetypes.ServiceConfig) error {
+func (cb *configBuilder) AddDeployment(dockerCompose *composetypes.Project, service composetypes.ServiceConfig) error {
 	values := map[string]interface{}{}
 
 	volumes, volumeMounts, _ := volumesConfig(service, dockerCompose.Volumes, cb.log)

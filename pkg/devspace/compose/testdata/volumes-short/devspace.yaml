@@ -31,7 +31,7 @@ deployments:
           - containerPath: /etc/configs/
             volume:
               name: volume-3
-              readOnly: true
+              readOnly: false
         volumes:
         - name: db-1
           size: 5Gi

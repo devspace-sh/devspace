@@ -7,7 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
-func (cb *configBuilder) AddDependencies(dockerCompose composetypes.Project, service composetypes.ServiceConfig) error {
+func (cb *configBuilder) AddDependencies(dockerCompose *composetypes.Project, service composetypes.ServiceConfig) error {
 	for _, dependency := range service.GetDependencies() {
 		depName := formatName(dependency)
 

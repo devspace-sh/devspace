@@ -2,13 +2,12 @@ package commands
 
 import (
 	"fmt"
-	"time"
-
 	"github.com/jessevdk/go-flags"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/interp"
+	"time"
 )
 
 type SelectPodOptions struct {

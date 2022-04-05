@@ -8,6 +8,26 @@ import (
 	composetypes "github.com/compose-spec/compose-go/types"
 )
 
+func GetServiceSyncPaths(
+	project *composetypes.Project,
+	service composetypes.ServiceConfig,
+) []string {
+	syncPaths := []string{}
+	for _, volumeMount := range service.Volumes {
+		isProvisionedVolume := false
+		for _, volume := range project.Volumes {
+			if volumeMount.Source == volume.Name {
+				isProvisionedVolume = true
+			}
+		}
+
+		if !isProvisionedVolume {
+			syncPaths = append(syncPaths, volumeMount.Target)
+		}
+	}
+	return syncPaths
+}
+
 func volumesConfig(
 	service composetypes.ServiceConfig,
 	composeVolumes map[string]composetypes.VolumeConfig,
@@ -124,11 +144,15 @@ func createSharedVolumeMount(volumeName string, volume composetypes.ServiceVolum
 }
 
 func createServiceVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
+	readonly := volume.ReadOnly
+	if volume.Source != "" {
+		readonly = false
+	}
 	return map[string]interface{}{
 		"containerPath": volume.Target,
 		"volume": map[string]interface{}{
 			"name":     volumeName,
-			"readOnly": volume.ReadOnly,
+			"readOnly": readonly,
 		},
 	}
 }

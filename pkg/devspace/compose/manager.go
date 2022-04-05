@@ -30,32 +30,13 @@ func GetDockerComposePath() string {
 	return ""
 }
 
-type ComposeManager interface {
-	Load(log log.Logger) error
-	Config(path string) *latest.Config
-	Configs() map[string]*latest.Config
-	Save() error
-}
-
-type composeManager struct {
-	composePath string
-	configs     map[string]*latest.Config
-}
-
-func NewComposeManager(composePath string) ComposeManager {
-	return &composeManager{
-		composePath: composePath,
-		configs:     map[string]*latest.Config{},
-	}
-}
-
-func (cm *composeManager) Load(log log.Logger) error {
-	composeFile, err := ioutil.ReadFile(cm.composePath)
+func LoadDockerComposeProject(path string) (*composetypes.Project, error) {
+	composeFile, err := ioutil.ReadFile(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	dockerCompose, err := composeloader.Load(composetypes.ConfigDetails{
+	project, err := composeloader.Load(composetypes.ConfigDetails{
 		ConfigFiles: []composetypes.ConfigFile{
 			{
 				Content: composeFile,
@@ -63,26 +44,44 @@ func (cm *composeManager) Load(log log.Logger) error {
 		},
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	dependentsMap, err := calculateDependentsMap(dockerCompose)
+	return project, nil
+}
+
+type ComposeManager interface {
+	Load(log log.Logger) error
+	Configs() map[string]*latest.Config
+	Save() error
+}
+
+type composeManager struct {
+	configs map[string]*latest.Config
+	project *composetypes.Project
+}
+
+func NewComposeManager(project *composetypes.Project) ComposeManager {
+	return &composeManager{
+		configs: map[string]*latest.Config{},
+		project: project,
+	}
+}
+
+func (cm *composeManager) Load(log log.Logger) error {
+
+	dependentsMap, err := calculateDependentsMap(cm.project)
 	if err != nil {
 		return err
 	}
 
 	builders := map[string]ConfigBuilder{}
-	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
+	err = cm.project.WithServices(nil, func(service composetypes.ServiceConfig) error {
 		configName := "docker-compose"
-		workingDir := filepath.Dir(cm.composePath)
+		workingDir := cm.project.WorkingDir
 
 		isDependency := dependentsMap[service.Name] != nil
 		if isDependency {
-			// configKey = "devspace-" + service.Name + ".yaml"
-			// if service.Build != nil && service.Build.Context != "" {
-			// 	configKey = filepath.Join(service.Build.Context, "devspace.yaml")
-			// }
-
 			configName = service.Name
 			if service.Build != nil && service.Build.Context != "" {
 				workingDir = filepath.Join(workingDir, service.Build.Context)
@@ -97,12 +96,12 @@ func (cm *composeManager) Load(log log.Logger) error {
 
 		builder.SetName(configName)
 
-		err := builder.AddImage(*dockerCompose, service)
+		err := builder.AddImage(cm.project, service)
 		if err != nil {
 			return err
 		}
 
-		err = builder.AddDeployment(*dockerCompose, service)
+		err = builder.AddDeployment(cm.project, service)
 		if err != nil {
 			return err
 		}
@@ -112,12 +111,12 @@ func (cm *composeManager) Load(log log.Logger) error {
 			return err
 		}
 
-		err = builder.AddSecret(*dockerCompose, service)
+		err = builder.AddSecret(cm.project, service)
 		if err != nil {
 			return err
 		}
 
-		err = builder.AddDependencies(*dockerCompose, service)
+		err = builder.AddDependencies(cm.project, service)
 		if err != nil {
 			return err
 		}
@@ -128,7 +127,7 @@ func (cm *composeManager) Load(log log.Logger) error {
 		return err
 	}
 
-	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
+	err = cm.project.WithServices(nil, func(service composetypes.ServiceConfig) error {
 		configName := "docker-compose"
 		path := constants.DefaultConfigPath
 

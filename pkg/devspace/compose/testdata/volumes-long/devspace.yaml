@@ -18,6 +18,11 @@ deployments:
             volume:
               name: db-1
               shared: true
+          - containerPath: /var/lib/ro
+            volume:
+              name: db-2
+              shared: true
+              readOnly: true
           - containerPath: /var/lib/mysql
             volume:
               name: datavolume
@@ -29,11 +34,11 @@ deployments:
               readOnly: true
           - containerPath: /var/lib/tmpfs
             volume:
-              name: db-2
+              name: db-3
               readOnly: false
           - containerPath: /var/lib/tmpfs-1000
             volume:
-              name: db-3
+              name: db-4
               readOnly: false
           - containerPath: /var/lib/data
             volume:
@@ -50,11 +55,13 @@ deployments:
         volumes:
         - name: db-1
           size: 5Gi
+        - name: db-2
+          size: 5Gi
         - name: datavolume
           size: 5Gi
-        - name: db-2
-          emptyDir: {}
         - name: db-3
+          emptyDir: {}
+        - name: db-4
           emptyDir:
             sizeLimit: "1000"
         - name: volume-1

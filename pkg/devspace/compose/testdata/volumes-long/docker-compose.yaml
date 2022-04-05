@@ -7,6 +7,11 @@ services:
       - type: volume
         target: /var/lib/mydata
       
+      # Just specify a path and let the Engine create a readonly
+      - type: volume
+        target: /var/lib/ro
+        read_only: true
+      
       # Specify an absolute path mapping
       # - /opt/data:/var/lib/mysql
       - type: bind
