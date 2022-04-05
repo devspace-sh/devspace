@@ -20,10 +20,15 @@ type RunDependencyPipelinesOptions struct {
 
 func RunDependencyPipelines(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 	ctx.Log().Debugf("run_dependency_pipelines %s", strings.Join(args, " "))
+	err := pipeline.Exclude(ctx)
+	if err != nil {
+		return err
+	}
+
 	options := &RunDependencyPipelinesOptions{
 		DependencyOptions: pipeline.Options().DependencyOptions,
 	}
-	args, err := flags.ParseArgs(options, args)
+	args, err = flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}

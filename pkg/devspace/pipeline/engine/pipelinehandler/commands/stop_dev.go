@@ -19,10 +19,15 @@ type StopDevOptions struct {
 
 func StopDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 	ctx.Log().Debugf("stop_dev %s", strings.Join(args, " "))
+	err := pipeline.Exclude(ctx)
+	if err != nil {
+		return err
+	}
+
 	options := &StopDevOptions{
 		PurgeOptions: pipeline.Options().PurgeOptions,
 	}
-	args, err := flags.ParseArgs(options, args)
+	args, err = flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}

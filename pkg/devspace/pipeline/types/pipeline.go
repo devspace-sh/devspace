@@ -45,6 +45,10 @@ type Pipeline interface {
 	// Parent retrieves the pipeline parent or nil if there is non
 	Parent() Pipeline
 
+	// Exclude locks the upmost parent pipeline in the namespace and ensures only
+	// a single DevSpace instance is running this project at the same time
+	Exclude(ctx devspacecontext.Context) error
+
 	// Dependencies retrieves the currently created dependencies
 	Dependencies() map[string]Pipeline
 

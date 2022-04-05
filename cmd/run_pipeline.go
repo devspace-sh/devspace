@@ -37,7 +37,6 @@ import (
 	"io/ioutil"
 	"k8s.io/client-go/kubernetes/fake"
 	"os"
-	"strings"
 )
 
 // RunPipelineCmd holds the command flags
@@ -168,7 +167,7 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 	}
 
 	return runWithHooks(ctx, hookName, func() error {
-		return runPipeline(ctx, true, options)
+		return runPipeline(ctx, options)
 	})
 }
 
@@ -259,14 +258,6 @@ func initialize(ctx context.Context, f factory.Factory, allowFailingKubeClient b
 		WithConfig(configInterface).
 		WithKubeClient(client)
 
-	// create namespace if necessary
-	if !options.DeployOptions.Render {
-		err := kubectl.EnsureNamespace(devCtx.Context(), devCtx.KubeClient(), devCtx.KubeClient().Namespace(), devCtx.Log())
-		if err != nil {
-			return nil, errors.Errorf("unable to create namespace: %v", err)
-		}
-	}
-
 	// print config
 	if devCtx.Log().GetLevel() == logrus.DebugLevel {
 		out, _ := yaml.Marshal(devCtx.Config().Config())
@@ -291,7 +282,7 @@ func initialize(ctx context.Context, f factory.Factory, allowFailingKubeClient b
 
 func updateLastKubeContext(ctx devspacecontext.Context) error {
 	// Update generated if we deploy the application
-	if ctx.Config != nil && ctx.Config().LocalCache() != nil {
+	if ctx.Config() != nil && ctx.Config().LocalCache() != nil {
 		ctx.Config().LocalCache().SetLastContext(&localcache.LastContextConfig{
 			Context:   ctx.KubeClient().CurrentContext(),
 			Namespace: ctx.KubeClient().Namespace(),
@@ -422,7 +413,7 @@ func (cmd *RunPipelineCmd) BuildOptions(configOptions *loader.ConfigOptions) *Co
 	}
 }
 
-func runPipeline(ctx devspacecontext.Context, forceLeader bool, options *CommandOptions) error {
+func runPipeline(ctx devspacecontext.Context, options *CommandOptions) error {
 	var configPipeline *latest.Pipeline
 	if ctx.Config().Config().Pipelines != nil && ctx.Config().Config().Pipelines[options.Pipeline] != nil {
 		configPipeline = ctx.Config().Config().Pipelines[options.Pipeline]
@@ -460,15 +451,6 @@ func runPipeline(ctx devspacecontext.Context, forceLeader bool, options *Command
 		return err
 	}
 	dependencyRegistry.SetServer("http://" + serv.Server.Addr)
-
-	// exclude ourselves
-	couldExclude, err := dependencyRegistry.MarkDependencyExcluded(ctx, ctx.Config().Config().Name, forceLeader)
-	if err != nil {
-		return err
-	} else if !couldExclude {
-		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace instance active in the current namespace right now that uses the same project name (%s)", strings.Join(os.Args, " "), ctx.Config().Config().Name)
-	}
-	ctx.Log().Debugf("Marked project excluded: %v", ctx.Config().Config().Name)
 
 	// get a stdout writer
 	stdoutWriter := ctx.Log().Writer(ctx.Log().GetLevel(), true)

@@ -24,10 +24,15 @@ type BuildImagesOptions struct {
 
 func BuildImages(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 	ctx.Log().Debugf("build_images %s", strings.Join(args, " "))
+	err := pipeline.Exclude(ctx)
+	if err != nil {
+		return err
+	}
+
 	options := &BuildImagesOptions{
 		Options: pipeline.Options().BuildOptions,
 	}
-	args, err := flags.ParseArgs(options, args)
+	args, err = flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}

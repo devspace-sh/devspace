@@ -59,7 +59,7 @@ var PipelineCommands = map[string]func(devCtx devspacecontext.Context, pipeline 
 		return commands.RunDependencyPipelines(devCtx, pipeline, args)
 	},
 	"ensure_pull_secrets": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		return commands.EnsurePullSecrets(devCtx, args)
+		return commands.EnsurePullSecrets(devCtx, pipeline, args)
 	},
 	"is_dependency": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.IsDependency(devCtx.Context(), args)

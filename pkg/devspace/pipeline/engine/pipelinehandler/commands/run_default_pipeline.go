@@ -13,6 +13,11 @@ import (
 type NewHandlerFn func(ctx devspacecontext.Context, stdout, stderr io.Writer, pipeline types.Pipeline) enginetypes.ExecHandler
 
 func RunDefaultPipeline(ctx devspacecontext.Context, pipeline types.Pipeline, args []string, newHandler NewHandlerFn) error {
+	err := pipeline.Exclude(ctx)
+	if err != nil {
+		return err
+	}
+
 	hc := interp.HandlerCtx(ctx.Context())
 	if len(args) != 1 {
 		return fmt.Errorf("usage: run_default_pipeline [pipeline]")

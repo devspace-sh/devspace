@@ -5,6 +5,7 @@ import (
 	flags "github.com/jessevdk/go-flags"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"github.com/pkg/errors"
 	"strings"
@@ -20,10 +21,15 @@ type EnsurePullSecretsOptions struct {
 	All bool `long:"all" description:"Ensure all pull secrets"`
 }
 
-func EnsurePullSecrets(ctx devspacecontext.Context, args []string) error {
+func EnsurePullSecrets(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 	ctx.Log().Debugf("ensure_pull_secrets %s", strings.Join(args, " "))
+	err := pipeline.Exclude(ctx)
+	if err != nil {
+		return err
+	}
+
 	options := &EnsurePullSecretsOptions{}
-	args, err := flags.ParseArgs(options, args)
+	args, err = flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}

@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"os"
 	"strings"
 	"sync"
 
@@ -39,6 +41,9 @@ func NewPipeline(name string, devPodManager devpod.Manager, dependencyRegistry r
 type pipeline struct {
 	m sync.Mutex
 
+	excluded    bool
+	excludedErr error
+
 	options types.Options
 
 	name               string
@@ -50,6 +55,46 @@ type pipeline struct {
 
 	main *Job
 	jobs map[string]*Job
+}
+
+func (p *pipeline) Exclude(ctx devspacecontext.Context) error {
+	// get parent
+	if p.Parent() != nil {
+		parent := p.Parent()
+		for parent.Parent() != nil {
+			parent = parent.Parent()
+		}
+
+		return p.Exclude(ctx)
+	}
+
+	// make sure we are locked
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	if p.excluded {
+		return p.excludedErr
+	}
+
+	p.excluded = true
+
+	// create namespace if necessary
+	p.excludedErr = kubectl.EnsureNamespace(ctx.Context(), ctx.KubeClient(), ctx.KubeClient().Namespace(), ctx.Log())
+	if p.excludedErr != nil {
+		p.excludedErr = errors.Errorf("unable to create namespace: %v", p.excludedErr)
+		return p.excludedErr
+	}
+
+	// exclude ourselves
+	var couldExclude bool
+	couldExclude, p.excludedErr = p.dependencyRegistry.MarkDependencyExcluded(ctx, p.name, true)
+	if p.excludedErr != nil {
+		return p.excludedErr
+	} else if !couldExclude {
+		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace instance active in the current namespace right now that uses the same project name (%s)", strings.Join(os.Args, " "), p.name)
+	}
+	ctx.Log().Debugf("Marked project excluded: %v", p.name)
+	return nil
 }
 
 func (p *pipeline) Parent() types.Pipeline {

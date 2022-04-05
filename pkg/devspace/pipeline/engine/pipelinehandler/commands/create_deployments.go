@@ -31,10 +31,15 @@ type CreateDeploymentsOptions struct {
 
 func CreateDeployments(ctx devspacecontext.Context, pipeline types.Pipeline, args []string, stdout io.Writer) error {
 	ctx.Log().Debugf("create_deployments %s", strings.Join(args, " "))
+	err := pipeline.Exclude(ctx)
+	if err != nil {
+		return err
+	}
+
 	options := &CreateDeploymentsOptions{
 		Options: pipeline.Options().DeployOptions,
 	}
-	args, err := flags.ParseArgs(options, args)
+	args, err = flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}

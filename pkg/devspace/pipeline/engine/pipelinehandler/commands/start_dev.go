@@ -25,10 +25,15 @@ type StartDevOptions struct {
 
 func StartDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 	ctx.Log().Debugf("start_dev %s", strings.Join(args, " "))
+	err := pipeline.Exclude(ctx)
+	if err != nil {
+		return err
+	}
+
 	options := &StartDevOptions{
 		Options: pipeline.Options().DevOptions,
 	}
-	args, err := flags.ParseArgs(options, args)
+	args, err = flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}
