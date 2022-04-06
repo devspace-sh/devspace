@@ -1,0 +1,25 @@
+version: v2beta1
+name: docker-compose
+
+deployments:
+  db:
+    helm:
+      values:
+        containers:
+        - name: db-container
+          image: mysql/mysql-server:8.0.19
+        service:
+          ports:
+          - containerPort: 80
+            port: 8080
+            protocol: TCP
+          - containerPort: 9090
+            port: 9090
+            protocol: UDP
+dev:
+  db:
+    labelSelector:
+      app.kubernetes.io/component: db
+    ports:
+    - port: 8080:80
+    - port: 9090

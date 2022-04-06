@@ -1,0 +1,61 @@
+version: v2beta1
+name: docker-compose
+deployments:
+  db:
+    helm:
+      values:
+        containers:
+        - name: db-container
+          image: alpine
+          command:
+          - sh
+          - -c
+          - 'cat /tmp/cache/hi && tail -f /dev/null'
+          volumeMounts:
+          - containerPath: /var/lib/mydata
+            volume:
+              name: db-1
+              shared: true
+          - containerPath: /var/lib/mysql
+            volume:
+              name: datavolume
+              shared: true
+          - containerPath: /var/lib/data
+            volume:
+              name: volume-1
+              readOnly: false
+          - containerPath: /tmp/cache
+            volume:
+              name: volume-2
+              readOnly: false
+          - containerPath: /etc/configs
+            volume:
+              name: volume-3
+              readOnly: false
+        volumes:
+        - name: db-1
+          size: 5Gi
+        - name: datavolume
+          size: 5Gi
+        - name: volume-1
+          emptyDir: {}
+        - name: volume-2
+          emptyDir: {}
+        - name: volume-3
+          emptyDir: {}
+
+dev:
+  db:
+    labelSelector:
+      app.kubernetes.io/component: db
+    command:
+      - sh
+      - -c
+      - 'cat /tmp/cache/hi && tail -f /dev/null'
+    sync:
+      - path: /opt/data:/var/lib/data
+        startContainer: true
+      - path: ./cache:/tmp/cache
+        startContainer: true
+      - path: ${devspace.userHome}/configs:/etc/configs
+        startContainer: true

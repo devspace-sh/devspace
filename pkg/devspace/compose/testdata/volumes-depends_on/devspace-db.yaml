@@ -1,0 +1,34 @@
+version: v2beta1
+name: db
+
+deployments:
+  db:
+    helm:
+      values:
+        containers:
+          - command:
+              - tail
+              - -f
+              - /dev/null
+            image: loft.sh/mysql-server:8.0.19
+            name: db-container
+            volumeMounts:
+              - containerPath: /tmp/cache
+                volume:
+                  name: volume-1
+                  readOnly: false
+        volumes:
+          - emptyDir: {}
+            name: volume-1
+
+dev:
+  db:
+    labelSelector:
+      app.kubernetes.io/component: db
+    command:
+      - tail
+      - -f
+      - /dev/null
+    sync:
+      - startContainer: true
+        path: ./cache:/tmp/cache

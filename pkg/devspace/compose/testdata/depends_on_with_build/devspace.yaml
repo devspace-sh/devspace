@@ -1,0 +1,112 @@
+version: v2beta1
+
+name: docker-compose
+
+dependencies:
+  backend:
+    path: backend
+  db:
+    path: devspace-db.yaml
+  frontend:
+    path: devspace-frontend.yaml
+  messaging:
+    path: devspace-messaging.yaml
+
+deployments:
+  proxy:
+    helm:
+      componentChart: true
+      values:
+        containers:
+        - name: proxy-container
+          image: haproxy:latest
+  worker:
+    helm:
+      values:
+        containers:
+        - name: worker-container
+          image: rails:latest
+# deployments:
+# - name: db
+#   helm:
+#     componentChart: true
+#     values:
+#       containers:
+#       - name: db-container
+#         image: mysql/mysql-server:8.0.19
+# - name: cache
+#   helm:
+#     componentChart: true
+#     values:
+#       containers:
+#       - name: cache-container
+#         image: redis:latest
+# - name: messaging
+#   helm:
+#     componentChart: true
+#     values:
+#       containers:
+#       - name: messaging-container
+#         image: rabbitmq:latest
+# - name: worker
+#   helm:
+#     componentChart: true
+#     values:
+#       containers:
+#       - name: worker-container
+#         image: rails:latest
+# - name: backend
+#   helm:
+#     componentChart: true
+#     values:
+#       containers:
+#       - name: backend-container
+#         image: rails:latest
+# - name: frontend
+#   helm:
+#     componentChart: true
+#     values:
+#       containers:
+#       - name: frontend-container
+#         image: nginx:latest
+# hooks:
+# - events: ["after:deploy:db"]
+#   container:
+#     labelSelector:
+#       app.kubernetes.io/component: db
+#     containerName: db-container
+#   wait:
+#     running: true
+#     terminatedWithCode: 0
+# - events: ["after:deploy:cache"]
+#   container:
+#     labelSelector:
+#       app.kubernetes.io/component: cache
+#     containerName: cache-container
+#   wait:
+#     running: true
+#     terminatedWithCode: 0
+# - events: ["after:deploy:messaging"]
+#   container:
+#     labelSelector:
+#       app.kubernetes.io/component: messaging
+#     containerName: messaging-container
+#   wait:
+#     running: true
+#     terminatedWithCode: 0
+# - events: ["after:deploy:backend"]
+#   container:
+#     labelSelector:
+#       app.kubernetes.io/component: backend
+#     containerName: backend-container
+#   wait:
+#     running: true
+#     terminatedWithCode: 0
+# - events: ["after:deploy:frontend"]
+#   container:
+#     labelSelector:
+#       app.kubernetes.io/component: frontend
+#     containerName: frontend-container
+#   wait:
+#     running: true
+#     terminatedWithCode: 0

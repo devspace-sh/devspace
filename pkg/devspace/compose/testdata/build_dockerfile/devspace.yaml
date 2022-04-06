@@ -1,0 +1,15 @@
+version: v2beta1
+name: docker-compose
+
+images:
+  foo:
+    image: foo
+    dockerfile: Dockerfile.prod
+
+deployments:
+  foo:
+    helm:
+      values:
+        containers:
+        - name: foo-container
+          image: foo

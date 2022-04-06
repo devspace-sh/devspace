@@ -220,7 +220,7 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 	}
 
 	if len(args) > 1 {
-		return fmt.Errorf("please specify only 1 pipeline to execute. E.g. devspace run-pipeline my-pipe -- other args")
+		return fmt.Errorf("please specify only 1 pipeline to execute (got %v). E.g. devspace run-pipeline my-pipe -- other args", args)
 	} else if len(args) == 0 && cmd.Pipeline == "" {
 		return fmt.Errorf("please specify a pipeline through --pipeline or argument")
 	} else if len(args) == 1 && cmd.Pipeline == "" {
