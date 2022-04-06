@@ -12,4 +12,4 @@ pipelines:
     run: |-
       echo ${IMPORT3}
       echo ${devspace.name} > dependency-name.txt
-      echo ${devspace.tempFolder} > dependency-temp.txt
+      echo ${DEVSPACE_TMPDIR} > dependency-temp.txt

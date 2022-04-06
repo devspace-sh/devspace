@@ -136,6 +136,10 @@ type Pipeline struct {
 	// Name of the pipeline, will be filled automatically
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
+	// Flags are extra flags that can be used for running the pipeline via
+	// devspace run-pipeline.
+	Flags []PipelineFlag `yaml:"flags,omitempty" json:"flags,omitempty"`
+
 	// ContinueOnError will not fail the whole job and pipeline if
 	// a call within the step fails.
 	ContinueOnError bool `yaml:"continueOnError,omitempty" json:"continueOnError,omitempty"`
@@ -143,6 +147,33 @@ type Pipeline struct {
 	// Run is the actual shell command that should be executed during this pipeline
 	Run string `yaml:"run,omitempty" json:"run,omitempty"`
 }
+
+// PipelineFlag defines an extra pipeline flag
+type PipelineFlag struct {
+	// Name is the name of the flag
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Short is optional and is the shorthand name for this flag. E.g. 'g' converts to '-g'
+	Short string `yaml:"short,omitempty" json:"short,omitempty"`
+
+	// Type is the type of the flag. Defaults to bool if empty
+	Type PipelineFlagType `yaml:"type,omitempty" json:"type,omitempty"`
+
+	// Default is the default value for this flag
+	Default interface{} `yaml:"default,omitempty" json:"default,omitempty"`
+
+	// Description is the description as shown in `devspace run-pipeline my-pipe -h`
+	Description string `yaml:"description,omitempty" json:"description,omitempty"`
+}
+
+type PipelineFlagType string
+
+const (
+	PipelineFlagTypeString      = "string"
+	PipelineFlagTypeBoolean     = "bool"
+	PipelineFlagTypeInteger     = "int"
+	PipelineFlagTypeStringArray = "stringArray"
+)
 
 func (p *Pipeline) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	pipelineString := ""
@@ -159,7 +190,7 @@ func (p *Pipeline) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return err
 		}
 
-		return json.Unmarshal(out, p)
+		return yamlutil.UnmarshalStrictJSON(out, p)
 	}
 
 	p.Run = pipelineString
@@ -1364,10 +1395,6 @@ type CommandConfig struct {
 	// COMMAND_ERROR.
 	After string `yaml:"after,omitempty" json:"after,omitempty"`
 
-	// DisableReplace signals DevSpace to not replace the default command. E.g.
-	// dev does not replace devspace dev.
-	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`
-
 	// Internal commands are not show in list and are usable through run_command
 	Internal bool `yaml:"internal,omitempty" json:"internal,omitempty"`
 
@@ -1401,7 +1428,7 @@ func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return err
 		}
 
-		return json.Unmarshal(out, c)
+		return yamlutil.UnmarshalStrictJSON(out, c)
 	}
 
 	c.Command = commandString
@@ -1471,7 +1498,7 @@ func (v *Variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return err
 		}
 
-		return json.Unmarshal(out, v)
+		return yamlutil.UnmarshalStrictJSON(out, v)
 	}
 	if strings.HasPrefix(varString, "$(") && strings.HasSuffix(varString, ")") {
 		varString = strings.TrimPrefix(strings.TrimSuffix(varString, ")"), "$(")

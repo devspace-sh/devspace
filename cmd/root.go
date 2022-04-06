@@ -246,7 +246,7 @@ Additional run commands:
 	rootCmd.AddCommand(NewInitCmd(f))
 	rootCmd.AddCommand(NewRestartCmd(f, globalFlags))
 	rootCmd.AddCommand(NewSyncCmd(f, globalFlags))
-	rootCmd.AddCommand(NewRenderCmd(f, globalFlags))
+	rootCmd.AddCommand(NewRenderCmd(f, globalFlags, rawConfig))
 	rootCmd.AddCommand(NewUpgradeCmd())
 	rootCmd.AddCommand(NewEnterCmd(f, globalFlags))
 	rootCmd.AddCommand(NewAnalyzeCmd(f, globalFlags))
@@ -256,31 +256,19 @@ Additional run commands:
 	rootCmd.AddCommand(NewRunCmd(f, globalFlags, rawConfig))
 	rootCmd.AddCommand(NewAttachCmd(f, globalFlags))
 	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
-	rootCmd.AddCommand(NewRunPipelineCmd(f, globalFlags))
+	rootCmd.AddCommand(NewRunPipelineCmd(f, globalFlags, rawConfig))
 	rootCmd.AddCommand(NewCompletionCmd())
 
 	// check overwrite commands
-	rootCmd.AddCommand(replaceCommand("dev", rawConfig, f, globalFlags, NewDevCmd))
-	rootCmd.AddCommand(replaceCommand("deploy", rawConfig, f, globalFlags, NewDeployCmd))
-	rootCmd.AddCommand(replaceCommand("build", rawConfig, f, globalFlags, NewBuildCmd))
-	rootCmd.AddCommand(replaceCommand("purge", rawConfig, f, globalFlags, NewPurgeCmd))
+	rootCmd.AddCommand(NewDevCmd(f, globalFlags, rawConfig))
+	rootCmd.AddCommand(NewDeployCmd(f, globalFlags, rawConfig))
+	rootCmd.AddCommand(NewBuildCmd(f, globalFlags, rawConfig))
+	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags, rawConfig))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(rootCmd, plugins, "")
 	variable.AddPredefinedVars(plugins)
 	return rootCmd
-}
-
-func replaceCommand(command string, rawConfig *RawConfig, f factory.Factory, globalFlags *flags.GlobalFlags, fallback func(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command) *cobra.Command {
-	if rawConfig != nil && rawConfig.CommandsConfig != nil && rawConfig.Resolver != nil && rawConfig.CommandsConfig.Commands != nil {
-		// get command
-		overwriteCommand, ok := rawConfig.CommandsConfig.Commands[command]
-		if ok && !overwriteCommand.DisableReplace {
-			return NewOverwriteCmd(f, globalFlags, overwriteCommand, rawConfig.Resolver.ResolvedVariables())
-		}
-	}
-
-	return fallback(f, globalFlags)
 }
 
 func disableKlog() {
@@ -338,7 +326,7 @@ type RawConfig struct {
 	RawConfig         map[string]interface{}
 	Resolver          variable.Resolver
 
-	CommandsConfig *latest.Config
+	Config *latest.Config
 
 	resolvedMutex sync.Mutex
 	resolved      map[string]string
@@ -357,8 +345,8 @@ func (r *RawConfig) Parse(
 	r.Resolver = resolver
 
 	// try parsing commands
-	latestConfig, beforeConversion, err := loader.NewCommandsParser().Parse(ctx, originalRawConfig, rawConfig, resolver, log)
-	r.CommandsConfig = latestConfig
+	latestConfig, beforeConversion, err := loader.NewCommandsPipelinesParser().Parse(ctx, originalRawConfig, rawConfig, resolver, log)
+	r.Config = latestConfig
 	return latestConfig, beforeConversion, err
 }
 

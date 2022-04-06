@@ -10,9 +10,9 @@ deployments:
 pipelines:
   deploy:
     run: |-
-      echo '{"helm": {"values": {"containers": [{"image":"alpine"}]}}}' > ${devspace.tempFolder}/deployment.yaml
+      echo '{"helm": {"values": {"containers": [{"image":"alpine"}]}}}' > ${DEVSPACE_TMPDIR}/deployment.yaml
       
-      create_deployments test1 test2 test3 test4 --from-file test1:${devspace.tempFolder}/deployment.yaml \
+      create_deployments test1 test2 test3 test4 --from-file test1:${DEVSPACE_TMPDIR}/deployment.yaml \
                                                  --from test2:base \
                                                  --set test3:helm.values.containers[0].image=alpine \
                                                  --set-string test4:helm.values.containers[0].image=alpine \

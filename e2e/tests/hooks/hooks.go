@@ -55,7 +55,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 			Pipeline: "build",
 			SkipPush: false,
 		}
-		err = buildCmd.Run(nil, nil, f, "build", "buildCommand")
+		err = buildCmd.Run(nil, nil, f, "buildCommand")
 		framework.ExpectError(err)
 
 		// check if files are there
@@ -81,7 +81,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 			Pipeline: "dev",
 			SkipPush: true,
 		}
-		err = devCmd.Run(nil, nil, f, "dev", "devCommand")
+		err = devCmd.Run(nil, nil, f, "devCommand")
 		framework.ExpectError(err)
 
 		// check if files are correctly created

@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/spf13/cobra"
 )
 
 // NewDeployCmd creates a new deploy command
-func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *RawConfig) *cobra.Command {
 	cmd := &RunPipelineCmd{
 		GlobalFlags:             globalFlags,
 		SkipPushLocalKubernetes: true,
@@ -29,10 +30,14 @@ devspace deploy --kube-context=deploy-context
 #######################################################`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(cobraCmd, args, f, "deploy", "deployCommand")
+			return cmd.Run(cobraCmd, args, f, "deployCommand")
 		},
 	}
 
-	cmd.AddFlags(deployCmd)
+	var pipeline *latest.Pipeline
+	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
+		pipeline = rawConfig.Config.Pipelines["deploy"]
+	}
+	cmd.AddPipelineFlags(f, deployCmd, pipeline)
 	return deployCmd
 }

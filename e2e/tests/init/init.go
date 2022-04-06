@@ -83,7 +83,7 @@ var _ = DevSpaceDescribe("init", func() {
 				},
 				Pipeline: "dev",
 			}
-			done <- devCmd.Run(nil, []string{"sh", "-c", "exit 0"}, f, "dev", "devCommand")
+			done <- devCmd.RunDefault(f)
 		}()
 
 		err = <-done
@@ -134,7 +134,7 @@ var _ = DevSpaceDescribe("init", func() {
 				},
 				Pipeline: "dev",
 			}
-			done <- devCmd.Run(nil, []string{"sh", "-c", "exit 0"}, f, "dev", "devCommand")
+			done <- devCmd.RunDefault(f)
 		}()
 
 		err = <-done
@@ -185,7 +185,7 @@ var _ = DevSpaceDescribe("init", func() {
 				},
 				Pipeline: "dev",
 			}
-			done <- devCmd.Run(nil, []string{"sh", "-c", "exit 0"}, f, "dev", "devCommand")
+			done <- devCmd.RunDefault(f)
 		}()
 
 		err = <-done
@@ -240,7 +240,7 @@ var _ = DevSpaceDescribe("init", func() {
 				},
 				Pipeline: "dev",
 			}
-			done <- devCmd.Run(nil, []string{"sh", "-c", "exit 0"}, f, "dev", "devCommand")
+			done <- devCmd.RunDefault(f)
 		}()
 
 		err = <-done

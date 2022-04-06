@@ -2,6 +2,7 @@ package yamlutil
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -19,6 +20,12 @@ func UnmarshalString(data string, out interface{}) error {
 }
 
 var lineRegEx = regexp.MustCompile(`^line ([0-9]+):`)
+
+func UnmarshalStrictJSON(data []byte, out interface{}) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	return decoder.Decode(out)
+}
 
 func UnmarshalStrict(data []byte, out interface{}) error {
 	decoder := yaml.NewDecoder(bytes.NewReader(data))

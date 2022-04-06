@@ -82,26 +82,25 @@ func ParseProfile(ctx context.Context, basePath string, data map[string]interfac
 }
 
 // Get parses only the key from the config
-func Get(data map[string]interface{}, key string) (map[string]interface{}, error) {
+func Get(data map[string]interface{}, keys ...string) (map[string]interface{}, error) {
 	retMap := map[string]interface{}{}
 	err := util.Convert(data, &retMap)
 	if err != nil {
 		return nil, err
 	}
 
-	keyData, ok := retMap[key]
-	if !ok {
-		return map[string]interface{}{
-			"version": retMap["version"],
-			"name":    retMap["name"],
-		}, nil
-	}
-
-	return map[string]interface{}{
+	retConfig := map[string]interface{}{
 		"version": retMap["version"],
 		"name":    retMap["name"],
-		key:       keyData,
-	}, nil
+	}
+	for _, key := range keys {
+		keyData, ok := retMap[key]
+		if ok {
+			retConfig[key] = keyData
+		}
+	}
+
+	return retConfig, nil
 }
 
 // ParseVariables parses only the variables from the config

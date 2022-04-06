@@ -33,6 +33,22 @@ func (d *defaultParser) Parse(ctx context.Context, originalRawConfig map[string]
 	return fillVariablesAndParse(ctx, resolver, rawConfig, log)
 }
 
+func NewCommandsPipelinesParser() Parser {
+	return &commandsPipelinesParser{}
+}
+
+type commandsPipelinesParser struct{}
+
+func (c *commandsPipelinesParser) Parse(ctx context.Context, originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, map[string]interface{}, error) {
+	// modify the config
+	preparedConfig, err := versions.Get(rawConfig, "commands", "pipelines")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return fillVariablesAndParse(ctx, resolver, preparedConfig, log)
+}
+
 func NewCommandsParser() Parser {
 	return &commandsParser{}
 }

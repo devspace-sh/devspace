@@ -18,7 +18,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var AlwaysResolvePredefinedVars = []string{"devspace.name", "devspace.tempFolder", "devspace.version", "devspace.random", "devspace.profile", "devspace.userHome", "devspace.timestamp", "devspace.context", "devspace.namespace"}
+var AlwaysResolvePredefinedVars = []string{"DEVSPACE_NAME", "DEVSPACE_TMPDIR", "DEVSPACE_VERSION", "DEVSPACE_RANDOM", "DEVSPACE_PROFILE", "DEVSPACE_USER_HOME", "DEVSPACE_TIMESTAMP", "devspace.context", "DEVSPACE_CONTEXT", "devspace.namespace", "DEVSPACE_NAMESPACE"}
 
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
 func NewResolver(localCache localcache.Cache, predefinedVariableOptions *PredefinedVariableOptions, flags []string, log log.Logger) (Resolver, error) {

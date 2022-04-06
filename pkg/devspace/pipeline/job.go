@@ -59,7 +59,7 @@ func (j *Job) Stop() error {
 	return t.Wait()
 }
 
-func (j *Job) Run(ctx devspacecontext.Context, environ expand.Environ) error {
+func (j *Job) Run(ctx devspacecontext.Context, args []string, environ expand.Environ) error {
 	if ctx.IsDone() {
 		return ctx.Context().Err()
 	}
@@ -72,7 +72,7 @@ func (j *Job) Run(ctx devspacecontext.Context, environ expand.Environ) error {
 	t.Go(func() error {
 		// start the actual job
 		done := t.NotifyGo(func() error {
-			return j.execute(ctx, t, environ)
+			return j.execute(ctx, args, t, environ)
 		})
 
 		// wait until job is dying
@@ -93,7 +93,7 @@ func (j *Job) Run(ctx devspacecontext.Context, environ expand.Environ) error {
 	return t.Wait()
 }
 
-func (j *Job) execute(ctx devspacecontext.Context, parent *tomb.Tomb, environ expand.Environ) error {
+func (j *Job) execute(ctx devspacecontext.Context, args []string, parent *tomb.Tomb, environ expand.Environ) error {
 	ctx = ctx.WithLogger(ctx.Log())
 	stdoutReader, stdoutWriter := io.Pipe()
 	defer stdoutWriter.Close()
@@ -118,6 +118,6 @@ func (j *Job) execute(ctx devspacecontext.Context, parent *tomb.Tomb, environ ex
 	})
 
 	handler := pipelinehandler.NewPipelineExecHandler(ctx, stdoutWriter, stderrWriter, j.Pipeline)
-	_, err := engine.ExecutePipelineShellCommand(ctx.Context(), j.Config.Run, os.Args[1:], ctx.WorkingDir(), j.Config.ContinueOnError, stdoutWriter, stderrWriter, os.Stdin, environ, handler)
+	_, err := engine.ExecutePipelineShellCommand(ctx.Context(), j.Config.Run, args, ctx.WorkingDir(), j.Config.ContinueOnError, stdoutWriter, stderrWriter, os.Stdin, environ, handler)
 	return err
 }
