@@ -75,8 +75,8 @@ devspace --dependency my-dependency run any-command --any-command-flag
 		return cmd.RunRun(f, args)
 	}
 
-	if rawConfig != nil && rawConfig.CommandsConfig != nil {
-		for _, cmd := range rawConfig.CommandsConfig.Commands {
+	if rawConfig != nil && rawConfig.Config != nil {
+		for _, cmd := range rawConfig.Config.Commands {
 			runCmd.AddCommand(NewSpecificRunCommand(f, globalFlags, cmd, rawConfig.Resolver.ResolvedVariables()))
 		}
 	}

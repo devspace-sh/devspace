@@ -12,7 +12,6 @@ const (
 	// nameKey is the context key for the DevSpace name.
 	nameKey key = iota
 	tempFolderKey
-	commandKey
 	dependencyKey
 	rootNameKey
 	devContextKey

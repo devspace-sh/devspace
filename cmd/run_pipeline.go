@@ -67,7 +67,7 @@ type RunPipelineCmd struct {
 	log          log.Logger
 }
 
-func (cmd *RunPipelineCmd) AddFlags(command *cobra.Command) {
+func (cmd *RunPipelineCmd) AddPipelineFlags(f factory.Factory, command *cobra.Command, pipeline *latest.Pipeline) {
 	command.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", cmd.SkipDependency, "Skips the following dependencies for deployment")
 	command.Flags().StringSliceVar(&cmd.Dependency, "dependency", cmd.Dependency, "Deploys only the specified named dependencies")
 
@@ -87,41 +87,134 @@ func (cmd *RunPipelineCmd) AddFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", cmd.SkipPushLocalKubernetes, "Skips image pushing, if a local kubernetes environment is detected")
 
 	command.Flags().BoolVar(&cmd.ShowUI, "show-ui", cmd.ShowUI, "Shows the ui server")
+
+	if pipeline != nil {
+		for _, pipelineFlag := range pipeline.Flags {
+			if pipelineFlag.Name == "" {
+				continue
+			}
+
+			usage := pipelineFlag.Description
+			if usage == "" {
+				usage = "Flag " + pipelineFlag.Name
+			}
+
+			var ok bool
+			if pipelineFlag.Type == "" || pipelineFlag.Type == latest.PipelineFlagTypeBoolean {
+				val := false
+				if pipelineFlag.Default != nil {
+					val, ok = pipelineFlag.Default.(bool)
+					if !ok {
+						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a boolean", pipelineFlag.Name, pipelineFlag.Default)
+						continue
+					}
+				}
+
+				command.Flags().BoolP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+			} else if pipelineFlag.Type == latest.PipelineFlagTypeString {
+				val := ""
+				if pipelineFlag.Default != nil {
+					val, ok = pipelineFlag.Default.(string)
+					if !ok {
+						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string", pipelineFlag.Name, pipelineFlag.Default)
+						continue
+					}
+				}
+
+				command.Flags().StringP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+			} else if pipelineFlag.Type == latest.PipelineFlagTypeInteger {
+				val := 0
+				if pipelineFlag.Default != nil {
+					val, ok = pipelineFlag.Default.(int)
+					if !ok {
+						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not an integer", pipelineFlag.Name, pipelineFlag.Default)
+						continue
+					}
+				}
+
+				command.Flags().IntP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+			} else if pipelineFlag.Type == latest.PipelineFlagTypeStringArray {
+				val := []string{}
+				if pipelineFlag.Default != nil {
+					val, ok = pipelineFlag.Default.([]string)
+					if !ok {
+						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string array", pipelineFlag.Name, pipelineFlag.Default)
+						continue
+					}
+				}
+
+				command.Flags().StringSliceP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+			}
+		}
+	}
 }
 
 // NewRunPipelineCmd creates a new devspace run-pipeline command
-func NewRunPipelineCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewRunPipelineCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *RawConfig) *cobra.Command {
 	cmd := &RunPipelineCmd{
 		GlobalFlags:             globalFlags,
 		SkipPushLocalKubernetes: true,
 	}
 	runPipelineCmd := &cobra.Command{
 		Use:   "run-pipeline",
-		Short: "Starts the development mode",
+		Short: "Starts a DevSpace pipeline",
 		Long: `
 #######################################################
 ############## devspace run-pipeline ##################
 #######################################################
-Execute a pipeline
+Execute a pipeline:
+devspace run-pipeline my-pipeline
+devspace run-pipeline dev
 #######################################################`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(cobraCmd, args, f, "run-pipeline", "runPipelineCommand")
+			return cmd.Run(cobraCmd, args, f, "runPipelineCommand")
 		},
 	}
 
-	cmd.AddFlags(runPipelineCmd)
+	if rawConfig != nil && rawConfig.Config != nil {
+		for _, pipe := range rawConfig.Config.Pipelines {
+			runPipelineCmd.AddCommand(NewSpecificPipelineCmd(f, globalFlags, pipe))
+		}
+	}
+	cmd.AddPipelineFlags(f, runPipelineCmd, nil)
 	return runPipelineCmd
 }
 
+// NewSpecificPipelineCmd creates a new devspace render command
+func NewSpecificPipelineCmd(f factory.Factory, globalFlags *flags.GlobalFlags, pipeline *latest.Pipeline) *cobra.Command {
+	cmd := &RunPipelineCmd{
+		GlobalFlags:             globalFlags,
+		SkipPushLocalKubernetes: true,
+		Pipeline:                pipeline.Name,
+	}
+
+	specificPipelineCmd := &cobra.Command{
+		Use:   pipeline.Name,
+		Short: "Executes pipeline " + pipeline.Name,
+		Long: `
+#######################################################
+######### devspace run-pipeline ` + pipeline.Name + ` ##########
+#######################################################
+Executes pipeline ` + pipeline.Name + `
+#######################################################`,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(cobraCmd, args, f, "runPipelineCommand")
+		},
+	}
+
+	cmd.AddPipelineFlags(f, specificPipelineCmd, pipeline)
+	return specificPipelineCmd
+}
+
 func (cmd *RunPipelineCmd) RunDefault(f factory.Factory) error {
-	return cmd.Run(nil, nil, f, "run-pipeline", "runPipelineCommand")
+	return cmd.Run(nil, nil, f, "runPipelineCommand")
 }
 
 // Run executes the command logic
-func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory.Factory, commandName, hookName string) error {
+func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory.Factory, hookName string) error {
 	dashArgs := []string{}
-	if cobraCmd.ArgsLenAtDash() > -1 {
+	if cobraCmd != nil && cobraCmd.ArgsLenAtDash() > -1 {
 		dashArgs = args[cobraCmd.ArgsLenAtDash():]
 		args = args[:cobraCmd.ArgsLenAtDash()]
 	}
@@ -159,7 +252,9 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 	}
 
 	// set command in context
-	cmd.Ctx = values.WithFlags(cmd.Ctx, cobraCmd.Flags())
+	if cobraCmd != nil {
+		cmd.Ctx = values.WithFlags(cmd.Ctx, cobraCmd.Flags())
+	}
 	options := cmd.BuildOptions(cmd.ToConfigOptions())
 	ctx, err := initialize(cmd.Ctx, f, false, options, cmd.log)
 	if err != nil {

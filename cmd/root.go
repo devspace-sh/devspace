@@ -246,7 +246,7 @@ Additional run commands:
 	rootCmd.AddCommand(NewInitCmd(f))
 	rootCmd.AddCommand(NewRestartCmd(f, globalFlags))
 	rootCmd.AddCommand(NewSyncCmd(f, globalFlags))
-	rootCmd.AddCommand(NewRenderCmd(f, globalFlags))
+	rootCmd.AddCommand(NewRenderCmd(f, globalFlags, rawConfig))
 	rootCmd.AddCommand(NewUpgradeCmd())
 	rootCmd.AddCommand(NewEnterCmd(f, globalFlags))
 	rootCmd.AddCommand(NewAnalyzeCmd(f, globalFlags))
@@ -256,14 +256,14 @@ Additional run commands:
 	rootCmd.AddCommand(NewRunCmd(f, globalFlags, rawConfig))
 	rootCmd.AddCommand(NewAttachCmd(f, globalFlags))
 	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
-	rootCmd.AddCommand(NewRunPipelineCmd(f, globalFlags))
+	rootCmd.AddCommand(NewRunPipelineCmd(f, globalFlags, rawConfig))
 	rootCmd.AddCommand(NewCompletionCmd())
 
 	// check overwrite commands
-	rootCmd.AddCommand(NewDevCmd(f, globalFlags))
-	rootCmd.AddCommand(NewDeployCmd(f, globalFlags))
-	rootCmd.AddCommand(NewBuildCmd(f, globalFlags))
-	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags))
+	rootCmd.AddCommand(NewDevCmd(f, globalFlags, rawConfig))
+	rootCmd.AddCommand(NewDeployCmd(f, globalFlags, rawConfig))
+	rootCmd.AddCommand(NewBuildCmd(f, globalFlags, rawConfig))
+	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags, rawConfig))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(rootCmd, plugins, "")
@@ -326,7 +326,7 @@ type RawConfig struct {
 	RawConfig         map[string]interface{}
 	Resolver          variable.Resolver
 
-	CommandsConfig *latest.Config
+	Config *latest.Config
 
 	resolvedMutex sync.Mutex
 	resolved      map[string]string
@@ -345,8 +345,8 @@ func (r *RawConfig) Parse(
 	r.Resolver = resolver
 
 	// try parsing commands
-	latestConfig, beforeConversion, err := loader.NewCommandsParser().Parse(ctx, originalRawConfig, rawConfig, resolver, log)
-	r.CommandsConfig = latestConfig
+	latestConfig, beforeConversion, err := loader.NewCommandsPipelinesParser().Parse(ctx, originalRawConfig, rawConfig, resolver, log)
+	r.Config = latestConfig
 	return latestConfig, beforeConversion, err
 }
 

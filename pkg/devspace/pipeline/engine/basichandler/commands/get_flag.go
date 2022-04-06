@@ -12,12 +12,13 @@ import (
 func GetFlag(ctx context.Context, args []string) error {
 	hc := interp.HandlerCtx(ctx)
 	if len(args) != 1 {
-		_, _ = hc.Stderr.Write([]byte(fmt.Sprintf("usage: get_flag NAME")))
+		_, _ = hc.Stderr.Write([]byte("usage: get_flag NAME"))
 		return interp.NewExitStatus(1)
 	}
 
 	flags, ok := values.FlagsFrom(ctx)
 	if !ok {
+		_, _ = hc.Stderr.Write([]byte("cannot use get_flag in a non pipeline command"))
 		return interp.NewExitStatus(1)
 	}
 

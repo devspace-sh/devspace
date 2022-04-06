@@ -153,11 +153,14 @@ type PipelineFlag struct {
 	// Name is the name of the flag
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
-	// Shorthand is optional and is the shorthand name for this flag. E.g. 'g' converts to '-g'
-	Shorthand string `yaml:"shorthand,omitempty" json:"shorthand,omitempty"`
+	// Short is optional and is the shorthand name for this flag. E.g. 'g' converts to '-g'
+	Short string `yaml:"short,omitempty" json:"short,omitempty"`
 
 	// Type is the type of the flag. Defaults to bool if empty
 	Type PipelineFlagType `yaml:"type,omitempty" json:"type,omitempty"`
+
+	// Default is the default value for this flag
+	Default interface{} `yaml:"default,omitempty" json:"default,omitempty"`
 
 	// Description is the description as shown in `devspace run-pipeline my-pipe -h`
 	Description string `yaml:"description,omitempty" json:"description,omitempty"`
@@ -169,7 +172,7 @@ const (
 	PipelineFlagTypeString      = "string"
 	PipelineFlagTypeBoolean     = "bool"
 	PipelineFlagTypeInteger     = "int"
-	PipelineFlagTypeStringSlice = "string_slice"
+	PipelineFlagTypeStringArray = "stringArray"
 )
 
 func (p *Pipeline) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -187,7 +190,7 @@ func (p *Pipeline) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return err
 		}
 
-		return json.Unmarshal(out, p)
+		return yamlutil.UnmarshalStrictJSON(out, p)
 	}
 
 	p.Run = pipelineString
@@ -1425,7 +1428,7 @@ func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return err
 		}
 
-		return json.Unmarshal(out, c)
+		return yamlutil.UnmarshalStrictJSON(out, c)
 	}
 
 	c.Command = commandString
@@ -1495,7 +1498,7 @@ func (v *Variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return err
 		}
 
-		return json.Unmarshal(out, v)
+		return yamlutil.UnmarshalStrictJSON(out, v)
 	}
 	if strings.HasPrefix(varString, "$(") && strings.HasSuffix(varString, ")") {
 		varString = strings.TrimPrefix(strings.TrimSuffix(varString, ")"), "$(")
