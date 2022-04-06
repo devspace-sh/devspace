@@ -1,11 +1,16 @@
 services:
   db:
-    image: loft.sh/mysql-server:8.0.19
-    build: db
+    image: alpine
+    entrypoint: sh -c 'cat /tmp/cache/hi && tail -f /dev/null'
     volumes:
       # Just specify a path and let the Engine create a volume
       - type: volume
         target: /var/lib/mydata
+      
+      # Just specify a path and let the Engine create a readonly
+      - type: volume
+        target: /var/lib/ro
+        read_only: true
       
       # Specify an absolute path mapping
       # - /opt/data:/var/lib/mysql
@@ -52,7 +57,8 @@ services:
         target: /var/lib/mysql
 
   backend_1.2:
-    image: mysql/mysql-server:8.0.19
+    image: alpine
+    entrypoint: sh -c 'cat /tmp/cache/hi && tail -f /dev/null'
     volumes:
       # Just specify a path and let the Engine create a volume
       - type: volume

@@ -1,0 +1,15 @@
+version: v2beta1
+name: docker-compose
+deployments:
+  db:
+    helm:
+      values:
+        containers:
+          - name: db-container
+            image: mysql/mysql-server:8.0.19
+  backend-1-2:
+    helm:
+      values:
+        containers:
+          - name: backend-1-2-container
+            image: mysql/mysql-server:8.0.19

@@ -1,0 +1,17 @@
+version: v2beta1
+name: docker-compose
+
+deployments:
+  db:
+    helm:
+      values:
+        containers:
+        - name: db-container
+          env:
+          - name: MYSQL_DATABASE
+            value: example
+          - name: MYSQL_ROOT_HOST
+            value: '%'
+          - name: MYSQL_ROOT_PASSWORD
+            value: /run/secrets/db-password
+          image: mysql/mysql-server:8.0.19
