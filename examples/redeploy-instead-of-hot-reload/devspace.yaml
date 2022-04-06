@@ -4,10 +4,10 @@ name: redeploy-instead-of-hot-reload
 vars:
   IMAGE: yourusername/devspace
 
+# Run the project in watch mode via 'devspace run watch'
 commands:
-  # Overwrite default devspace dev
-  dev: |-
-    run_watch -p devspace.yaml -p *.go -- devspace run-pipeline dev $@
+  watch: |-
+    run_watch -p devspace.yaml -p *.go -- devspace dev "$@"
 
 images:
   default:

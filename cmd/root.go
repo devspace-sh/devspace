@@ -260,27 +260,15 @@ Additional run commands:
 	rootCmd.AddCommand(NewCompletionCmd())
 
 	// check overwrite commands
-	rootCmd.AddCommand(replaceCommand("dev", rawConfig, f, globalFlags, NewDevCmd))
-	rootCmd.AddCommand(replaceCommand("deploy", rawConfig, f, globalFlags, NewDeployCmd))
-	rootCmd.AddCommand(replaceCommand("build", rawConfig, f, globalFlags, NewBuildCmd))
-	rootCmd.AddCommand(replaceCommand("purge", rawConfig, f, globalFlags, NewPurgeCmd))
+	rootCmd.AddCommand(NewDevCmd(f, globalFlags))
+	rootCmd.AddCommand(NewDeployCmd(f, globalFlags))
+	rootCmd.AddCommand(NewBuildCmd(f, globalFlags))
+	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(rootCmd, plugins, "")
 	variable.AddPredefinedVars(plugins)
 	return rootCmd
-}
-
-func replaceCommand(command string, rawConfig *RawConfig, f factory.Factory, globalFlags *flags.GlobalFlags, fallback func(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command) *cobra.Command {
-	if rawConfig != nil && rawConfig.CommandsConfig != nil && rawConfig.Resolver != nil && rawConfig.CommandsConfig.Commands != nil {
-		// get command
-		overwriteCommand, ok := rawConfig.CommandsConfig.Commands[command]
-		if ok && !overwriteCommand.DisableReplace {
-			return NewOverwriteCmd(f, globalFlags, overwriteCommand, rawConfig.Resolver.ResolvedVariables())
-		}
-	}
-
-	return fallback(f, globalFlags)
 }
 
 func disableKlog() {

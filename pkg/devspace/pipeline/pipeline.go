@@ -175,8 +175,8 @@ func (p *pipeline) Dependencies() map[string]types.Pipeline {
 	return children
 }
 
-func (p *pipeline) Run(ctx devspacecontext.Context) error {
-	return p.executeJob(ctx, p.main, ctx.Environ())
+func (p *pipeline) Run(ctx devspacecontext.Context, args []string) error {
+	return p.executeJob(ctx, p.main, args, ctx.Environ())
 }
 
 func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencies []types2.Dependency, options types.DependencyOptions) error {
@@ -327,7 +327,7 @@ func (p *pipeline) startNewDependency(ctx devspacecontext.Context, dependency ty
 	if streamLogger, ok := ctx.Log().(*log.StreamLogger); !ok || streamLogger.GetFormat() != log.RawFormat {
 		ctx = ctx.WithLogger(ctx.Log().WithPrefix(dependency.Name() + " "))
 	}
-	return pip.Run(ctx.AsDependency(dependency))
+	return pip.Run(ctx.AsDependency(dependency), nil)
 }
 
 func (p *pipeline) StartNewPipelines(ctx devspacecontext.Context, pipelines []*latest.Pipeline, options types.PipelineOptions) error {
@@ -376,7 +376,7 @@ func (p *pipeline) startNewPipeline(ctx devspacecontext.Context, configPipeline 
 	}
 	defer p.removeJob(j, id)
 
-	err = p.executeJob(ctx, j, options.Environ)
+	err = p.executeJob(ctx, j, nil, options.Environ)
 	if err != nil {
 		return err
 	}
@@ -414,13 +414,13 @@ func (p *pipeline) removeJob(j *Job, id string) {
 	}
 }
 
-func (p *pipeline) executeJob(ctx devspacecontext.Context, j *Job, environ expand.Environ) error {
+func (p *pipeline) executeJob(ctx devspacecontext.Context, j *Job, args []string, environ expand.Environ) error {
 	// don't start jobs on a cancelled context
 	if ctx.IsDone() {
 		return nil
 	}
 
-	err := j.Run(ctx, environ)
+	err := j.Run(ctx, args, environ)
 	if err != nil {
 		return err
 	}

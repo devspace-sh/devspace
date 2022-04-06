@@ -34,40 +34,40 @@ type PredefinedVariableFunction func(ctx context.Context, options *PredefinedVar
 
 // predefinedVars holds all predefined variables that can be used in the config
 var predefinedVars = map[string]PredefinedVariableFunction{
-	"devspace.name": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_NAME": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		name, ok := values.NameFrom(ctx)
 		if !ok {
 			return "", nil
 		}
 		return name, nil
 	},
-	"devspace.tempFolder": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_TMPDIR": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		tempFolder, ok := values.TempFolderFrom(ctx)
 		if !ok {
 			return os.TempDir(), nil
 		}
 		return tempFolder, nil
 	},
-	"devspace.version": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_VERSION": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return upgrade.GetVersion(), nil
 	},
-	"devspace.random": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_RANDOM": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return randutil.GenerateRandomString(6), nil
 	},
-	"devspace.profile": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_PROFILE": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return options.Profile, nil
 	},
-	"devspace.userHome": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_USER_HOME": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		homeDir, err := homedir.Dir()
 		if err != nil {
 			return nil, err
 		}
 		return homeDir, nil
 	},
-	"devspace.timestamp": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_TIMESTAMP": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return strconv.FormatInt(time.Now().Unix(), 10), nil
 	},
-	"devspace.git.branch": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_GIT_BRANCH": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		configPath := options.ConfigPath
 		branch, err := git.GetBranch(filepath.Dir(configPath))
 		if err != nil {
@@ -76,7 +76,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		return branch, nil
 	},
-	"devspace.git.commit": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_GIT_COMMIT": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		configPath := options.ConfigPath
 		hash, err := git.GetHash(ctx, filepath.Dir(configPath))
 		if err != nil {
@@ -85,14 +85,14 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		return hash[:8], nil
 	},
-	"devspace.context": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_CONTEXT": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		if options.KubeClient == nil {
 			return "", nil
 		}
 
 		return options.KubeClient.CurrentContext(), nil
 	},
-	"devspace.namespace": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_NAMESPACE": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		if options.KubeClient == nil {
 			return "", nil
 		}
@@ -103,15 +103,16 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 func init() {
 	// migrate old names
-	predefinedVars["DEVSPACE_VERSION"] = predefinedVars["devspace.version"]
-	predefinedVars["DEVSPACE_RANDOM"] = predefinedVars["devspace.random"]
-	predefinedVars["DEVSPACE_PROFILE"] = predefinedVars["devspace.profile"]
-	predefinedVars["DEVSPACE_USER_HOME"] = predefinedVars["devspace.userHome"]
-	predefinedVars["DEVSPACE_TIMESTAMP"] = predefinedVars["devspace.timestamp"]
-	predefinedVars["DEVSPACE_GIT_BRANCH"] = predefinedVars["devspace.git.branch"]
-	predefinedVars["DEVSPACE_GIT_COMMIT"] = predefinedVars["devspace.git.commit"]
-	predefinedVars["DEVSPACE_CONTEXT"] = predefinedVars["devspace.context"]
-	predefinedVars["DEVSPACE_NAMESPACE"] = predefinedVars["devspace.namespace"]
+	predefinedVars["devspace.name"] = predefinedVars["DEVSPACE_NAME"]
+	predefinedVars["devspace.version"] = predefinedVars["DEVSPACE_VERSION"]
+	predefinedVars["devspace.random"] = predefinedVars["DEVSPACE_RANDOM"]
+	predefinedVars["devspace.profile"] = predefinedVars["DEVSPACE_PROFILE"]
+	predefinedVars["devspace.userHome"] = predefinedVars["DEVSPACE_USER_HOME"]
+	predefinedVars["devspace.timestamp"] = predefinedVars["DEVSPACE_TIMESTAMP"]
+	predefinedVars["devspace.git.branch"] = predefinedVars["DEVSPACE_GIT_BRANCH"]
+	predefinedVars["devspace.git.commit"] = predefinedVars["DEVSPACE_GIT_COMMIT"]
+	predefinedVars["devspace.context"] = predefinedVars["DEVSPACE_CONTEXT"]
+	predefinedVars["devspace.namespace"] = predefinedVars["DEVSPACE_NAMESPACE"]
 }
 
 func IsPredefinedVariable(name string) bool {

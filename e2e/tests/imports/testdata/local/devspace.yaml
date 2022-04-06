@@ -20,7 +20,7 @@ pipelines:
   deploy:
     run: |-
       echo ${devspace.name} > name.txt
-      echo ${devspace.tempFolder} > temp.txt
+      echo ${DEVSPACE_TMPDIR} > temp.txt
       
       run_dependency_pipelines --all > dependency.txt
       

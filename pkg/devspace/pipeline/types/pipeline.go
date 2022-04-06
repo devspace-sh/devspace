@@ -36,7 +36,7 @@ type PipelineOptions struct {
 
 type Pipeline interface {
 	// Run runs the main pipeline
-	Run(ctx devspacecontext.Context) error
+	Run(ctx devspacecontext.Context, args []string) error
 
 	// DevPodManager retrieves the used dev pod manager
 	DevPodManager() devpod.Manager

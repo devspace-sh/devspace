@@ -17,6 +17,9 @@ import (
 // BasicCommands are extra commands DevSpace provides within the shell or are common
 // commands that might not be available locally for example in windows systems.
 var BasicCommands = map[string]func(ctx context.Context, args []string) error{
+	"get_flag": func(ctx context.Context, args []string) error {
+		return enginecommands.GetFlag(ctx, args)
+	},
 	"is_os": func(ctx context.Context, args []string) error {
 		return enginecommands.IsOS(args)
 	},
@@ -28,9 +31,6 @@ var BasicCommands = map[string]func(ctx context.Context, args []string) error{
 	},
 	"is_true": func(ctx context.Context, args []string) error {
 		return enginecommands.IsTrue(args)
-	},
-	"is_command": func(ctx context.Context, args []string) error {
-		return enginecommands.IsCommand(ctx, args)
 	},
 	"sleep": func(ctx context.Context, args []string) error {
 		return HandleError(ctx, "sleep", enginecommands.Sleep(ctx, args))

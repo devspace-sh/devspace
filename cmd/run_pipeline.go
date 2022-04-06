@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
-	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -27,8 +26,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
-	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -62,8 +59,6 @@ type RunPipelineCmd struct {
 	ForceDeploy bool
 	SkipDeploy  bool
 
-	Terminal bool
-
 	ShowUI bool
 
 	// used for testing to allow interruption
@@ -91,7 +86,6 @@ func (cmd *RunPipelineCmd) AddFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&cmd.SkipPush, "skip-push", cmd.SkipPush, "Skips image pushing, useful for minikube deployment")
 	command.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", cmd.SkipPushLocalKubernetes, "Skips image pushing, if a local kubernetes environment is detected")
 
-	command.Flags().BoolVar(&cmd.Terminal, "terminal", cmd.Terminal, "Open a terminal instead of showing logs")
 	command.Flags().BoolVar(&cmd.ShowUI, "show-ui", cmd.ShowUI, "Shows the ui server")
 }
 
@@ -110,14 +104,8 @@ func NewRunPipelineCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra
 #######################################################
 Execute a pipeline
 #######################################################`,
-		Args: cobra.MaximumNArgs(1),
+		Args: cobra.ArbitraryArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			if len(args) == 0 && cmd.Pipeline == "" {
-				return fmt.Errorf("please specify a pipeline through --pipeline or argument")
-			} else if len(args) == 1 && cmd.Pipeline == "" {
-				cmd.Pipeline = args[0]
-			}
-
 			return cmd.Run(cobraCmd, args, f, "run-pipeline", "runPipelineCommand")
 		},
 	}
@@ -132,6 +120,20 @@ func (cmd *RunPipelineCmd) RunDefault(f factory.Factory) error {
 
 // Run executes the command logic
 func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory.Factory, commandName, hookName string) error {
+	dashArgs := []string{}
+	if cobraCmd.ArgsLenAtDash() > -1 {
+		dashArgs = args[cobraCmd.ArgsLenAtDash():]
+		args = args[:cobraCmd.ArgsLenAtDash()]
+	}
+
+	if len(args) > 1 {
+		return fmt.Errorf("please specify only 1 pipeline to execute. E.g. devspace run-pipeline my-pipe -- other args")
+	} else if len(args) == 0 && cmd.Pipeline == "" {
+		return fmt.Errorf("please specify a pipeline through --pipeline or argument")
+	} else if len(args) == 1 && cmd.Pipeline == "" {
+		cmd.Pipeline = args[0]
+	}
+
 	if cmd.log == nil {
 		cmd.log = f.GetLog()
 	}
@@ -157,7 +159,7 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 	}
 
 	// set command in context
-	cmd.Ctx = values.WithCommand(cmd.Ctx, commandName)
+	cmd.Ctx = values.WithFlags(cmd.Ctx, cobraCmd.Flags())
 	options := cmd.BuildOptions(cmd.ToConfigOptions())
 	ctx, err := initialize(cmd.Ctx, f, false, options, cmd.log)
 	if err != nil {
@@ -165,7 +167,7 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 	}
 
 	return runWithHooks(ctx, hookName, func() error {
-		return runPipeline(ctx, options)
+		return runPipeline(ctx, dashArgs, options)
 	})
 }
 
@@ -176,7 +178,6 @@ type CommandOptions struct {
 	ConfigOptions *loader.ConfigOptions
 
 	Pipeline string
-	Terminal bool
 	ShowUI   bool
 	UIPort   int
 }
@@ -245,12 +246,6 @@ func initialize(ctx context.Context, f factory.Factory, allowFailingKubeClient b
 	// add root name to context
 	ctx = values.WithRootName(ctx, configInterface.Config().Name)
 
-	// adjust config
-	err = adjustConfig(configInterface, options, logger)
-	if err != nil {
-		return nil, err
-	}
-
 	// create devspace context
 	devCtx := devspacecontext.NewContext(ctx, configInterface.Variables(), logger).
 		WithConfig(configInterface).
@@ -289,50 +284,6 @@ func updateLastKubeContext(ctx devspacecontext.Context) error {
 		err := ctx.Config().LocalCache().Save()
 		if err != nil {
 			return errors.Wrap(err, "save generated")
-		}
-	}
-
-	return nil
-}
-
-func adjustConfig(conf config2.Config, options *CommandOptions, log log.Logger) error {
-	// check if terminal is enabled
-	c := conf.Config()
-	if options.Terminal {
-		if len(c.Dev) == 0 {
-			return errors.New("No dev config available in DevSpace config")
-		}
-
-		devNames := make([]string, 0, len(c.Dev))
-		for k := range c.Dev {
-			devNames = append(devNames, k)
-		}
-
-		// if only one image exists, use it, otherwise show image picker
-		devName := ""
-		if len(devNames) == 1 {
-			devName = devNames[0]
-		} else {
-			var err error
-			devName, err = log.Question(&survey.QuestionOptions{
-				Question: "Where do you want to open a terminal to?",
-				Options:  devNames,
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		// adjust dev config
-		for k := range c.Dev {
-			if k == devName {
-				if c.Dev[devName].Terminal == nil {
-					c.Dev[devName].Terminal = &latest.Terminal{}
-				}
-				c.Dev[devName].Terminal.Enabled = ptr.Bool(true)
-			} else {
-				c.Dev[devName].Terminal = nil
-			}
 		}
 	}
 
@@ -405,13 +356,12 @@ func (cmd *RunPipelineCmd) BuildOptions(configOptions *loader.ConfigOptions) *Co
 			},
 		},
 		ConfigOptions: configOptions,
-		Terminal:      cmd.Terminal,
 		Pipeline:      cmd.Pipeline,
 		ShowUI:        cmd.ShowUI,
 	}
 }
 
-func runPipeline(ctx devspacecontext.Context, options *CommandOptions) error {
+func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOptions) error {
 	var configPipeline *latest.Pipeline
 	if ctx.Config().Config().Pipelines != nil && ctx.Config().Config().Pipelines[options.Pipeline] != nil {
 		configPipeline = ctx.Config().Config().Pipelines[options.Pipeline]
@@ -459,7 +409,7 @@ func runPipeline(ctx devspacecontext.Context, options *CommandOptions) error {
 	defer stderrWriter.Close()
 
 	// start pipeline
-	err = pipe.Run(ctx.WithLogger(log.NewStreamLoggerWithFormat(stdoutWriter, stderrWriter, ctx.Log().GetLevel(), log.TimeFormat)))
+	err = pipe.Run(ctx.WithLogger(log.NewStreamLoggerWithFormat(stdoutWriter, stderrWriter, ctx.Log().GetLevel(), log.TimeFormat)), args)
 	if err != nil {
 		return err
 	}

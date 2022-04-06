@@ -1,6 +1,9 @@
 package values
 
-import "context"
+import (
+	"context"
+	flag "github.com/spf13/pflag"
+)
 
 // The key type is unexported to prevent collisions
 type key int
@@ -13,7 +16,19 @@ const (
 	dependencyKey
 	rootNameKey
 	devContextKey
+	flagsKey
 )
+
+// WithFlags creates a new context with the dev context
+func WithFlags(parent context.Context, flagSet *flag.FlagSet) context.Context {
+	return WithValue(parent, flagsKey, flagSet)
+}
+
+// FlagsFrom returns a context used to start and stop dev configurations
+func FlagsFrom(ctx context.Context) (*flag.FlagSet, bool) {
+	flags, ok := ctx.Value(flagsKey).(*flag.FlagSet)
+	return flags, ok
+}
 
 // WithDevContext creates a new context with the dev context
 func WithDevContext(parent context.Context, devCtx context.Context) context.Context {
@@ -61,17 +76,6 @@ func WithTempFolder(parent context.Context, name string) context.Context {
 // TempFolderFrom returns the name of the temporary devspace folder
 func TempFolderFrom(ctx context.Context) (string, bool) {
 	user, ok := ctx.Value(tempFolderKey).(string)
-	return user, ok
-}
-
-// WithCommand returns a copy of parent in which the devspace command is set
-func WithCommand(parent context.Context, name string) context.Context {
-	return WithValue(parent, commandKey, name)
-}
-
-// CommandFrom returns the name of the devspace command
-func CommandFrom(ctx context.Context) (string, bool) {
-	user, ok := ctx.Value(commandKey).(string)
 	return user, ok
 }
 
