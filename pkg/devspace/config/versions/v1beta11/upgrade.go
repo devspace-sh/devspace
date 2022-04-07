@@ -749,6 +749,7 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 				WorkDir:        c.Dev.Terminal.WorkDir,
 				Enabled:        ptr.Bool(!c.Dev.Terminal.Disabled),
 				DisableReplace: true,
+				DisableScreen:  true,
 			}
 		}
 	}
