@@ -347,10 +347,14 @@ func NewSpecificRunCommand(f factory.Factory, globalFlags *flags.GlobalFlags, co
 		Short: description,
 		Long:  longDescription,
 		Args:  cobra.ArbitraryArgs,
-		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+		RunE: func(cobraCmd *cobra.Command, originalArgs []string) error {
 			args, err := ParseArgs(cobraCmd, cmd.GlobalFlags, f.GetLog())
 			if err != nil {
 				return err
+			}
+
+			if cmd.ConfigPath != "" {
+				return cobraCmd.Parent().RunE(cobraCmd, originalArgs)
 			}
 
 			plugin.SetPluginCommand(cobraCmd, args)
