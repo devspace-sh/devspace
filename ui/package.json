@@ -48,7 +48,7 @@
     "react-test-renderer": "^16.8.6",
     "react-timeago": "^4.4.0",
     "resolve": "1.12.0",
-    "source-map-loader": "^0.2.1",
+    "source-map-loader": "^1.0.0",
     "style-loader": "0.23.1",
     "sw-precache-webpack-plugin": "0.11.5",
     "ts-jest": "^24.1.0",
