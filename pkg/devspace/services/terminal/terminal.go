@@ -191,6 +191,7 @@ if command -v screen; then
   if [ ! -f ~/.screenrc ]; then
     echo "termcapinfo xterm* ti@:te@" > ~/.screenrc
     echo "logfile /tmp/terminal-log.0" >> ~/.screenrc
+    echo "escape ^tt" >> ~/.screenrc
   fi
 else
   echo "Couldn't find screen, need to fallback."
