@@ -5,18 +5,16 @@ import PartialDockerfile from "./images/dockerfile.mdx"
 import PartialContext from "./images/context.mdx"
 import PartialEntrypoint from "./images/entrypoint.mdx"
 import PartialCmd from "./images/cmd.mdx"
-import PartialCreatePullSecret from "./images/createPullSecret.mdx"
-import PartialInjectRestartHelper from "./images/injectRestartHelper.mdx"
-import PartialRestartHelperPath from "./images/restartHelperPath.mdx"
 import PartialAppendDockerfileInstructions from "./images/appendDockerfileInstructions.mdx"
-import PartialRebuildStrategy from "./images/rebuildStrategy.mdx"
+import PartialBuildArgs from "./images/buildArgs.mdx"
 import PartialTarget from "./images/target.mdx"
 import PartialNetwork from "./images/network.mdx"
-import PartialBuildArgs from "./images/buildArgs.mdx"
 import PartialSkipPush from "./images/skipPush.mdx"
+import PartialCreatePullSecret from "./images/createPullSecret.mdx"
+import PartialRebuildStrategy from "./images/rebuildStrategy.mdx"
+import PartialBuildKit from "./images/buildKit.mdx"
 import PartialDocker from "./images/docker.mdx"
 import PartialKaniko from "./images/kaniko.mdx"
-import PartialBuildKit from "./images/buildKit.mdx"
 import PartialCustom from "./images/custom.mdx"
 
 <PartialImage />
@@ -37,19 +35,10 @@ import PartialCustom from "./images/custom.mdx"
 <PartialCmd />
 
 
-<PartialCreatePullSecret />
-
-
-<PartialInjectRestartHelper />
-
-
-<PartialRestartHelperPath />
-
-
 <PartialAppendDockerfileInstructions />
 
 
-<PartialRebuildStrategy />
+<PartialBuildArgs />
 
 
 <PartialTarget />
@@ -58,49 +47,20 @@ import PartialCustom from "./images/custom.mdx"
 <PartialNetwork />
 
 
-<PartialBuildArgs />
-
-
 <PartialSkipPush />
 
 
-
-<details className="config-field" data-expandable="true">
-<summary>
-
-### `docker` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
-
-Docker if docker is specified, DevSpace will build the image using the local docker daemon
-
-</summary>
-
-<PartialDocker />
+<PartialCreatePullSecret />
 
 
-</details>
+<PartialRebuildStrategy />
 
 
 
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `kaniko` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
-
-Kaniko if kaniko is specified, DevSpace will build the image in-cluster with kaniko
-
-</summary>
-
-<PartialKaniko />
-
-
-</details>
-
-
-
-<details className="config-field" data-expandable="true">
-<summary>
-
-### `buildKit` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `buildKit` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 BuildKit if buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit
 
@@ -116,7 +76,39 @@ BuildKit if buildKit is specified, DevSpace will build the image either in-clust
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `custom` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `docker` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
+
+Docker if docker is specified, DevSpace will build the image using the local docker daemon
+
+</summary>
+
+<PartialDocker />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `kaniko` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
+
+Kaniko if kaniko is specified, DevSpace will build the image in-cluster with kaniko
+
+</summary>
+
+<PartialKaniko />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `custom` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Custom if custom is specified, DevSpace will build the image with the help of
 a custom script.

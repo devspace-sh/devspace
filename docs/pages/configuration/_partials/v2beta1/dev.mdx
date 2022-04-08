@@ -2,8 +2,6 @@
 import PartialImageSelector from "./dev/imageSelector.mdx"
 import PartialLabelSelector from "./dev/labelSelector.mdx"
 import PartialNamespace from "./dev/namespace.mdx"
-import PartialPorts from "./dev/ports.mdx"
-import PartialOpen from "./dev/open.mdx"
 import PartialContainer from "./dev/container.mdx"
 import PartialDevImage from "./dev/devImage.mdx"
 import PartialArch from "./dev/arch.mdx"
@@ -21,6 +19,8 @@ import PartialPersistPaths from "./dev/persistPaths.mdx"
 import PartialSync from "./dev/sync.mdx"
 import PartialSsh from "./dev/ssh.mdx"
 import PartialProxyCommands from "./dev/proxyCommands.mdx"
+import PartialPorts from "./dev/ports.mdx"
+import PartialOpen from "./dev/open.mdx"
 import PartialContainers from "./dev/containers.mdx"
 import PartialPatches from "./dev/patches.mdx"
 import PartialPersistenceOptions from "./dev/persistenceOptions.mdx"
@@ -32,39 +32,6 @@ import PartialPersistenceOptions from "./dev/persistenceOptions.mdx"
 
 
 <PartialNamespace />
-
-
-
-<details className="config-field" data-expandable="true">
-<summary>
-
-### `ports` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
-
-Ports defines port mappings from the remote pod that should be forwarded to your local
-computer
-
-</summary>
-
-<PartialPorts />
-
-
-</details>
-
-
-
-<details className="config-field" data-expandable="true">
-<summary>
-
-### `open` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
-
-Open defines urls that should be opened as soon as they are reachable
-
-</summary>
-
-<PartialOpen />
-
-
-</details>
 
 
 <PartialContainer />
@@ -80,7 +47,7 @@ Open defines urls that should be opened as soon as they are reachable
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `restartHelper` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `restartHelper` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
 the container and restarting it and is injected via an annotation in the replaced pod.
@@ -97,7 +64,7 @@ the container and restarting it and is injected via an annotation in the replace
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `reversePorts` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+### `reversePorts` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 ReversePorts are port mappings to make local ports available inside the container
 
@@ -122,7 +89,7 @@ ReversePorts are port mappings to make local ports available inside the containe
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `resources` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `resources` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Resources can be used to override the resource definitions of the container
 
@@ -138,7 +105,7 @@ Resources can be used to override the resource definitions of the container
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `env` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+### `env` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Env can be used to add environment variables to the container. DevSpace will
 not replace existing environment variables if an environment variable is defined here.
@@ -155,7 +122,7 @@ not replace existing environment variables if an environment variable is defined
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `terminal` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `terminal` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Terminal allows you to tell DevSpace to open a terminal with screen support to this container
 
@@ -171,7 +138,7 @@ Terminal allows you to tell DevSpace to open a terminal with screen support to t
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `logs` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `logs` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Logs allows you to tell DevSpace to stream logs from this container to the console
 
@@ -187,7 +154,7 @@ Logs allows you to tell DevSpace to stream logs from this container to the conso
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `attach` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `attach` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Attach allows you to tell DevSpace to attach to this container
 
@@ -203,7 +170,7 @@ Attach allows you to tell DevSpace to attach to this container
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `persistPaths` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+### `persistPaths` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 PersistPaths allows you to persist certain paths within this container with a persistent volume claim
 
@@ -219,7 +186,7 @@ PersistPaths allows you to persist certain paths within this container with a pe
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `sync` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+### `sync` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Sync allows you to sync certain local paths with paths inside the container
 
@@ -235,7 +202,7 @@ Sync allows you to sync certain local paths with paths inside the container
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `ssh` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `ssh` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 SSH allows you to create an SSH tunnel to this container
 
@@ -251,7 +218,7 @@ SSH allows you to create an SSH tunnel to this container
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `proxyCommands` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+### `proxyCommands` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 ProxyCommands allow you to proxy certain local commands to the container
 
@@ -267,7 +234,40 @@ ProxyCommands allow you to proxy certain local commands to the container
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `containers` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `ports` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
+
+Ports defines port mappings from the remote pod that should be forwarded to your local
+computer
+
+</summary>
+
+<PartialPorts />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `open` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
+
+Open defines urls that should be opened as soon as they are reachable
+
+</summary>
+
+<PartialOpen />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `containers` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 
 
@@ -283,7 +283,7 @@ ProxyCommands allow you to proxy certain local commands to the container
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `patches` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+### `patches` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Patches are additional changes to the pod spec that should be applied
 
@@ -299,7 +299,7 @@ Patches are additional changes to the pod spec that should be applied
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `persistenceOptions` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `persistenceOptions` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 PersistenceOptions are additional options for persisting paths within this pod
 

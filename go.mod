@@ -15,6 +15,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/evanphx/json-patch v4.12.0+incompatible
 	github.com/evanphx/json-patch/v5 v5.1.0
+	github.com/gertd/go-pluralize v0.2.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/gliderlabs/ssh v0.3.3
 	github.com/google/uuid v1.1.2

@@ -15,17 +15,25 @@ body .markdown .config-field {
         border-bottom: 1px solid #eee;
     }
 
-    &[data-expandable="false"] > summary {
-        pointer-events: none;
-
-        &::before {
-            display: none;
-        }
-    }
-
-    &[open] {
+    &[open],
+    &[data-expandable="false"] {
         &[data-expandable="true"] {
             border-color: #eee;
+        }
+
+        &[data-expandable="false"] {
+            > summary {
+                cursor: text;
+                padding-bottom: 0.2em;
+        
+                &::before {
+                    display: none;
+                }
+
+                ~ * {
+                    display: none !important;
+                }
+            }
         }
 
         > summary{
@@ -37,6 +45,7 @@ body .markdown .config-field {
                 max-height: none;
                 white-space: inherit;
                 opacity: 1;
+                overflow: visible;
             }
         }
     }
@@ -83,27 +92,103 @@ body .markdown .config-field {
         h5,
         h6 {
             display: block;
+
+            code {
+                font-weight: 600;
+                background: none;
+                border: none;
+                letter-spacing: 0.03em;
+                padding: 0;
+            }
         }
 
-        code {
-            font-weight: 600;
-            background: none;
-            border: none;
-            letter-spacing: 0.03em;
-            padding: 0;
-        }
-
+        .config-field-required,
         .config-field-type,
-        .config-field-required {
+        .config-field-enum,
+        .config-field-default {
             display: inline-block;
             margin-left: 0.5em;
             font-size: 0.7em;
             line-height: 1em;
         }
 
-        .config-field-type {
-            color: rgb(147, 147, 147);
+        .config-field-type,
+        .config-field-enum,
+        .config-field-default {
             font-family: var(--ifm-font-family-monospace);
+        }
+
+        .config-field-default {
+            color: rgb(19, 19, 189);
+            
+            &:empty {
+                display: none;
+            }
+
+            &::before {
+                content: "default: ";
+                display: inline-block;
+                margin-right: 0.15em;
+            }
+        }
+
+        .config-field-type,
+        .config-field-enum {
+            color: rgb(147, 147, 147);
+        }
+        
+        .config-field-enum {
+            padding-left: 5em;
+            position: relative;
+
+            &:empty {
+                display: none;
+            }
+
+            &::before {
+                content: "values: ";
+                position: absolute;
+                top: -0.8em;
+                transform: translateX(-112%);
+            }
+            
+            > span {
+                display: table-caption;
+                position: absolute;
+                top: -1.28em;
+                border: 1px solid #eee;
+                background: #fff;
+                z-index: 1;
+                padding: 0.3em 1.4em 0.3em 0.5em;
+                line-height: 1.2em;
+                max-height: 1.8em;
+                overflow: hidden;
+                transition: max-height 0.4s;
+                border-radius: 3px;
+                text-align: left;
+
+                &:hover {
+                    max-height: 1000px;
+
+                    &::after {
+                        transform: rotate(-90deg);
+                    }
+                }
+
+                &::after {
+                    position: absolute;
+                    right: 0.1em;
+                    left: auto;
+                    top: 0.45em;
+                    content: '';
+                    border-width: calc(var(--docusaurus-details-summary-arrow-size) / 1.4);
+                    border-style: solid;
+                    border-color: transparent transparent transparent var(--docusaurus-details-decoration-color);
+                    transform: rotate(90deg);
+                    transition: var(--docusaurus-details-transition);
+                    transform-origin: calc(var(--docusaurus-details-summary-arrow-size) / 2.8) 50%;
+                }
+            }
         }
 
         .config-field-required {
@@ -141,6 +226,20 @@ body .markdown .config-field {
                     }
                 }
             }
+        }
+    }
+
+    .group {
+        margin-top: 1em;
+        padding-bottom: 1.2em;
+        border: 1px solid #2156f2;
+
+        .group-name {
+            padding: 0.3em 0 0.3em 1.3em;
+            font-weight: 600;
+            background: #2156f2;
+            color: #fff;
+            font-size: 0.9em;
         }
     }
 

@@ -1,20 +1,14 @@
 
-import PartialNamespace from "./deployments/namespace.mdx"
-import PartialUpdateImageTags from "./deployments/updateImageTags.mdx"
 import PartialHelm from "./deployments/helm.mdx"
 import PartialKubectl from "./deployments/kubectl.mdx"
-
-<PartialNamespace />
-
-
-<PartialUpdateImageTags />
-
+import PartialUpdateImageTags from "./deployments/updateImageTags.mdx"
+import PartialNamespace from "./deployments/namespace.mdx"
 
 
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `helm` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `helm` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Helm tells DevSpace to deploy this deployment via helm
 
@@ -30,7 +24,7 @@ Helm tells DevSpace to deploy this deployment via helm
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `kubectl` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+### `kubectl` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Kubectl tells DevSpace to deploy this deployment via kubectl or kustomize
 
@@ -40,3 +34,9 @@ Kubectl tells DevSpace to deploy this deployment via kubectl or kustomize
 
 
 </details>
+
+
+<PartialUpdateImageTags />
+
+
+<PartialNamespace />

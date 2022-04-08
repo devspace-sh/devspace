@@ -179,6 +179,9 @@ github.com/evanphx/json-patch/v5
 github.com/form3tech-oss/jwt-go
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
+# github.com/gertd/go-pluralize v0.2.0
+## explicit
+github.com/gertd/go-pluralize
 # github.com/ghodss/yaml v1.0.0
 ## explicit
 github.com/ghodss/yaml

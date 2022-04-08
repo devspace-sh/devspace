@@ -1,19 +1,25 @@
 
+import PartialValue from "./vars/value.mdx"
 import PartialQuestion from "./vars/question.mdx"
+import PartialDefault from "./vars/default.mdx"
 import PartialOptions from "./vars/options.mdx"
 import PartialPassword from "./vars/password.mdx"
 import PartialValidationPattern from "./vars/validationPattern.mdx"
 import PartialValidationMessage from "./vars/validationMessage.mdx"
-import PartialNoCache from "./vars/noCache.mdx"
-import PartialAlwaysResolve from "./vars/alwaysResolve.mdx"
-import PartialValue from "./vars/value.mdx"
-import PartialDefault from "./vars/default.mdx"
-import PartialSource from "./vars/source.mdx"
 import PartialCommand from "./vars/command.mdx"
 import PartialArgs from "./vars/args.mdx"
 import PartialCommands from "./vars/commands.mdx"
+import PartialNoCache from "./vars/noCache.mdx"
+import PartialAlwaysResolve from "./vars/alwaysResolve.mdx"
+import PartialSource from "./vars/source.mdx"
+
+<PartialValue />
+
 
 <PartialQuestion />
+
+
+<PartialDefault />
 
 
 <PartialOptions />
@@ -28,21 +34,6 @@ import PartialCommands from "./vars/commands.mdx"
 <PartialValidationMessage />
 
 
-<PartialNoCache />
-
-
-<PartialAlwaysResolve />
-
-
-<PartialValue />
-
-
-<PartialDefault />
-
-
-<PartialSource />
-
-
 <PartialCommand />
 
 
@@ -53,7 +44,7 @@ import PartialCommands from "./vars/commands.mdx"
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `commands` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+### `commands` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span>
 
 Commands are additional commands that can be used to run a different command on a different operating
 system.
@@ -64,3 +55,12 @@ system.
 
 
 </details>
+
+
+<PartialNoCache />
+
+
+<PartialAlwaysResolve />
+
+
+<PartialSource />

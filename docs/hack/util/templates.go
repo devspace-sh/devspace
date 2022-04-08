@@ -39,7 +39,7 @@ const TemplateConfigField = `
 <details className="config-field" data-expandable="%t"%s>
 <summary>
 
-%s` + "`%s`" + ` <span class="config-field-required" data-required="%t">required</span> <span class="config-field-type">%s</span> <span class="config-field-default">%s</span>
+%s` + "`%s`" + ` <span class="config-field-required" data-required="%t">required</span> <span class="config-field-type">%s</span> <span class="config-field-default">%s</span> <span class="config-field-enum">%s</span>
 
 %s
 
