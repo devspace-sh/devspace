@@ -1,8 +1,12 @@
 package versions
 
-import "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/dockerfile"
+	"github.com/pkg/errors"
+)
 
-func adjustConfig(config *latest.Config) {
+func adjustConfig(config *latest.Config) error {
 	for name, v := range config.Vars {
 		v.Name = name
 	}
@@ -28,6 +32,18 @@ func adjustConfig(config *latest.Config) {
 		newObjs := map[string]*latest.Image{}
 		for k, v := range config.Images {
 			if v != nil {
+				image, tag, err := dockerfile.GetStrippedDockerImageName(v.Image)
+				if err != nil {
+					return errors.Errorf("error parsing images.%s.image: '%s': %v", k, v.Image, err)
+				}
+				if tag != "" {
+					v.Image = image
+					oldTags := v.Tags
+					v.Tags = []string{}
+					v.Tags = append(v.Tags, tag)
+					v.Tags = append(v.Tags, oldTags...)
+				}
+
 				newObjs[k] = v
 			}
 		}
@@ -52,4 +68,5 @@ func adjustConfig(config *latest.Config) {
 		}
 		config.Hooks = newObjs
 	}
+	return nil
 }

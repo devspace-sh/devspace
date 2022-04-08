@@ -46,6 +46,11 @@ func Validate(config *latest.Config) error {
 		return err
 	}
 
+	err = validateVars(config.Vars)
+	if err != nil {
+		return err
+	}
+
 	err = validatePipelines(config)
 	if err != nil {
 		return err

@@ -163,7 +163,10 @@ func Parse(data map[string]interface{}, log log.Logger) (*latest.Config, error) 
 	latestConfigConverted.Version = latest.Version
 
 	// Filter out empty images, deployments etc.
-	adjustConfig(latestConfigConverted)
+	err = adjustConfig(latestConfigConverted)
+	if err != nil {
+		return nil, err
+	}
 
 	// validate config
 	err = Validate(latestConfigConverted)
