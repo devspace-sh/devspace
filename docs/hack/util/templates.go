@@ -35,14 +35,13 @@ const TemplateFlag = AutoGenTagBegin + `
 ### ` + "`--%s%s`" + `
 %s
 ` + AutoGenTagEnd + "\n\n"
-const TemplateConfigFieldRequired = `<span class="config-field-required">required</span>`
-const TemplateConfigFieldDefault = `<span class="config-field-default">Default: %s</span>`
-const TemplateConfigFieldType = `<span class="config-field-type">%s</span>`
 const TemplateConfigField = `
-<details>
+<details className="config-field" data-expandable="%t"%s>
 <summary>
 
-` + "`%s`" + ` %s %s %s
+%s` + "`%s`" + ` <span class="config-field-required" data-required="%t">required</span> <span class="config-field-type">%s</span> <span class="config-field-default">%s</span>
+
+%s
 
 </summary>
 

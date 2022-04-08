@@ -1,14 +1,16 @@
 
-<details>
+<details className="config-field" data-expandable="false" open>
 <summary>
 
-`injectRestartHelper`  <span class="config-field-type">boolean</span> 
-
-</summary>
+### `injectRestartHelper` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">boolean</span> <span class="config-field-default"></span>
 
 InjectRestartHelper will inject a small restart script into the container and wraps the entrypoint of that
 container, so that devspace is able to restart the complete container during sync.
 Please make sure you either have an Entrypoint defined in the devspace config or in the
 dockerfile for this image, otherwise devspace will fail.
+
+</summary>
+
+
 
 </details>

@@ -31,25 +31,73 @@ import PartialContainer from "./hooks/container.mdx"
 <PartialOs />
 
 
-<details><summary><h3><code>upload</code></h3></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `upload` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+If Upload is specified, DevSpace will upload certain local files or folders into a
+remote container.
+
+</summary>
+
 <PartialUpload />
 
+
 </details>
 
-<details><summary><h3><code>download</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `download` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Same as Upload, but with this option DevSpace will download files or folders from
+a remote container.
+
+</summary>
+
 <PartialDownload />
 
+
 </details>
 
-<details><summary><h3><code>logs</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `logs` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+If logs is defined will print the logs of the target container. This is useful for containers
+that should finish like init containers or job pods. Otherwise this hook will never terminate.
+
+</summary>
+
 <PartialLogs />
 
+
 </details>
 
-<details><summary><h3><code>wait</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `wait` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+If wait is defined the hook will wait until the matched pod or container is running or is terminated
+with a certain exit code.
+
+</summary>
+
 <PartialWait />
 
+
 </details>
+
 
 <PartialBackground />
 
@@ -57,7 +105,18 @@ import PartialContainer from "./hooks/container.mdx"
 <PartialSilent />
 
 
-<details><summary><h3><code>container</code></h3></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `container` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Container specifies where the hook should be run. If this is omitted DevSpace expects a
+local command hook.
+
+</summary>
+
 <PartialContainer />
+
 
 </details>

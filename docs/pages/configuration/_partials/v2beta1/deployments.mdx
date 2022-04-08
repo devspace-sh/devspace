@@ -1,12 +1,8 @@
 
-import PartialName from "./deployments/name.mdx"
 import PartialNamespace from "./deployments/namespace.mdx"
 import PartialUpdateImageTags from "./deployments/updateImageTags.mdx"
 import PartialHelm from "./deployments/helm.mdx"
 import PartialKubectl from "./deployments/kubectl.mdx"
-
-<PartialName />
-
 
 <PartialNamespace />
 
@@ -14,12 +10,33 @@ import PartialKubectl from "./deployments/kubectl.mdx"
 <PartialUpdateImageTags />
 
 
-<details><summary><h3><code>helm</code></h3></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `helm` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Helm tells DevSpace to deploy this deployment via helm
+
+</summary>
+
 <PartialHelm />
+
 
 </details>
 
-<details><summary><h3><code>kubectl</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `kubectl` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Kubectl tells DevSpace to deploy this deployment via kubectl or kustomize
+
+</summary>
+
 <PartialKubectl />
+
 
 </details>

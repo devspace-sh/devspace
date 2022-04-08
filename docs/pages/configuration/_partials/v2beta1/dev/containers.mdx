@@ -26,15 +26,38 @@ import PartialProxyCommands from "./containers/proxyCommands.mdx"
 <PartialArch />
 
 
-<details><summary><h4><code>restartHelper</code></h4></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `restartHelper` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
+the container and restarting it and is injected via an annotation in the replaced pod.
+
+</summary>
+
 <PartialRestartHelper />
 
+
 </details>
 
-<details><summary><h4><code>reversePorts</code></h4></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `reversePorts` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+ReversePorts are port mappings to make local ports available inside the container
+
+</summary>
+
 <PartialReversePorts />
 
+
 </details>
+
 
 <PartialCommand />
 
@@ -45,47 +68,146 @@ import PartialProxyCommands from "./containers/proxyCommands.mdx"
 <PartialWorkingDir />
 
 
-<details><summary><h4><code>resources</code></h4></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `resources` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Resources can be used to override the resource definitions of the container
+
+</summary>
+
 <PartialResources />
 
+
 </details>
 
-<details><summary><h4><code>env</code></h4></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `env` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Env can be used to add environment variables to the container. DevSpace will
+not replace existing environment variables if an environment variable is defined here.
+
+</summary>
+
 <PartialEnv />
 
+
 </details>
 
-<details><summary><h4><code>terminal</code></h4></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `terminal` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Terminal allows you to tell DevSpace to open a terminal with screen support to this container
+
+</summary>
+
 <PartialTerminal />
 
+
 </details>
 
-<details><summary><h4><code>logs</code></h4></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `logs` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Logs allows you to tell DevSpace to stream logs from this container to the console
+
+</summary>
+
 <PartialLogs />
 
+
 </details>
 
-<details><summary><h4><code>attach</code></h4></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `attach` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Attach allows you to tell DevSpace to attach to this container
+
+</summary>
+
 <PartialAttach />
 
+
 </details>
 
-<details><summary><h4><code>persistPaths</code></h4></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `persistPaths` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+PersistPaths allows you to persist certain paths within this container with a persistent volume claim
+
+</summary>
+
 <PartialPersistPaths />
 
+
 </details>
 
-<details><summary><h4><code>sync</code></h4></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `sync` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Sync allows you to sync certain local paths with paths inside the container
+
+</summary>
+
 <PartialSync />
 
+
 </details>
 
-<details><summary><h4><code>ssh</code></h4></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `ssh` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+SSH allows you to create an SSH tunnel to this container
+
+</summary>
+
 <PartialSsh />
 
+
 </details>
 
-<details><summary><h4><code>proxyCommands</code></h4></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `proxyCommands` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+ProxyCommands allow you to proxy certain local commands to the container
+
+</summary>
+
 <PartialProxyCommands />
+
 
 </details>

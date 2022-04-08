@@ -1,6 +1,24 @@
 body .markdown {
   position: relative;
   --ifm-h2-vertical-rhythm-top: 1.8;
+  --ifm-list-margin: 0.25em;
+}
+
+.markdown > pre,
+.markdown > ul,
+.markdown > ol,
+.markdown > p {
+  margin-bottom: 0;
+
+  + * {
+    &:is(ul, ol) {
+      margin-top: var(--ifm-list-margin);
+    }
+
+    &:not(ul, ol) {
+      margin-top: var(--ifm-leading);
+    }
+  }
 }
 
 .markdown h1:first-child {
@@ -9,11 +27,6 @@ body .markdown {
 
 .markdown summary {
   font-weight: 500;
-}
-
-.markdown p + ul {
-  margin-top: -1.2em !important;
-  margin-bottom: 1.4em !important;
 }
 
 .markdown ul > li {
@@ -187,12 +200,6 @@ h3.active-section::before {
   background: #fff;
   border-radius: 0;
   box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 5px 0px;
-}
-
-.markdown p + ul,
-.markdown p + ol {
-  margin-top: calc(-0.5 * var(--ifm-paragraph-margin-bottom));
-  margin-bottom: calc(0.8 * var(--ifm-paragraph-margin-bottom));
 }
 
 .markdown .admonition {

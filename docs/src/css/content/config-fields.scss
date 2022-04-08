@@ -1,0 +1,152 @@
+body .markdown .config-field {
+    --docusaurus-details-decoration-color: #ccc;
+    
+    background: none;
+    box-shadow: none;
+    font-size: 1rem; /* must reset font-size to prevent nested fields getting smaller */
+
+    &,
+    details {
+        border: 1px solid transparent;
+    }
+
+    &:not(:last-child) {
+        margin: 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    &[data-expandable="false"] > summary {
+        pointer-events: none;
+
+        &::before {
+            display: none;
+        }
+    }
+
+    &[open] {
+        &[data-expandable="true"] {
+            border-color: #eee;
+        }
+
+        > summary{
+            &::before {
+                transform: rotate(-90deg);
+            }
+
+            p:first-of-type {
+                max-height: none;
+                white-space: inherit;
+                opacity: 1;
+            }
+        }
+    }
+
+    p,
+    summary + * {
+        display: inline-block;
+        font-size: 0.85rem;
+        color: rgb(117, 117, 117);
+        line-height: 1.2em;
+        font-weight: 400;
+    }
+
+    summary {
+        padding-left: 0;
+        min-height: 2.4em;
+
+        &::before {
+            left: auto;
+            right: 0;
+            margin-top: 0.4em;
+            transform: rotate(90deg);
+        }
+
+        > * {
+            display: none;
+        }
+
+        p:first-of-type {
+            display: block;
+            max-width: 96%;
+            max-height: 1.6em;
+            padding-top: 0.4em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            opacity: 0.7;
+            transition: all 0.5s;
+        }
+
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            display: block;
+        }
+
+        code {
+            font-weight: 600;
+            background: none;
+            border: none;
+            letter-spacing: 0.03em;
+            padding: 0;
+        }
+
+        .config-field-type,
+        .config-field-required {
+            display: inline-block;
+            margin-left: 0.5em;
+            font-size: 0.7em;
+            line-height: 1em;
+        }
+
+        .config-field-type {
+            color: rgb(147, 147, 147);
+            font-family: var(--ifm-font-family-monospace);
+        }
+
+        .config-field-required {
+            color: rgb(187, 7, 7);
+            text-transform: uppercase;
+
+            &[data-required="false"] {
+                display: none;
+            }
+        }
+
+        .hash-link {
+            margin-top: 0.42em;
+        }
+
+        + * {
+            &,
+            & > * {
+                border-top: none;
+                margin-top: 0;
+                padding-top: 0.2em;
+            }
+            
+            /* 2nd-level config fields */
+            details {
+                margin-bottom: 0;
+                
+                &[data-expandable="true"] {
+                    &:first-of-type {
+                        margin-top: 1em;
+                    }
+
+                    &[open] {
+                        border-color: #eee;
+                    }
+                }
+            }
+        }
+    }
+
+    p:last-child,
+    details:not([data-expandable="true"]):last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+}

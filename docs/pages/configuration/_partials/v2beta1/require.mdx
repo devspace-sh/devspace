@@ -6,12 +6,33 @@ import PartialPlugins from "./require/plugins.mdx"
 <PartialDevspace />
 
 
-<details><summary><h3><code>commands</code></h3></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `commands` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Commands specifies an array of commands that need to be installed locally to use this config
+
+</summary>
+
 <PartialCommands />
+
 
 </details>
 
-<details><summary><h3><code>plugins</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `plugins` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Plugins specifies an array of plugins that need to be installed locally
+
+</summary>
+
 <PartialPlugins />
+
 
 </details>

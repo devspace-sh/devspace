@@ -6,12 +6,34 @@ import PartialExecRemote from "./onUpload/execRemote.mdx"
 <PartialRestartContainer />
 
 
-<details><summary><h5><code>exec</code></h5></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+##### `exec` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Exec will execute the given commands in order after a sync operation
+
+</summary>
+
 <PartialExec />
+
 
 </details>
 
-<details><summary><h5><code>execRemote</code></h5></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+##### `execRemote` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Defines what commands should be executed on the container side if a change is uploaded and applied in the target
+container
+
+</summary>
+
 <PartialExecRemote />
+
 
 </details>

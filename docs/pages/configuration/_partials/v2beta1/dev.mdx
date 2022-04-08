@@ -1,5 +1,4 @@
 
-import PartialName from "./dev/name.mdx"
 import PartialImageSelector from "./dev/imageSelector.mdx"
 import PartialLabelSelector from "./dev/labelSelector.mdx"
 import PartialNamespace from "./dev/namespace.mdx"
@@ -26,9 +25,6 @@ import PartialContainers from "./dev/containers.mdx"
 import PartialPatches from "./dev/patches.mdx"
 import PartialPersistenceOptions from "./dev/persistenceOptions.mdx"
 
-<PartialName />
-
-
 <PartialImageSelector />
 
 
@@ -38,15 +34,38 @@ import PartialPersistenceOptions from "./dev/persistenceOptions.mdx"
 <PartialNamespace />
 
 
-<details><summary><h3><code>ports</code></h3></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `ports` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Ports defines port mappings from the remote pod that should be forwarded to your local
+computer
+
+</summary>
+
 <PartialPorts />
 
+
 </details>
 
-<details><summary><h3><code>open</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `open` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Open defines urls that should be opened as soon as they are reachable
+
+</summary>
+
 <PartialOpen />
 
+
 </details>
+
 
 <PartialContainer />
 
@@ -57,15 +76,38 @@ import PartialPersistenceOptions from "./dev/persistenceOptions.mdx"
 <PartialArch />
 
 
-<details><summary><h3><code>restartHelper</code></h3></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `restartHelper` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
+the container and restarting it and is injected via an annotation in the replaced pod.
+
+</summary>
+
 <PartialRestartHelper />
 
+
 </details>
 
-<details><summary><h3><code>reversePorts</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `reversePorts` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+ReversePorts are port mappings to make local ports available inside the container
+
+</summary>
+
 <PartialReversePorts />
 
+
 </details>
+
 
 <PartialCommand />
 
@@ -76,62 +118,194 @@ import PartialPersistenceOptions from "./dev/persistenceOptions.mdx"
 <PartialWorkingDir />
 
 
-<details><summary><h3><code>resources</code></h3></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `resources` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Resources can be used to override the resource definitions of the container
+
+</summary>
+
 <PartialResources />
 
+
 </details>
 
-<details><summary><h3><code>env</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `env` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Env can be used to add environment variables to the container. DevSpace will
+not replace existing environment variables if an environment variable is defined here.
+
+</summary>
+
 <PartialEnv />
 
+
 </details>
 
-<details><summary><h3><code>terminal</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `terminal` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Terminal allows you to tell DevSpace to open a terminal with screen support to this container
+
+</summary>
+
 <PartialTerminal />
 
+
 </details>
 
-<details><summary><h3><code>logs</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `logs` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Logs allows you to tell DevSpace to stream logs from this container to the console
+
+</summary>
+
 <PartialLogs />
 
+
 </details>
 
-<details><summary><h3><code>attach</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `attach` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Attach allows you to tell DevSpace to attach to this container
+
+</summary>
+
 <PartialAttach />
 
+
 </details>
 
-<details><summary><h3><code>persistPaths</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `persistPaths` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+PersistPaths allows you to persist certain paths within this container with a persistent volume claim
+
+</summary>
+
 <PartialPersistPaths />
 
+
 </details>
 
-<details><summary><h3><code>sync</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `sync` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Sync allows you to sync certain local paths with paths inside the container
+
+</summary>
+
 <PartialSync />
 
+
 </details>
 
-<details><summary><h3><code>ssh</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `ssh` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+SSH allows you to create an SSH tunnel to this container
+
+</summary>
+
 <PartialSsh />
 
+
 </details>
 
-<details><summary><h3><code>proxyCommands</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `proxyCommands` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+ProxyCommands allow you to proxy certain local commands to the container
+
+</summary>
+
 <PartialProxyCommands />
 
+
 </details>
 
-<details><summary><h3><code>containers</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `containers` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+
+
+</summary>
+
 <PartialContainers />
 
+
 </details>
 
-<details><summary><h3><code>patches</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `patches` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Patches are additional changes to the pod spec that should be applied
+
+</summary>
+
 <PartialPatches />
 
+
 </details>
 
-<details><summary><h3><code>persistenceOptions</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `persistenceOptions` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+PersistenceOptions are additional options for persisting paths within this pod
+
+</summary>
+
 <PartialPersistenceOptions />
+
 
 </details>

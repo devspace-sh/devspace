@@ -64,22 +64,66 @@ import PartialCustom from "./images/custom.mdx"
 <PartialSkipPush />
 
 
-<details><summary><h3><code>docker</code></h3></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `docker` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Docker if docker is specified, DevSpace will build the image using the local docker daemon
+
+</summary>
+
 <PartialDocker />
 
+
 </details>
 
-<details><summary><h3><code>kaniko</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `kaniko` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Kaniko if kaniko is specified, DevSpace will build the image in-cluster with kaniko
+
+</summary>
+
 <PartialKaniko />
 
+
 </details>
 
-<details><summary><h3><code>buildKit</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `buildKit` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+BuildKit if buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit
+
+</summary>
+
 <PartialBuildKit />
 
+
 </details>
 
-<details><summary><h3><code>custom</code></h3></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `custom` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Custom if custom is specified, DevSpace will build the image with the help of
+a custom script.
+
+</summary>
+
 <PartialCustom />
+
 
 </details>

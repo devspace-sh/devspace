@@ -5,15 +5,37 @@ import PartialReadOnly from "./additionalMounts/readOnly.mdx"
 import PartialMountPath from "./additionalMounts/mountPath.mdx"
 import PartialSubPath from "./additionalMounts/subPath.mdx"
 
-<details><summary><h5><code>secret</code></h5></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+##### `secret` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+The secret that should be mounted
+
+</summary>
+
 <PartialSecret />
 
+
 </details>
 
-<details><summary><h5><code>configMap</code></h5></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+##### `configMap` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+The configMap that should be mounted
+
+</summary>
+
 <PartialConfigMap />
 
+
 </details>
+
 
 <PartialReadOnly />
 

@@ -53,10 +53,21 @@ import PartialResources from "./kaniko/resources.mdx"
 <PartialNodeSelector />
 
 
-<details><summary><h4><code>tolerations</code></h4></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `tolerations` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Tolerations is a tolerations list to use for the kaniko pod
+
+</summary>
+
 <PartialTolerations />
 
+
 </details>
+
 
 <PartialServiceAccount />
 
@@ -76,12 +87,33 @@ import PartialResources from "./kaniko/resources.mdx"
 <PartialEnvFrom />
 
 
-<details><summary><h4><code>additionalMounts</code></h4></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `additionalMounts` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+AdditionalMounts are additional mounts that will be added to the build pod
+
+</summary>
+
 <PartialAdditionalMounts />
+
 
 </details>
 
-<details><summary><h4><code>resources</code></h4></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `resources` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+Resources are the resources that should be set on the kaniko pod
+
+</summary>
+
 <PartialResources />
+
 
 </details>

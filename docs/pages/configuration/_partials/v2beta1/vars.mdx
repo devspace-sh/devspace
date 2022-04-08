@@ -1,5 +1,4 @@
 
-import PartialName from "./vars/name.mdx"
 import PartialQuestion from "./vars/question.mdx"
 import PartialOptions from "./vars/options.mdx"
 import PartialPassword from "./vars/password.mdx"
@@ -13,9 +12,6 @@ import PartialSource from "./vars/source.mdx"
 import PartialCommand from "./vars/command.mdx"
 import PartialArgs from "./vars/args.mdx"
 import PartialCommands from "./vars/commands.mdx"
-
-<PartialName />
-
 
 <PartialQuestion />
 
@@ -53,7 +49,18 @@ import PartialCommands from "./vars/commands.mdx"
 <PartialArgs />
 
 
-<details><summary><h3><code>commands</code></h3></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `commands` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span>
+
+Commands are additional commands that can be used to run a different command on a different operating
+system.
+
+</summary>
+
 <PartialCommands />
+
 
 </details>

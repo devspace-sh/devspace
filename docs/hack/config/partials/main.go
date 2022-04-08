@@ -13,6 +13,7 @@ import (
 )
 
 const configPartialBasePath = "docs/pages/configuration/_partials/"
+const nameFieldName = "name"
 
 func main() {
 	r := new(jsonschema.Reflector)
@@ -29,55 +30,61 @@ func main() {
 
 	schema := r.Reflect(&latest.Config{})
 
-	createSections("", schema, schema.Definitions, 1)
+	createSections("", schema, schema.Definitions, 1, false)
 }
 
-func createSections(prefix string, schema *jsonschema.Schema, definitions jsonschema.Definitions, depth int) string {
+func createSections(prefix string, schema *jsonschema.Schema, definitions jsonschema.Definitions, depth int, parentIsNameObjectMap bool) string {
 	partialImports := &[]string{}
 	content := ""
+	headlinePrefix := strings.Repeat("#", depth+1) + " "
 
 	for _, fieldName := range schema.Properties.Keys() {
+		if parentIsNameObjectMap && fieldName == nameFieldName {
+			continue
+		}
 
 		field, ok := schema.Properties.Get(fieldName)
 		if ok {
 			if fieldSchema, ok := field.(*jsonschema.Schema); ok {
 				fieldContent := ""
 				fieldFile := fmt.Sprintf(configPartialBasePath+"%s/%s%s.mdx", latest.Version, prefix, fieldName)
+				fieldType := "object"
+				isNameObjectMap := false
+
+				var nestedSchema *jsonschema.Schema
 
 				ref := ""
 				if fieldSchema.Type == "array" {
 					ref = fieldSchema.Items.Ref
+					fieldType = "object[]"
 				} else if patternPropertySchema, ok := fieldSchema.PatternProperties[".*"]; ok {
 					ref = patternPropertySchema.Ref
+					isNameObjectMap = true
 				} else if fieldSchema.Ref != "" {
 					ref = fieldSchema.Ref
 				}
 
 				if ref != "" {
 					refSplit := strings.Split(ref, "/")
-					nestedSchema, ok := definitions[refSplit[len(refSplit)-1]]
+					nestedSchema, ok = definitions[refSplit[len(refSplit)-1]]
 
 					if ok {
 						newPrefix := prefix + fieldName + "/"
-						createSections(newPrefix, nestedSchema, definitions, depth+1)
+						createSections(newPrefix, nestedSchema, definitions, depth+1, isNameObjectMap)
 					}
 				} else {
-					required := ""
-					if contains(schema.Required, fieldName) {
-						required = util.TemplateConfigFieldRequired
+					required := contains(schema.Required, fieldName)
+					fieldType = fieldSchema.Type
+					if fieldType == "array" {
+						fieldType = fieldSchema.Items.Type + "[]"
 					}
 
-					fieldTypeRaw := fieldSchema.Type
-					if fieldTypeRaw == "array" {
-						fieldTypeRaw = fieldSchema.Items.Type + "[]"
-					}
-					fieldType := fmt.Sprintf(util.TemplateConfigFieldType, fieldTypeRaw)
-					fieldDefault := ""
-					if fieldSchema.Default != nil {
-						fieldDefault = fmt.Sprintf(util.TemplateConfigFieldType, fieldSchema.Default)
+					fieldDefault, ok := fieldSchema.Default.(string)
+					if !ok {
+						fieldDefault = ""
 					}
 
-					fieldContent = fmt.Sprintf(util.TemplateConfigField, fieldName, required, fieldType, fieldDefault, fieldSchema.Description)
+					fieldContent = fmt.Sprintf(util.TemplateConfigField, false, " open", headlinePrefix, fieldName, required, fieldType, fieldDefault, fieldSchema.Description, "")
 
 					err := os.MkdirAll(filepath.Dir(fieldFile), os.ModePerm)
 					if err != nil {
@@ -93,8 +100,15 @@ func createSections(prefix string, schema *jsonschema.Schema, definitions jsonsc
 				*partialImports = append(*partialImports, fieldFile)
 				fieldPartial := fmt.Sprintf(util.TemplatePartialUse, util.GetPartialImportName(fieldFile))
 				if ref != "" {
-					fieldSummary := fmt.Sprintf("<h%d><code>%s</code></h%d>", depth+1, fieldName, depth+1)
-					fieldPartial = fmt.Sprintf("<details><summary>%s</summary>\n%s\n</details>", fieldSummary, fieldPartial)
+					if isNameObjectMap && nestedSchema != nil {
+						nameField, ok := nestedSchema.Properties.Get(nameFieldName)
+						if ok {
+							if nameFieldSchema, ok := nameField.(*jsonschema.Schema); ok {
+								fieldPartial = fmt.Sprintf(util.TemplateConfigField, true, "open", headlinePrefix, "<"+nameFieldName+">", false, "object", "", nameFieldSchema.Description, fieldPartial)
+							}
+						}
+					}
+					fieldPartial = fmt.Sprintf(util.TemplateConfigField, true, "", headlinePrefix, fieldName, false, fieldType, "", fieldSchema.Description, fieldPartial)
 				}
 
 				content = content + "\n\n" + fieldPartial

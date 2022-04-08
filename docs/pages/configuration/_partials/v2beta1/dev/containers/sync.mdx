@@ -66,12 +66,35 @@ import PartialOnUpload from "./sync/onUpload.mdx"
 <PartialWaitInitialSync />
 
 
-<details><summary><h5><code>bandwidthLimits</code></h5></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+##### `bandwidthLimits` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+BandwidthLimits can be used to limit the amount of bytes that are transferred by DevSpace with this
+sync configuration
+
+</summary>
+
 <PartialBandwidthLimits />
+
 
 </details>
 
-<details><summary><h5><code>onUpload</code></h5></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+##### `onUpload` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+OnUpload can be used to execute certain commands on uploading either in the container or locally as
+well as restart the container after a file changed has happened.
+
+</summary>
+
 <PartialOnUpload />
+
 
 </details>

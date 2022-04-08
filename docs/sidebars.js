@@ -17,7 +17,6 @@ module.exports = {
       type: 'category',
       label: 'devspace.yaml',
       className: 'code-style',
-      link: { type: 'doc', id: 'configuration/reference' },
       items: [
         {
           type: 'category',

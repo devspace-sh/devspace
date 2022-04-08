@@ -11,17 +11,53 @@ import PartialOnBatch from "./execRemote/onBatch.mdx"
 <PartialArgs />
 
 
-<details><summary><h7><code>onFileChange</code></h7></summary>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+####### `onFileChange` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+OnFileChange is invoked after every file change. DevSpace will wait for the command to successfully finish
+and then will continue to upload files & create folders
+
+</summary>
+
 <PartialOnFileChange />
 
+
 </details>
 
-<details><summary><h7><code>onDirCreate</code></h7></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+####### `onDirCreate` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+OnDirCreate is invoked after every directory that is created. DevSpace will wait for the command to successfully finish
+and then will continue to upload files & create folders
+
+</summary>
+
 <PartialOnDirCreate />
 
+
 </details>
 
-<details><summary><h7><code>onBatch</code></h7></summary>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+####### `onBatch` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span>
+
+OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish
+and then will continue execution. This is useful for commands
+that shouldn't be executed after every single change that may take a little bit longer like recompiling etc.
+
+</summary>
+
 <PartialOnBatch />
+
 
 </details>
