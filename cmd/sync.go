@@ -5,6 +5,7 @@ import (
 	"fmt"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
@@ -335,7 +336,7 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig, option
 	}
 
 	if cmd.InitialSync != "" {
-		if !loader.ValidInitialSyncStrategy(latest.InitialSyncStrategy(cmd.InitialSync)) {
+		if !versions.ValidInitialSyncStrategy(latest.InitialSyncStrategy(cmd.InitialSync)) {
 			return options, errors.Errorf("--initial-sync is not valid '%s'", cmd.InitialSync)
 		}
 

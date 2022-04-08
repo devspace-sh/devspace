@@ -3,12 +3,12 @@ package configure
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 	"os"
 	"path"
 	"regexp"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/sirupsen/logrus"
@@ -207,7 +207,7 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 
 func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) (string, error) {
 	var err error
-	image, _, err = imageselector.GetStrippedDockerImageName(strings.ToLower(image))
+	image, _, err = dockerfile.GetStrippedDockerImageName(strings.ToLower(image))
 	if err != nil {
 		return "", err
 	}

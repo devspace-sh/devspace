@@ -49,9 +49,6 @@ const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.de
 
 const (
 	// Dockerfile not found options
-	UseExistingDockerfileOption       = "Use the Dockerfile in ./Dockerfile"
-	CreateDockerfileOption            = "Create a Dockerfile for this project"
-	EnterDockerfileOption             = "Enter path to a different Dockerfile"
 	DeployOptionHelm                  = "helm"
 	DeployOptionKubectl               = "kubectl"
 	DeployOptionKustomize             = "kustomize"
@@ -739,7 +736,8 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 	}
 	err = renderCmd.RunDefault(f)
 	if err != nil {
-		return "", err
+		f.GetLog().Debugf("error rendering chart: %v", err)
+		return "", nil
 	}
 
 	return writer.String(), nil

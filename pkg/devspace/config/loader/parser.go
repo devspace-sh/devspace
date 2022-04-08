@@ -8,7 +8,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -114,7 +113,7 @@ func fillVariablesAndParse(ctx context.Context, resolver variable.Resolver, prep
 		return nil, nil, err
 	}
 
-	latestConfig, err := Convert(preparedConfigInterface.(map[string]interface{}), log)
+	latestConfig, err := versions.Parse(preparedConfigInterface.(map[string]interface{}), log)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,18 +121,15 @@ func fillVariablesAndParse(ctx context.Context, resolver variable.Resolver, prep
 	return latestConfig, preparedConfigInterface.(map[string]interface{}), nil
 }
 
-func Convert(preparedConfig map[string]interface{}, log log.Logger) (*latest.Config, error) {
-	// Now convert the whole config to latest
-	latestConfig, err := versions.Parse(preparedConfig, log)
-	if err != nil {
-		return nil, errors.Wrap(err, "convert config")
+func EachDevContainer(devPod *latest.DevPod, each func(devContainer *latest.DevContainer) bool) {
+	if len(devPod.Containers) > 0 {
+		for _, devContainer := range devPod.Containers {
+			cont := each(devContainer)
+			if !cont {
+				break
+			}
+		}
+	} else {
+		_ = each(&devPod.DevContainer)
 	}
-
-	// now we validate the config
-	err = Validate(latestConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return latestConfig, nil
 }

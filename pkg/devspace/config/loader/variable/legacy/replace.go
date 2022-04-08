@@ -2,6 +2,7 @@ package legacy
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 	"regexp"
 	"strings"
 
@@ -98,7 +99,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 	}
 
 	// strip docker image name
-	image, originalTag, err := imageselector.GetStrippedDockerImageName(resolvedImage)
+	image, originalTag, err := dockerfile.GetStrippedDockerImageName(resolvedImage)
 	if err != nil {
 		return false, false, "", nil
 	}
