@@ -3,6 +3,8 @@ package init
 import (
 	"bytes"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"strings"
@@ -125,19 +127,15 @@ var _ = DevSpaceDescribe("init", func() {
 		framework.ExpectNoError(err)
 		defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
-		done := make(chan error)
-		go func() {
-			devCmd := &cmd.RunPipelineCmd{
-				GlobalFlags: &flags.GlobalFlags{
-					NoWarn:    true,
-					Namespace: ns,
-				},
-				Pipeline: "dev",
-			}
-			done <- devCmd.RunDefault(f)
-		}()
-
-		err = <-done
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "dev",
+			Log:      log.GetInstance().WithLevel(logrus.DebugLevel),
+		}
+		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 	})
 

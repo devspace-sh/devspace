@@ -1,11 +1,11 @@
 package helm
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
@@ -251,7 +251,7 @@ func (d *DeployConfig) getDeploymentValues(ctx devspacecontext.Context) (bool, m
 	}
 
 	// Validate deployment values
-	err = loader.ValidateComponentConfig(d.DeploymentConfig, overwriteValues)
+	err = versions.ValidateComponentConfig(d.DeploymentConfig, overwriteValues)
 	if err != nil {
 		return false, nil, err
 	}

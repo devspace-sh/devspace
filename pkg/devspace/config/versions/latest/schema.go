@@ -232,6 +232,9 @@ type RequireCommand struct {
 
 // Image defines the image specification
 type Image struct {
+	// Name of the image, will be filled automatically
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
 	// Image is the complete image name including registry and repository
 	// for example myregistry.com/mynamespace/myimage
 	Image string `yaml:"image" json:"image"`

@@ -1,19 +1,18 @@
-package loader
+package versions
 
 import (
 	"fmt"
-
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
-
 	"strings"
 
 	jsonyaml "github.com/ghodss/yaml"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
-	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/dockerfile"
+	"github.com/loft-sh/devspace/pkg/util/encoding"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 )
 
 // ValidInitialSyncStrategy checks if strategy is valid
@@ -43,6 +42,11 @@ func Validate(config *latest.Config) error {
 	}
 
 	err := validateRequire(config)
+	if err != nil {
+		return err
+	}
+
+	err = validateVars(config.Vars)
 	if err != nil {
 		return err
 	}
@@ -278,7 +282,7 @@ func validateImages(config *latest.Config) error {
 		if imageConf.Image == "" {
 			return errors.Errorf("images.%s.image is required", imageConfigName)
 		}
-		if _, tag, _ := imageselector.GetStrippedDockerImageName(imageConf.Image); tag != "" {
+		if _, tag, _ := dockerfile.GetStrippedDockerImageName(imageConf.Image); tag != "" {
 			return errors.Errorf("images.%s.image '%s' can not have tag '%s'", imageConfigName, imageConf.Image, tag)
 		}
 		if imageConf.Custom != nil && imageConf.Custom.Command == "" && len(imageConf.Custom.Commands) == 0 {
@@ -395,17 +399,4 @@ func validateDevContainer(path string, devContainer *latest.DevContainer, nameRe
 	}
 
 	return nil
-}
-
-func EachDevContainer(devPod *latest.DevPod, each func(devContainer *latest.DevContainer) bool) {
-	if len(devPod.Containers) > 0 {
-		for _, devContainer := range devPod.Containers {
-			cont := each(devContainer)
-			if !cont {
-				break
-			}
-		}
-	} else {
-		_ = each(&devPod.DevContainer)
-	}
 }
