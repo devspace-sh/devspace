@@ -177,7 +177,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	}
 
 	// create the devspace context
-	ctx := devspacecontext.NewContext(cmd.Ctx, logger).
+	ctx := devspacecontext.NewContext(cmd.Ctx, nil, logger).
 		WithConfig(configInterface).
 		WithKubeClient(client)
 
@@ -257,7 +257,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	// apply the flags to the empty sync config or loaded sync config from the devspace.yaml
 	var configImageSelector []string
 	if syncConfig.devPod.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, syncConfig.devPod.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), true).FillRuntimeVariablesAsImageSelector(ctx.Context(), syncConfig.devPod.ImageSelector, ctx.Config(), ctx.Dependencies())
 		if err != nil {
 			return err
 		}

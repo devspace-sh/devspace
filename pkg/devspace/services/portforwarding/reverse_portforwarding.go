@@ -16,18 +16,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-func StartReversePortForwarding(ctx *devspacecontext.Context, name, arch string, portForwarding []*latest.PortMapping, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func StartReversePortForwarding(ctx devspacecontext.Context, name, arch string, portForwarding []*latest.PortMapping, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
 
-	container, err := selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+	container, err := selector.SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return errors.Wrap(err, "error selecting container")
 	}
 
 	// make sure the DevSpace helper binary is injected
-	err = inject.InjectDevSpaceHelper(ctx.Context, ctx.KubeClient, container.Pod, container.Container.Name, arch, ctx.Log)
+	err = inject.InjectDevSpaceHelper(ctx.Context(), ctx.KubeClient(), container.Pod, container.Container.Name, arch, ctx.Log())
 	if err != nil {
 		return err
 	}
@@ -38,14 +38,14 @@ func StartReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 	go func() {
-		err := sync.StartStream(ctx.Context, ctx.KubeClient, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter, false, ctx.Log)
+		err := sync.StartStream(ctx.Context(), ctx.KubeClient(), container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter, false, ctx.Log())
 		if err != nil {
 			errorChan <- errors.Errorf("connection lost to pod %s/%s: %v", container.Pod.Namespace, container.Pod.Name, err)
 		}
 	}()
 
 	go func() {
-		err := tunnel.StartReverseForward(ctx.Context, stdoutReader, stdinWriter, portForwarding, closeChan, container.Pod.Namespace, container.Pod.Name, ctx.Log)
+		err := tunnel.StartReverseForward(ctx.Context(), stdoutReader, stdinWriter, portForwarding, closeChan, container.Pod.Namespace, container.Pod.Name, ctx.Log())
 		if err != nil {
 			errorChan <- err
 		}
@@ -53,7 +53,7 @@ func StartReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 
 	parent.Go(func() error {
 		select {
-		case <-ctx.Context.Done():
+		case <-ctx.Context().Done():
 			close(closeChan)
 			_ = stdinWriter.Close()
 			_ = stdoutWriter.Close()
@@ -67,8 +67,8 @@ func StartReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 				return nil
 			}
 			if err != nil {
-				ctx.Log.Errorf("Restarting because: %v", err)
-				shouldExit := sync.PrintPodError(ctx.Context, ctx.KubeClient, container.Pod, ctx.Log)
+				ctx.Log().Errorf("Restarting because: %v", err)
+				shouldExit := sync.PrintPodError(ctx.Context(), ctx.KubeClient(), container.Pod, ctx.Log())
 				close(closeChan)
 				_ = stdinWriter.Close()
 				_ = stdoutWriter.Close()
@@ -88,13 +88,13 @@ func StartReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 							"reverse_port_forwarding_config": portForwarding,
 							"error":                          err,
 						}, hook.EventsForSingle("restart:reversePortForwarding", name).With("reversePortForwarding.restart")...)
-						ctx.Log.Errorf("Error restarting reverse port-forwarding: %v", err)
-						ctx.Log.Errorf("Will try again in 15 seconds")
+						ctx.Log().Errorf("Error restarting reverse port-forwarding: %v", err)
+						ctx.Log().Errorf("Will try again in 15 seconds")
 
 						select {
 						case <-time.After(time.Second * 15):
 							continue
-						case <-ctx.Context.Done():
+						case <-ctx.Context().Done():
 							doneReverseForwarding(ctx, name, portForwarding, parent)
 							return nil
 						}
@@ -110,12 +110,12 @@ func StartReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 	return nil
 }
 
-func doneReverseForwarding(ctx *devspacecontext.Context, name string, portForwarding []*latest.PortMapping, parent *tomb.Tomb) {
+func doneReverseForwarding(ctx devspacecontext.Context, name string, portForwarding []*latest.PortMapping, parent *tomb.Tomb) {
 	hook.LogExecuteHooks(ctx, map[string]interface{}{
 		"reverse_port_forwarding_config": portForwarding,
 	}, hook.EventsForSingle("stop:reversePortForwarding", name).With("reversePortForwarding.stop")...)
 	parent.Kill(nil)
 	for _, m := range portForwarding {
-		ctx.Log.Debugf("Stopped reverse port forwarding %v", m.Port)
+		ctx.Log().Debugf("Stopped reverse port forwarding %v", m.Port)
 	}
 }

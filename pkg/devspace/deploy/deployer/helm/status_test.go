@@ -1,13 +1,18 @@
 package helm
 
 import (
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"context"
 	"testing"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	fakehelm "github.com/loft-sh/devspace/pkg/devspace/helm/testing"
 	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
+	log "github.com/loft-sh/devspace/pkg/util/log/testing"
 	yaml "gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
@@ -85,7 +90,12 @@ func TestStatus(t *testing.T) {
 			},
 		}
 
-		status, err := deployer.Status(devspacecontext.NewContext())
+		kube := fake.NewSimpleClientset()
+		kubeClient := &fakekube.Client{
+			Client: kube,
+		}
+		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithKubeClient(kubeClient)
+		status, err := deployer.Status(devCtx)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {

@@ -29,7 +29,7 @@ import (
 
 // Project is the result of loading a set of compose files
 type Project struct {
-	Name         string            `yaml:"-" json:"-"`
+	Name         string            `yaml:"name,omitempty" json:"name,omitempty"`
 	WorkingDir   string            `yaml:"-" json:"-"`
 	Services     Services          `json:"services"`
 	Networks     Networks          `yaml:",omitempty" json:"networks,omitempty"`
@@ -46,7 +46,7 @@ type Project struct {
 
 // ServiceNames return names for all services in this Compose config
 func (p Project) ServiceNames() []string {
-	names := []string{}
+	var names []string
 	for _, s := range p.Services {
 		names = append(names, s.Name)
 	}
@@ -56,7 +56,7 @@ func (p Project) ServiceNames() []string {
 
 // VolumeNames return names for all volumes in this Compose config
 func (p Project) VolumeNames() []string {
-	names := []string{}
+	var names []string
 	for k := range p.Volumes {
 		names = append(names, k)
 	}
@@ -66,7 +66,7 @@ func (p Project) VolumeNames() []string {
 
 // NetworkNames return names for all volumes in this Compose config
 func (p Project) NetworkNames() []string {
-	names := []string{}
+	var names []string
 	for k := range p.Networks {
 		names = append(names, k)
 	}
@@ -76,7 +76,7 @@ func (p Project) NetworkNames() []string {
 
 // SecretNames return names for all secrets in this Compose config
 func (p Project) SecretNames() []string {
-	names := []string{}
+	var names []string
 	for k := range p.Secrets {
 		names = append(names, k)
 	}
@@ -86,7 +86,7 @@ func (p Project) SecretNames() []string {
 
 // ConfigNames return names for all configs in this Compose config
 func (p Project) ConfigNames() []string {
-	names := []string{}
+	var names []string
 	for k := range p.Configs {
 		names = append(names, k)
 	}
@@ -179,12 +179,12 @@ func (p *Project) RelativePath(path string) string {
 }
 
 // HasProfile return true if service has no profile declared or has at least one profile matching
-func (service ServiceConfig) HasProfile(profiles []string) bool {
-	if len(service.Profiles) == 0 {
+func (s ServiceConfig) HasProfile(profiles []string) bool {
+	if len(s.Profiles) == 0 {
 		return true
 	}
 	for _, p := range profiles {
-		for _, sp := range service.Profiles {
+		for _, sp := range s.Profiles {
 			if sp == p {
 				return true
 			}
@@ -327,7 +327,6 @@ func (p *Project) ResolveImages(resolver func(named reference.Named) (digest.Dig
 				if err != nil {
 					return err
 				}
-
 				named, err = reference.WithDigest(named, digest)
 				if err != nil {
 					return err

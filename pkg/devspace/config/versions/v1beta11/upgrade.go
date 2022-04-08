@@ -516,12 +516,11 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	for _, command := range c.Commands {
 		commandName := encoding.Convert(command.Name)
 		nextConfig.Commands[commandName] = &next.CommandConfig{
-			Name:           commandName,
-			Command:        command.Command,
-			Args:           command.Args,
-			AppendArgs:     command.AppendArgs,
-			Description:    command.Description,
-			DisableReplace: true,
+			Name:        commandName,
+			Command:     command.Command,
+			Args:        command.Args,
+			AppendArgs:  command.AppendArgs,
+			Description: command.Description,
 		}
 	}
 
@@ -750,6 +749,7 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 				WorkDir:        c.Dev.Terminal.WorkDir,
 				Enabled:        ptr.Bool(!c.Dev.Terminal.Disabled),
 				DisableReplace: true,
+				DisableScreen:  true,
 			}
 		}
 	}

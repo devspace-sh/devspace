@@ -170,7 +170,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 	}
 
 	// dev context
-	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+	ctx := devspacecontext.NewContext(context.Background(), nil, cmd.log).
 		WithConfig(config).
 		WithKubeClient(client)
 

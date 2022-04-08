@@ -1,0 +1,21 @@
+version: v2beta1
+name: docker-compose
+
+deployments:
+  db:
+    helm:
+      values:
+        containers:
+        - name: db-container
+          image: mysql/mysql-server:8.0.19
+        service:
+          ports:
+          - port: 3306
+          - port: 33060
+dev:
+  db:
+    labelSelector:
+      app.kubernetes.io/component: db
+    ports:
+      - port: 3306
+      - port: 33060

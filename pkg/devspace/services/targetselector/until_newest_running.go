@@ -179,6 +179,10 @@ type relevantObject struct {
 }
 
 func displayWarnings(ctx context.Context, relevantObjects []relevantObject, namespace string, client kubectl.Client, filter []string, log log.Logger) []string {
+	if namespace == "" {
+		namespace = client.Namespace()
+	}
+
 	events, err := client.KubeClient().CoreV1().Events(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Debugf("Error retrieving pod events: %v", err)

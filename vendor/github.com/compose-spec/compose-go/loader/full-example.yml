@@ -1,3 +1,4 @@
+name: Full_Example_project_name
 services:
   foo:
 
@@ -6,6 +7,8 @@ services:
       dockerfile: Dockerfile
       args:
         foo: bar
+      ssh:
+        - default
       target: foo
       network: foo
       cache_from:
@@ -84,6 +87,10 @@ services:
         preferences:
           - spread: node.labels.az
       endpoint_mode: dnsrr
+
+    device_cgroup_rules:
+      - "c 1:3 mr"
+      - "a 7:* rmw"
 
     devices:
       - "/dev/ttyUSB0:/dev/ttyUSB0"
@@ -268,7 +275,7 @@ services:
       - .:/code
       - ./static:/var/www/html
       # User-relative path
-      - ~/configs:/etc/configs/:ro
+      - ~/configs:/etc/configs:ro
       # Named volume
       - datavolume:/var/lib/mysql
       - type: bind

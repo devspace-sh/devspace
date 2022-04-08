@@ -1,0 +1,11 @@
+version: v2beta1
+name: docker-compose
+
+deployments:
+  db:
+    helm:
+      values:
+        containers:
+        - name: db-container
+          image: mysql/mysql-server:8.0.19
+        restartPolicy: OnFailure

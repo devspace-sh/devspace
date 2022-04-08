@@ -3,13 +3,13 @@ package util
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/encoding"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -18,8 +18,6 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 )
-
-var authRegEx = regexp.MustCompile(`^(https?:\/\/)[^:]+:[^@]+@(.*)$`)
 
 // DependencyFolder is the dependency folder in the home directory of the user
 const DependencyFolder = ".devspace/dependencies"
@@ -149,7 +147,6 @@ func getDependencyConfigPath(dependencyPath string, source *latest.SourceConfig)
 	}
 	if strings.HasSuffix(dependencyPath, ".yaml") || strings.HasSuffix(dependencyPath, ".yml") {
 		configPath = dependencyPath
-		dependencyPath = filepath.Dir(dependencyPath)
 	} else {
 		configPath = filepath.Join(dependencyPath, constants.DefaultConfigPath)
 	}

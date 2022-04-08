@@ -1,6 +1,8 @@
 package testing
 
 import (
+	"context"
+
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -71,7 +73,7 @@ func (f *Factory) GetLog() log.Logger {
 }
 
 // NewDependencyManager implements interface
-func (f *Factory) NewDependencyManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager {
+func (f *Factory) NewDependencyManager(ctx devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager {
 	return f.DependencyManager
 }
 
@@ -91,12 +93,12 @@ func (f *Factory) NewConfigureManager(config *latest.Config, generated localcach
 }
 
 // NewDockerClient implements interface
-func (f *Factory) NewDockerClient(log log.Logger) (docker.Client, error) {
+func (f *Factory) NewDockerClient(ctx context.Context, log log.Logger) (docker.Client, error) {
 	return f.DockerClient, nil
 }
 
 // NewDockerClientWithMinikube implements interface
-func (f *Factory) NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
+func (f *Factory) NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
 	return f.DockerClient, nil
 }
 

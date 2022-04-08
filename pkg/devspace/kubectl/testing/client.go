@@ -2,12 +2,13 @@ package testing
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"k8s.io/client-go/tools/clientcmd"

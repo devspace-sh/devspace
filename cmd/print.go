@@ -91,7 +91,7 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 	}
 
 	// create devspace context
-	ctx := devspacecontext.NewContext(context.Background(), log).
+	ctx := devspacecontext.NewContext(context.Background(), config.Variables(), log).
 		WithConfig(config).
 		WithKubeClient(client)
 
@@ -117,13 +117,13 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 		ctx = ctx.AsDependency(dep)
 	}
 
-	bsConfig, err := yaml.Marshal(ctx.Config.Config())
+	bsConfig, err := yaml.Marshal(ctx.Config().Config())
 	if err != nil {
 		return err
 	}
 
 	if !cmd.SkipInfo {
-		err = printExtraInfo(ctx.Config, dependencies, log)
+		err = printExtraInfo(ctx.Config(), dependencies, log)
 		if err != nil {
 			return err
 		}

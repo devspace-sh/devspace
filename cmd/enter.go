@@ -123,11 +123,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, args []string) error {
 	}
 
 	// create the context
-	ctx := &devspacecontext.Context{
-		Context:    context.Background(),
-		KubeClient: client,
-		Log:        logger,
-	}
+	ctx := devspacecontext.NewContext(context.Background(), nil, logger).WithKubeClient(client)
 
 	// Execute plugin hook
 	err = hook.ExecuteHooks(ctx, nil, "enter")

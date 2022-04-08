@@ -20,10 +20,10 @@ type SelectPodOptions struct {
 	Timeout     int64  `long:"timeout" description:"The timeout to wait. Defaults to 5 minutes"`
 }
 
-func SelectPod(ctx *devspacecontext.Context, args []string) error {
-	hc := interp.HandlerCtx(ctx.Context)
+func SelectPod(ctx devspacecontext.Context, args []string) error {
+	hc := interp.HandlerCtx(ctx.Context())
 	options := &SelectPodOptions{
-		Namespace: ctx.KubeClient.Namespace(),
+		Namespace: ctx.KubeClient().Namespace(),
 	}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
@@ -36,13 +36,13 @@ func SelectPod(ctx *devspacecontext.Context, args []string) error {
 		return fmt.Errorf("usage: select_pod [--image-selector|--label-selector]")
 	}
 
-	logger := ctx.Log.ErrorStreamOnly()
+	logger := ctx.Log().ErrorStreamOnly()
 	selectorOptions := targetselector.NewOptionsFromFlags(options.Container, options.LabelSelector, []string{options.ImageSelector}, options.Namespace, "")
 	if options.Timeout != 0 {
 		selectorOptions = selectorOptions.WithTimeout(options.Timeout)
 	}
 	selectorOptions.WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 100))
-	selectedContainer, err := targetselector.NewTargetSelector(selectorOptions).SelectSingleContainer(ctx.Context, ctx.KubeClient, logger)
+	selectedContainer, err := targetselector.NewTargetSelector(selectorOptions).SelectSingleContainer(ctx.Context(), ctx.KubeClient(), logger)
 	if err != nil {
 		return err
 	}

@@ -113,11 +113,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	}
 
 	// create the context
-	ctx := &devspacecontext.Context{
-		Context:    context.Background(),
-		KubeClient: client,
-		Log:        log,
-	}
+	ctx := devspacecontext.NewContext(context.Background(), nil, log).WithKubeClient(client)
 
 	// Execute plugin hook
 	err = hook.ExecuteHooks(ctx, nil, "logs")
@@ -149,7 +145,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	return nil
 }
 
-func getImageSelector(ctx *devspacecontext.Context, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, imageSelector string) ([]string, error) {
+func getImageSelector(ctx devspacecontext.Context, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, imageSelector string) ([]string, error) {
 	var imageSelectors []string
 	if imageSelector != "" {
 		var (
@@ -160,7 +156,7 @@ func getImageSelector(ctx *devspacecontext.Context, configLoader loader.ConfigLo
 		if !configLoader.Exists() {
 			config = config2.Ensure(nil)
 		} else {
-			config, err = configLoader.Load(ctx.Context, ctx.KubeClient, configOptions, ctx.Log)
+			config, err = configLoader.Load(ctx.Context(), ctx.KubeClient(), configOptions, ctx.Log())
 			if err != nil {
 				return nil, err
 			}
@@ -168,11 +164,11 @@ func getImageSelector(ctx *devspacecontext.Context, configLoader loader.ConfigLo
 			ctx = ctx.WithConfig(config)
 			dependencies, err = dependency.NewManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 			if err != nil {
-				ctx.Log.Warnf("Error resolving dependencies: %v", err)
+				ctx.Log().Warnf("Error resolving dependencies: %v", err)
 			}
 		}
 
-		resolved, err := runtimevar.NewRuntimeResolver(".", true).FillRuntimeVariablesAsImageSelector(ctx.Context, imageSelector, config, dependencies)
+		resolved, err := runtimevar.NewRuntimeResolver(".", true).FillRuntimeVariablesAsImageSelector(ctx.Context(), imageSelector, config, dependencies)
 		if err != nil {
 			return nil, err
 		}

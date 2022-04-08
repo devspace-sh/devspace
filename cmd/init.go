@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/compose"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/sirupsen/logrus"
 
@@ -60,6 +61,8 @@ const (
 
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
+	*flags.GlobalFlags
+
 	// Flags
 	Reconfigure bool
 	Dockerfile  string
@@ -71,7 +74,8 @@ type InitCmd struct {
 // NewInitCmd creates a new init command
 func NewInitCmd(f factory.Factory) *cobra.Command {
 	cmd := &InitCmd{
-		log: f.GetLog(),
+		log:         f.GetLog(),
+		GlobalFlags: globalFlags,
 	}
 
 	initCmd := &cobra.Command{
@@ -147,45 +151,31 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	// Print DevSpace logo
 	log.PrintLogo()
 
-	/*
-		    generateFromDockerCompose := false
-			// TODO: Enable again
-			dockerComposePath := "" // compose.GetDockerComposePath()
-			if dockerComposePath != "" {
-				selectedDockerComposeOption, err := cmd.log.Question(&survey.QuestionOptions{
-					Question:     "Docker Compose configuration detected. Do you want to create a DevSpace configuration based on Docker Compose?",
-					DefaultValue: DockerComposeDevSpaceConfigOption,
-					Options: []string{
-						DockerComposeDevSpaceConfigOption,
-						NewDevSpaceConfigOption,
-					},
-				})
-				if err != nil {
-					return err
-				}
+	// Determine if we're initializing from scratch, or using docker-compose.yaml
+	dockerComposePath, generateFromDockerCompose, err := cmd.shouldGenerateFromDockerCompose()
+	if err != nil {
+		return err
+	}
 
-				generateFromDockerCompose = selectedDockerComposeOption == DockerComposeDevSpaceConfigOption
-			}
+	if generateFromDockerCompose {
+		err = cmd.initDockerCompose(f, dockerComposePath)
+	} else {
+		err = cmd.initDevspace(f, configLoader)
+	}
 
-			if generateFromDockerCompose {
-				composeLoader := compose.NewDockerComposeLoader(dockerComposePath)
-				if err != nil {
-					return err
-				}
+	if err != nil {
+		panic(err)
+	}
 
-				// Load config
-				config, err := composeLoader.Load(cmd.log)
-				if err != nil {
-					return err
-				}
+	cmd.log.WriteString(logrus.InfoLevel, "\n")
+	cmd.log.Done("Project successfully initialized")
+	cmd.log.Info("Configuration saved in devspace.yaml - you can make adjustments as needed")
+	cmd.log.Infof("\r         \nYou can now run:\n1. %s - to pick which Kubernetes namespace to work in\n2. %s - to start developing your project in Kubernetes\n\nRun `%s` or `%s` to see a list of available commands and flags\n", ansi.Color("devspace use namespace", "blue+b"), ansi.Color("devspace dev", "blue+b"), ansi.Color("devspace -h", "blue+b"), ansi.Color("devspace [command] -h", "blue+b"))
 
-				// Save config
-				err = composeLoader.Save(config)
-				if err != nil {
-					return err
-				}
-			} else {*/
+	return nil
+}
 
+func (cmd *InitCmd) initDevspace(f factory.Factory, configLoader loader.ConfigLoader) error {
 	// Create new dockerfile generator
 	languageHandler, err := generator.NewLanguageHandler("", "", cmd.log)
 	if err != nil {
@@ -214,7 +204,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	var config *latest.Config
 
 	// create kubectl client
-	client, err := f.NewKubeClientFromContext(globalFlags.KubeContext, globalFlags.Namespace)
+	client, err := f.NewKubeClientFromContext(cmd.GlobalFlags.KubeContext, cmd.GlobalFlags.Namespace)
 	if err == nil {
 		configInterface, err := configLoader.Load(context.TODO(), client, &loader.ConfigOptions{}, cmd.log)
 		if err == nil {
@@ -476,8 +466,6 @@ create_deployments --all \                        # 3. Deploy Helm charts and ma
 		return err
 	}
 
-	/*}*/
-
 	// Save generated
 	err = localCache.Save()
 	if err != nil {
@@ -491,6 +479,88 @@ create_deployments --all \                        # 3. Deploy Helm charts and ma
 	}
 
 	configPath := loader.ConfigPath("")
+	err = annotateConfig(configPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (cmd *InitCmd) initDockerCompose(f factory.Factory, composePath string) error {
+	project, err := compose.LoadDockerComposeProject(composePath)
+	if err != nil {
+		return err
+	}
+
+	projectName, _, err := getProjectName()
+	if err != nil {
+		return err
+	}
+
+	project.Name = projectName
+
+	// Prompt user for entrypoints for each container with sync folders.
+	for idx, service := range project.Services {
+		localPaths := compose.GetServiceSyncPaths(project, service)
+		noEntryPoint := len(service.Entrypoint) == 0
+		hasSyncEndpoints := len(localPaths) > 0
+
+		if noEntryPoint && hasSyncEndpoints {
+			entrypointStr, err := cmd.log.Question(&survey.QuestionOptions{
+				Question: "How is this container started? (e.g. npm start, gradle run, go run main.go)",
+			})
+			if err != nil {
+				return err
+			}
+
+			entrypoint := strings.Split(entrypointStr, " ")
+			project.Services[idx].Entrypoint = entrypoint
+		}
+	}
+
+	// Generate DevSpace configuration
+	composeManager := compose.NewComposeManager(project)
+	err = composeManager.Load(cmd.log)
+	if err != nil {
+		return err
+	}
+
+	// Save each configuration file
+	for path, config := range composeManager.Configs() {
+		localCache, err := localcache.NewCacheLoader().Load(path)
+		if err != nil {
+			return err
+		}
+
+		// Save config
+		err = loader.Save(path, config)
+		if err != nil {
+			return err
+		}
+
+		// Save generated
+		err = localCache.Save()
+		if err != nil {
+			return errors.Errorf("Error saving generated file: %v", err)
+		}
+
+		// Add .devspace/ to .gitignore
+		err = appendToIgnoreFile(gitIgnoreFile, devspaceFolderGitignore)
+		if err != nil {
+			cmd.log.Warn(err)
+		}
+
+		err = annotateConfig(path)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func annotateConfig(configPath string) error {
 	annotatedConfig, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		panic(err)
@@ -541,72 +611,7 @@ create_deployments --all \                        # 3. Deploy Helm charts and ma
 		return err
 	}
 
-	cmd.log.WriteString(logrus.InfoLevel, "\n")
-	cmd.log.Done("Project successfully initialized")
-	cmd.log.Info("Configuration saved in devspace.yaml - you can make adjustments as needed")
-	cmd.log.Infof("\r         \nYou can now run:\n1. %s - to pick which Kubernetes namespace to work in\n2. %s - to start developing your project in Kubernetes\n\nRun `%s` or `%s` to see a list of available commands and flags\n", ansi.Color("devspace use namespace", "blue+b"), ansi.Color("devspace dev", "blue+b"), ansi.Color("devspace -h", "blue+b"), ansi.Color("devspace [command] -h", "blue+b"))
 	return nil
-}
-
-func appendToIgnoreFile(ignoreFile, content string) error {
-	// Check if ignoreFile exists
-	_, err := os.Stat(ignoreFile)
-	if os.IsNotExist(err) {
-		_ = fsutil.WriteToFile([]byte(content), ignoreFile)
-	} else {
-		fileContent, err := ioutil.ReadFile(ignoreFile)
-		if err != nil {
-			return errors.Errorf("Error reading file %s: %v", ignoreFile, err)
-		}
-
-		// append only if not found in file content
-		if !strings.Contains(string(fileContent), content) {
-			file, err := os.OpenFile(ignoreFile, os.O_APPEND|os.O_WRONLY, 0600)
-			if err != nil {
-				return errors.Errorf("Error writing file %s: %v", ignoreFile, err)
-			}
-
-			defer file.Close()
-			if _, err = file.WriteString(content); err != nil {
-				return errors.Errorf("Error writing file %s: %v", ignoreFile, err)
-			}
-		}
-	}
-	return nil
-}
-
-func getProjectName() (string, string, error) {
-	projectName := ""
-	projectNamespace := ""
-	gitRemote, err := command.Output(context.TODO(), "", "git", "config", "--get", "remote.origin.url")
-	if err == nil {
-		sep := "/"
-		projectParts := strings.Split(string(regexp.MustCompile("^.*?://[^/]+?/([^.]+)(\\.git)?").ReplaceAll(gitRemote, []byte("$1"))), sep)
-		partsLen := len(projectParts)
-		if partsLen > 1 {
-			projectNamespace = strings.Join(projectParts[0:partsLen-1], sep)
-			projectName = projectParts[partsLen-1]
-		}
-	}
-
-	if projectName == "" {
-		absPath, err := filepath.Abs(".")
-		if err != nil {
-			return "", "", err
-		}
-		projectName = filepath.Base(absPath)
-	}
-
-	projectName = strings.ToLower(projectName)
-	projectName = regexp.MustCompile("[^a-zA-Z0-9- ]+").ReplaceAllString(projectName, "")
-	projectName = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(projectName, "-")
-	projectName = strings.Trim(projectName, "-")
-
-	if !SpaceNameValidationRegEx.MatchString(projectName) || len(projectName) > 42 {
-		projectName = "devspace"
-	}
-
-	return projectName, projectNamespace, nil
 }
 
 func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string, port int, languageHandler *generator.LanguageHandler) error {
@@ -677,21 +682,6 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		Command: "./" + startScriptName,
 	}
 
-	// Determine language
-	language, err := languageHandler.GetLanguage()
-	if err != nil {
-		return err
-	}
-
-	if language == "java" {
-		stat, err := os.Stat("build.gradle")
-		if err == nil && !stat.IsDir() {
-			language += "-gradle"
-		} else {
-			language += "-maven"
-		}
-	}
-
 	devImage, err := languageHandler.GetDevImage()
 	if err != nil {
 		return err
@@ -741,6 +731,7 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 			Silent:     true,
 			ConfigPath: renderPath,
 		},
+		Pipeline:     "deploy",
 		SkipPush:     true,
 		SkipBuild:    true,
 		Render:       true,
@@ -752,6 +743,87 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 	}
 
 	return writer.String(), nil
+}
+
+func (cmd *InitCmd) shouldGenerateFromDockerCompose() (string, bool, error) {
+	dockerComposePath := compose.GetDockerComposePath()
+	if dockerComposePath != "" {
+		selectedDockerComposeOption, err := cmd.log.Question(&survey.QuestionOptions{
+			Question:     "Docker Compose configuration detected. Do you want to create a DevSpace configuration based on Docker Compose?",
+			DefaultValue: DockerComposeDevSpaceConfigOption,
+			Options: []string{
+				DockerComposeDevSpaceConfigOption,
+				NewDevSpaceConfigOption,
+			},
+		})
+		if err != nil {
+			return "", false, err
+		}
+
+		return dockerComposePath, selectedDockerComposeOption == DockerComposeDevSpaceConfigOption, nil
+	}
+	return "", false, nil
+}
+
+func appendToIgnoreFile(ignoreFile, content string) error {
+	// Check if ignoreFile exists
+	_, err := os.Stat(ignoreFile)
+	if os.IsNotExist(err) {
+		_ = fsutil.WriteToFile([]byte(content), ignoreFile)
+	} else {
+		fileContent, err := ioutil.ReadFile(ignoreFile)
+		if err != nil {
+			return errors.Errorf("Error reading file %s: %v", ignoreFile, err)
+		}
+
+		// append only if not found in file content
+		if !strings.Contains(string(fileContent), content) {
+			file, err := os.OpenFile(ignoreFile, os.O_APPEND|os.O_WRONLY, 0600)
+			if err != nil {
+				return errors.Errorf("Error writing file %s: %v", ignoreFile, err)
+			}
+
+			defer file.Close()
+			if _, err = file.WriteString(content); err != nil {
+				return errors.Errorf("Error writing file %s: %v", ignoreFile, err)
+			}
+		}
+	}
+	return nil
+}
+
+func getProjectName() (string, string, error) {
+	projectName := ""
+	projectNamespace := ""
+	gitRemote, err := command.Output(context.TODO(), "", "git", "config", "--get", "remote.origin.url")
+	if err == nil {
+		sep := "/"
+		projectParts := strings.Split(string(regexp.MustCompile(`^.*?://[^/]+?/([^.]+)(\.git)?`).ReplaceAll(gitRemote, []byte("$1"))), sep)
+		partsLen := len(projectParts)
+		if partsLen > 1 {
+			projectNamespace = strings.Join(projectParts[0:partsLen-1], sep)
+			projectName = projectParts[partsLen-1]
+		}
+	}
+
+	if projectName == "" {
+		absPath, err := filepath.Abs(".")
+		if err != nil {
+			return "", "", err
+		}
+		projectName = filepath.Base(absPath)
+	}
+
+	projectName = strings.ToLower(projectName)
+	projectName = regexp.MustCompile("[^a-zA-Z0-9- ]+").ReplaceAllString(projectName, "")
+	projectName = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(projectName, "-")
+	projectName = strings.Trim(projectName, "-")
+
+	if !SpaceNameValidationRegEx.MatchString(projectName) || len(projectName) > 42 {
+		projectName = "devspace"
+	}
+
+	return projectName, projectNamespace, nil
 }
 
 func parseImages(manifests string) ([]string, error) {

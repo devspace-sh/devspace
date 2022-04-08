@@ -1,0 +1,15 @@
+
+version: v2beta1
+name: docker-compose
+
+deployments:
+  db:
+    helm:
+      values:
+        containers:
+        - name: db-container
+          image: mysql/mysql-server:8.0.19
+        hostAliases:
+        - ip: "50.31.209.229"
+          hostnames:
+          - "otherhost"

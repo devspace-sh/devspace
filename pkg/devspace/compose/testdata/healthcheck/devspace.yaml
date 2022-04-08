@@ -1,0 +1,45 @@
+
+version: v2beta1
+name: docker-compose
+
+deployments:
+  cmd:
+    helm:
+      values:
+        containers:
+        - name: cmd-container
+          image: mysql/mysql-server:8.0.19
+          livenessProbe:
+            exec:
+              command:
+              - mysqladmin
+              - ping
+              - -h
+              - 127.0.0.1
+              - --silent
+            failureThreshold: 5
+            initialDelaySeconds: 3
+            periodSeconds: 3
+  cmd-shell:
+    helm:
+      values:
+        containers:
+        - name: cmd-shell-container
+          image: mysql/mysql-server:8.0.19
+          livenessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - mysqladmin ping -h 127.0.0.1 --silent
+            failureThreshold: 5
+            initialDelaySeconds: 3
+            periodSeconds: 3
+  none:
+    helm:
+      values:
+        containers:
+        - name: none-container
+          image: mysql/mysql-server:8.0.19
+
+        

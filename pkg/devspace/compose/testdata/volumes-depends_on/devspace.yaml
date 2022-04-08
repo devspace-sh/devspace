@@ -1,0 +1,38 @@
+version: v2beta1
+name: docker-compose
+
+deployments:
+  backend:
+    helm:
+      values:
+        containers:
+          - command:
+              - tail
+              - -f
+              - /dev/null
+            image: rails:latest
+            name: backend-container
+            volumeMounts:
+              - containerPath: /tmp/cache
+                volume:
+                  name: volume-1
+                  readOnly: false
+        volumes:
+          - emptyDir: {}
+            name: volume-1
+
+dev:
+  backend:
+    labelSelector:
+      app.kubernetes.io/component: backend
+    command:
+      - tail
+      - -f
+      - /dev/null
+    sync:
+      - startContainer: true
+        path: ./cache:/tmp/cache
+
+dependencies:
+  db:
+    path: devspace-db.yaml

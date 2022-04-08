@@ -87,7 +87,7 @@ func TestGetRegistryEndpoint(t *testing.T) {
 			CommonAPIClient: &fakeDockerClient{},
 		}
 
-		isDefault, endpoint, err := client.GetRegistryEndpoint(testCase.registryURL)
+		isDefault, endpoint, err := client.GetRegistryEndpoint(context.Background(), testCase.registryURL)
 
 		if !testCase.expectedErr {
 			assert.NilError(t, err, "Unexpected error in testCase %s", testCase.name)
@@ -169,7 +169,7 @@ func TestGetAuthConfig(t *testing.T) {
 			CommonAPIClient: &fakeDockerClient{},
 		}
 
-		auth, err := client.GetAuthConfig(testCase.registryURL, testCase.checkCredentialsStore)
+		auth, err := client.GetAuthConfig(context.Background(), testCase.registryURL, testCase.checkCredentialsStore)
 
 		if !testCase.expectedErr {
 			assert.NilError(t, err, "Unexpected error in testCase %s", testCase.name)
@@ -261,7 +261,7 @@ func TestLogin(t *testing.T) {
 			CommonAPIClient: &fakeDockerClient{},
 		}
 
-		auth, err := client.Login(testCase.registryURL, testCase.user, testCase.password, testCase.checkCredentialsStore, testCase.saveAuthConfig, testCase.relogin)
+		auth, err := client.Login(context.Background(), testCase.registryURL, testCase.user, testCase.password, testCase.checkCredentialsStore, testCase.saveAuthConfig, testCase.relogin)
 		if !testCase.expectedErr {
 			assert.NilError(t, err, "Unexpected error in testCase %s", testCase.name)
 		} else if err == nil {

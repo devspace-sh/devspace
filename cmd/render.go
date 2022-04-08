@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"os"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -9,7 +10,7 @@ import (
 )
 
 // NewRenderCmd creates a new devspace render command
-func NewRenderCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewRenderCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *RawConfig) *cobra.Command {
 	cmd := &RunPipelineCmd{
 		GlobalFlags:             globalFlags,
 		SkipPushLocalKubernetes: true,
@@ -31,10 +32,14 @@ deployment.
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			f.GetLog().Warnf("This command is deprecated, please use 'devspace deploy --render' instead")
-			return cmd.Run(cobraCmd, args, f, "render", "renderCommand")
+			return cmd.Run(cobraCmd, args, f, "renderCommand")
 		},
 	}
 
-	cmd.AddFlags(renderCmd)
+	var pipeline *latest.Pipeline
+	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
+		pipeline = rawConfig.Config.Pipelines["deploy"]
+	}
+	cmd.AddPipelineFlags(f, renderCmd, pipeline)
 	return renderCmd
 }

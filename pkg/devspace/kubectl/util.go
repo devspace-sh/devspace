@@ -168,7 +168,7 @@ func EnsureNamespace(ctx context.Context, client Client, namespace string, log l
 			return err
 		}
 
-		log.Donef("Created namespace: %s", namespace)
+		log.WithPrefixColor("info ", "cyan+b").Donef("Created namespace: %s", namespace)
 	}
 
 	return nil

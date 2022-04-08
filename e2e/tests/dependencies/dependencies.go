@@ -2,15 +2,16 @@ package dependencies
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"io/ioutil"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -39,6 +40,36 @@ var _ = DevSpaceDescribe("dependencies", func() {
 	ginkgo.BeforeEach(func() {
 		f = framework.NewDefaultFactory()
 		kubeClient, err = kube.NewKubeHelper()
+	})
+
+	ginkgo.It("should wait for dependencies", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/wait")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dependencies")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command and start it
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Pipeline: "dev",
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out.txt"), `dep3
+dep2
+dep2
+wait
+`)
 	})
 
 	ginkgo.It("should not purge common dependency", func() {
@@ -135,7 +166,7 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectNoError(err)
 
 		// make sure the dependencies are correctly deployed
-		deploy, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "my-deployment", metav1.GetOptions{})
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "my-deployment", metav1.GetOptions{})
 		framework.ExpectError(err)
 
 		// check if replica set exists & pod got replaced correctly

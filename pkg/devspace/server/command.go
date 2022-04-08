@@ -23,7 +23,7 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		h.ctx.Log.Errorf("Error upgrading connection: %v", err)
+		h.ctx.Log().Errorf("Error upgrading connection: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -31,7 +31,7 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 
 	// Open logs connection
 	stream := &wsStream{WebSocket: ws}
-	cmd := exec.Command("devspace", "--namespace", h.ctx.KubeClient.Namespace(), "--kube-context", h.ctx.KubeClient.CurrentContext(), "run", name[0])
+	cmd := exec.Command("devspace", "--namespace", h.ctx.KubeClient().Namespace(), "--kube-context", h.ctx.KubeClient().CurrentContext(), "run", name[0])
 	done := make(chan bool)
 	defer close(done)
 
@@ -60,7 +60,7 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 
 	err = cmd.Run()
 	if err != nil {
-		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
+		h.ctx.Log().Errorf("Error in %s: %v", r.URL.String(), err)
 		websocketError(ws, err)
 		return
 	}

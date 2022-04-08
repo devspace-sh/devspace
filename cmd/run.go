@@ -75,27 +75,9 @@ devspace --dependency my-dependency run any-command --any-command-flag
 		return cmd.RunRun(f, args)
 	}
 
-	if rawConfig != nil && rawConfig.CommandsConfig != nil {
-		for _, cmd := range rawConfig.CommandsConfig.Commands {
-			description := cmd.Description
-			if description == "" {
-				description = "Runs command: " + cmd.Command
-			}
-			if len(description) > 64 {
-				if len(description) > 64 {
-					description = description[:61] + "..."
-				}
-			}
-			runCmd.AddCommand(&cobra.Command{
-				Use:                cmd.Name,
-				Short:              description,
-				Long:               description,
-				Args:               cobra.ArbitraryArgs,
-				DisableFlagParsing: true,
-				RunE: func(cobraCmd *cobra.Command, args []string) error {
-					return cobraCmd.Parent().RunE(cobraCmd, args)
-				},
-			})
+	if rawConfig != nil && rawConfig.Config != nil {
+		for _, cmd := range rawConfig.Config.Commands {
+			runCmd.AddCommand(NewSpecificRunCommand(f, globalFlags, cmd, rawConfig.Resolver.ResolvedVariables()))
 		}
 	}
 	runCmd.Flags().StringVar(&cmd.Dependency, "dependency", "", "Run a command from a specific dependency")
@@ -142,7 +124,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
-		config, err := configLoader.LoadWithCache(context.Background(), ctx.Config.LocalCache(), nil, configOptions, f.GetLog())
+		config, err := configLoader.LoadWithCache(context.Background(), ctx.Config().LocalCache(), nil, configOptions, f.GetLog())
 		if err != nil {
 			return err
 		}
@@ -159,20 +141,20 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 		}
 
 		ctx = ctx.AsDependency(dep)
-		commandConfig, err := findCommand(ctx.Config, args[0])
+		commandConfig, err := findCommand(ctx.Config(), args[0])
 		if err != nil {
 			return err
 		}
 
-		return executeCommandWithAfter(ctx.Context, commandConfig, args[1:], ctx.Config.Variables(), ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log)
+		return executeCommandWithAfter(ctx.Context(), commandConfig, args[1:], ctx.Config().Variables(), ctx.WorkingDir(), cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log())
 	}
 
-	commandConfig, err := findCommand(ctx.Config, args[0])
+	commandConfig, err := findCommand(ctx.Config(), args[0])
 	if err != nil {
 		return err
 	}
 
-	return executeCommandWithAfter(ctx.Context, commandConfig, args[1:], ctx.Config.Variables(), ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log)
+	return executeCommandWithAfter(ctx.Context(), commandConfig, args[1:], ctx.Config().Variables(), ctx.WorkingDir(), cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log())
 }
 
 func findCommand(config config.Config, name string) (*latest.CommandConfig, error) {
@@ -249,7 +231,7 @@ func ParseArgs(cobraCmd *cobra.Command, globalFlags *flags.GlobalFlags, log log.
 }
 
 // LoadCommandsConfig loads the commands config
-func LoadCommandsConfig(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log log.Logger) (*devspacecontext.Context, error) {
+func LoadCommandsConfig(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log log.Logger) (devspacecontext.Context, error) {
 	// load generated
 	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
@@ -263,7 +245,7 @@ func LoadCommandsConfig(configLoader loader.ConfigLoader, configOptions *loader.
 	}
 
 	// create context
-	return devspacecontext.NewContext(context.Background(), log).
+	return devspacecontext.NewContext(context.Background(), commandsInterface.Variables(), log).
 		WithConfig(commandsInterface), nil
 }
 
@@ -325,4 +307,65 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 
 	shellArgs = append(shellArgs, args...)
 	return command.CommandWithEnv(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, shellArgs...)
+}
+
+// RunCommandCmd holds the cmd flags of an run command
+type RunCommandCmd struct {
+	*flags.GlobalFlags
+
+	Command   *latest.CommandConfig
+	Variables map[string]interface{}
+
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
+// NewSpecificRunCommand creates a new run command
+func NewSpecificRunCommand(f factory.Factory, globalFlags *flags.GlobalFlags, command *latest.CommandConfig, variables map[string]interface{}) *cobra.Command {
+	cmd := &RunCommandCmd{
+		GlobalFlags: globalFlags,
+		Command:     command,
+		Variables:   variables,
+		Stdout:      os.Stdout,
+		Stderr:      os.Stderr,
+	}
+
+	description := command.Description
+	longDescription := command.Description
+	if description == "" {
+		description = "Runs command: " + command.Name
+		longDescription = description
+	}
+	if len(description) > 64 {
+		if len(description) > 64 {
+			description = description[:61] + "..."
+		}
+	}
+
+	runCmd := &cobra.Command{
+		Use:   command.Name,
+		Short: description,
+		Long:  longDescription,
+		Args:  cobra.ArbitraryArgs,
+		RunE: func(cobraCmd *cobra.Command, originalArgs []string) error {
+			args, err := ParseArgs(cobraCmd, cmd.GlobalFlags, f.GetLog())
+			if err != nil {
+				return err
+			}
+
+			if cmd.ConfigPath != "" {
+				return cobraCmd.Parent().RunE(cobraCmd, originalArgs)
+			}
+
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f, args)
+		},
+	}
+	runCmd.DisableFlagParsing = true
+	return runCmd
+}
+
+func (cmd *RunCommandCmd) Run(f factory.Factory, args []string) error {
+	devCtx := devspacecontext.NewContext(context.Background(), cmd.Variables, f.GetLog())
+	return executeCommandWithAfter(devCtx.Context(), cmd.Command, args, cmd.Variables, devCtx.WorkingDir(), cmd.Stdout, cmd.Stderr, os.Stdin, devCtx.Log())
 }

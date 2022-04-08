@@ -28,7 +28,7 @@ func NewClient(log log.Logger) (types.Client, error) {
 }
 
 // InstallChart installs the given chart via helm v3
-func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
+func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	valuesFile, err := c.genericHelm.WriteValues(values)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	defer os.Remove(valuesFile)
 
 	if releaseNamespace == "" {
-		releaseNamespace = ctx.KubeClient.Namespace()
+		releaseNamespace = ctx.KubeClient().Namespace()
 	}
 
 	args := []string{
@@ -52,7 +52,7 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	// Chart settings
 	chartName := ""
 	if helmConfig.Chart.Source != nil {
-		chartName, err = dependencyutil.DownloadDependency(ctx.Context, ctx.WorkingDir, helmConfig.Chart.Source, ctx.Log)
+		chartName, err = dependencyutil.DownloadDependency(ctx.Context(), ctx.WorkingDir(), helmConfig.Chart.Source, ctx.Log())
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +83,7 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	if err == nil && stat.IsDir() {
 		_, err := c.genericHelm.Exec(ctx.WithWorkingDir(chartName), []string{"dependency", "update"})
 		if err != nil {
-			ctx.Log.Warnf("error running helm dependency update: %v", err)
+			ctx.Log().Warnf("error running helm dependency update: %v", err)
 		}
 	}
 
@@ -91,7 +91,7 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	args = append(args, helmConfig.UpgradeArgs...)
 	output, err := c.genericHelm.Exec(ctx, args)
 	if helmConfig.DisplayOutput {
-		writer := ctx.Log.Writer(logrus.InfoLevel, false)
+		writer := ctx.Log().Writer(logrus.InfoLevel, false)
 		_, _ = writer.Write(output)
 		_ = writer.Close()
 	}
@@ -113,7 +113,7 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	return nil, nil
 }
 
-func (c *client) Template(ctx *devspacecontext.Context, releaseName, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+func (c *client) Template(ctx devspacecontext.Context, releaseName, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (string, error) {
 	valuesFile, err := c.genericHelm.WriteValues(values)
 	if err != nil {
 		return "", err
@@ -121,7 +121,7 @@ func (c *client) Template(ctx *devspacecontext.Context, releaseName, releaseName
 	defer os.Remove(valuesFile)
 
 	if releaseNamespace == "" {
-		releaseNamespace = ctx.KubeClient.Namespace()
+		releaseNamespace = ctx.KubeClient().Namespace()
 	}
 
 	args := []string{
@@ -136,7 +136,7 @@ func (c *client) Template(ctx *devspacecontext.Context, releaseName, releaseName
 	// Chart settings
 	chartName := ""
 	if helmConfig.Chart.Source != nil {
-		chartName, err = dependencyutil.DownloadDependency(ctx.Context, ctx.WorkingDir, helmConfig.Chart.Source, ctx.Log)
+		chartName, err = dependencyutil.DownloadDependency(ctx.Context(), ctx.WorkingDir(), helmConfig.Chart.Source, ctx.Log())
 		if err != nil {
 			return "", err
 		}
@@ -167,7 +167,7 @@ func (c *client) Template(ctx *devspacecontext.Context, releaseName, releaseName
 	if err == nil && stat.IsDir() {
 		_, err := c.genericHelm.Exec(ctx.WithWorkingDir(chartName), []string{"dependency", "update"})
 		if err != nil {
-			ctx.Log.Warnf("error running helm dependency update: %v", err)
+			ctx.Log().Warnf("error running helm dependency update: %v", err)
 		}
 	}
 
@@ -180,9 +180,9 @@ func (c *client) Template(ctx *devspacecontext.Context, releaseName, releaseName
 	return string(result), nil
 }
 
-func (c *client) DeleteRelease(ctx *devspacecontext.Context, releaseName string, releaseNamespace string) error {
+func (c *client) DeleteRelease(ctx devspacecontext.Context, releaseName string, releaseNamespace string) error {
 	if releaseNamespace == "" {
-		releaseNamespace = ctx.KubeClient.Namespace()
+		releaseNamespace = ctx.KubeClient().Namespace()
 	}
 
 	args := []string{
@@ -199,7 +199,7 @@ func (c *client) DeleteRelease(ctx *devspacecontext.Context, releaseName string,
 	return nil
 }
 
-func (c *client) ListReleases(ctx *devspacecontext.Context, namespace string) ([]*types.Release, error) {
+func (c *client) ListReleases(ctx devspacecontext.Context, namespace string) ([]*types.Release, error) {
 	args := []string{
 		"list",
 		"--namespace",

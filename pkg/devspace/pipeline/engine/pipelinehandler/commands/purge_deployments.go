@@ -21,12 +21,17 @@ type PurgeDeploymentsOptions struct {
 	// Extra flags here to add a deployment
 }
 
-func PurgeDeployments(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-	ctx.Log.Debugf("purge_deployments %s", strings.Join(args, " "))
+func PurgeDeployments(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	ctx.Log().Debugf("purge_deployments %s", strings.Join(args, " "))
+	err := pipeline.Exclude(ctx)
+	if err != nil {
+		return err
+	}
+
 	options := &PurgeDeploymentsOptions{
 		PurgeOptions: pipeline.Options().PurgeOptions,
 	}
-	args, err := flags.ParseArgs(options, args)
+	args, err = flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}

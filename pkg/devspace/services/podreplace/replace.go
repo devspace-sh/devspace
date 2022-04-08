@@ -35,10 +35,10 @@ const (
 
 type PodReplacer interface {
 	// ReplacePod will try to replace a pod with the given config
-	ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPod) error
+	ReplacePod(ctx devspacecontext.Context, devPod *latest.DevPod) error
 
 	// RevertReplacePod will try to revert a pod replacement with the given config
-	RevertReplacePod(ctx *devspacecontext.Context, devPodCache *remotecache.DevPodCache, options *deploy.PurgeOptions) (bool, error)
+	RevertReplacePod(ctx devspacecontext.Context, devPodCache *remotecache.DevPodCache, options *deploy.PurgeOptions) (bool, error)
 }
 
 func NewPodReplacer() PodReplacer {
@@ -47,20 +47,20 @@ func NewPodReplacer() PodReplacer {
 
 type replacer struct{}
 
-func (p *replacer) ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPod) error {
+func (p *replacer) ReplacePod(ctx devspacecontext.Context, devPod *latest.DevPod) error {
 	namespace := devPod.Namespace
 	if namespace == "" {
-		namespace = ctx.KubeClient.Namespace()
+		namespace = ctx.KubeClient().Namespace()
 	}
 
-	devPodCache, ok := ctx.Config.RemoteCache().GetDevPod(devPod.Name)
+	devPodCache, ok := ctx.Config().RemoteCache().GetDevPod(devPod.Name)
 	if !ok {
 		devPodCache.Name = devPod.Name
 		devPodCache.Namespace = namespace
 	}
 
 	// check if root name exists
-	rootName, ok := values.RootNameFrom(ctx.Context)
+	rootName, ok := values.RootNameFrom(ctx.Context())
 	if ok && !stringutil.Contains(devPodCache.Projects, rootName) {
 		devPodCache.Projects = append(devPodCache.Projects, rootName)
 	}
@@ -68,10 +68,10 @@ func (p *replacer) ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPo
 	// did we already replace a pod?
 	if devPodCache.Deployment != "" {
 		// check if there is a replaced pod in the target namespace
-		ctx.Log.Debug("Try to find replaced deployment...")
+		ctx.Log().Debug("Try to find replaced deployment...")
 
 		// find the replaced replica set
-		deployment, err := ctx.KubeClient.KubeClient().AppsV1().Deployments(devPodCache.Namespace).Get(ctx.Context, devPodCache.Deployment, metav1.GetOptions{})
+		deployment, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(devPodCache.Namespace).Get(ctx.Context(), devPodCache.Deployment, metav1.GetOptions{})
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
 				return errors.Wrap(err, "find devspace deployment")
@@ -83,8 +83,8 @@ func (p *replacer) ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPo
 			if err != nil {
 				return err
 			} else if !recreateNeeded {
-				ctx.Config.RemoteCache().SetDevPod(devPodCache.Name, devPodCache)
-				err = ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
+				ctx.Config().RemoteCache().SetDevPod(devPodCache.Name, devPodCache)
+				err = ctx.Config().RemoteCache().Save(ctx.Context(), ctx.KubeClient())
 				if err != nil {
 					return err
 				}
@@ -107,24 +107,24 @@ func (p *replacer) ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPo
 	devPodCache.TargetKind = target.GetObjectKind().GroupVersionKind().Kind
 	devPodCache.TargetName = target.(metav1.Object).GetName()
 	devPodCache.Deployment = target.(metav1.Object).GetName() + "-devspace"
-	ctx.Config.RemoteCache().SetDevPod(devPodCache.Name, devPodCache)
-	err = ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
+	ctx.Config().RemoteCache().SetDevPod(devPodCache.Name, devPodCache)
+	err = ctx.Config().RemoteCache().Save(ctx.Context(), ctx.KubeClient())
 	if err != nil {
 		return err
 	}
 
 	// replace the pod
-	ctx.Log.Debugf("Replacing %s %s...", devPodCache.TargetKind, devPodCache.TargetName)
+	ctx.Log().Debugf("Replacing %s %s...", devPodCache.TargetKind, devPodCache.TargetName)
 	err = p.replace(ctx, devPodCache.Deployment, target, devPod)
 	if err != nil {
 		return err
 	}
 
-	ctx.Log.Debugf("Successfully replaced %s %s", devPodCache.TargetKind, devPodCache.TargetName)
+	ctx.Log().Debugf("Successfully replaced %s %s", devPodCache.TargetKind, devPodCache.TargetName)
 	return nil
 }
 
-func updateNeeded(ctx *devspacecontext.Context, deployment *appsv1.Deployment, devPod *latest.DevPod) (recreateNeeded bool, err error) {
+func updateNeeded(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPod *latest.DevPod) (recreateNeeded bool, err error) {
 	if deployment.Annotations == nil || deployment.Annotations[TargetKindAnnotation] == "" || deployment.Annotations[TargetNameAnnotation] == "" {
 		return true, deleteDeployment(ctx, deployment)
 	}
@@ -135,7 +135,7 @@ func updateNeeded(ctx *devspacecontext.Context, deployment *appsv1.Deployment, d
 			return true, deleteDeployment(ctx, deployment)
 		}
 
-		ctx.Log.Debugf("error getting target for deployment %s/%s: %v", deployment.Namespace, deployment.Name, err)
+		ctx.Log().Debugf("error getting target for deployment %s/%s: %v", deployment.Namespace, deployment.Name, err)
 		return false, err
 	}
 
@@ -151,13 +151,13 @@ func updateNeeded(ctx *devspacecontext.Context, deployment *appsv1.Deployment, d
 
 	err = scaleDownTarget(ctx, target)
 	if err != nil {
-		ctx.Log.Warnf("Error scaling down target: %v", err)
+		ctx.Log().Warnf("Error scaling down target: %v", err)
 	}
 
 	// don't update if pod spec & config hash are the same
 	if apiequality.Semantic.DeepEqual(newDeployment.Spec.Template, deployment.Spec.Template) && configHash == deployment.Annotations[DevPodConfigHashAnnotation] {
 		// make sure target is downscaled
-		ctx.Log.Debugf("No changes required in replaced deployment %s", deployment.Name)
+		ctx.Log().Debugf("No changes required in replaced deployment %s", deployment.Name)
 		return false, nil
 	}
 
@@ -170,16 +170,16 @@ func updateNeeded(ctx *devspacecontext.Context, deployment *appsv1.Deployment, d
 	if err != nil {
 		return false, err
 	} else if string(patchBytes) == "{}" {
-		ctx.Log.Debugf("No changes required in replaced deployment %s", deployment.Name)
+		ctx.Log().Debugf("No changes required in replaced deployment %s", deployment.Name)
 		return false, nil
 	}
 
-	ctx.Log.Debugf("Update replaced deployment with patch:\n %s", string(patchBytes))
+	ctx.Log().Debugf("Update replaced deployment with patch:\n %s", string(patchBytes))
 
-	_, err = ctx.KubeClient.KubeClient().AppsV1().Deployments(deployment.Namespace).Patch(ctx.Context, deployment.Name, patch.Type(), patchBytes, metav1.PatchOptions{})
+	_, err = ctx.KubeClient().KubeClient().AppsV1().Deployments(deployment.Namespace).Patch(ctx.Context(), deployment.Name, patch.Type(), patchBytes, metav1.PatchOptions{})
 	if err != nil {
 		if kerrors.IsInvalid(err) {
-			ctx.Log.Debugf("Recreate deployment because it is invalid: %v", err)
+			ctx.Log().Debugf("Recreate deployment because it is invalid: %v", err)
 			return true, deleteDeployment(ctx, deployment)
 		}
 
@@ -189,9 +189,9 @@ func updateNeeded(ctx *devspacecontext.Context, deployment *appsv1.Deployment, d
 	return false, nil
 }
 
-func deleteDeployment(ctx *devspacecontext.Context, deployment *appsv1.Deployment) error {
+func deleteDeployment(ctx devspacecontext.Context, deployment *appsv1.Deployment) error {
 	// delete the owning deployment or pod
-	err := ctx.KubeClient.KubeClient().AppsV1().Deployments(deployment.Namespace).Delete(ctx.Context, deployment.Name, metav1.DeleteOptions{})
+	err := ctx.KubeClient().KubeClient().AppsV1().Deployments(deployment.Namespace).Delete(ctx.Context(), deployment.Name, metav1.DeleteOptions{})
 	if err != nil {
 		if !kerrors.IsNotFound(err) {
 			return errors.Wrap(err, "delete deployment")
@@ -201,7 +201,7 @@ func deleteDeployment(ctx *devspacecontext.Context, deployment *appsv1.Deploymen
 	return nil
 }
 
-func (p *replacer) replace(ctx *devspacecontext.Context, deploymentName string, target runtime.Object, devPod *latest.DevPod) error {
+func (p *replacer) replace(ctx devspacecontext.Context, deploymentName string, target runtime.Object, devPod *latest.DevPod) error {
 	deploymentObj, err := buildDeployment(ctx, deploymentName, target, devPod)
 	if err != nil {
 		return err
@@ -212,13 +212,13 @@ func (p *replacer) replace(ctx *devspacecontext.Context, deploymentName string, 
 	if err != nil {
 		return errors.Wrap(err, "scale down target")
 	}
-	ctx.Log.Debugf("Scaled down %s %s", deploymentObj.Annotations[TargetKindAnnotation], deploymentObj.Annotations[TargetNameAnnotation])
+	ctx.Log().Debugf("Scaled down %s %s", deploymentObj.Annotations[TargetKindAnnotation], deploymentObj.Annotations[TargetNameAnnotation])
 
 	// create the deployment
-	deployment, err := ctx.KubeClient.KubeClient().AppsV1().Deployments(deploymentObj.Namespace).Create(ctx.Context, deploymentObj, metav1.CreateOptions{})
+	deployment, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(deploymentObj.Namespace).Create(ctx.Context(), deploymentObj, metav1.CreateOptions{})
 	if err != nil {
 		if kerrors.IsAlreadyExists(err) {
-			ctx.Log.Info("Pod was already replaced, retrying to update the configuration")
+			ctx.Log().Info("Pod was already replaced, retrying to update the configuration")
 			return p.ReplacePod(ctx, devPod)
 		}
 
@@ -239,10 +239,10 @@ func (p *replacer) replace(ctx *devspacecontext.Context, deploymentName string, 
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				// delete the old one and wait
-				_ = ctx.KubeClient.KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Delete(ctx.Context, deployment.Name, metav1.DeleteOptions{})
-				ctx.Log.Infof("Waiting for old persistent volume claim to terminate")
+				_ = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Delete(ctx.Context(), deployment.Name, metav1.DeleteOptions{})
+				ctx.Log().Infof("Waiting for old persistent volume claim to terminate")
 				err = wait.Poll(time.Second, time.Minute*2, func() (done bool, err error) {
-					_, err = ctx.KubeClient.KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Get(ctx.Context, deployment.Name, metav1.GetOptions{})
+					_, err = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Get(ctx.Context(), deployment.Name, metav1.GetOptions{})
 					return kerrors.IsNotFound(err), nil
 				})
 				if err != nil {
@@ -263,7 +263,7 @@ func (p *replacer) replace(ctx *devspacecontext.Context, deploymentName string, 
 	return nil
 }
 
-func createPVC(ctx *devspacecontext.Context, deployment *appsv1.Deployment, devPod *latest.DevPod) error {
+func createPVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPod *latest.DevPod) error {
 	var err error
 	size := resource.MustParse("10Gi")
 	if devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Size != "" {
@@ -291,7 +291,7 @@ func createPVC(ctx *devspacecontext.Context, deployment *appsv1.Deployment, devP
 		name = devPod.PersistenceOptions.Name
 	}
 
-	_, err = ctx.KubeClient.KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Create(ctx.Context, &corev1.PersistentVolumeClaim{
+	_, err = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Create(ctx.Context(), &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: deployment.Namespace,
@@ -317,18 +317,18 @@ func createPVC(ctx *devspacecontext.Context, deployment *appsv1.Deployment, devP
 	}, metav1.CreateOptions{})
 	if err != nil {
 		if kerrors.IsAlreadyExists(err) && devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Name != "" {
-			ctx.Log.Infof("PVC %s already exists for replaced pod %s", name, deployment.Name)
+			ctx.Log().Infof("PVC %s already exists for replaced pod %s", name, deployment.Name)
 			return nil
 		}
 
 		return err
 	}
 
-	ctx.Log.Donef("Created PVC %s for replaced pod %s", name, deployment.Name)
+	ctx.Log().Donef("Created PVC %s for replaced pod %s", name, deployment.Name)
 	return nil
 }
 
-func scaleDownTarget(ctx *devspacecontext.Context, obj runtime.Object) error {
+func scaleDownTarget(ctx devspacecontext.Context, obj runtime.Object) error {
 	cloned := obj.DeepCopyObject()
 
 	// update object based on type
@@ -355,7 +355,7 @@ func scaleDownTarget(ctx *devspacecontext.Context, obj runtime.Object) error {
 			return err
 		}
 
-		_, err = ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(t.Namespace).Patch(ctx.Context, t.Name, patch.Type(), bytes, metav1.PatchOptions{})
+		_, err = ctx.KubeClient().KubeClient().AppsV1().ReplicaSets(t.Namespace).Patch(ctx.Context(), t.Name, patch.Type(), bytes, metav1.PatchOptions{})
 		if err != nil {
 			return err
 		}
@@ -383,7 +383,7 @@ func scaleDownTarget(ctx *devspacecontext.Context, obj runtime.Object) error {
 			return err
 		}
 
-		_, err = ctx.KubeClient.KubeClient().AppsV1().Deployments(t.Namespace).Patch(ctx.Context, t.Name, patch.Type(), bytes, metav1.PatchOptions{})
+		_, err = ctx.KubeClient().KubeClient().AppsV1().Deployments(t.Namespace).Patch(ctx.Context(), t.Name, patch.Type(), bytes, metav1.PatchOptions{})
 		if err != nil {
 			return err
 		}
@@ -411,7 +411,7 @@ func scaleDownTarget(ctx *devspacecontext.Context, obj runtime.Object) error {
 			return err
 		}
 
-		_, err = ctx.KubeClient.KubeClient().AppsV1().StatefulSets(t.Namespace).Patch(ctx.Context, t.Name, patch.Type(), bytes, metav1.PatchOptions{})
+		_, err = ctx.KubeClient().KubeClient().AppsV1().StatefulSets(t.Namespace).Patch(ctx.Context(), t.Name, patch.Type(), bytes, metav1.PatchOptions{})
 		if err != nil {
 			return err
 		}

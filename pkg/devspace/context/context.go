@@ -1,10 +1,11 @@
 package context
 
 import (
-	"context"
+	context2 "context"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
@@ -16,7 +17,7 @@ import (
 	"strings"
 )
 
-func NewContext(ctx context.Context, log log.Logger) *Context {
+func NewContext(ctx context2.Context, variables map[string]interface{}, log log.Logger) Context {
 	var err error
 	workingDir, _ := RealWorkDir()
 	if workingDir == "" {
@@ -26,11 +27,12 @@ func NewContext(ctx context.Context, log log.Logger) *Context {
 		}
 	}
 
-	return &Context{
-		Context:    ctx,
-		WorkingDir: workingDir,
-		RunID:      strings.ToLower(randutil.GenerateRandomString(12)),
-		Log:        log,
+	return &context{
+		context:    ctx,
+		workingDir: workingDir,
+		runID:      strings.ToLower(randutil.GenerateRandomString(12)),
+		environ:    env.NewVariableEnvProvider(env.ConvertMap(variables)),
+		log:        log,
 	}
 }
 
@@ -45,36 +47,118 @@ func RealWorkDir() (string, error) {
 	return "", nil
 }
 
-type Context struct {
-	// Context is the context to use
-	Context context.Context
+type Context interface {
+	// Context is the golang context to use
+	Context() context2.Context
 
 	// WorkingDir is the current working dir. Functions
 	// that receive this context should prefer this working directory
 	// instead of using the global one.
-	WorkingDir string
+	WorkingDir() string
 
 	// RunID is the current DevSpace run id, which differs in each
 	// run of DevSpace. This can be used to save certain informations
 	// during the run.
-	RunID string
+	RunID() string
 
-	// Config is the loaded DevSpace config
-	Config config.Config
-
-	// Dependencies are the loaded dependencies
-	Dependencies []types.Dependency
-
-	// KubeClient is the kubernetes client
-	KubeClient kubectl.Client
+	// Environ is the environment for command execution
+	Environ() env.Provider
 
 	// Log is the currently used logger
-	Log log.Logger
+	Log() log.Logger
+
+	// Config is the loaded DevSpace config
+	Config() config.Config
+
+	// Dependencies are the loaded dependencies
+	Dependencies() []types.Dependency
+
+	// KubeClient is the kubernetes client
+	KubeClient() kubectl.Client
+
+	// IsDone checks if the context expired
+	IsDone() bool
+
+	// ResolvePath resolves a relative path according to the
+	// current working directory
+	ResolvePath(relPath string) string
+
+	WithNewTomb() (Context, *tomb.Tomb)
+	WithKubeClient(client kubectl.Client) Context
+	WithWorkingDir(workingDir string) Context
+	WithConfig(conf config.Config) Context
+	WithDependencies(dependencies []types.Dependency) Context
+	WithContext(ctx context2.Context) Context
+	WithEnviron(environ env.Provider) Context
+	WithLogger(logger log.Logger) Context
+	AsDependency(dependency types.Dependency) Context
 }
 
-func (c *Context) IsDone() bool {
+type context struct {
+	// context is the context to use
+	context context2.Context
+
+	// workingDir is the current working dir. Functions
+	// that receive this context should prefer this working directory
+	// instead of using the global one.
+	workingDir string
+
+	// runID is the current DevSpace run id, which differs in each
+	// run of DevSpace. This can be used to save certain informations
+	// during the run.
+	runID string
+
+	// config is the loaded DevSpace config
+	config config.Config
+
+	// dependencies are the loaded dependencies
+	dependencies []types.Dependency
+
+	// kubeClient is the kubernetes client
+	kubeClient kubectl.Client
+
+	// environ is the environment provider used for executing a command
+	environ env.Provider
+
+	// log is the currently used logger
+	log log.Logger
+}
+
+func (c *context) Environ() env.Provider {
+	return c.environ
+}
+
+func (c *context) Context() context2.Context {
+	return c.context
+}
+
+func (c *context) WorkingDir() string {
+	return c.workingDir
+}
+
+func (c *context) RunID() string {
+	return c.runID
+}
+
+func (c *context) Config() config.Config {
+	return c.config
+}
+
+func (c *context) Dependencies() []types.Dependency {
+	return c.dependencies
+}
+
+func (c *context) KubeClient() kubectl.Client {
+	return c.kubeClient
+}
+
+func (c *context) Log() log.Logger {
+	return c.log
+}
+
+func (c *context) IsDone() bool {
 	select {
-	case <-c.Context.Done():
+	case <-c.context.Done():
 		return true
 	default:
 	}
@@ -82,29 +166,30 @@ func (c *Context) IsDone() bool {
 	return false
 }
 
-func (c *Context) WithNewTomb() (*Context, *tomb.Tomb) {
+func (c *context) WithEnviron(environ env.Provider) Context {
+	if c == nil {
+		return nil
+	}
+
+	n := *c
+	n.environ = environ
+	return &n
+}
+
+func (c *context) WithNewTomb() (Context, *tomb.Tomb) {
 	if c == nil {
 		return nil, nil
 	}
 
 	var t *tomb.Tomb
 	n := *c
-	t, n.Context = tomb.WithContext(c.Context)
+	t, n.context = tomb.WithContext(c.context)
 	return &n, t
 }
 
-func (c *Context) ToOriginalRelativePath(absPath string) string {
-	relPath, err := filepath.Rel(c.WorkingDir, absPath)
-	if err != nil {
-		c.Log.Debugf("Error computing original relative path: %v", err)
-		return absPath
-	}
-	return relPath
-}
-
-func (c *Context) ResolvePath(relPath string) string {
+func (c *context) ResolvePath(relPath string) string {
 	if relPath == "" {
-		return c.WorkingDir
+		return c.workingDir
 	}
 
 	relPath = filepath.ToSlash(relPath)
@@ -112,83 +197,84 @@ func (c *Context) ResolvePath(relPath string) string {
 		return path.Clean(relPath)
 	}
 
-	outPath := path.Join(filepath.ToSlash(c.WorkingDir), relPath)
+	outPath := path.Join(filepath.ToSlash(c.workingDir), relPath)
 	if !filepath.IsAbs(outPath) {
-		return c.WorkingDir
+		return c.workingDir
 	}
 
 	return outPath
 }
 
-func (c *Context) WithKubeClient(client kubectl.Client) *Context {
+func (c *context) WithKubeClient(client kubectl.Client) Context {
 	if c == nil {
 		return nil
 	}
 
 	n := *c
-	n.KubeClient = client
+	n.kubeClient = client
 	return &n
 }
 
-func (c *Context) WithWorkingDir(workingDir string) *Context {
+func (c *context) WithWorkingDir(workingDir string) Context {
 	if c == nil {
 		return nil
 	}
 
 	n := *c
-	n.WorkingDir = workingDir
+	n.workingDir = workingDir
 	return &n
 }
 
-func (c *Context) WithConfig(conf config.Config) *Context {
+func (c *context) WithConfig(conf config.Config) Context {
 	if c == nil {
 		return nil
 	}
 
 	n := *c
-	n.Config = conf
+	n.config = conf
 	return &n
 }
 
-func (c *Context) WithDependencies(dependencies []types.Dependency) *Context {
+func (c *context) WithDependencies(dependencies []types.Dependency) Context {
 	if c == nil {
 		return nil
 	}
 
 	n := *c
-	n.Dependencies = dependencies
+	n.dependencies = dependencies
 	return &n
 }
 
-func (c *Context) WithContext(ctx context.Context) *Context {
+func (c *context) WithContext(ctx context2.Context) Context {
 	if c == nil {
 		return nil
 	}
 
 	n := *c
-	n.Context = ctx
+	n.context = ctx
 	return &n
 }
 
-func (c *Context) WithLogger(logger log.Logger) *Context {
+func (c *context) WithLogger(logger log.Logger) Context {
 	if c == nil {
 		return nil
 	}
 
 	n := *c
-	n.Log = logger
+	n.log = logger
 	return &n
 }
 
-func (c *Context) AsDependency(dependency types.Dependency) *Context {
+func (c *context) AsDependency(dependency types.Dependency) Context {
 	if c == nil {
 		return nil
 	}
 
 	n := *c
-	n.WorkingDir = dependency.Path()
-	n.KubeClient = dependency.KubeClient()
-	n.Config = dependency.Config()
-	n.Dependencies = dependency.Children()
+	n.workingDir = dependency.Path()
+	n.kubeClient = dependency.KubeClient()
+	n.config = dependency.Config()
+	n.dependencies = dependency.Children()
+	n.environ = env.NewVariableEnvProvider(env.ConvertMap(n.config.Variables()))
 	return &n
 }

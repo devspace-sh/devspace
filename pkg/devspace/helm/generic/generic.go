@@ -22,7 +22,7 @@ import (
 const stableChartRepo = "https://charts.helm.sh/stable"
 
 type Client interface {
-	Exec(ctx *devspacecontext.Context, args []string) ([]byte, error)
+	Exec(ctx devspacecontext.Context, args []string) ([]byte, error)
 	WriteValues(values map[string]interface{}) (string, error)
 }
 
@@ -63,21 +63,21 @@ func (c *client) WriteValues(values map[string]interface{}) (string, error) {
 	return f.Name(), nil
 }
 
-func (c *client) Exec(ctx *devspacecontext.Context, args []string) ([]byte, error) {
-	err := c.ensureHelmBinary(ctx.Context)
+func (c *client) Exec(ctx devspacecontext.Context, args []string) ([]byte, error) {
+	err := c.ensureHelmBinary(ctx.Context())
 	if err != nil {
 		return nil, err
 	}
 
-	if !ctx.KubeClient.IsInCluster() {
-		args = append(args, "--kube-context", ctx.KubeClient.CurrentContext())
+	if !ctx.KubeClient().IsInCluster() {
+		args = append(args, "--kube-context", ctx.KubeClient().CurrentContext())
 	}
 
 	// disable log for list, because it prints same command multiple times if we've multiple deployments.
 	if args[0] != "list" {
 		c.log.Debugf("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
 	}
-	result, err := command.Output(ctx.Context, ctx.WorkingDir, c.helmPath, args...)
+	result, err := command.Output(ctx.Context(), ctx.WorkingDir(), c.helmPath, args...)
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", string(result), err)
 	}

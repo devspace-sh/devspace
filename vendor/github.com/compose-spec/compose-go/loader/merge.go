@@ -53,6 +53,7 @@ func merge(configs []*types.Config) (*types.Config, error) {
 	base := configs[0]
 	for _, override := range configs[1:] {
 		var err error
+		base.Name = mergeNames(base.Name, override.Name)
 		base.Services, err = mergeServices(base.Services, override.Services)
 		if err != nil {
 			return base, errors.Wrapf(err, "cannot merge services from %s", override.Filename)
@@ -79,6 +80,13 @@ func merge(configs []*types.Config) (*types.Config, error) {
 		}
 	}
 	return base, nil
+}
+
+func mergeNames(base, override string) string {
+	if override != "" {
+		return override
+	}
+	return base
 }
 
 func mergeServices(base, override []types.ServiceConfig) ([]types.ServiceConfig, error) {
@@ -113,6 +121,11 @@ func _merge(baseService *types.ServiceConfig, overrideService *types.ServiceConf
 	}
 	if overrideService.Entrypoint != nil {
 		baseService.Entrypoint = overrideService.Entrypoint
+	}
+	if baseService.Environment != nil {
+		baseService.Environment.OverrideBy(overrideService.Environment)
+	} else {
+		baseService.Environment = overrideService.Environment
 	}
 	return baseService, nil
 }
@@ -149,7 +162,7 @@ func toServicePortConfigsMap(s interface{}) (map[interface{}]interface{}, error)
 	m := map[interface{}]interface{}{}
 	type port struct {
 		target    uint32
-		published uint32
+		published string
 		ip        string
 		protocol  string
 	}
@@ -179,7 +192,7 @@ func toServiceVolumeConfigsMap(s interface{}) (map[interface{}]interface{}, erro
 }
 
 func toServiceSecretConfigsSlice(dst reflect.Value, m map[interface{}]interface{}) error {
-	s := []types.ServiceSecretConfig{}
+	var s []types.ServiceSecretConfig
 	for _, v := range m {
 		s = append(s, v.(types.ServiceSecretConfig))
 	}
@@ -189,7 +202,7 @@ func toServiceSecretConfigsSlice(dst reflect.Value, m map[interface{}]interface{
 }
 
 func toSServiceConfigObjConfigsSlice(dst reflect.Value, m map[interface{}]interface{}) error {
-	s := []types.ServiceConfigObjConfig{}
+	var s []types.ServiceConfigObjConfig
 	for _, v := range m {
 		s = append(s, v.(types.ServiceConfigObjConfig))
 	}
@@ -199,7 +212,7 @@ func toSServiceConfigObjConfigsSlice(dst reflect.Value, m map[interface{}]interf
 }
 
 func toServicePortConfigsSlice(dst reflect.Value, m map[interface{}]interface{}) error {
-	s := []types.ServicePortConfig{}
+	var s []types.ServicePortConfig
 	for _, v := range m {
 		s = append(s, v.(types.ServicePortConfig))
 	}
@@ -220,7 +233,7 @@ func toServicePortConfigsSlice(dst reflect.Value, m map[interface{}]interface{})
 }
 
 func toServiceVolumeConfigsSlice(dst reflect.Value, m map[interface{}]interface{}) error {
-	s := []types.ServiceVolumeConfig{}
+	var s []types.ServiceVolumeConfig
 	for _, v := range m {
 		s = append(s, v.(types.ServiceVolumeConfig))
 	}
@@ -229,7 +242,7 @@ func toServiceVolumeConfigsSlice(dst reflect.Value, m map[interface{}]interface{
 	return nil
 }
 
-type tomapFn func(s interface{}) (map[interface{}]interface{}, error)
+type toMapFn func(s interface{}) (map[interface{}]interface{}, error)
 type writeValueFromMapFn func(reflect.Value, map[interface{}]interface{}) error
 
 func safelyMerge(mergeFn func(dst, src reflect.Value) error) func(dst, src reflect.Value) error {
@@ -245,13 +258,13 @@ func safelyMerge(mergeFn func(dst, src reflect.Value) error) func(dst, src refle
 	}
 }
 
-func mergeSlice(tomap tomapFn, writeValue writeValueFromMapFn) func(dst, src reflect.Value) error {
+func mergeSlice(toMap toMapFn, writeValue writeValueFromMapFn) func(dst, src reflect.Value) error {
 	return func(dst, src reflect.Value) error {
-		dstMap, err := sliceToMap(tomap, dst)
+		dstMap, err := sliceToMap(toMap, dst)
 		if err != nil {
 			return err
 		}
-		srcMap, err := sliceToMap(tomap, src)
+		srcMap, err := sliceToMap(toMap, src)
 		if err != nil {
 			return err
 		}
@@ -262,12 +275,12 @@ func mergeSlice(tomap tomapFn, writeValue writeValueFromMapFn) func(dst, src ref
 	}
 }
 
-func sliceToMap(tomap tomapFn, v reflect.Value) (map[interface{}]interface{}, error) {
+func sliceToMap(toMap toMapFn, v reflect.Value) (map[interface{}]interface{}, error) {
 	// check if valid
 	if !v.IsValid() {
 		return nil, errors.Errorf("invalid value : %+v", v)
 	}
-	return tomap(v.Interface())
+	return toMap(v.Interface())
 }
 
 func mergeLoggingConfig(dst, src reflect.Value) error {
@@ -286,7 +299,7 @@ func mergeLoggingConfig(dst, src reflect.Value) error {
 	return nil
 }
 
-//nolint: unparam
+// nolint: unparam
 func mergeUlimitsConfig(dst, src reflect.Value) error {
 	if src.Interface() != reflect.Zero(reflect.TypeOf(src.Interface())).Interface() {
 		dst.Elem().Set(src.Elem())
@@ -294,7 +307,7 @@ func mergeUlimitsConfig(dst, src reflect.Value) error {
 	return nil
 }
 
-//nolint: unparam
+// nolint: unparam
 func mergeServiceNetworkConfig(dst, src reflect.Value) error {
 	if src.Interface() != reflect.Zero(reflect.TypeOf(src.Interface())).Interface() {
 		dst.Elem().FieldByName("Aliases").Set(src.Elem().FieldByName("Aliases"))

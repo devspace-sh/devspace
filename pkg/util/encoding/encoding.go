@@ -34,20 +34,13 @@ func Convert(ID string) string {
 	return SafeConcatName(ID)
 }
 
-// UnsafeNameRegEx checks for a valid name and needs to be url compatible
-var UnsafeNameRegEx = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]+[a-z0-9]$`)
-var UnsafeUpperNameRegEx = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9\-_]+[A-Za-z0-9]$`)
+var UnsafeNameRegEx = regexp.MustCompile(`^(([a-z0-9][a-z0-9\-]*[a-z0-9])|([a-z0-9]))$`)
+var UnsafeUpperNameRegEx = regexp.MustCompile(`^(([A-Za-z0-9][A-Za-z0-9\-_]*[A-Za-z0-9])|([A-Za-z0-9]))$`)
 
 func IsUnsafeUpperName(unsafeName string) bool {
-	if UnsafeUpperNameRegEx.MatchString(unsafeName) {
-		return false
-	}
-	return true
+	return !UnsafeUpperNameRegEx.MatchString(unsafeName)
 }
 
 func IsUnsafeName(unsafeName string) bool {
-	if UnsafeNameRegEx.MatchString(unsafeName) {
-		return false
-	}
-	return true
+	return !UnsafeNameRegEx.MatchString(unsafeName)
 }

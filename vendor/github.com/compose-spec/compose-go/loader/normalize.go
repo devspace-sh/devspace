@@ -41,6 +41,10 @@ func normalize(project *types.Project, resolvePaths bool) error {
 	}
 	project.ComposeFiles = absComposeFiles
 
+	if project.Networks == nil {
+		project.Networks = make(map[string]types.NetworkConfig)
+	}
+
 	// If not declared explicitly, Compose model involves an implicit "default" network
 	if _, ok := project.Networks["default"]; !ok {
 		project.Networks["default"] = types.NetworkConfig{}
@@ -74,9 +78,8 @@ func normalize(project *types.Project, resolvePaths bool) error {
 			if _, err := os.Stat(localContext); err == nil {
 				if resolvePaths {
 					s.Build.Context = localContext
-					s.Build.Dockerfile = absPath(localContext, s.Build.Dockerfile)
 				}
-			} else {
+				// } else {
 				// might be a remote http/git context. Unfortunately supported "remote" syntax is highly ambiguous
 				// in moby/moby and not defined by compose-spec, so let's assume runtime will check
 			}

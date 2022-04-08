@@ -92,7 +92,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	}
 
 	// Create conext
-	ctx := devspacecontext.NewContext(context.Background(), logger).
+	ctx := devspacecontext.NewContext(context.Background(), configInterface.Variables(), logger).
 		WithConfig(configInterface).
 		WithKubeClient(client)
 
@@ -103,8 +103,8 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	}
 	ctx = ctx.WithDependencies(dependencies)
 
-	if ctx.Config.Config().Deployments != nil {
-		for _, deployConfig := range ctx.Config.Config().Deployments {
+	if ctx.Config().Config().Deployments != nil {
+		for _, deployConfig := range ctx.Config().Config().Deployments {
 			var deployClient deployer.Interface
 
 			// Delete kubectl engine
@@ -121,7 +121,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 					continue
 				}
 
-				deployClient, err = deployHelm.New(ctx, helmClient, deployConfig)
+				deployClient, err = deployHelm.New(helmClient, deployConfig)
 				if err != nil {
 					logger.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue

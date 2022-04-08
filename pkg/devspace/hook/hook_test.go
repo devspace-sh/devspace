@@ -1,59 +1,83 @@
 package hook
 
 import (
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"context"
 	"testing"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
 func TestHookWithoutExecution(t *testing.T) {
 	// Execute 0 hooks
-	conf := config.NewConfig(nil, &latest.Config{}, nil, nil, constants.DefaultConfigPath)
-	err := ExecuteHooks(devspacecontext.NewContext().WithConfig(conf), nil)
+	// conf := config.NewConfig(nil, &latest.Config{}, nil, nil, constants.DefaultConfigPath)
+	conf := config.NewConfig(map[string]interface{}{},
+		map[string]interface{}{},
+		latest.NewRaw(),
+		localcache.New(constants.DefaultCacheFolder),
+		&remotecache.RemoteCache{},
+		map[string]interface{}{},
+		constants.DefaultConfigPath)
+	err := ExecuteHooks(devspacecontext.NewContext(context.Background(), nil, log.Discard).WithConfig(conf), nil)
 	if err != nil {
 		t.Fatalf("Failed to execute 0 hooks with error: %v", err)
 	}
 
-	// Execute 1 hook with no when
-	conf = config.NewConfig(nil, &latest.Config{
-		Hooks: []*latest.HookConfig{
-			{},
+	conf = config.NewConfig(map[string]interface{}{},
+		map[string]interface{}{},
+		&latest.Config{
+			Hooks: []*latest.HookConfig{{}},
 		},
-	}, nil, nil, constants.DefaultConfigPath)
-	err = ExecuteHooks(devspacecontext.NewContext().WithConfig(conf), nil)
+		localcache.New(constants.DefaultCacheFolder),
+		&remotecache.RemoteCache{},
+		map[string]interface{}{},
+		constants.DefaultConfigPath)
+	err = ExecuteHooks(devspacecontext.NewContext(context.Background(), nil, log.Discard).WithConfig(conf), nil)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook without when with error: %v", err)
 	}
 
-	// Execute 1 hook with no When.Before and no When.After
-	conf = config.NewConfig(nil, &latest.Config{
-		Hooks: []*latest.HookConfig{
-			{
+	conf = config.NewConfig(map[string]interface{}{},
+		map[string]interface{}{},
+		&latest.Config{
+			Hooks: []*latest.HookConfig{{
 				Events: []string{"before:deploy"},
-			},
+			}},
 		},
-	}, nil, nil, constants.DefaultConfigPath)
-	err = ExecuteHooks(devspacecontext.NewContext().WithConfig(conf), nil)
+		localcache.New(constants.DefaultCacheFolder),
+		&remotecache.RemoteCache{},
+		map[string]interface{}{},
+		constants.DefaultConfigPath)
+
+	err = ExecuteHooks(devspacecontext.NewContext(context.Background(), nil, log.Discard).WithConfig(conf), nil)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook without When.Before and When.After with error: %v", err)
 	}
 }
 
 func TestHookWithExecution(t *testing.T) {
-	conf := config.NewConfig(nil, &latest.Config{
-		Hooks: []*latest.HookConfig{
-			{
+	conf := config.NewConfig(map[string]interface{}{},
+		map[string]interface{}{},
+		&latest.Config{
+			Hooks: []*latest.HookConfig{{
 				Events:  []string{"my-event"},
 				Command: "echo",
 				Args:    []string{"hello"},
-			},
+			}},
 		},
-	}, nil, nil, constants.DefaultConfigPath)
-	err := ExecuteHooks(devspacecontext.NewContext().WithConfig(conf), nil, "my-event")
+		localcache.New(constants.DefaultCacheFolder),
+		&remotecache.RemoteCache{},
+		map[string]interface{}{},
+		constants.DefaultConfigPath)
+
+	err := ExecuteHooks(devspacecontext.NewContext(context.Background(), nil, log.Discard).WithConfig(conf), nil)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook with empty When.After: %v", err)
 	}

@@ -15,9 +15,9 @@ type GetImageOptions struct {
 	Only       string `long:"only" description:"Displays either only the tag or only the image"`
 }
 
-func GetImage(ctx *devspacecontext.Context, args []string) error {
-	ctx = ctx.WithLogger(ctx.Log.ErrorStreamOnly())
-	ctx.Log.Debugf("get_image %s", strings.Join(args, " "))
+func GetImage(ctx devspacecontext.Context, args []string) error {
+	ctx = ctx.WithLogger(ctx.Log().ErrorStreamOnly())
+	ctx.Log().Debugf("get_image %s", strings.Join(args, " "))
 	options := &GetImageOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
@@ -43,7 +43,7 @@ func GetImage(ctx *devspacecontext.Context, args []string) error {
 
 	if options.Dependency != "" {
 		found := false
-		for _, dep := range ctx.Dependencies {
+		for _, dep := range ctx.Dependencies() {
 			if dep.Name() == options.Dependency {
 				ctx = ctx.AsDependency(dep)
 				found = true
@@ -55,12 +55,12 @@ func GetImage(ctx *devspacecontext.Context, args []string) error {
 		}
 	}
 
-	_, imageCache, err := runtime.GetImage(ctx.Config, args[0], onlyImage, onlyTag)
+	_, imageCache, err := runtime.GetImage(ctx.Config(), args[0], onlyImage, onlyTag)
 	if err != nil {
 		return err
 	}
 
-	hc := interp.HandlerCtx(ctx.Context)
+	hc := interp.HandlerCtx(ctx.Context())
 	_, _ = hc.Stdout.Write([]byte(imageCache))
 	return nil
 }

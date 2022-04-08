@@ -1,0 +1,12 @@
+version: v2beta1
+name: dep2
+
+dependencies:
+  dep3:
+    path: dep3.yaml
+
+pipelines:
+  deploy: |-
+    run_dependency_pipelines --all
+    echo "dep2" >> out.txt
+

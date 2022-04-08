@@ -3,6 +3,9 @@ package loader
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
@@ -10,8 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
-	"io/ioutil"
-	"path/filepath"
 )
 
 var ImportSections = []string{
@@ -67,7 +68,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 
 	// load imports
 	for _, i := range imports.Imports {
-		if i.Enabled != nil && *i.Enabled == false {
+		if i.Enabled != nil && !*i.Enabled {
 			continue
 		}
 

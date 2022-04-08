@@ -8,6 +8,7 @@ import (
 	types2 "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
+	"mvdan.cc/sh/v3/expand"
 )
 
 type Options struct {
@@ -27,14 +28,15 @@ type DependencyOptions struct {
 
 // PipelineOptions describe how pipelines should be run
 type PipelineOptions struct {
-	Env        []string `long:"env" description:"Pass the following environment variable to the pipelines"`
-	Background bool     `long:"background" description:"Run the pipeline in the background"`
-	Sequential bool     `long:"sequential" description:"Run pipelines one after another"`
+	Background bool `long:"background" description:"Run the pipeline in the background"`
+	Sequential bool `long:"sequential" description:"Run pipelines one after another"`
+
+	Environ expand.Environ
 }
 
 type Pipeline interface {
 	// Run runs the main pipeline
-	Run(ctx *devspacecontext.Context) error
+	Run(ctx devspacecontext.Context, args []string) error
 
 	// DevPodManager retrieves the used dev pod manager
 	DevPodManager() devpod.Manager
@@ -44,6 +46,10 @@ type Pipeline interface {
 
 	// Parent retrieves the pipeline parent or nil if there is non
 	Parent() Pipeline
+
+	// Exclude locks the upmost parent pipeline in the namespace and ensures only
+	// a single DevSpace instance is running this project at the same time
+	Exclude(ctx devspacecontext.Context) error
 
 	// Dependencies retrieves the currently created dependencies
 	Dependencies() map[string]Pipeline
@@ -60,6 +66,9 @@ type Pipeline interface {
 	// project like my-microservice etc.
 	Name() string
 
+	// Done returns a channel that is closed when the pipeline is done running
+	Done() <-chan struct{}
+
 	// WaitDev waits for the dependency dev managers as well current
 	// dev pod manager to be finished
 	WaitDev() error
@@ -67,9 +76,9 @@ type Pipeline interface {
 	// StartNewPipelines starts sub pipelines in this pipeline. It is ensured
 	// that each pipeline can only be run once at the same time and otherwise
 	// will fail to start.
-	StartNewPipelines(ctx *devspacecontext.Context, pipelines []*latest.Pipeline, options PipelineOptions) error
+	StartNewPipelines(ctx devspacecontext.Context, pipelines []*latest.Pipeline, options PipelineOptions) error
 
 	// StartNewDependencies starts dependency pipelines in this pipeline. It is ensured
 	// that each pipeline will only run once ever and will otherwise be skipped.
-	StartNewDependencies(ctx *devspacecontext.Context, dependencies []types2.Dependency, options DependencyOptions) error
+	StartNewDependencies(ctx devspacecontext.Context, dependencies []types2.Dependency, options DependencyOptions) error
 }

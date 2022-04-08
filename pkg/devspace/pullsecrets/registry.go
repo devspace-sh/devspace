@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"regexp"
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -18,10 +17,6 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-const registryAuthSecretNamePrefix = "devspace-auth-"
-
-var registryNameReplaceRegex = regexp.MustCompile(`[^a-z0-9\\-]`)
 
 // PullSecretOptions has all options necessary to create a pullSecret
 type PullSecretOptions struct {
@@ -51,7 +46,7 @@ type DockerConfigEntry struct {
 }
 
 // CreatePullSecret creates an image pull secret for a registry
-func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSecretOptions) error {
+func (r *client) CreatePullSecret(ctx devspacecontext.Context, options *PullSecretOptions) error {
 	pullSecretName := options.Secret
 	if pullSecretName == "" {
 		pullSecretName = GetRegistryAuthSecretName(options.RegistryURL)
@@ -73,7 +68,7 @@ func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSec
 	}
 
 	err := wait.PollImmediate(time.Second, time.Second*30, func() (bool, error) {
-		secret, err := ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Get(ctx.Context, pullSecretName, metav1.GetOptions{})
+		secret, err := ctx.KubeClient().KubeClient().CoreV1().Secrets(options.Namespace).Get(ctx.Context(), pullSecretName, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				// Create the pull secret
@@ -82,7 +77,7 @@ func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSec
 					return false, err
 				}
 
-				_, err = ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Create(ctx.Context, secret, metav1.CreateOptions{})
+				_, err = ctx.KubeClient().KubeClient().CoreV1().Secrets(options.Namespace).Create(ctx.Context(), secret, metav1.CreateOptions{})
 				if err != nil {
 					if kerrors.IsAlreadyExists(err) {
 						// Retry
@@ -92,7 +87,7 @@ func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSec
 					return false, errors.Wrap(err, "create pull secret")
 				}
 
-				ctx.Log.Donef("Created image pull secret %s/%s", options.Namespace, pullSecretName)
+				ctx.Log().Donef("Created image pull secret %s/%s", options.Namespace, pullSecretName)
 				return true, nil
 			} else {
 				// Retry
@@ -118,7 +113,7 @@ func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSec
 			}
 
 			// Update secret
-			_, err = ctx.KubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Update(ctx.Context, secret, metav1.UpdateOptions{})
+			_, err = ctx.KubeClient().KubeClient().CoreV1().Secrets(options.Namespace).Update(ctx.Context(), secret, metav1.UpdateOptions{})
 			if err != nil {
 				if kerrors.IsConflict(err) {
 					// Retry
@@ -128,7 +123,7 @@ func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSec
 				return false, errors.Wrap(err, "update pull secret")
 			}
 
-			ctx.Log.Donef("Updated image pull secret %s/%s", options.Namespace, pullSecretName)
+			ctx.Log().Donef("Updated image pull secret %s/%s", options.Namespace, pullSecretName)
 		}
 		return true, nil
 	})

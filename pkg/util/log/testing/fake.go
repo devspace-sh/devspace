@@ -2,9 +2,10 @@ package testing
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
 	"io/ioutil"
+
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	fakesurvey "github.com/loft-sh/devspace/pkg/util/survey/testing"
@@ -131,9 +132,7 @@ func (d *FakeLogger) WithLevel(level logrus.Level) log.Logger {
 	return d
 }
 
-func (d *FakeLogger) AddSink(log log.Logger) {
-	return
-}
+func (d *FakeLogger) AddSink(log log.Logger) {}
 
 func (d *FakeLogger) WithPrefix(prefix string) log.Logger {
 	return d

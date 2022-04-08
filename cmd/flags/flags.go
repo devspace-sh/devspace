@@ -15,7 +15,6 @@ type GlobalFlags struct {
 	Namespace                string
 	KubeContext              string
 	Profiles                 []string
-	ProfileRefresh           bool
 	DisableProfileActivation bool
 	SwitchContext            bool
 	ConfigPath               string
@@ -33,7 +32,6 @@ func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 	return &loader.ConfigOptions{
 		OverrideName:             gf.OverrideName,
 		Profiles:                 profiles,
-		ProfileRefresh:           gf.ProfileRefresh,
 		DisableProfileActivation: gf.DisableProfileActivation,
 		Vars:                     gf.Vars,
 	}
@@ -51,9 +49,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.BoolVar(&globalFlags.Debug, "debug", false, "Prints the stack trace if an error occurs")
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devspace log output except panics & fatals")
 
-	flags.StringVar(&globalFlags.ConfigPath, "config", "", "The devspace config file to use")
 	flags.StringSliceVarP(&globalFlags.Profiles, "profile", "p", []string{}, "The DevSpace profiles to apply. Multiple profiles are applied in the order they are specified")
-	flags.BoolVar(&globalFlags.ProfileRefresh, "profile-refresh", false, "If true will pull and re-download profile parent sources")
 	flags.BoolVar(&globalFlags.DisableProfileActivation, "disable-profile-activation", false, "If true will ignore all profile activations")
 	flags.BoolVarP(&globalFlags.SwitchContext, "switch-context", "s", false, "Switches and uses the last kube context and namespace that was used to deploy the DevSpace project")
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")
@@ -61,5 +57,28 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.StringSliceVar(&globalFlags.Vars, "var", []string{}, "Variables to override during execution (e.g. --var=MYVAR=MYVALUE)")
 
 	flags.IntVar(&globalFlags.InactivityTimeout, "inactivity-timeout", 0, "Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems")
+	flags.AddFlag(&flag.Flag{
+		Name:   "config",
+		Usage:  "DEPRECATED: please use the DEVSPACE_CONFIG environment variable instead",
+		Hidden: true,
+		Value:  NewStringValue("", &globalFlags.ConfigPath),
+	})
 	return globalFlags
 }
+
+type StringValue string
+
+func NewStringValue(val string, p *string) *StringValue {
+	*p = val
+	return (*StringValue)(p)
+}
+
+func (s *StringValue) Set(val string) error {
+	*s = StringValue(val)
+	return nil
+}
+func (s *StringValue) Type() string {
+	return "string"
+}
+
+func (s *StringValue) String() string { return string(*s) }

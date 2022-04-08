@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	command2 "github.com/loft-sh/devspace/pkg/util/command"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -15,6 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	command2 "github.com/loft-sh/devspace/pkg/util/command"
 
 	cliconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/docker/api/types"
@@ -39,10 +40,10 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(ctx *devspacecontext.Context, imageConfigName string, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
+func NewBuilder(ctx devspacecontext.Context, imageConfigName string, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	// ensure namespace
 	if imageConf.BuildKit != nil && imageConf.BuildKit.InCluster != nil && imageConf.BuildKit.InCluster.Namespace != "" {
-		err := kubectl.EnsureNamespace(ctx.Context, ctx.KubeClient, imageConf.BuildKit.InCluster.Namespace, ctx.Log)
+		err := kubectl.EnsureNamespace(ctx.Context(), ctx.KubeClient(), imageConf.BuildKit.InCluster.Namespace, ctx.Log())
 		if err != nil {
 			return nil, err
 		}
@@ -56,26 +57,26 @@ func NewBuilder(ctx *devspacecontext.Context, imageConfigName string, imageConf 
 }
 
 // Build implements the interface
-func (b *Builder) Build(ctx *devspacecontext.Context) error {
+func (b *Builder) Build(ctx devspacecontext.Context) error {
 	return b.helper.Build(ctx, b)
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool) (bool, error) {
+func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) (bool, error) {
 	rebuild, err := b.helper.ShouldRebuild(ctx, forceRebuild)
 
 	// Check if image is present in local repository
 	if !rebuild && err == nil && b.helper.ImageConf.BuildKit.InCluster == nil {
-		if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient.CurrentContext()) {
-			dockerClient, err := dockerpkg.NewClientWithMinikube(ctx.Context, ctx.KubeClient.CurrentContext(), b.helper.ImageConf.BuildKit.PreferMinikube == nil || *b.helper.ImageConf.BuildKit.PreferMinikube, ctx.Log)
+		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+			dockerClient, err := dockerpkg.NewClientWithMinikube(ctx.Context(), ctx.KubeClient().CurrentContext(), b.helper.ImageConf.BuildKit.PreferMinikube == nil || *b.helper.ImageConf.BuildKit.PreferMinikube, ctx.Log())
 			if err != nil {
 				return false, err
 			}
 
 			found, err := b.helper.IsImageAvailableLocally(ctx, dockerClient)
 			if !found && err == nil {
-				imageCache, _ := ctx.Config.LocalCache().GetImageCache(b.helper.ImageConfigName)
-				ctx.Log.Infof("Rebuild image %s because it was not found in local docker daemon", imageCache.ImageName)
+				imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
+				ctx.Log().Infof("Rebuild image %s because it was not found in local docker daemon", imageCache.ImageName)
 				return true, nil
 			}
 		}
@@ -87,7 +88,7 @@ func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool)
 // BuildImage builds a dockerimage with the docker cli
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
-func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfilePath string, entrypoint []string, cmd []string) error {
+func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfilePath string, entrypoint []string, cmd []string) error {
 	// build options
 	options := &types.ImageBuildOptions{}
 	if b.helper.ImageConf.BuildArgs != nil {
@@ -103,37 +104,35 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 	buildKitConfig := b.helper.ImageConf.BuildKit
 
 	// create the builder
-	builder, err := ensureBuilder(ctx.Context, ctx.WorkingDir, ctx.KubeClient, buildKitConfig, ctx.Log)
+	builder, err := ensureBuilder(ctx.Context(), ctx.WorkingDir(), ctx.KubeClient(), buildKitConfig, ctx.Log())
 	if err != nil {
 		return err
 	}
 
 	// create the context stream
-	body, writer, _, buildOptions, err := docker.CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, ctx.Log)
+	body, writer, _, buildOptions, err := docker.CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, ctx.Log())
 	defer writer.Close()
 	if err != nil {
 		return err
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient.CurrentContext()) {
+	if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
 		b.skipPush = true
 	}
 
 	// Should we use the minikube docker daemon?
 	useMinikubeDocker := false
-	if ctx.KubeClient != nil && ctx.KubeClient.CurrentContext() == "minikube" && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube) {
+	if ctx.KubeClient() != nil && ctx.KubeClient().CurrentContext() == "minikube" && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube) {
 		useMinikubeDocker = true
 	}
 
 	// Should we build with cli?
 	skipPush := b.skipPush || b.helper.ImageConf.SkipPush
-	return buildWithCLI(ctx.Context, ctx.WorkingDir, body, writer, ctx.KubeClient, builder, buildKitConfig, *buildOptions, useMinikubeDocker, skipPush, ctx.Log)
+	return buildWithCLI(ctx.Context(), ctx.WorkingDir(), body, writer, ctx.KubeClient(), builder, buildKitConfig, *buildOptions, useMinikubeDocker, skipPush, ctx.Log())
 }
 
 func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker, skipPush bool, log logpkg.Logger) error {
-	environ := os.Environ()
-
 	command := []string{"docker", "buildx"}
 	if len(imageConf.Command) > 0 {
 		command = imageConf.Command
@@ -177,7 +176,6 @@ func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.
 		}
 		defer os.Remove(tempFile)
 
-		environ = append(environ, "KUBECONFIG="+tempFile)
 		args = append(args, "--builder", builder)
 
 		// TODO: find a better solution than this

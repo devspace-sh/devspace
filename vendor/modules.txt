@@ -60,16 +60,16 @@ github.com/blang/semver
 github.com/bmatcuk/doublestar
 # github.com/cespare/xxhash/v2 v2.1.1
 github.com/cespare/xxhash/v2
-# github.com/compose-spec/compose-go v1.0.1
+# github.com/compose-spec/compose-go v1.2.2
 ## explicit
+github.com/compose-spec/compose-go/consts
+github.com/compose-spec/compose-go/dotenv
 github.com/compose-spec/compose-go/errdefs
 github.com/compose-spec/compose-go/interpolation
 github.com/compose-spec/compose-go/loader
 github.com/compose-spec/compose-go/schema
 github.com/compose-spec/compose-go/template
 github.com/compose-spec/compose-go/types
-# github.com/compose-spec/godotenv v1.0.0
-github.com/compose-spec/godotenv
 # github.com/containerd/cgroups v0.0.0-20200710171044-318312a37340
 github.com/containerd/cgroups/stats/v1
 # github.com/containerd/containerd v1.4.1-0.20201117152358-0edc412565dc
@@ -282,7 +282,7 @@ github.com/mgutz/ansi
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-wordwrap v1.0.0
 github.com/mitchellh/go-wordwrap
-# github.com/mitchellh/mapstructure v1.4.1
+# github.com/mitchellh/mapstructure v1.4.3
 github.com/mitchellh/mapstructure
 # github.com/moby/buildkit v0.8.2
 ## explicit

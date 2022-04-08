@@ -15,18 +15,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func findTargetByKindName(ctx *devspacecontext.Context, kind, namespace, name string) (runtime.Object, error) {
+func findTargetByKindName(ctx devspacecontext.Context, kind, namespace, name string) (runtime.Object, error) {
 	var (
 		err    error
 		parent runtime.Object
 	)
 	switch kind {
 	case "ReplicaSet":
-		parent, err = ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(namespace).Get(ctx.Context, name, metav1.GetOptions{})
+		parent, err = ctx.KubeClient().KubeClient().AppsV1().ReplicaSets(namespace).Get(ctx.Context(), name, metav1.GetOptions{})
 	case "Deployment":
-		parent, err = ctx.KubeClient.KubeClient().AppsV1().Deployments(namespace).Get(ctx.Context, name, metav1.GetOptions{})
+		parent, err = ctx.KubeClient().KubeClient().AppsV1().Deployments(namespace).Get(ctx.Context(), name, metav1.GetOptions{})
 	case "StatefulSet":
-		parent, err = ctx.KubeClient.KubeClient().AppsV1().StatefulSets(namespace).Get(ctx.Context, name, metav1.GetOptions{})
+		parent, err = ctx.KubeClient().KubeClient().AppsV1().StatefulSets(namespace).Get(ctx.Context(), name, metav1.GetOptions{})
 	default:
 		return nil, fmt.Errorf("unrecognized parent kind")
 	}
@@ -40,14 +40,14 @@ func findTargetByKindName(ctx *devspacecontext.Context, kind, namespace, name st
 	return parent, nil
 }
 
-func findTargetBySelector(ctx *devspacecontext.Context, devPod *latest.DevPod, filter func(obj metav1.Object) bool) (runtime.Object, error) {
-	namespace := ctx.KubeClient.Namespace()
+func findTargetBySelector(ctx devspacecontext.Context, devPod *latest.DevPod, filter func(obj metav1.Object) bool) (runtime.Object, error) {
+	namespace := ctx.KubeClient().Namespace()
 	if devPod.Namespace != "" {
 		namespace = devPod.Namespace
 	}
 
 	// deployments
-	deployments, err := ctx.KubeClient.KubeClient().AppsV1().Deployments(namespace).List(ctx.Context, metav1.ListOptions{})
+	deployments, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(namespace).List(ctx.Context(), metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "list Deployments")
 	}
@@ -66,7 +66,7 @@ func findTargetBySelector(ctx *devspacecontext.Context, devPod *latest.DevPod, f
 	}
 
 	// replicaSets
-	replicaSets, err := ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(namespace).List(ctx.Context, metav1.ListOptions{})
+	replicaSets, err := ctx.KubeClient().KubeClient().AppsV1().ReplicaSets(namespace).List(ctx.Context(), metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "list ReplicaSets")
 	}
@@ -85,7 +85,7 @@ func findTargetBySelector(ctx *devspacecontext.Context, devPod *latest.DevPod, f
 	}
 
 	// statefulSets
-	statefulSets, err := ctx.KubeClient.KubeClient().AppsV1().StatefulSets(namespace).List(ctx.Context, metav1.ListOptions{})
+	statefulSets, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(namespace).List(ctx.Context(), metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "list StatefulSets")
 	}
@@ -106,7 +106,7 @@ func findTargetBySelector(ctx *devspacecontext.Context, devPod *latest.DevPod, f
 	return nil, nil
 }
 
-func matchesSelector(ctx *devspacecontext.Context, pod *corev1.PodTemplateSpec, devPod *latest.DevPod) (bool, error) {
+func matchesSelector(ctx devspacecontext.Context, pod *corev1.PodTemplateSpec, devPod *latest.DevPod) (bool, error) {
 	if len(devPod.LabelSelector) > 0 {
 		labelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 			MatchLabels: devPod.LabelSelector,
@@ -128,10 +128,10 @@ func matchesSelector(ctx *devspacecontext.Context, pod *corev1.PodTemplateSpec, 
 	return false, nil
 }
 
-func matchesImageSelector(ctx *devspacecontext.Context, pod *corev1.PodTemplateSpec, devPod *latest.DevPod) ([]string, error) {
+func matchesImageSelector(ctx devspacecontext.Context, pod *corev1.PodTemplateSpec, devPod *latest.DevPod) ([]string, error) {
 	var matchingContainers []string
 	if devPod.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, devPod.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), true).FillRuntimeVariablesAsImageSelector(ctx.Context(), devPod.ImageSelector, ctx.Config(), ctx.Dependencies())
 		if err != nil {
 			return nil, err
 		}
