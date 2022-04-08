@@ -32,6 +32,7 @@ func adjustConfig(config *latest.Config) error {
 		newObjs := map[string]*latest.Image{}
 		for k, v := range config.Images {
 			if v != nil {
+				v.Name = k
 				image, tag, err := dockerfile.GetStrippedDockerImageName(v.Image)
 				if err != nil {
 					return errors.Errorf("error parsing images.%s.image: '%s': %v", k, v.Image, err)

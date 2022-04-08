@@ -75,8 +75,12 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 	} else {
 		if buildMethod != skip && buildMethod != rootLevelDockerfile {
 			imageConfig.Dockerfile, err = m.log.Question(&survey.QuestionOptions{
-				Question: "Please enter the path to this Dockerfile",
+				Question: "Please enter the path to this Dockerfile: (Enter to skip)",
 				ValidationFunc: func(value string) error {
+					if value == "" {
+						return nil
+					}
+
 					stat, err := os.Stat(value)
 					if err == nil && !stat.IsDir() {
 						return nil
@@ -88,24 +92,28 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 				return err
 			}
 
-			imageConfig.Context, err = m.log.Question(&survey.QuestionOptions{
-				Question:     "What is the build context for building this image?",
-				DefaultValue: path.Dir(imageConfig.Dockerfile) + "/",
-				ValidationFunc: func(value string) error {
-					stat, err := os.Stat(value)
-					if err != nil && !stat.IsDir() {
-						return errors.New("Context path does not exist or is not a directory")
-					}
-					return nil
-				},
-			})
-			if err != nil {
-				return err
+			if imageConfig.Dockerfile != "" {
+				imageConfig.Context, err = m.log.Question(&survey.QuestionOptions{
+					Question:     "What is the build context for building this image?",
+					DefaultValue: path.Dir(imageConfig.Dockerfile) + "/",
+					ValidationFunc: func(value string) error {
+						stat, err := os.Stat(value)
+						if err != nil && !stat.IsDir() {
+							return errors.New("Context path does not exist or is not a directory")
+						}
+						return nil
+					},
+				})
+				if err != nil {
+					return err
+				}
+			} else {
+				buildMethod = skip
 			}
 		}
 	}
 
-	if image == "" {
+	if image == "" && buildMethod != skip {
 		// Ignore error as context may not be a Space
 		kubeContext, err := m.factory.NewKubeConfigLoader().GetCurrentContext()
 		if err != nil {
@@ -200,8 +208,12 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 		}
 	}
 
-	m.config.Images[imageName] = imageConfig
+	if buildMethod == skip {
+		imageConfig.Image = "username/app"
+		imageConfig.Dockerfile = "./Dockerfile"
+	}
 
+	m.config.Images[imageName] = imageConfig
 	return nil
 }
 

@@ -64,7 +64,7 @@ type RunPipelineCmd struct {
 	// used for testing to allow interruption
 	Ctx          context.Context
 	RenderWriter io.Writer
-	log          log.Logger
+	Log          log.Logger
 }
 
 func (cmd *RunPipelineCmd) AddPipelineFlags(f factory.Factory, command *cobra.Command, pipeline *latest.Pipeline) {
@@ -227,16 +227,16 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 		cmd.Pipeline = args[0]
 	}
 
-	if cmd.log == nil {
-		cmd.log = f.GetLog()
+	if cmd.Log == nil {
+		cmd.Log = f.GetLog()
 	}
 	if cmd.Silent {
-		cmd.log.SetLevel(logrus.FatalLevel)
+		cmd.Log.SetLevel(logrus.FatalLevel)
 	}
 
 	// Print upgrade message if new version available
 	if !cmd.Render {
-		upgrade.PrintUpgradeMessage(cmd.log)
+		upgrade.PrintUpgradeMessage(cmd.Log)
 	} else if cmd.RenderWriter == nil {
 		cmd.RenderWriter = os.Stdout
 	}
@@ -256,7 +256,7 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 		cmd.Ctx = values.WithFlags(cmd.Ctx, cobraCmd.Flags())
 	}
 	options := cmd.BuildOptions(cmd.ToConfigOptions())
-	ctx, err := initialize(cmd.Ctx, f, false, options, cmd.log)
+	ctx, err := initialize(cmd.Ctx, f, false, options, cmd.Log)
 	if err != nil {
 		return err
 	}
