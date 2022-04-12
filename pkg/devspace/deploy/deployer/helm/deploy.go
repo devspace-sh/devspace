@@ -33,8 +33,8 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bo
 	)
 
 	releaseNamespace := ctx.KubeClient().Namespace()
-	if d.DeploymentConfig.Namespace != nil && *d.DeploymentConfig.Namespace != "" {
-		releaseNamespace = *d.DeploymentConfig.Namespace
+	if d.DeploymentConfig.Namespace != "" {
+		releaseNamespace = d.DeploymentConfig.Namespace
 	}
 
 	// Hash the chart directory if there is any
@@ -155,8 +155,8 @@ func (d *DeployConfig) internalDeploy(ctx devspacecontext.Context, overwriteValu
 		releaseName = d.DeploymentConfig.Name
 	)
 	releaseNamespace := ctx.KubeClient().Namespace()
-	if d.DeploymentConfig.Namespace != nil && *d.DeploymentConfig.Namespace != "" {
-		releaseNamespace = *d.DeploymentConfig.Namespace
+	if d.DeploymentConfig.Namespace != "" {
+		releaseNamespace = d.DeploymentConfig.Namespace
 	}
 
 	if out != nil {

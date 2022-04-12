@@ -7,7 +7,6 @@ vars:
 
 deployments:
   helm:
-    namespace: ""
     helm:
       chart:
         path: chart
@@ -16,7 +15,6 @@ deployments:
         namespace2: ${NAMESPACE2}
 
   kubectl:
-    namespace: ""
     kubectl:
       manifests:
         - kube

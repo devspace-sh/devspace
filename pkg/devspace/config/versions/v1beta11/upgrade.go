@@ -415,10 +415,8 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 
 		name := encoding.Convert(deployment.Name)
 		nextConfig.Deployments[name] = &next.DeploymentConfig{
-			Name: name,
-		}
-		if deployment.Namespace != "" {
-			nextConfig.Deployments[name].Namespace = &deployment.Namespace
+			Name:      name,
+			Namespace: deployment.Namespace,
 		}
 		if deployment.Helm != nil {
 			nextConfig.Deployments[name].Helm = &next.HelmConfig{

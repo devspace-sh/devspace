@@ -36,7 +36,51 @@ var _ = DevSpaceDescribe("deploy", func() {
 	})
 
 	ginkgo.It("should deploy kustomize application", func() {
-		// TODO
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/kustomize")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new deploy command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if services are there
+		service, err := kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "my-service", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(service.Labels["kustomize-app"], "devspace")
+
+		// create a new purge command
+		purgeCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "purge",
+		}
+
+		// run the command
+		err = purgeCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if services are there
+		_, err = kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "my-service", metav1.GetOptions{})
+		framework.ExpectError(err)
 	})
 
 	ginkgo.It("should deploy multiple namespaces", func() {
