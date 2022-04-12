@@ -14,7 +14,7 @@ func newPluginCmd(f factory.Factory) *cobra.Command {
 	cmd := &pluginCmd{}
 	pluginCmd := &cobra.Command{
 		Use:   "plugin",
-		Short: "Add a plugin to devspace",
+		Short: "Adds a plugin to devspace",
 		Long: `
 #######################################################
 ############### devspace add plugin ###################

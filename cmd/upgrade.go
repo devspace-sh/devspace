@@ -20,7 +20,7 @@ func NewUpgradeCmd() *cobra.Command {
 
 	upgradeCmd := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Upgrade the DevSpace CLI to the newest version",
+		Short: "Upgrades the DevSpace CLI to the newest version",
 		Long: `
 #######################################################
 ################## devspace upgrade ###################

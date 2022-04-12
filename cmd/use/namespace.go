@@ -29,7 +29,7 @@ func newNamespaceCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.C
 #######################################################
 ############## devspace use namespace #################
 #######################################################
-Set the default namespace to deploy to
+Sets the default namespace to deploy to
 
 Example:
 devspace use namespace my-namespace
