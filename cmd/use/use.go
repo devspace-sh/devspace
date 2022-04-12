@@ -11,7 +11,7 @@ import (
 func NewUseCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	useCmd := &cobra.Command{
 		Use:   "use",
-		Short: "Use specific config",
+		Short: "Uses specific config",
 		Long: `
 #######################################################
 #################### devspace use #####################

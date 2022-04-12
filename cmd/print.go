@@ -45,7 +45,7 @@ func NewPrintCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Comma
 
 	printCmd := &cobra.Command{
 		Use:   "print",
-		Short: "Print displays the configuration",
+		Short: "Prints displays the configuration",
 		Long: `
 #######################################################
 ################## devspace print #####################

@@ -50,7 +50,7 @@ func NewLogsCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Comman
 #######################################################
 #################### devspace logs ####################
 #######################################################
-Logs prints the last log of a pod container and attachs 
+Prints the last log of a pod container and attachs 
 to it
 
 Example:
