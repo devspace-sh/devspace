@@ -32,9 +32,9 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bo
 		hash        = ""
 	)
 
-	releaseNamespace := d.DeploymentConfig.Namespace
-	if releaseNamespace == "" {
-		releaseNamespace = ctx.KubeClient().Namespace()
+	releaseNamespace := ctx.KubeClient().Namespace()
+	if d.DeploymentConfig.Namespace != nil && *d.DeploymentConfig.Namespace != "" {
+		releaseNamespace = *d.DeploymentConfig.Namespace
 	}
 
 	// Hash the chart directory if there is any
@@ -152,9 +152,12 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bo
 
 func (d *DeployConfig) internalDeploy(ctx devspacecontext.Context, overwriteValues map[string]interface{}, out io.Writer) (*types.Release, error) {
 	var (
-		releaseName      = d.DeploymentConfig.Name
-		releaseNamespace = d.DeploymentConfig.Namespace
+		releaseName = d.DeploymentConfig.Name
 	)
+	releaseNamespace := ctx.KubeClient().Namespace()
+	if d.DeploymentConfig.Namespace != nil && *d.DeploymentConfig.Namespace != "" {
+		releaseNamespace = *d.DeploymentConfig.Namespace
+	}
 
 	if out != nil {
 		str, err := d.Helm.Template(ctx, releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)

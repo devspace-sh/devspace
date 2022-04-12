@@ -171,8 +171,8 @@ func (c *controller) deployOne(ctx devspacecontext.Context, deployConfig *latest
 		method       string
 	)
 
-	if !options.Render && deployConfig.Namespace != "" {
-		err = kubectlclient.EnsureNamespace(ctx.Context(), ctx.KubeClient(), deployConfig.Namespace, ctx.Log())
+	if !options.Render && deployConfig.Namespace != nil && *deployConfig.Namespace != "" {
+		err = kubectlclient.EnsureNamespace(ctx.Context(), ctx.KubeClient(), *deployConfig.Namespace, ctx.Log())
 		if err != nil {
 			return false, err
 		}
