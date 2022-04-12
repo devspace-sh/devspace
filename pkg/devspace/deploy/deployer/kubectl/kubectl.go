@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"io"
 	"strings"
 
@@ -79,16 +80,16 @@ func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (de
 		}, nil
 	}
 
-	namespace := ctx.KubeClient().Namespace()
-	if deployConfig.Namespace != "" {
-		namespace = deployConfig.Namespace
+	namespace := deployConfig.Namespace
+	if namespace == nil {
+		namespace = ptr.String(ctx.KubeClient().Namespace())
 	}
 
 	return &DeployConfig{
 		Name:        deployConfig.Name,
 		CmdPath:     cmdPath,
 		Context:     ctx.KubeClient().CurrentContext(),
-		Namespace:   namespace,
+		Namespace:   *namespace,
 		Manifests:   manifests,
 		IsInCluster: ctx.KubeClient().IsInCluster(),
 

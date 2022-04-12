@@ -1,0 +1,5 @@
+apiVersion: v2
+name: test
+description: Test Chart
+type: application
+version: 0.0.1

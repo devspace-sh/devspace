@@ -42,11 +42,12 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 	args := []string{
 		"upgrade",
 		releaseName,
-		"--namespace",
-		releaseNamespace,
 		"--values",
 		valuesFile,
 		"--install",
+	}
+	if releaseNamespace != "" {
+		args = append(args, "--namespace", releaseNamespace)
 	}
 
 	// Chart settings
@@ -127,10 +128,11 @@ func (c *client) Template(ctx devspacecontext.Context, releaseName, releaseNames
 	args := []string{
 		"template",
 		releaseName,
-		"--namespace",
-		releaseNamespace,
 		"--values",
 		valuesFile,
+	}
+	if releaseNamespace != "" {
+		args = append(args, "--namespace", releaseNamespace)
 	}
 
 	// Chart settings
@@ -188,8 +190,9 @@ func (c *client) DeleteRelease(ctx devspacecontext.Context, releaseName string, 
 	args := []string{
 		"delete",
 		releaseName,
-		"--namespace",
-		releaseNamespace,
+	}
+	if releaseNamespace != "" {
+		args = append(args, "--namespace", releaseNamespace)
 	}
 	_, err := c.genericHelm.Exec(ctx, args)
 	if err != nil {
@@ -202,13 +205,15 @@ func (c *client) DeleteRelease(ctx devspacecontext.Context, releaseName string, 
 func (c *client) ListReleases(ctx devspacecontext.Context, namespace string) ([]*types.Release, error) {
 	args := []string{
 		"list",
-		"--namespace",
-		namespace,
 		"--max",
 		strconv.Itoa(0),
 		"--output",
 		"json",
 	}
+	if namespace != "" {
+		args = append(args, "--namespace", namespace)
+	}
+
 	out, err := c.genericHelm.Exec(ctx, args)
 	if err != nil {
 		return nil, err

@@ -587,7 +587,7 @@ type DeploymentConfig struct {
 	// Name of the deployment
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 	// Namespace where to deploy this deployment
-	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Namespace *string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 	// UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the
 	// images section with their most recent built tag.
 	UpdateImageTags *bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
