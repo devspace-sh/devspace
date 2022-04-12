@@ -64,7 +64,7 @@ func TestNew(t *testing.T) {
 			name: "Everything given",
 			deployConfig: &latest.DeploymentConfig{
 				Name:      "someDeploy2",
-				Namespace: ptr.String("overwriteNamespace"),
+				Namespace: "overwriteNamespace",
 				Kubectl: &latest.KubectlConfig{
 					KubectlBinaryPath: "someCmdPath2",
 					Manifests:         []string{},
@@ -80,7 +80,7 @@ func TestNew(t *testing.T) {
 				Namespace: "overwriteNamespace",
 				DeploymentConfig: &latest.DeploymentConfig{
 					Name:      "someDeploy2",
-					Namespace: ptr.String("overwriteNamespace"),
+					Namespace: "overwriteNamespace",
 					Kubectl: &latest.KubectlConfig{
 						KubectlBinaryPath: "someCmdPath2",
 						Manifests:         []string{},

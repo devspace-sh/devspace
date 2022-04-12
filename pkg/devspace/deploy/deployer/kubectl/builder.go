@@ -3,6 +3,10 @@ package kubectl
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -56,21 +60,17 @@ func (k *kustomizeBuilder) Build(ctx context.Context, dir, manifest string) ([]*
 }
 
 type kubectlBuilder struct {
-	path        string
-	config      *latest.DeploymentConfig
-	context     string
-	namespace   string
-	isInCluster bool
+	path       string
+	config     *latest.DeploymentConfig
+	kubeConfig clientcmdapi.Config
 }
 
 // NewKubectlBuilder creates a new kubectl manifest builder
-func NewKubectlBuilder(path string, config *latest.DeploymentConfig, context, namespace string, isInCluster bool) Builder {
+func NewKubectlBuilder(path string, config *latest.DeploymentConfig, kubeConfig clientcmdapi.Config) Builder {
 	return &kubectlBuilder{
-		path:        path,
-		config:      config,
-		context:     context,
-		namespace:   namespace,
-		isInCluster: isInCluster,
+		path:       path,
+		config:     config,
+		kubeConfig: kubeConfig,
 	}
 }
 
@@ -102,13 +102,24 @@ var useOldDryRun = func(ctx context.Context, dir, path string) (bool, error) {
 }
 
 func (k *kubectlBuilder) Build(ctx context.Context, dir, manifest string) ([]*unstructured.Unstructured, error) {
+	tempFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(tempFile.Name())
+
+	data, err := clientcmd.Write(k.kubeConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = tempFile.Write(data)
+	if err != nil {
+		return nil, err
+	}
+	_ = tempFile.Close()
+
 	args := []string{"create"}
-	if k.context != "" && !k.isInCluster {
-		args = append(args, "--context", k.context)
-	}
-	if k.namespace != "" {
-		args = append(args, "--namespace", k.namespace)
-	}
 
 	// decides which --dry-run value is to be used
 	uodr, err := useOldDryRun(ctx, dir, k.path)
@@ -132,7 +143,9 @@ func (k *kubectlBuilder) Build(ctx context.Context, dir, manifest string) ([]*un
 	args = append(args, k.config.Kubectl.CreateArgs...)
 
 	// Execute command
-	output, err := command.Output(ctx, dir, k.path, args...)
+	output, err := command.OutputWithEnv(ctx, dir, map[string]string{
+		"KUBECONFIG": tempFile.Name(),
+	}, k.path, args...)
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
