@@ -43,7 +43,7 @@ func NewCompletionCmd() *cobra.Command {
 			return cobra.OnlyValidArgs(cmd, args)
 		},
 		ValidArgs: []string{"bash", "zsh"},
-		Short:     "Output shell completion for the given shell (bash or zsh)",
+		Short:     "Outputs shell completion for the given shell (bash or zsh)",
 		Long:      longDescription,
 		RunE:      completion,
 	}

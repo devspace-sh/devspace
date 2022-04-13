@@ -2,17 +2,18 @@ package deploy
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"os"
-	"path/filepath"
-
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
+	"io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 var _ = DevSpaceDescribe("deploy", func() {
@@ -35,7 +36,132 @@ var _ = DevSpaceDescribe("deploy", func() {
 	})
 
 	ginkgo.It("should deploy kustomize application", func() {
-		// TODO
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/kustomize")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new deploy command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if services are there
+		service, err := kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "my-service", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(service.Labels["kustomize-app"], "devspace")
+
+		// create a new purge command
+		purgeCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "purge",
+		}
+
+		// run the command
+		err = purgeCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if services are there
+		_, err = kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "my-service", metav1.GetOptions{})
+		framework.ExpectError(err)
+	})
+
+	ginkgo.It("should deploy multiple namespaces", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/different_namespaces")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		ns2, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns2)
+			framework.ExpectNoError(err)
+		}()
+
+		// exchange kube manifests
+		manifests := filepath.Join(tempDir, "kube", "service1.yaml")
+		out, err := ioutil.ReadFile(manifests)
+		framework.ExpectNoError(err)
+
+		data := strings.Replace(string(out), "###NAMESPACE1###", ns, -1)
+		data = strings.Replace(data, "###NAMESPACE2###", ns2, -1)
+
+		err = ioutil.WriteFile(manifests, []byte(data), 0777)
+		framework.ExpectNoError(err)
+
+		// create a new deploy command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+				Vars: []string{
+					"NAMESPACE1=" + ns,
+					"NAMESPACE2=" + ns2,
+				},
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if services are there
+		_, err = kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "service1", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		_, err = kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "service2", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		_, err = kubeClient.RawClient().CoreV1().Services(ns2).Get(context.TODO(), "service1", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		_, err = kubeClient.RawClient().CoreV1().Services(ns2).Get(context.TODO(), "service2", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+
+		// create a new purge command
+		purgeCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "purge",
+		}
+
+		// run the command
+		err = purgeCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if services are there
+		_, err = kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "service1", metav1.GetOptions{})
+		framework.ExpectError(err)
+		_, err = kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "service2", metav1.GetOptions{})
+		framework.ExpectError(err)
+		_, err = kubeClient.RawClient().CoreV1().Services(ns2).Get(context.TODO(), "service1", metav1.GetOptions{})
+		framework.ExpectError(err)
+		_, err = kubeClient.RawClient().CoreV1().Services(ns2).Get(context.TODO(), "service2", metav1.GetOptions{})
+		framework.ExpectError(err)
 	})
 
 	ginkgo.It("should deploy concurrent deployments", func() {

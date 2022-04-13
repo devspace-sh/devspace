@@ -17,7 +17,7 @@ func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *
 
 	deployCmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Deploy the project",
+		Short: "Deploys the project",
 		Long: `
 #######################################################
 ################## devspace deploy ####################

@@ -17,7 +17,7 @@ func NewPurgeCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *R
 	}
 	purgeCmd := &cobra.Command{
 		Use:   "purge",
-		Short: "Delete deployed resources",
+		Short: "Deletes deployed resources",
 		Long: `
 #######################################################
 ################### devspace purge ####################

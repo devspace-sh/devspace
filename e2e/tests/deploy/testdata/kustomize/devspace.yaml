@@ -1,0 +1,8 @@
+version: v2beta1
+
+deployments:
+  my-deployment:
+    kubectl:
+      kustomize: true
+      manifests:
+        - kube

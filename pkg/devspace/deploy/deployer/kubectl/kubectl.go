@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strings"
 
@@ -79,9 +80,9 @@ func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (de
 		}, nil
 	}
 
-	namespace := ctx.KubeClient().Namespace()
-	if deployConfig.Namespace != "" {
-		namespace = deployConfig.Namespace
+	namespace := deployConfig.Namespace
+	if namespace == "" {
+		namespace = ctx.KubeClient().Namespace()
 	}
 
 	return &DeployConfig{
@@ -176,10 +177,9 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error)
 
 		kubeObjects = append(kubeObjects, parsedObjects...)
 		if shouldRedeploy || forceDeploy {
-			stringReader := strings.NewReader(replacedManifest)
 			args := d.getCmdArgs("apply", "--force")
 			args = append(args, d.DeploymentConfig.Kubectl.ApplyArgs...)
-			err = command.Command(ctx.Context(), ctx.WorkingDir(), writer, writer, stringReader, d.CmdPath, args...)
+			err = command.Command(ctx.Context(), ctx.WorkingDir(), writer, writer, strings.NewReader(replacedManifest), d.CmdPath, args...)
 			if err != nil {
 				return false, errors.Errorf("%v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", err, manifest)
 			}
@@ -219,6 +219,9 @@ func (d *DeployConfig) getReplacedManifest(ctx devspacecontext.Context, manifest
 		if resource.Object == nil {
 			continue
 		}
+		if resource.GetNamespace() == "" {
+			resource.SetNamespace(d.Namespace)
+		}
 
 		kubeObjects = append(kubeObjects, remotecache.KubectlObject{
 			APIVersion: resource.GetAPIVersion(),
@@ -252,9 +255,6 @@ func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []str
 	if d.Context != "" && !d.IsInCluster {
 		args = append(args, "--context", d.Context)
 	}
-	if d.Namespace != "" {
-		args = append(args, "--namespace", d.Namespace)
-	}
 
 	args = append(args, method)
 	if additionalArgs != nil {
@@ -276,8 +276,17 @@ func (d *DeployConfig) buildManifests(ctx devspacecontext.Context, manifest stri
 		return NewKustomizeBuilder(kustomizePath, d.DeploymentConfig, ctx.Log()).Build(ctx.Context(), ctx.WorkingDir(), manifest)
 	}
 
+	raw, err := ctx.KubeClient().KubeConfigLoader().LoadConfig().RawConfig()
+	if err != nil {
+		return nil, fmt.Errorf("get raw config")
+	}
+	copied := raw.DeepCopy()
+	for key := range copied.Contexts {
+		copied.Contexts[key].Namespace = d.Namespace
+	}
+
 	// Build with kubectl
-	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, d.Context, d.Namespace, d.IsInCluster).Build(ctx.Context(), ctx.WorkingDir(), manifest)
+	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, *copied).Build(ctx.Context(), ctx.WorkingDir(), manifest)
 }
 
 func (d *DeployConfig) isKustomizeInstalled(ctx context.Context, dir, path string) bool {

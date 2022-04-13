@@ -55,11 +55,6 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		return nil, err
 	}
 
-	err = Validate(imports)
-	if err != nil {
-		return nil, err
-	}
-
 	mergedMap := map[string]interface{}{}
 	err = util.Convert(rawData, mergedMap)
 	if err != nil {

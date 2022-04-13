@@ -1,0 +1,20 @@
+version: v2beta1
+name: different-namespaces
+
+vars:
+  NAMESPACE1: namespace1
+  NAMESPACE2: namespace2
+
+deployments:
+  helm:
+    helm:
+      chart:
+        path: chart
+      values:
+        namespace1: ${NAMESPACE1}
+        namespace2: ${NAMESPACE2}
+
+  kubectl:
+    kubectl:
+      manifests:
+        - kube

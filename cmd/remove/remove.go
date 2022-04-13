@@ -11,7 +11,7 @@ import (
 func NewRemoveCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	removeCmd := &cobra.Command{
 		Use:   "remove",
-		Short: "Changes devspace configuration",
+		Short: "Removes devspace configuration",
 		Long: `
 #######################################################
 ################## devspace remove ####################

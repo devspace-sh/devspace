@@ -32,7 +32,7 @@ func newDeploymentsCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra
 #######################################################
 ############# devspace list deployments ###############
 #######################################################
-Shows the status of all deployments
+Lists the status of all deployments
 #######################################################
 	`,
 		Args: cobra.NoArgs,

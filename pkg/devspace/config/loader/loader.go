@@ -364,12 +364,6 @@ func reloadVariables(resolver variable.Resolver, rawConfig map[string]interface{
 		return err
 	}
 
-	// validate variables
-	err = validateVars(loadedVars)
-	if err != nil {
-		return err
-	}
-
 	// update the used vars in the resolver
 	resolver.UpdateVars(loadedVars)
 	return nil

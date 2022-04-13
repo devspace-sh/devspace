@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -27,8 +28,9 @@ import (
 type PrintCmd struct {
 	*flags.GlobalFlags
 
-	Out      io.Writer
-	SkipInfo bool
+	Out        io.Writer
+	StripNames bool
+	SkipInfo   bool
 
 	Dependency string
 }
@@ -37,12 +39,13 @@ type PrintCmd struct {
 func NewPrintCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &PrintCmd{
 		GlobalFlags: globalFlags,
+		StripNames:  true,
 		Out:         os.Stdout,
 	}
 
 	printCmd := &cobra.Command{
 		Use:   "print",
-		Short: "Print displays the configuration",
+		Short: "Prints displays the configuration",
 		Long: `
 #######################################################
 ################## devspace print #####################
@@ -117,7 +120,7 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 		ctx = ctx.AsDependency(dep)
 	}
 
-	bsConfig, err := yaml.Marshal(ctx.Config().Config())
+	bsConfig, err := marshalConfig(ctx.Config().Config(), cmd.StripNames)
 	if err != nil {
 		return err
 	}
@@ -139,6 +142,41 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 	}
 
 	return nil
+}
+
+func marshalConfig(config *latest.Config, stripNames bool) ([]byte, error) {
+	// remove the auto generated names
+	if stripNames {
+		for k := range config.Images {
+			config.Images[k].Name = ""
+		}
+		for k := range config.Deployments {
+			config.Deployments[k].Name = ""
+		}
+		for k := range config.Dependencies {
+			config.Dependencies[k].Name = ""
+		}
+		for k := range config.Pipelines {
+			config.Pipelines[k].Name = ""
+		}
+		for k := range config.Dev {
+			config.Dev[k].Name = ""
+			for c := range config.Dev[k].Containers {
+				config.Dev[k].Containers[c].Container = ""
+			}
+		}
+		for k := range config.Vars {
+			config.Vars[k].Name = ""
+		}
+		for k := range config.PullSecrets {
+			config.PullSecrets[k].Name = ""
+		}
+		for k := range config.Commands {
+			config.Commands[k].Name = ""
+		}
+	}
+
+	return yaml.Marshal(config)
 }
 
 func printExtraInfo(config config.Config, dependencies []types.Dependency, log logger.Logger) error {

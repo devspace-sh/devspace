@@ -46,7 +46,7 @@ if (process.argv && process.argv.length > 2) {
   return;
 }
 
-if (action == "noop") {
+if (action === "noop") {
   console.log("Successfully ran noop command");
   process.exit(0);
 }
@@ -70,7 +70,7 @@ const getLatestVersion = function(callback, includePreReleases) {
     res,
     releasePage
   ) {
-    if (res.statusCode != 200) {
+    if (res.statusCode !== 200) {
       console.error(
         "Error requesting URL " +
           releasesURL +
@@ -93,7 +93,7 @@ const getLatestVersion = function(callback, includePreReleases) {
       "$1"
     );
 
-    if (releasePage != latestVersion && latestVersion) {
+    if (releasePage !== latestVersion && latestVersion) {
       callback(latestVersion);
     } else {
       console.error("Unable to identify latest devspace version");
@@ -102,7 +102,7 @@ const getLatestVersion = function(callback, includePreReleases) {
   });
 };
 
-if (action == "update-version") {
+if (action === "update-version") {
   getLatestVersion(function(latestVersion) {
     packageJson.version = latestVersion;
 
@@ -113,7 +113,7 @@ if (action == "update-version") {
   return;
 }
 
-if (action == "get-tag") {
+if (action === "get-tag") {
   getLatestVersion(function(latestVersion) {
     let tagRegex = /^.*-([a-z]*)(\.)?([0-9]*)?$/i
     let tag = "latest"
@@ -135,7 +135,7 @@ if (action == "get-tag") {
 function rimraf(dir_path) {
   if (fs.existsSync(dir_path)) {
       fs.readdirSync(dir_path).forEach(function(entry) {
-          var entry_path = path.join(dir_path, entry);
+          let entry_path = path.join(dir_path, entry);
           if (fs.lstatSync(entry_path).isDirectory()) {
               rimraf(entry_path);
           } else {
@@ -153,7 +153,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
   let downloadExtension = ".dl";
   let binaryName = packageJson.name;
 
-  if (platform == PLATFORM_MAPPING.win32) {
+  if (platform === PLATFORM_MAPPING.win32) {
     binaryName += ".exe";
   }
 
@@ -184,7 +184,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
   try {
     let yarnGlobalDir = normalizePath(path.join(execSync('yarn global dir').toString(), "node_modules"));
     let yarnLink = normalizePath(path.join(yarnGlobalDir, packageJson.name));
-    let yarnLinkExists = fs.existsSync(yarnLink) && yarnLink == packageDir;
+    let yarnLinkExists = fs.existsSync(yarnLink) && yarnLink === packageDir;
 
     if (yarnLinkExists || packageDir.startsWith(yarnGlobalDir)) {
       try {
@@ -199,7 +199,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
   try {
     let npmGlobalDir = normalizePath(execSync('npm root -g').toString());
     let npmLink = normalizePath(path.join(npmGlobalDir, packageJson.name));
-    let npmLinkExists = fs.existsSync(npmLink) && npmLink == packageDir;
+    let npmLinkExists = fs.existsSync(npmLink) && npmLink === packageDir;
 
     if (npmLinkExists || !globalDir || packageDir.startsWith(npmGlobalDir)) {
       try {
@@ -211,8 +211,8 @@ let continueProcess = function(askRemoveGlobalFolder) {
     }
   } catch(e) {}
   
-  if (globalDir == null) {
-    if (platform == PLATFORM_MAPPING.win32) {
+  if (globalDir === null) {
+    if (platform === PLATFORM_MAPPING.win32) {
       console.error("Error finding binary installation directory");
       process.exit(3);
     }
@@ -241,7 +241,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
   } catch (e) {}
 
   let removeScripts = function(allScripts) {
-    if (platform == PLATFORM_MAPPING.win32) {
+    if (platform === PLATFORM_MAPPING.win32) {
       if (allScripts) {
         try {
           fs.unlinkSync(binaryPath.replace(/\.exe$/i, ""));
@@ -255,10 +255,10 @@ let continueProcess = function(askRemoveGlobalFolder) {
     }
   }
   
-  if (action == "install") {
+  if (action === "install") {
     removeScripts(false);
 
-    if (platform == PLATFORM_MAPPING.win32) {
+    if (platform === PLATFORM_MAPPING.win32) {
       if (globalInstall) {
         // Remove bin/devspace.cmd file because it can cause issues
         try {
@@ -272,7 +272,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
       }
     }
   }
-  else if (action == "uninstall") {
+  else if (action === "uninstall") {
     try {
       fs.unlinkSync(binaryPath);
     } catch (e) {}
@@ -308,7 +308,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
           },
         ])
         .then(answers => {
-          if (answers.checkRemoveGlobalFolder == "yes") {
+          if (answers.checkRemoveGlobalFolder === "yes") {
             removeGlobalFolder();
           }
         });
@@ -316,11 +316,11 @@ let continueProcess = function(askRemoveGlobalFolder) {
       console.warn("DevSpace will not remove the global ~/.devspace folder without asking. This uninstall call is being executed in a non-interactive environment.")
     }
   } else {
-    if (action == "finish-install") {
+    if (action === "finish-install") {
       cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, path.delimiter).replace(/(\\)+/g, '/');
       cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/').trimRight("/");
     
-      if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1 && cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir + "/") == -1) {
+      if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) === -1 && cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir + "/") === -1) {
         console.error("\n\n################################################\nWARNING: npm binary directory NOT in $PATH environment variable: " + globalDir + "\n################################################\n\n");
     
         if (globalInstall) {
@@ -349,7 +349,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
           .replace("{{platform}}", platform)
           .replace("{{arch}}", arch);
 
-        if (platform == PLATFORM_MAPPING.win32) {
+        if (platform === PLATFORM_MAPPING.win32) {
           downloadPath += ".exe";
         }
 
@@ -376,15 +376,15 @@ let continueProcess = function(askRemoveGlobalFolder) {
             process.exit(6);
           })
           .on("response", function(res) {
-            if (res.statusCode != 200) {
+            if (res.statusCode !== 200) {
               writeStream.end();
               spinner.stop(true);
 
-              if (res.statusCode == 404) {
+              if (res.statusCode === 404) {
                 console.error("Release version " + version + " not found.\n");
 
                 getLatestVersion(function(latestVersion) {
-                  if (latestVersion != version) {
+                  if (latestVersion !== version) {
                     console.log(
                       "Downloading latest stable release instead. Latest version is: " +
                         latestVersion +
@@ -394,7 +394,6 @@ let continueProcess = function(askRemoveGlobalFolder) {
                     downloadRelease(latestVersion);
                   }
                 });
-                return;
               } else {
                 console.error(
                   "Error requesting URL " +
@@ -420,7 +419,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
             spinner.stop(true);
 
             try {
-              fs.chmodSync(binaryPath + downloadExtension, 0755);
+              fs.chmodSync(binaryPath + downloadExtension, "0755");
             } catch (e) {
               console.error("Unable to chmod: " + e)
               showRootError();
@@ -446,10 +445,10 @@ let continueProcess = function(askRemoveGlobalFolder) {
 if (process.ppid > 1) {
   findProcess('pid', process.ppid)
     .then(function (list) {
-      if (list.length == 1 && list[0].ppid > 1) {
+      if (list.length === 1 && list[0].ppid > 1) {
         findProcess('pid', list[0].ppid)
           .then(function (list) {
-            if (list.length == 1 && /((npm-cli.js("|')\s+up(date)?)|(yarn.js("|')\s+(global\s+)?upgrade))\s+.*((\/)|(\\)|(\s))devspace((\/)|(\\)|(\s)|$)/.test(list[0].cmd)) {
+            if (list.length === 1 && /((npm-cli.js("|')\s+up(date)?)|(yarn.js("|')\s+(global\s+)?upgrade))\s+.*((\/)|(\\)|(\s))devspace((\/)|(\\)|(\s)|$)/.test(list[0].cmd)) {
               continueProcess(false);
             } else {
               continueProcess(true);

@@ -27,7 +27,7 @@ func newContextCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Com
 #######################################################
 ############### devspace use context ##################
 #######################################################
-Switch the current kube context
+Switches the current kube-context
 
 Example:
 devspace use context my-context

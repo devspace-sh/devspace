@@ -258,6 +258,7 @@ Additional run commands:
 	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
 	rootCmd.AddCommand(NewRunPipelineCmd(f, globalFlags, rawConfig))
 	rootCmd.AddCommand(NewCompletionCmd())
+	rootCmd.AddCommand(NewVersionCmd())
 
 	// check overwrite commands
 	rootCmd.AddCommand(NewDevCmd(f, globalFlags, rawConfig))

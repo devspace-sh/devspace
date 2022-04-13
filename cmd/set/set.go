@@ -11,7 +11,7 @@ import (
 func NewSetCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	setCmd := &cobra.Command{
 		Use:   "set",
-		Short: "Make global configuration changes",
+		Short: "Sets global configuration changes",
 		Long: `
 #######################################################
 #################### devspace set #####################

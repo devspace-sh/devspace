@@ -2,10 +2,9 @@ package imageselector
 
 import (
 	"fmt"
-	"github.com/docker/distribution/reference"
-	dockerregistry "github.com/docker/docker/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 	"regexp"
 	"strings"
 )
@@ -82,11 +81,11 @@ func CompareImageNames(selector string, image2 string) bool {
 	// we replace possible # with a's here to avoid an parsing error
 	// since the tag is stripped anyways it doesn't really matter if we lose
 	// information where the # were
-	tagStrippedImage1, _, err := GetStrippedDockerImageName(strings.Replace(image1, "#", "a", -1))
+	tagStrippedImage1, _, err := dockerfile.GetStrippedDockerImageName(strings.Replace(image1, "#", "a", -1))
 	if err != nil {
 		tagStrippedImage1 = image1
 	}
-	tagStrippedImage2, _, err := GetStrippedDockerImageName(image2)
+	tagStrippedImage2, _, err := dockerfile.GetStrippedDockerImageName(image2)
 	if err != nil {
 		tagStrippedImage2 = image2
 	}
@@ -110,33 +109,4 @@ func CompareImageNames(selector string, image2 string) bool {
 	}
 
 	return tagStrippedImage1 == tagStrippedImage2
-}
-
-// GetStrippedDockerImageName returns a tag stripped image name and checks if it's a valid image name
-func GetStrippedDockerImageName(imageName string) (string, string, error) {
-	imageName = strings.TrimSpace(imageName)
-
-	// Check if we can parse the name
-	ref, err := reference.ParseNormalizedNamed(imageName)
-	if err != nil {
-		return "", "", err
-	}
-
-	// Check if there was a tag
-	tag := ""
-	if refTagged, ok := ref.(reference.NamedTagged); ok {
-		tag = refTagged.Tag()
-	}
-
-	repoInfo, err := dockerregistry.ParseRepositoryInfo(ref)
-	if err != nil {
-		return "", "", err
-	}
-
-	if repoInfo.Index.Official {
-		// strip docker.io and library from image
-		return strings.TrimPrefix(strings.TrimPrefix(reference.TrimNamed(ref).Name(), repoInfo.Index.Name+"/library/"), repoInfo.Index.Name+"/"), tag, nil
-	}
-
-	return reference.TrimNamed(ref).Name(), tag, nil
 }

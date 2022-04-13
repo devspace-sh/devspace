@@ -1,0 +1,5 @@
+commonLabels:
+  kustomize-app: devspace
+
+resources:
+- service.yaml

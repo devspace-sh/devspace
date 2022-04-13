@@ -49,9 +49,6 @@ const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.de
 
 const (
 	// Dockerfile not found options
-	UseExistingDockerfileOption       = "Use the Dockerfile in ./Dockerfile"
-	CreateDockerfileOption            = "Create a Dockerfile for this project"
-	EnterDockerfileOption             = "Enter path to a different Dockerfile"
 	DeployOptionHelm                  = "helm"
 	DeployOptionKubectl               = "kubectl"
 	DeployOptionKustomize             = "kustomize"
@@ -162,9 +159,8 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	} else {
 		err = cmd.initDevspace(f, configLoader)
 	}
-
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	cmd.log.WriteString(logrus.InfoLevel, "\n")
@@ -437,7 +433,7 @@ func (cmd *InitCmd) initDevspace(f factory.Factory, configLoader loader.ConfigLo
 
 		config.Commands["migrate-db"] = &latest.CommandConfig{
 			Command: `echo 'This is a cross-platform, shared command that can be used to codify any kind of dev task.'
-	echo 'Anyone using this project can invoke it via "devspace run migrate-db"'`,
+echo 'Anyone using this project can invoke it via "devspace run migrate-db"'`,
 		}
 	}
 
@@ -456,8 +452,7 @@ start_dev ` + imageName + `                     # 3. Start dev mode "` + imageNa
 	config.Pipelines["deploy"] = &latest.Pipeline{
 		Run: `run_dependency_pipelines --all                    # 1. Deploy any projects this project needs (see "dependencies")
 build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
-create_deployments --all \                        # 3. Deploy Helm charts and manifests specfied as "deployments"
-  --set updateImageTags=true                      #    + make sure to update all image tags to the one from step 2`,
+create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"`,
 	}
 
 	// Save config
@@ -739,7 +734,8 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 	}
 	err = renderCmd.RunDefault(f)
 	if err != nil {
-		return "", err
+		f.GetLog().Debugf("error rendering chart: %v", err)
+		return "", nil
 	}
 
 	return writer.String(), nil

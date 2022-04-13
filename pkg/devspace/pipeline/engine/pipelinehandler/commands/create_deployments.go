@@ -4,7 +4,7 @@ import (
 	"fmt"
 	flags "github.com/jessevdk/go-flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
@@ -154,7 +154,7 @@ func applySetValues(ctx devspacecontext.Context, name, objName string, set, setS
 	}
 
 	rawConfig[name].(map[string]interface{})[objName] = mapObj
-	latestConfig, err := loader.Convert(rawConfig, ctx.Log())
+	latestConfig, err := versions.Parse(rawConfig, ctx.Log())
 	if err != nil {
 		return nil, err
 	}

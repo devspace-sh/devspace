@@ -2,6 +2,8 @@ package dockerfile
 
 import (
 	"bytes"
+	"github.com/docker/distribution/reference"
+	dockerregistry "github.com/docker/docker/registry"
 	"io/ioutil"
 	"regexp"
 	"strconv"
@@ -9,6 +11,35 @@ import (
 )
 
 var findExposePortsRegEx = regexp.MustCompile(`^EXPOSE\s(.*)$`)
+
+// GetStrippedDockerImageName returns a tag stripped image name and checks if it's a valid image name
+func GetStrippedDockerImageName(imageName string) (string, string, error) {
+	imageName = strings.TrimSpace(imageName)
+
+	// Check if we can parse the name
+	ref, err := reference.ParseNormalizedNamed(imageName)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Check if there was a tag
+	tag := ""
+	if refTagged, ok := ref.(reference.NamedTagged); ok {
+		tag = refTagged.Tag()
+	}
+
+	repoInfo, err := dockerregistry.ParseRepositoryInfo(ref)
+	if err != nil {
+		return "", "", err
+	}
+
+	if repoInfo.Index.Official {
+		// strip docker.io and library from image
+		return strings.TrimPrefix(strings.TrimPrefix(reference.TrimNamed(ref).Name(), repoInfo.Index.Name+"/library/"), repoInfo.Index.Name+"/"), tag, nil
+	}
+
+	return reference.TrimNamed(ref).Name(), tag, nil
+}
 
 // GetPorts retrieves all the exported ports from a dockerfile
 func GetPorts(filename string) ([]int, error) {
