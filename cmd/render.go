@@ -21,7 +21,7 @@ func NewRenderCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *
 
 	renderCmd := &cobra.Command{
 		Use:   "render",
-		Short: "Render builds all defined images and shows the yamls that would be deployed",
+		Short: "Builds all defined images and shows the yamls that would be deployed",
 		Long: `
 #######################################################
 ################## devspace render #####################

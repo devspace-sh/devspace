@@ -50,12 +50,12 @@ func NewRunCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *Raw
 	runCmd := &cobra.Command{
 		Use:                "run",
 		DisableFlagParsing: true,
-		Short:              "Run executes a predefined command",
+		Short:              "Executes a predefined command",
 		Long: `
 #######################################################
 ##################### devspace run ####################
 #######################################################
-Run executes a predefined command from the devspace.yaml
+Executes a predefined command from the devspace.yaml
 
 Examples:
 devspace run mycommand --myarg 123

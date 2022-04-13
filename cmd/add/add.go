@@ -11,7 +11,7 @@ import (
 func NewAddCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	addCmd := &cobra.Command{
 		Use:   "add",
-		Short: "Convenience command: adds something to devspace.yaml",
+		Short: "Adds something to devspace.yaml",
 		Long: `
 #######################################################
 #################### devspace add #####################
