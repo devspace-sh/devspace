@@ -1,0 +1,98 @@
+
+import PartialTerminal from "./terminal.mdx"
+import PartialLogs from "./logs.mdx"
+import PartialAttach from "./attach.mdx"
+import PartialSsh from "./ssh.mdx"
+import PartialProxyCommands from "./proxyCommands.mdx"
+import PartialRestartHelper from "./restartHelper.mdx"
+
+<div className="group" data-group="devWorkflow">
+<div className="group-name">Dev Workflow</div>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `terminal` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-containers-terminal}
+
+Terminal allows you to tell DevSpace to open a terminal with screen support to this container
+
+</summary>
+
+<PartialTerminal />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `logs` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-containers-logs}
+
+Logs allows you to tell DevSpace to stream logs from this container to the console
+
+</summary>
+
+<PartialLogs />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `attach` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-containers-attach}
+
+Attach allows you to tell DevSpace to attach to this container
+
+</summary>
+
+<PartialAttach />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `ssh` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-containers-ssh}
+
+PersistPaths allows you to persist certain paths within this container with a persistent volume claim
+
+</summary>
+
+<PartialSsh />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `proxyCommands` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-containers-proxyCommands}
+
+ProxyCommands allow you to proxy certain local commands to the container
+
+</summary>
+
+<PartialProxyCommands />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `restartHelper` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-containers-restartHelper}
+
+RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
+the container and restarting it and is injected via an annotation in the replaced pod.
+
+</summary>
+
+<PartialRestartHelper />
+
+
+</details>
+
+</div>

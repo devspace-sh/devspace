@@ -1,0 +1,68 @@
+
+import PartialBuildKit from "./buildKit.mdx"
+import PartialDocker from "./docker.mdx"
+import PartialKaniko from "./kaniko.mdx"
+import PartialCustom from "./custom.mdx"
+
+<div className="group" data-group="engines">
+<div className="group-name">Build Engines</div>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `buildKit` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#images-buildKit}
+
+BuildKit if buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit
+
+</summary>
+
+<PartialBuildKit />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `docker` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#images-docker}
+
+Docker if docker is specified, DevSpace will build the image using the local docker daemon
+
+</summary>
+
+<PartialDocker />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `kaniko` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#images-kaniko}
+
+Kaniko if kaniko is specified, DevSpace will build the image in-cluster with kaniko
+
+</summary>
+
+<PartialKaniko />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `custom` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#images-custom}
+
+Custom if custom is specified, DevSpace will build the image with the help of
+a custom script.
+
+</summary>
+
+<PartialCustom />
+
+
+</details>
+
+</div>

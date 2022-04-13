@@ -3,6 +3,8 @@ title: Pipelines
 sidebar_label: pipelines
 ---
 
+import ConfigPartialPipeline from '../_partials/v2beta1/pipelines.mdx'
+
 Pipelines in DevSpace consists of one or more jobs that are run in parallel and can depend on each other. Each job consists of one or more conditional steps that are executed in order.
 
 An example `pipelines` section could look like this in `devspace.yaml`:
@@ -16,8 +18,7 @@ pipelines:
   deploy: |
     run_dependency_pipelines --all                    # 1. Deploy any projects this project needs (see "dependencies")
     build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
-    create_deployments --all \                        # 3. Deploy Helm charts and manifests specfied as "deployments"
-      --set updateImageTags=true                      #    + make sure to update all image tags to the one from step 2
+    create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"
   build: |
     build_images --all -t $(git describe --always)
   custom: ...
@@ -70,8 +71,7 @@ The `deploy` pipeline is executed by running `devspace deploy` and has the follo
 ```bash
 run_dependency_pipelines --all      # 1. Deploy any projects this project needs (see "dependencies")
 build_images --all                  # 2. Build, tag (git commit hash) and push all images (see "images")
-create_deployments --all \          # 3. Deploy Helm charts and manifests specfied as "deployments"
-  --set updateImageTags=true        #    + make sure to update all image tags to the one from step 2
+create_deployments --all            # 3. Deploy Helm charts and manifests specfied as "deployments"
 ```
 
 </details>
@@ -95,36 +95,4 @@ build_images --all      # Build, tag (git commit hash) and push all images (see 
 
 ## Configuration
 
-### `name`
-The `name` option is mandatory and expects a string with name that is used to invoke the pipeline via:
-``` bash
-devspace run-pipeline [name]
-```
-
-:::info
-A few special names can be invoked as top-level commands, including:
-- `dev` can be invoked via `devspace dev`
-- `deploy` can be invoked via `devspace deploy`
-- `build` can be invoked via `devspace build`
-:::
-
-
-### `run`
-The `run` option is mandatory and specifies the script that is executed when this pipeline is invoked.
-
-:::info Implicit definition
-\# TODO: note about providing string value vs {run: ...} (see example below)
-:::
-
-Example:
-```yaml
-pipelines:
-  pipeline1: ...
-  pipeline3: |
-    ...
-  pipeline3:
-    run: ...
-```
-
-### `continueOnError`
-The `continueOnError` option expects a boolean value and #TODO
+<ConfigPartialPipeline/>

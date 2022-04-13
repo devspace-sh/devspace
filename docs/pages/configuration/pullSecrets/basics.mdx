@@ -5,6 +5,7 @@ sidebar_label: pullSecrets
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import ConfigPartialPullSecrets from '../_partials/v2beta1/pullsecrets.mdx'
 
 DevSpace allows you to configure additional [pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) that should be created in the target namespace. For each configured pull secret in the `devspace.yaml`, DevSpace will create a secret in the target namespace and add the secret to the `imagePullSecrets` field of the service account.
 
@@ -59,23 +60,4 @@ pullSecrets:
 
 ## Configuration
 
-### `registry`
-The `registry` option is mandatory and expects a string with the registry name for which a pull secret should be created for.
-
-### `disabled`
-The `disabled` option is optional and expects a bool if the pull secret should get created for the specified registry.
-
-### `username`
-The `username` option is optional and expects a string with the username to login into the registry. If this field is empty, DevSpace will try to find out username and password from the local docker store.
-
-### `password`
-The `password` option is optional and expects a string with the password to login into the registry. If this field is empty, DevSpace will try to find out username and password from the local docker store.
-
-### `email`
-The `email` option is optional and expects a string with the email to login into the registry. This can be left empty usually since username and password are enough to log into a docker registry. If empty, the default value will be `noreply@devspace.cloud`.
-
-### `secret`
-The `secret` option is optional and expects a string how the secret should be named. If empty, DevSpace will automatically create a meaningful name for the secret.
-
-### `serviceAccounts`
-The `serviceAccounts` option is optional and expects an array of strings to which the pull secret should be added. If an image pull secret is added to a service account, the service account is able to pull images from that registry even without specifying the image pull secret in a pod definition. If this is empty, DevSpace will add the pull secret to the `default` serviceaccount.
+<ConfigPartialPullSecrets/>

@@ -5,6 +5,7 @@ sidebar_label: "Basics"
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PartialDependenciesConfig from '../_partials/v2beta1/dependencies.mdx'
 
 DevSpace allows you to define dependencies between several software projects that have a `devspace.yaml`, e.g. across different git repositories or local folders. This makes DevSpace a great tool for building and deploying software that consists of several microservices. Primary use cases of dependencies are:
 
@@ -181,3 +182,8 @@ If you want to force DevSpace to update the dependencies (e.g. git fetch & pull)
 ```bash
 devspace update dependencies
 ```
+
+
+## Configuration
+
+<PartialDependenciesConfig/>

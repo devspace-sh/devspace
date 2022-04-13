@@ -1,0 +1,37 @@
+
+import PartialSync from "./sync.mdx"
+import PartialPersistPaths from "./persistPaths.mdx"
+
+<div className="group" data-group="files">
+<div className="group-name">Files & Sync</div>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `sync` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-containers-sync}
+
+Sync allows you to sync certain local paths with paths inside the container
+
+</summary>
+
+<PartialSync />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+#### `persistPaths` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-containers-persistPaths}
+
+SSH allows you to create an SSH tunnel to this container
+
+</summary>
+
+<PartialPersistPaths />
+
+
+</details>
+
+</div>

@@ -21,6 +21,8 @@ const nameFieldName = "name"
 const versionFieldName = "version"
 const groupKey = "group"
 const groupNameKey = "group_name"
+const prefixSeparator = "/"
+const anchorSeparator = "-"
 
 var pluralizeClient = pluralize.NewClient()
 
@@ -81,6 +83,7 @@ func createSections(prefix string, schema *jsonschema.Schema, definitions jsonsc
 	partialImports := &[]string{}
 	content := ""
 	headlinePrefix := strings.Repeat("#", depth+1) + " "
+	anchorPrefix := strings.TrimPrefix(strings.ReplaceAll(prefix, prefixSeparator, anchorSeparator), anchorSeparator)
 
 	groups := map[string]*Group{}
 
@@ -117,7 +120,7 @@ func createSections(prefix string, schema *jsonschema.Schema, definitions jsonsc
 					nestedSchema, ok = definitions[refSplit[len(refSplit)-1]]
 
 					if ok {
-						newPrefix := prefix + fieldName + "/"
+						newPrefix := prefix + fieldName + prefixSeparator
 						createSections(newPrefix, nestedSchema, definitions, depth+1, isNameObjectMap)
 					}
 				} else {
@@ -164,7 +167,8 @@ func createSections(prefix string, schema *jsonschema.Schema, definitions jsonsc
 
 					enumValues := GetEumValues(fieldSchema, required, &fieldDefault)
 
-					fieldContent = fmt.Sprintf(util.TemplateConfigField, false, " open", headlinePrefix, fieldName, required, fieldType, fieldDefault, enumValues, fieldSchema.Description, "")
+					anchorName := anchorPrefix + fieldName
+					fieldContent = fmt.Sprintf(util.TemplateConfigField, false, " open", headlinePrefix, fieldName, required, fieldType, fieldDefault, enumValues, anchorName, fieldSchema.Description, "")
 
 					err := os.MkdirAll(filepath.Dir(fieldFile), os.ModePerm)
 					if err != nil {
@@ -188,13 +192,15 @@ func createSections(prefix string, schema *jsonschema.Schema, definitions jsonsc
 								nameFieldDefault := ""
 								nameFieldEnumValues := GetEumValues(nameFieldSchema, nameFieldRequired, &nameFieldDefault)
 
-								fieldPartial = fmt.Sprintf(util.TemplateConfigField, true, "open", headlinePrefix, "<"+fieldNameSingular+"_"+nameFieldName+">", nameFieldRequired, "string", nameFieldDefault, nameFieldEnumValues, nameFieldSchema.Description, fieldPartial)
+								anchorName := anchorPrefix + nameFieldName
+								fieldPartial = fmt.Sprintf(util.TemplateConfigField, true, "open", headlinePrefix, "<"+fieldNameSingular+"_"+nameFieldName+">", nameFieldRequired, "string", nameFieldDefault, nameFieldEnumValues, anchorName, nameFieldSchema.Description, fieldPartial)
 								fieldType = "&lt;" + fieldNameSingular + "_name&gt;:object"
 							}
 						}
 					}
 
-					fieldPartial = fmt.Sprintf(util.TemplateConfigField, true, "", headlinePrefix, fieldName, false, fieldType, "", "", fieldSchema.Description, fieldPartial)
+					anchorName := anchorPrefix + fieldName
+					fieldPartial = fmt.Sprintf(util.TemplateConfigField, true, "", headlinePrefix, fieldName, false, fieldType, "", "", anchorName, fieldSchema.Description, fieldPartial)
 				}
 
 				if groupID != "" {

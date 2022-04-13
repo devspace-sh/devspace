@@ -229,23 +229,31 @@ body .markdown .config-field {
         }
     }
 
-    .group {
-        margin-top: 1em;
-        padding-bottom: 1.2em;
-        border: 1px solid #2156f2;
-
-        .group-name {
-            padding: 0.3em 0 0.3em 1.3em;
-            font-weight: 600;
-            background: #2156f2;
-            color: #fff;
-            font-size: 0.9em;
-        }
-    }
-
     p:last-child,
     details:not([data-expandable="true"]):last-child {
         margin-bottom: 0;
         padding-bottom: 0;
+    }
+}
+
+.group {
+    margin-top: 1em;
+    border: 1px solid #2156f2;
+
+    .group-name {
+        padding: 0.3em 0 0.3em 1.3em;
+        font-weight: 600;
+        background: #2156f2;
+        color: #fff;
+        font-size: 0.9em;
+    }
+
+    > details:first-of-type {
+        margin-top: 0 !important;
+    }
+
+    > details:last-of-type {
+        padding-bottom: 1.2em !important;
+        margin-bottom: 0 !important;
     }
 }

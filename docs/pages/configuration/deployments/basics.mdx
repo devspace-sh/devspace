@@ -9,6 +9,7 @@ import FragmentWorkflowDeployDependencies from '../../_partials/workflow-deploy-
 import FragmentWorkflowBuildImages from '../../_partials/workflow-build-images.mdx';
 import FragmentWorkflowReplaceTags from '../../_partials/workflow-replace-tags.mdx';
 import FragmentWorkflowDeployProject from '../../_partials/workflow-deploy-project.mdx';
+import ConfigPartialDeployments from '../_partials/v2beta1/deployments.mdx'
 
 Deployments are configured within the `deployments` section of the `devspace.yaml`.
 
@@ -168,3 +169,8 @@ In case of Helm deployments, this command behaves similar to `helm install --dry
 :::info Image Building & Tag Replacement
 This command will build images (if necessary) and update the tags within manifests and Helm chart values.
 :::
+
+
+## Configuration
+
+<ConfigPartialDeployments/>

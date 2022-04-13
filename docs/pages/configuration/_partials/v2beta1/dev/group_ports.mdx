@@ -1,0 +1,53 @@
+
+import PartialReversePorts from "./reversePorts.mdx"
+import PartialPorts from "./ports.mdx"
+import PartialOpen from "./open.mdx"
+
+<div className="group" data-group="ports">
+<div className="group-name">Ports & Localhost Access</div>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `reversePorts` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-reversePorts}
+
+ReversePorts are port mappings to make local ports available inside the container
+
+</summary>
+
+<PartialReversePorts />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `ports` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-ports}
+
+Ports defines port mappings from the remote pod that should be forwarded to your local
+computer
+
+</summary>
+
+<PartialPorts />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `open` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-open}
+
+Open defines urls that should be opened as soon as they are reachable
+
+</summary>
+
+<PartialOpen />
+
+
+</details>
+
+</div>

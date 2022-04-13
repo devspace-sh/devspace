@@ -1,0 +1,52 @@
+
+import PartialSync from "./sync.mdx"
+import PartialPersistPaths from "./persistPaths.mdx"
+import PartialPersistenceOptions from "./persistenceOptions.mdx"
+
+<div className="group" data-group="files">
+<div className="group-name">Files & Sync</div>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `sync` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-sync}
+
+Sync allows you to sync certain local paths with paths inside the container
+
+</summary>
+
+<PartialSync />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `persistPaths` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object[]</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-persistPaths}
+
+SSH allows you to create an SSH tunnel to this container
+
+</summary>
+
+<PartialPersistPaths />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `persistenceOptions` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#dev-persistenceOptions}
+
+PersistenceOptions are additional options for persisting paths within this pod
+
+</summary>
+
+<PartialPersistenceOptions />
+
+
+</details>
+
+</div>
