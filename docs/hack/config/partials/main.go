@@ -72,20 +72,13 @@ func main() {
 	createSections("", schema, schema.Definitions, 1, false)
 }
 
-type Group struct {
-	File    string
-	Name    string
-	Content string
-	Imports *[]string
-}
-
 func createSections(prefix string, schema *jsonschema.Schema, definitions jsonschema.Definitions, depth int, parentIsNameObjectMap bool) string {
 	partialImports := &[]string{}
 	content := ""
 	headlinePrefix := strings.Repeat("#", depth+1) + " "
 	anchorPrefix := strings.TrimPrefix(strings.ReplaceAll(prefix, prefixSeparator, anchorSeparator), anchorSeparator)
 
-	groups := map[string]*Group{}
+	groups := map[string]*util.Group{}
 
 	for _, fieldName := range schema.Properties.Keys() {
 		if parentIsNameObjectMap && fieldName == nameFieldName {
@@ -206,7 +199,7 @@ func createSections(prefix string, schema *jsonschema.Schema, definitions jsonsc
 				if groupID != "" {
 					group, ok := groups[groupID]
 					if !ok {
-						group = &Group{
+						group = &util.Group{
 							File:    fmt.Sprintf(configPartialBasePath+"%s/%sgroup_%s.mdx", latest.Version, prefix, groupID),
 							Imports: &[]string{},
 						}
@@ -232,34 +225,7 @@ func createSections(prefix string, schema *jsonschema.Schema, definitions jsonsc
 		}
 	}
 
-	for groupID, group := range groups {
-		groupContent := group.Content
-
-		if group.Name != "" {
-			groupContent = "\n" + `<div className="group-name">` + group.Name + `</div>` + "\n\n" + groupContent
-		}
-
-		groupImportContent := ""
-		for _, partialFile := range *group.Imports {
-			groupImportContent = groupImportContent + GetPartialImport(partialFile, group.File)
-		}
-
-		if groupImportContent != "" {
-			groupImportContent = groupImportContent + "\n\n"
-		}
-
-		groupFileContent := fmt.Sprintf(`%s<div className="group" data-group="%s">%s`+"\n"+`</div>`, groupImportContent, groupID, groupContent)
-
-		err := os.MkdirAll(filepath.Dir(group.File), os.ModePerm)
-		if err != nil {
-			panic(err)
-		}
-
-		err = ioutil.WriteFile(group.File, []byte(groupFileContent), os.ModePerm)
-		if err != nil {
-			panic(err)
-		}
-	}
+	util.ProcessGroups(groups)
 
 	if prefix == "" {
 		prefix = "reference"
@@ -269,7 +235,7 @@ func createSections(prefix string, schema *jsonschema.Schema, definitions jsonsc
 
 	importContent := ""
 	for _, partialFile := range *partialImports {
-		importContent = importContent + GetPartialImport(partialFile, pageFile)
+		importContent = importContent + util.GetPartialImport(partialFile, pageFile)
 	}
 
 	content = fmt.Sprintf("%s%s", importContent, content)
@@ -282,19 +248,6 @@ func createSections(prefix string, schema *jsonschema.Schema, definitions jsonsc
 	//fmt.Println(content)
 
 	return content
-}
-
-func GetPartialImport(partialFile, importingFile string) string {
-	partialImportPath, err := filepath.Rel(filepath.Dir(importingFile), partialFile)
-	if err != nil {
-		panic(err)
-	}
-
-	if partialImportPath[0:1] != "." {
-		partialImportPath = "./" + partialImportPath
-	}
-
-	return fmt.Sprintf(util.TemplatePartialImport, util.GetPartialImportName(partialFile), partialImportPath)
 }
 
 func GetEumValues(fieldSchema *jsonschema.Schema, required bool, fieldDefault *string) string {

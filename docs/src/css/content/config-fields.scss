@@ -130,6 +130,11 @@ body .markdown .config-field {
                 display: inline-block;
                 margin-right: 0.15em;
             }
+
+            &.-return::before {
+                content: "returns: ";
+                margin-right: 0.3em;
+            }
         }
 
         .config-field-type,
@@ -140,6 +145,10 @@ body .markdown .config-field {
         .config-field-enum {
             padding-left: 5em;
             position: relative;
+
+            &:not(:empty) + .config-field-default {
+                margin-left: 8.5em;
+            }
 
             &:empty {
                 display: none;

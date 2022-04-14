@@ -23,6 +23,7 @@ func GetSection(headlineText, pageContent string) string {
 	return ""
 }
 
+/*
 func GetPartOfAutogenSection(headlineText, pageContent string) string {
 	regex := "(?is)^.*" + AutoGenTagBegin + `\s*\n###?\s+` + headlineText + `.*?` + AutoGenTagEnd + `\s*(.*?)\s*` + AutoGenTagBegin + ".*$"
 	match := regexp.MustCompile(regex).ReplaceAllString(pageContent, "$1")
@@ -31,4 +32,4 @@ func GetPartOfAutogenSection(headlineText, pageContent string) string {
 		return match + "\n\n"
 	}
 	return ""
-}
+}*/

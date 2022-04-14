@@ -23,6 +23,7 @@ type BuildImagesOptions struct {
 	FromFile  []string `long:"from-file" description:"Reuse an existing configuration from a file"`
 }
 
+// BuildImages
 func BuildImages(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 	ctx.Log().Debugf("build_images %s", strings.Join(args, " "))
 	err := pipeline.Exclude(ctx)
