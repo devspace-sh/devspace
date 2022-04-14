@@ -291,6 +291,7 @@ func getActivatedProfiles(ctx context.Context, data map[string]interface{}, reso
 			}
 
 			if activatedByEnv && activatedByVars {
+				log.Debugf("profile %s was automatically activated", profileConfig.Name)
 				activatedProfiles = append(activatedProfiles, profileConfig.Name)
 			}
 		}

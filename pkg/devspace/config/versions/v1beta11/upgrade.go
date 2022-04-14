@@ -45,6 +45,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		if p.Merge != nil {
 			nextConfig.Profiles[i].Merge = &next.ProfileConfigStructure{
 				Images:          p.Merge.Images,
+				Dev:             p.Merge.Dev,
 				Hooks:           p.Merge.Hooks,
 				OldDeployments:  p.Merge.Deployments,
 				OldDependencies: p.Merge.Dependencies,
@@ -56,6 +57,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		if p.Replace != nil {
 			nextConfig.Profiles[i].Replace = &next.ProfileConfigStructure{
 				Images:          p.Replace.Images,
+				Dev:             p.Replace.Dev,
 				Hooks:           p.Replace.Hooks,
 				OldDeployments:  p.Replace.Deployments,
 				OldDependencies: p.Replace.Dependencies,
