@@ -3,8 +3,10 @@ package proxycommands
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/mitchellh/go-homedir"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
@@ -24,6 +26,8 @@ type ConfigureCmd struct {
 	PrivateKey string
 	WorkingDir string
 
+	GitCredentials bool
+
 	Commands []string
 }
 
@@ -41,6 +45,7 @@ func NewConfigureCmd() *cobra.Command {
 	configureCmd.Flags().StringVar(&cmd.PrivateKey, "private-key", "", "Private key to use")
 	configureCmd.Flags().StringVar(&cmd.WorkingDir, "working-dir", "", "Working dir to use")
 	configureCmd.Flags().StringSliceVar(&cmd.Commands, "commands", []string{}, "Commands to overwrite")
+	configureCmd.Flags().BoolVar(&cmd.GitCredentials, "git-credentials", false, "If git credentials should get configured")
 	return configureCmd
 }
 
@@ -115,6 +120,24 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 		workingDir, err = os.Getwd()
 		if err != nil {
 			return err
+		}
+	}
+
+	// now configure git credentials
+	if cmd.GitCredentials {
+		homeDir, err := homedir.Dir()
+		if err != nil {
+			return err
+		}
+
+		gitConfigPath := filepath.Join(homeDir, ".gitconfig")
+		out, err = ioutil.ReadFile(gitConfigPath)
+		if err != nil || !strings.Contains(string(out), "helper = \"/tmp/devspacehelper proxy-commands git-credentials\"") {
+			content := string(out) + "\n" + "[credential]" + "\n" + "        helper = \"/tmp/devspacehelper proxy-commands git-credentials\"\n"
+			err = ioutil.WriteFile(gitConfigPath, []byte(content), 0644)
+			if err != nil {
+				return errors.Wrap(err, "write git config")
+			}
 		}
 	}
 

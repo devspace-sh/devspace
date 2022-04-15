@@ -97,7 +97,11 @@ func startLocalSSH(ctx devspacecontext.Context, selector targetselector.TargetSe
 
 	// gather all commands that should get replaced in the container
 	commandsToReplace := []string{}
+	gitCredentials := false
 	for _, r := range reverseCommands {
+		if r.GitCredentials {
+			gitCredentials = true
+		}
 		if r.Command == "" {
 			continue
 		}
@@ -106,7 +110,14 @@ func startLocalSSH(ctx devspacecontext.Context, selector targetselector.TargetSe
 	}
 
 	// execute configure command in container
-	command := []string{inject.DevSpaceHelperContainerPath, "proxy-commands", "configure", "--public-key", base64.StdEncoding.EncodeToString([]byte(publicKey)), "--private-key", base64.StdEncoding.EncodeToString([]byte(privateKey)), "--commands", strings.Join(commandsToReplace, ",")}
+	command := []string{inject.DevSpaceHelperContainerPath, "proxy-commands", "configure", "--public-key", base64.StdEncoding.EncodeToString([]byte(publicKey)), "--private-key", base64.StdEncoding.EncodeToString([]byte(privateKey))}
+	if len(commandsToReplace) > 0 {
+		command = append(command, "--commands", strings.Join(commandsToReplace, ","))
+	}
+	if gitCredentials {
+		command = append(command, "--git-credentials")
+	}
+
 	stdout, stderr, err := ctx.KubeClient().ExecBuffered(ctx.Context(), container.Pod, container.Container.Name, command, nil)
 	if err != nil {
 		return fmt.Errorf("error setting up proxy commands in container: %s %s %v", string(stdout), string(stderr), err)

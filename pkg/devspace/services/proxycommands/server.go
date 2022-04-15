@@ -140,6 +140,10 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, *types.ProxyCommand, e
 
 	var reverseCommand *latest.ProxyCommand
 	for _, r := range s.commands {
+		if r.GitCredentials && command.Args[0] == "git-credentials" {
+			reverseCommand = r
+			break
+		}
 		if r.Command == command.Args[0] {
 			reverseCommand = r
 			break
@@ -152,6 +156,9 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, *types.ProxyCommand, e
 	c := reverseCommand.Command
 	if reverseCommand.LocalCommand != "" {
 		c = reverseCommand.LocalCommand
+	}
+	if reverseCommand.GitCredentials {
+		c = "git"
 	}
 
 	args := []string{}
@@ -176,12 +183,15 @@ func (s *Server) getCommand(sess ssh.Session) (*exec.Cmd, *types.ProxyCommand, e
 	}
 
 	s.log.Debugf("run command '%s %s' locally", c, strings.Join(args, " "))
-	if !reverseCommand.SkipContainerEnv {
+	if !reverseCommand.SkipContainerEnv && !reverseCommand.GitCredentials {
 		cmd.Env = append(cmd.Env, command.Env...)
 	}
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	for k, v := range reverseCommand.Env {
 		cmd.Env = append(cmd.Env, k+"="+v)
+	}
+	if reverseCommand.GitCredentials {
+		cmd.Env = append(cmd.Env, "GIT_ASKPASS=true")
 	}
 	return cmd, command, nil
 }

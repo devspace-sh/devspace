@@ -916,6 +916,9 @@ type RestartHelper struct {
 }
 
 type ProxyCommand struct {
+	// GitCredentials configures a git credentials helper inside the container that proxies local git credentials
+	GitCredentials bool `yaml:"gitCredentials,omitempty" json:"gitCredentials,omitempty"`
+
 	// Command is the name of the command that should be available in the remote container. DevSpace
 	// will create a small script for that inside the container that redirect command execution to
 	// the local computer.

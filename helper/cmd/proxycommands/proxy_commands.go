@@ -14,5 +14,6 @@ func NewProxyCommands() *cobra.Command {
 
 	reverseCommandsCmd.AddCommand(NewConfigureCmd())
 	reverseCommandsCmd.AddCommand(NewRunCmd())
+	reverseCommandsCmd.AddCommand(NewGitCredentialsCmd())
 	return reverseCommandsCmd
 }
