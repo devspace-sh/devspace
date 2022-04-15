@@ -30,6 +30,10 @@ func NewRunCmd() *cobra.Command {
 
 // Run runs the command logic
 func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
+	return runProxyCommand(args)
+}
+
+func runProxyCommand(args []string) error {
 	key, err := ioutil.ReadFile(sshPrivateKeyPath)
 	if err != nil {
 		return errors.Wrap(err, "read private key")
