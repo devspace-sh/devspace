@@ -77,7 +77,7 @@ Name of the pipeline, will be filled automatically
 <details className="config-field" data-expandable="true">
 <summary>
 
-## `images` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#images}
+## `images` <span class="config-field-required" data-required="false">required</span> <span class="config-field-type">&lt;image_name&gt;:object</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#images}
 
 Images holds configuration of how DevSpace should build images. By default, DevSpace will build all defined images.
 If you are using a custom pipeline, you can dynamically define which image is built at which time during the
@@ -85,7 +85,20 @@ execution.
 
 </summary>
 
+
+<details className="config-field" data-expandable="true"open>
+<summary>
+
+## `<image_name>` <span class="config-field-required" data-required="true">required</span> <span class="config-field-type">string</span> <span class="config-field-default"></span> <span class="config-field-enum"></span> {#name}
+
+Name of the image, will be filled automatically
+
+</summary>
+
 <PartialImages />
+
+
+</details>
 
 
 </details>

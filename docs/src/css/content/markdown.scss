@@ -15,7 +15,7 @@ body .markdown {
       margin-top: var(--ifm-list-margin);
     }
 
-    &:not(ul, ol) {
+    &:not(ul, ol, h1, h2, h3, h4) {
       margin-top: var(--ifm-leading);
     }
   }

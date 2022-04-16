@@ -3,6 +3,8 @@ title: Build Images with Docker
 sidebar_label: docker
 ---
 
+import ConfigPartial from '../../_partials/v2beta1/images/docker.mdx'
+
 ## `docker`
 If nothing is specified, DevSpace always tries to build the image using `docker` as build tool.
 
@@ -94,3 +96,8 @@ images:
 **Explanation:**  
 - The first image `backend` would be preferably built with Minikube's Docker daemon and the image would **not** be pushed to a registry.
 - The second image `frontend` would **not** be built with the Docker daemon of Minikube and it would be pushed to a registry after building and tagging the image using Docker (or kaniko as fallback).
+
+
+## Config Reference
+
+<ConfigPartial/>

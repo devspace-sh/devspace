@@ -7,6 +7,10 @@ import ConfigPartialPipeline from '../_partials/v2beta1/pipelines.mdx'
 
 Pipelines in DevSpace consists of one or more jobs that are run in parallel and can depend on each other. Each job consists of one or more conditional steps that are executed in order.
 
+## Workflow
+
+
+### 1. Define Pipelines
 An example `pipelines` section could look like this in `devspace.yaml`:
 ```yaml
 # File: devspace.yaml
@@ -30,6 +34,8 @@ Pipelines can:
 - Use bash-like syntax including `if []; then ... fi`, `&&`, `||` or `;`
 - Access environment variables and DevSpace variables
 
+
+### 2. Run Pipelines
 Pipelines are invoked via:
 ```bash
 devspace run-pipeline [name]
@@ -38,6 +44,9 @@ devspace run-pipeline [name]
 :::info Cross-Platform Execution
 Write all pipeline scrips in `bash` fashion. DevSpace is using a library to make them cross-platform executable.
 :::
+
+
+## Custom Flags
 
 
 ## Default Pipelines
@@ -93,6 +102,6 @@ build_images --all      # Build, tag (git commit hash) and push all images (see 
 </details>
 
 
-## Configuration
+## Config Reference
 
 <ConfigPartialPipeline/>

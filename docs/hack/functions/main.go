@@ -250,6 +250,14 @@ var Functions = []Function{
 		Group:       groupPipelines,
 	},
 	{
+		Name:        "is_dependency",
+		Description: `Returns true if the pipeline currently being executed is run because the project is a dependency of another project`,
+		Handler:     commands.IsDependency,
+		Return:      reflect.Bool.String(),
+		Group:       groupChecks,
+		IsGlobal:    true,
+	},
+	{
 		Name:        "is_empty",
 		Description: `Returns true if the value of the argument is empty string`,
 		Args:        `[value]`,

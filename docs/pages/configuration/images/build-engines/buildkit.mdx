@@ -3,6 +3,10 @@ title: Build Images with BuildKit
 sidebar_label: buildKit
 ---
 
+
+import ConfigPartial from '../../_partials/v2beta1/images/buildKit.mdx'
+
+
 Using [BuildKit](https://github.com/moby/buildkit) as build tool allows you to build images either locally or inside your Kubernetes cluster without a Docker daemon. 
 
 :::info
@@ -121,3 +125,8 @@ images:
 **Explanation:**
 - `buildKit` tells DevSpace to use the BuildKit engine to build the image.
 - The command option will tell DevSpace to use this command instead of `docker buildx` and the actual build command will look like this: `/path/to/my/buildx build --tag john/appbackend:DRLzYNS --push --file Dockerfile --cache-to user/app:cache -`
+
+
+## Config Reference
+
+<ConfigPartial/>

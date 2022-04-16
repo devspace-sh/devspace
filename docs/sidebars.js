@@ -21,77 +21,7 @@ module.exports = {
       items: [
         'configuration/imports/basics',
         'configuration/functions/basics',
-        {
-          type: 'category',
-          label: 'pipelines',
-          link: { type: 'doc', id: 'configuration/pipelines/basics' },
-          items: [
-            {
-              type: 'category',
-              label: 'Images',
-              collapsible: false,
-              items: [
-                'configuration/pipelines/functions/build_images',
-                'configuration/pipelines/functions/ensure_pull_secrets',
-                'configuration/pipelines/functions/get_image',
-              ],
-            },
-            {
-              type: 'category',
-              label: 'Deployments',
-              collapsible: false,
-              items: [
-                'configuration/pipelines/functions/create_deployments',
-                'configuration/pipelines/functions/purge_deployments',
-              ],
-            },
-            {
-              type: 'category',
-              label: 'Development',
-              collapsible: false,
-              items: [
-                'configuration/pipelines/functions/start_dev',
-                'configuration/pipelines/functions/stop_dev',
-              ],
-            },
-            {
-              type: 'category',
-              label: 'Pipelines',
-              collapsible: false,
-              items: [
-                'configuration/pipelines/functions/run_pipelines',
-                'configuration/pipelines/functions/run_default_pipeline',
-                'configuration/pipelines/functions/run_dependency_pipelines',
-              ],
-            },
-            {
-              type: 'category',
-              label: 'Checks',
-              collapsible: false,
-              items: [
-                'configuration/pipelines/functions/is_command',
-                'configuration/pipelines/functions/is_dependency',
-                'configuration/pipelines/functions/is_equal',
-                'configuration/pipelines/functions/is_os',
-                'configuration/pipelines/functions/is_true',
-              ],
-            },
-            {
-              type: 'category',
-              label: 'Other',
-              collapsible: false,
-              items: [
-                'configuration/pipelines/functions/cat',
-                'configuration/pipelines/functions/exec_container',
-                'configuration/pipelines/functions/get_config_value',
-                'configuration/pipelines/functions/run_watch',
-                'configuration/pipelines/functions/select_pod',
-                'configuration/pipelines/functions/sleep',
-                'configuration/pipelines/functions/xargs',
-              ],
-            },
-          ],
-        },
+        'configuration/pipelines/basics',
         {
           type: 'category',
           label: 'images',
@@ -99,39 +29,34 @@ module.exports = {
           items: [
             {
               type: 'category',
-              label: 'Image',
-              collapsible: false,
+              label: '1. Build',
+              link: { type: 'doc', id: 'configuration/images/build' },
               items: [
-                'configuration/images/image-definition/image',
-                'configuration/images/image-definition/tags',
-                'configuration/images/image-definition/dockerfile',
-                'configuration/images/image-definition/context',
+                'configuration/images/build/args',
+                'configuration/images/build/multi-stage',
+                'configuration/images/build/rebuild',
               ],
             },
+            'configuration/images/tag',
+            'configuration/images/push',
+            'configuration/images/pull-secrets',
             {
               type: 'category',
-              label: 'Overwrites',
-              collapsible: false,
+              label: 'Registry Auth',
+              link: { type: 'doc', id: 'configuration/images/registries/basics' },
               items: [
-                //'configuration/images/entrypoint-cmd',
-                'configuration/images/image-definition/append-dockerfile-instructions',
-              ],
-            },
-            {
-              type: 'category',
-              label: 'Build Configuration',
-              collapsible: false,
-              items: [
-                'configuration/images/build-settings/rebuild-strategy',
-                //'configuration/images/inject-restart-helper',
-                //'configuration/images/pull-secrets',
-                //'configuration/images/skip-push',
+                'configuration/images/registries/docker-hub',
+                'configuration/images/registries/github',
+                'configuration/images/registries/aws',
+                'configuration/images/registries/google',
+                'configuration/images/registries/azure',
+                'configuration/images/registries/other',
               ],
             },
             {
               type: 'category',
               label: 'Build Engines',
-              collapsible: false,
+              link: { type: 'doc', id: 'configuration/images/build-engines/basics' },
               items: [
                 'configuration/images/build-engines/docker',
                 'configuration/images/build-engines/buildkit',
@@ -236,35 +161,7 @@ module.exports = {
             'configuration/variables/built-in',
           ],
         },
-        {
-          type: 'category',
-          label: 'commands',
-          link: { type: 'doc', id: 'configuration/commands/basics' },
-          items: [
-            {
-              type: 'category',
-              label: 'Checks',
-              collapsible: false,
-              items: [
-                'configuration/commands/functions/is_command',
-                'configuration/commands/functions/is_equal',
-                'configuration/commands/functions/is_os',
-                'configuration/commands/functions/is_true',
-              ],
-            },
-            {
-              type: 'category',
-              label: 'Other',
-              collapsible: false,
-              items: [
-                'configuration/commands/functions/cat',
-                'configuration/commands/functions/run_watch',
-                'configuration/commands/functions/sleep',
-                'configuration/commands/functions/xargs',
-              ],
-            },
-          ],
-        },
+        'configuration/commands/basics',
         {
           type: 'category',
           label: 'dependencies',

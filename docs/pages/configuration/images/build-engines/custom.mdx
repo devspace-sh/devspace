@@ -3,6 +3,8 @@ title: Custom Build Scripts
 sidebar_label: custom
 ---
 
+import ConfigPartial from '../../_partials/v2beta1/images/custom.mdx'
+
 ## `custom`
 Using `custom` as build tool allows you to define a custom command for building images. This is particularly useful if you want to use a remote build system such as Google Cloud Build.
 
@@ -53,3 +55,8 @@ images:
 ```
 **Explanation:**
 The image `backend` is built using the command `./build --image "[IMAGE]:[TAG]"`, and DevSpace skips the build if none of the files within `some/path/`, nor the file `another/path/file.txt`, has changed since the last build.
+
+
+## Config Reference
+
+<ConfigPartial/>

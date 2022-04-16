@@ -3,6 +3,8 @@ title: Build Images with kaniko
 sidebar_label: kaniko
 ---
 
+import ConfigPartial from '../../_partials/v2beta1/images/kaniko.mdx'
+
 Using [kaniko](https://github.com/GoogleContainerTools/kaniko) as build tool allows you to build images directly inside your Kubernetes cluster without a Docker daemon. DevSpace simply starts a build pod and builds the image using `kaniko`.
 
 :::note Automatic Cleanup
@@ -411,3 +413,8 @@ A key value map of the node selector to use for the build pod.
 Array of node [Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#concepts) that should be used to schedule the build pod.
 
 <br />
+
+
+## Config Reference
+
+<ConfigPartial/>
