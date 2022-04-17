@@ -186,7 +186,7 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 								nameFieldDefault := ""
 								nameFieldEnumValues := GetEumValues(nameFieldSchema, nameFieldRequired, &nameFieldDefault)
 
-								anchorName := anchorPrefix + nameFieldName
+								anchorName := anchorPrefix + fieldName + anchorSeparator + nameFieldName
 								fieldPartial = fmt.Sprintf(TemplateConfigField, true, "open", headlinePrefix, "<"+fieldNameSingular+"_"+nameFieldName+">", nameFieldRequired, "string", nameFieldDefault, nameFieldEnumValues, anchorName, nameFieldSchema.Description, fieldPartial)
 								fieldType = "&lt;" + fieldNameSingular + "_name&gt;:object"
 							}

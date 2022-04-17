@@ -1,19 +1,26 @@
 body .markdown .config-field {
     --docusaurus-details-decoration-color: #ccc;
+
+    margin: 0;
+    padding: 1em 1.4em;
+    border: 1px solid transparent;
+    border-bottom-color: #eee;
+
+    &:first-of-type {
+        border-top-color: #eee;
+    }
+
+    .config-field {
+        border-top-color: transparent;
+        
+        &:last-of-type {
+            border-bottom-color: transparent;
+        }
+    }
     
-    background: none;
+    background: transparent;
     box-shadow: none;
     font-size: 1rem; /* must reset font-size to prevent nested fields getting smaller */
-
-    &,
-    details {
-        border: 1px solid transparent;
-    }
-
-    &:not(:last-child) {
-        margin: 0;
-        border-bottom: 1px solid #eee;
-    }
 
     &[open],
     &[data-expandable="false"] {
@@ -100,6 +107,15 @@ body .markdown .config-field {
                 letter-spacing: 0.03em;
                 padding: 0;
             }
+
+            &:target {
+                &,
+                & ~ * {
+                    &::before {
+                        display: none;
+                    }
+                }
+            }
         }
 
         .config-field-required,
@@ -145,10 +161,6 @@ body .markdown .config-field {
         .config-field-enum {
             padding-left: 5em;
             position: relative;
-
-            &:not(:empty) + .config-field-default {
-                margin-left: 8.5em;
-            }
 
             &:empty {
                 display: none;
@@ -210,7 +222,13 @@ body .markdown .config-field {
         }
 
         .hash-link {
-            margin-top: 0.42em;
+            position: absolute;
+            left: -1.4em;
+            top: 0.1em;
+
+            &:focus {
+                opacity: 0;
+            }
         }
 
         + * {

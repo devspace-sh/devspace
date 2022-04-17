@@ -10,7 +10,7 @@ const TemplateConfigField = `
 <details className="config-field" data-expandable="%t"%s>
 <summary>
 
-%s` + "`%s`" + ` <span class="config-field-required" data-required="%t">required</span> <span class="config-field-type">%s</span> <span class="config-field-default">%s</span> <span class="config-field-enum">%s</span> {#%s}
+%s` + "`%s`" + ` <span className="config-field-required" data-required="%t">required</span> <span className="config-field-type">%s</span> <span className="config-field-default">%s</span> <span className="config-field-enum">%s</span> {#%s}
 
 %s
 
@@ -24,7 +24,7 @@ const TemplateFunctionRef = `
 <details className="config-field -function" data-expandable="%t"%s>
 <summary>
 
-%s` + "`%s`" + ` <span class="config-field-type">%s</span> <span class="config-field-enum">%s</span> <span class="config-field-default -return">%s</span> <span class="config-field-required" data-required="%t">pipeline only</span>  {#%s}
+%s` + "`%s`" + ` <span className="config-field-type">%s</span> <span className="config-field-enum">%s</span> <span className="config-field-default -return">%s</span> <span className="config-field-required" data-required="%t">pipeline only</span>  {#%s}
 
 %s
 

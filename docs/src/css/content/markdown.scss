@@ -8,8 +8,6 @@ body .markdown {
 .markdown > ul,
 .markdown > ol,
 .markdown > p {
-  margin-bottom: 0;
-
   + * {
     &:is(ul, ol) {
       margin-top: var(--ifm-list-margin);
@@ -101,6 +99,12 @@ html body pre.prism-code > button {
   position: relative;
 }
 
+.hash-link,
+.hash-link:hover {
+  color: orange;
+  text-decoration: none;
+}
+
 .markdown :target,
 .markdown :target ~ *:not(h2:not(:target), h3:not(:target), h4:not(:target), :target ~ h2:not(:target) ~ *, :target ~ h3:not(:target) ~ *, :target ~ h4:not(:target) ~ *) {
   &::before {
@@ -110,7 +114,7 @@ html body pre.prism-code > button {
     left: -20px;
     top: -20px;
     bottom: calc(-1*var(--ifm-paragraph-margin-bottom));
-    background: #077EEC;
+    background: orange;
     z-index: -1;
 
     @media (min-width: 1500px) {
@@ -122,6 +126,10 @@ html body pre.prism-code > button {
 
   &.admonition::before {
     margin-left: -4px;
+  }
+
+  &:is(details, .group)::before {
+    margin-left: -1px;
   }
 }
 
@@ -196,7 +204,8 @@ h3.active-section::before {
   border-color: #00bdff;
   border-style: solid;
   border-width: var(--ifm-alert-border-width);
-  border-left-width: 0;
+  border-left-width: 4px;
+  border-left-color: transparent;
   background: #fff;
   border-radius: 0;
   box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 5px 0px;
@@ -205,4 +214,13 @@ h3.active-section::before {
 .markdown .admonition {
   margin-left: -1px;
   border-radius: 4px;
+}
+
+.-contains-target-link {
+  box-shadow: 0 0 14px 0 orange !important;
+  border-color: transparent !important;
+  transform: scale(1.01);
+  z-index: 1;
+  position: relative;
+  background: #fff !important;
 }
