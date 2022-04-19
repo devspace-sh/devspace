@@ -163,9 +163,9 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		}
 
 		if !dep.Disabled {
-			deployPipeline += "run_dependency_pipelines " + name + "\n"
-			buildPipeline += "run_dependency_pipelines " + name + " --pipeline build\n"
-			purgePipeline += "run_dependency_pipelines " + name + " --pipeline purge\n"
+			deployPipeline += "run_dependencies " + name + "\n"
+			buildPipeline += "run_dependencies " + name + " --pipeline build\n"
+			purgePipeline += "run_dependencies " + name + " --pipeline purge\n"
 		}
 	}
 

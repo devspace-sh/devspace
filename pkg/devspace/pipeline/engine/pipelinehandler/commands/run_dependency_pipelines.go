@@ -19,7 +19,7 @@ type RunDependencyPipelinesOptions struct {
 }
 
 func RunDependencyPipelines(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-	ctx.Log().Debugf("run_dependency_pipelines %s", strings.Join(args, " "))
+	ctx.Log().Debugf("run_dependencies %s", strings.Join(args, " "))
 	err := pipeline.Exclude(ctx)
 	if err != nil {
 		return err
@@ -57,7 +57,7 @@ func RunDependencyPipelines(ctx devspacecontext.Context, pipeline types.Pipeline
 			}
 		}
 	} else {
-		return fmt.Errorf("either specify 'run_dependency_pipelines --all' or 'run_dependency_pipelines dep1 dep2'")
+		return fmt.Errorf("either specify 'run_dependencies --all' or 'run_dependencies dep1 dep2'")
 	}
 
 	// run hooks & deploy dependencies
