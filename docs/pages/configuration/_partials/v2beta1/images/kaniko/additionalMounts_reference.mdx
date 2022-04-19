@@ -1,0 +1,46 @@
+
+import PartialSecretreference from "./additionalMounts/secret_reference.mdx"
+import PartialConfigMapreference from "./additionalMounts/configMap_reference.mdx"
+import PartialReadOnly from "./additionalMounts/readOnly.mdx"
+import PartialMountPath from "./additionalMounts/mountPath.mdx"
+import PartialSubPath from "./additionalMounts/subPath.mdx"
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+##### `secret` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-kaniko-additionalMounts-secret}
+
+The secret that should be mounted
+
+</summary>
+
+<PartialSecretreference />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+##### `configMap` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-kaniko-additionalMounts-configMap}
+
+The configMap that should be mounted
+
+</summary>
+
+<PartialConfigMapreference />
+
+
+</details>
+
+
+<PartialReadOnly />
+
+
+<PartialMountPath />
+
+
+<PartialSubPath />

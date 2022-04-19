@@ -159,8 +159,10 @@ body .markdown .config-field {
         }
         
         .config-field-enum {
-            padding-left: 5em;
             position: relative;
+            display: inline-block;
+            height: 0.8em;
+            overflow: visible;
 
             &:empty {
                 display: none;
@@ -168,15 +170,14 @@ body .markdown .config-field {
 
             &::before {
                 content: "values: ";
-                position: absolute;
-                top: -0.8em;
-                transform: translateX(-112%);
+                display: inline;
+                float: left;
+                margin-right: 0.7em;
             }
             
             > span {
                 display: table-caption;
-                position: absolute;
-                top: -1.28em;
+                width: 100%;
                 border: 1px solid #eee;
                 background: #fff;
                 z-index: 1;
@@ -187,6 +188,7 @@ body .markdown .config-field {
                 transition: max-height 0.4s;
                 border-radius: 3px;
                 text-align: left;
+                transform: translateY(-0.48em);
 
                 &:hover {
                     max-height: 1000px;
@@ -220,7 +222,7 @@ body .markdown .config-field {
                 display: none;
             }
         }
-
+        /*
         .hash-link {
             position: absolute;
             left: -1.4em;
@@ -229,7 +231,7 @@ body .markdown .config-field {
             &:focus {
                 opacity: 0;
             }
-        }
+        }*/
 
         + * {
             &,

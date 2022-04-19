@@ -1,33 +1,17 @@
 
-import PartialPath from "./persistPaths/path.mdx"
-import PartialVolumePath from "./persistPaths/volumePath.mdx"
-import PartialReadOnly from "./persistPaths/readOnly.mdx"
-import PartialSkipPopulate from "./persistPaths/skipPopulate.mdx"
-import PartialInitContainer from "./persistPaths/initContainer.mdx"
-
-<PartialPath />
+import PartialPersistPathsreference from "./persistPaths_reference.mdx"
 
 
-<PartialVolumePath />
-
-
-<PartialReadOnly />
-
-
-<PartialSkipPopulate />
-
-
-
-<details className="config-field" data-expandable="true">
+<details className="config-field" data-expandable="true" open>
 <summary>
 
-##### `initContainer` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-containers-persistPaths-initContainer}
+#### `persistPaths` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-containers-persistPaths}
 
-InitContainer holds additional options for the persistent path init container
+SSH allows you to create an SSH tunnel to this container
 
 </summary>
 
-<PartialInitContainer />
+<PartialPersistPathsreference />
 
 
 </details>

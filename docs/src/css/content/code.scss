@@ -26,9 +26,7 @@
     background: var(--ifm-color-primary-darker);
   }
   
-  body .prism-code,
-  pre.prism-code {
-    margin-top: -0.2em;
+  .theme-code-block {
     border-radius: 4px;
   }
   

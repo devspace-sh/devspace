@@ -30,8 +30,10 @@ type Function struct {
 func main() {
 	functionRefContent := "\n\n"
 	globalFunctionRefContent := "\n\n"
+	pipelineFunctionRefContent := "\n\n"
 	functionRefFile := functionPartialBasePath + "reference.mdx"
 	globalFunctionRefFile := functionPartialBasePath + "reference_global.mdx"
+	pipelineFunctionRefFile := functionPartialBasePath + "reference_pipeline.mdx"
 
 	groups := map[string]*util.Group{}
 
@@ -74,9 +76,23 @@ func main() {
 
 		partialImport := util.GetPartialImport(functionFile, functionRefFile)
 		partialUse := fmt.Sprintf(util.TemplatePartialUse, util.GetPartialImportName(function.Name))
+		partialImportGlobal := partialImport
+		partialUseGlobal := partialUse
+		partialImportPipeline := partialImport
+		partialUsePipeline := partialUse
+		writeRef := true
+		writeGlobalRef := false
+		writePipelineRef := false
 
 		if function.Group != "" {
 			groupID := strings.ToLower(function.Group)
+
+			globalGroupID := fmt.Sprintf("%s_global", groupID)
+			globalGroup, globalGroupExists := groups[globalGroupID]
+
+			pipelineGroupID := fmt.Sprintf("%s_pipeline", groupID)
+			pipelineGroup, pipelineGroupExists := groups[pipelineGroupID]
+
 			group, groupExists := groups[groupID]
 			if !groupExists {
 				group = &util.Group{
@@ -88,20 +104,60 @@ func main() {
 				groups[groupID] = group
 			}
 
+			writeRef = !groupExists
+			partialImportGlobal = ""
+			partialUseGlobal = ""
+			partialImportPipeline = ""
+			partialUsePipeline = ""
+
+			if !globalGroupExists {
+				globalGroup = &util.Group{
+					Name:    function.Group,
+					File:    fmt.Sprintf(functionPartialBasePath+"group_%s.mdx", globalGroupID),
+					Imports: &[]string{},
+					Content: "\n\n",
+				}
+				groups[globalGroupID] = globalGroup
+				writeGlobalRef = true
+				partialImportGlobal = util.GetPartialImport(globalGroup.File, globalFunctionRefFile)
+				partialUseGlobal = fmt.Sprintf(util.TemplatePartialUse, util.GetPartialImportName(globalGroup.File))
+			}
+
+			if !pipelineGroupExists {
+				pipelineGroup = &util.Group{
+					Name:    function.Group,
+					File:    fmt.Sprintf(functionPartialBasePath+"group_%s.mdx", pipelineGroupID),
+					Imports: &[]string{},
+					Content: "\n\n",
+				}
+				groups[pipelineGroupID] = pipelineGroup
+				writePipelineRef = true
+				partialImportPipeline = util.GetPartialImport(pipelineGroup.File, pipelineFunctionRefFile)
+				partialUsePipeline = fmt.Sprintf(util.TemplatePartialUse, util.GetPartialImportName(pipelineGroup.File))
+			}
+
 			group.Content = partialImport + group.Content + partialUse
 
-			if groupExists {
-				continue
+			if function.IsGlobal {
+				globalGroup.Content = partialImport + globalGroup.Content + partialUse
+			} else {
+				pipelineGroup.Content = partialImport + pipelineGroup.Content + partialUse
 			}
 
 			partialImport = util.GetPartialImport(group.File, functionRefFile)
 			partialUse = fmt.Sprintf(util.TemplatePartialUse, util.GetPartialImportName(group.File))
 		}
 
-		functionRefContent = partialImport + functionRefContent + partialUse
+		if writeRef {
+			functionRefContent = partialImport + functionRefContent + partialUse
+		}
 
-		if function.IsGlobal {
-			globalFunctionRefContent = partialImport + globalFunctionRefContent + partialUse
+		if writeGlobalRef {
+			globalFunctionRefContent = partialImportGlobal + globalFunctionRefContent + partialUseGlobal
+		}
+
+		if writePipelineRef {
+			pipelineFunctionRefContent = partialImportPipeline + pipelineFunctionRefContent + partialUsePipeline
 		}
 	}
 
@@ -113,6 +169,11 @@ func main() {
 	}
 
 	err = ioutil.WriteFile(globalFunctionRefFile, []byte(globalFunctionRefContent), os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
+	err = ioutil.WriteFile(pipelineFunctionRefFile, []byte(pipelineFunctionRefContent), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}

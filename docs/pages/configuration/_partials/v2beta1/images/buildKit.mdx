@@ -1,29 +1,17 @@
 
-import PartialInCluster from "./buildKit/inCluster.mdx"
-import PartialPreferMinikube from "./buildKit/preferMinikube.mdx"
-import PartialArgs from "./buildKit/args.mdx"
-import PartialCommand from "./buildKit/command.mdx"
+import PartialBuildKitreference from "./buildKit_reference.mdx"
 
 
-<details className="config-field" data-expandable="true">
+<details className="config-field" data-expandable="true" open>
 <summary>
 
-#### `inCluster` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-buildKit-inCluster}
+### `buildKit` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-buildKit}
 
-InCluster if specified, DevSpace will use BuildKit to build the image within the cluster
+BuildKit if buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit
 
 </summary>
 
-<PartialInCluster />
+<PartialBuildKitreference />
 
 
 </details>
-
-
-<PartialPreferMinikube />
-
-
-<PartialArgs />
-
-
-<PartialCommand />

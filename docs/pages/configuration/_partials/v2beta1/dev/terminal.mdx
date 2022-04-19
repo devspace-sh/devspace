@@ -1,20 +1,17 @@
 
-import PartialCommand from "./terminal/command.mdx"
-import PartialWorkDir from "./terminal/workDir.mdx"
-import PartialEnabled from "./terminal/enabled.mdx"
-import PartialDisableReplace from "./terminal/disableReplace.mdx"
-import PartialDisableScreen from "./terminal/disableScreen.mdx"
-
-<PartialCommand />
+import PartialTerminalreference from "./terminal_reference.mdx"
 
 
-<PartialWorkDir />
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+### `terminal` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-terminal}
+
+Terminal allows you to tell DevSpace to open a terminal with screen support to this container
+
+</summary>
+
+<PartialTerminalreference />
 
 
-<PartialEnabled />
-
-
-<PartialDisableReplace />
-
-
-<PartialDisableScreen />
+</details>

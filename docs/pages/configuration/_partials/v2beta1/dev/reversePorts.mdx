@@ -1,8 +1,17 @@
 
-import PartialPort from "./reversePorts/port.mdx"
-import PartialBindAddress from "./reversePorts/bindAddress.mdx"
-
-<PartialPort />
+import PartialReversePortsreference from "./reversePorts_reference.mdx"
 
 
-<PartialBindAddress />
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+### `reversePorts` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-reversePorts}
+
+ReversePorts are port mappings to make local ports available inside the container
+
+</summary>
+
+<PartialReversePortsreference />
+
+
+</details>

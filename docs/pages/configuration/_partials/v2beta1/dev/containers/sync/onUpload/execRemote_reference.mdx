@@ -1,0 +1,63 @@
+
+import PartialCommand from "./execRemote/command.mdx"
+import PartialArgs from "./execRemote/args.mdx"
+import PartialOnFileChangereference from "./execRemote/onFileChange_reference.mdx"
+import PartialOnDirCreatereference from "./execRemote/onDirCreate_reference.mdx"
+import PartialOnBatchreference from "./execRemote/onBatch_reference.mdx"
+
+<PartialCommand />
+
+
+<PartialArgs />
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+####### `onFileChange` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-containers-sync-onUpload-execRemote-onFileChange}
+
+OnFileChange is invoked after every file change. DevSpace will wait for the command to successfully finish
+and then will continue to upload files & create folders
+
+</summary>
+
+<PartialOnFileChangereference />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+####### `onDirCreate` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-containers-sync-onUpload-execRemote-onDirCreate}
+
+OnDirCreate is invoked after every directory that is created. DevSpace will wait for the command to successfully finish
+and then will continue to upload files & create folders
+
+</summary>
+
+<PartialOnDirCreatereference />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+####### `onBatch` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-containers-sync-onUpload-execRemote-onBatch}
+
+OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish
+and then will continue execution. This is useful for commands
+that shouldn't be executed after every single change that may take a little bit longer like recompiling etc.
+
+</summary>
+
+<PartialOnBatchreference />
+
+
+</details>

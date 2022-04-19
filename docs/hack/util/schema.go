@@ -91,9 +91,11 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 			if fieldSchema, ok := field.(*jsonschema.Schema); ok {
 				fieldContent := ""
 				fieldFile := fmt.Sprintf("%s%s%s.mdx", basePath, prefix, fieldName)
+				fieldFileReference := fieldFile
 				fieldType := "object"
 				isNameObjectMap := false
 				groupID, _ := fieldSchema.Extras[groupKey].(string)
+				expandable := false
 
 				var patternPropertySchema *jsonschema.Schema
 				var nestedSchema *jsonschema.Schema
@@ -116,66 +118,47 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 					if ok {
 						newPrefix := prefix + fieldName + prefixSeparator
 						createSections(basePath, newPrefix, nestedSchema, definitions, depth+1, isNameObjectMap)
-					}
-				} else {
-					required := contains(schema.Required, fieldName)
-					fieldDefault := ""
+						fieldFileReference = fmt.Sprintf("%s%s%s_reference.mdx", basePath, prefix, fieldName)
 
-					fieldType = fieldSchema.Type
-					if fieldType == "" && fieldSchema.OneOf != nil {
-						for _, oneOfType := range fieldSchema.OneOf {
-							if fieldType != "" {
-								fieldType = fieldType + "|"
-							}
-							fieldType = fieldType + oneOfType.Type
-						}
-					}
+						fieldContent = GetPartialImport(fieldFileReference, fieldFile) + "\n\n" + fmt.Sprintf(TemplatePartialUse, GetPartialImportName(fieldFileReference))
 
-					if isNameObjectMap {
-						fieldNameSingular := pluralizeClient.Singular(fieldName)
-						fieldType = "&lt;" + fieldNameSingular + "_name&gt;:"
-
-						if patternPropertySchema != nil && patternPropertySchema.Type != "" {
-							fieldType = fieldType + patternPropertySchema.Type
-						} else {
-							fieldType = fieldType + "object"
-						}
-					}
-
-					if fieldType == "array" {
-						fieldType = fieldSchema.Items.Type + "[]"
-					}
-
-					if fieldType == "boolean" {
-						fieldDefault = "false"
-						if required {
-							fieldDefault = "true"
-							required = false
-						}
-					} else {
-						fieldDefault, ok = fieldSchema.Default.(string)
-						if !ok {
-							fieldDefault = ""
-						}
-					}
-
-					enumValues := GetEumValues(fieldSchema, required, &fieldDefault)
-
-					anchorName := anchorPrefix + fieldName
-					fieldContent = fmt.Sprintf(TemplateConfigField, false, " open", headlinePrefix, fieldName, required, fieldType, fieldDefault, enumValues, anchorName, fieldSchema.Description, "")
-
-					err := os.MkdirAll(filepath.Dir(fieldFile), os.ModePerm)
-					if err != nil {
-						panic(err)
-					}
-
-					err = ioutil.WriteFile(fieldFile, []byte(fieldContent), os.ModePerm)
-					if err != nil {
-						panic(err)
+						expandable = true
 					}
 				}
 
-				fieldPartial := fmt.Sprintf(TemplatePartialUse, GetPartialImportName(fieldFile))
+				required := contains(schema.Required, fieldName)
+				fieldDefault := ""
+
+				fieldType = fieldSchema.Type
+				if fieldType == "" && fieldSchema.OneOf != nil {
+					for _, oneOfType := range fieldSchema.OneOf {
+						if fieldType != "" {
+							fieldType = fieldType + "|"
+						}
+						fieldType = fieldType + oneOfType.Type
+					}
+				}
+
+				if isNameObjectMap {
+					fieldNameSingular := pluralizeClient.Singular(fieldName)
+					fieldType = "&lt;" + fieldNameSingular + "_name&gt;:"
+
+					if patternPropertySchema != nil && patternPropertySchema.Type != "" {
+						fieldType = fieldType + patternPropertySchema.Type
+					} else {
+						fieldType = fieldType + "object"
+					}
+				}
+
+				if fieldType == "array" {
+					if fieldSchema.Items.Type == "" {
+						fieldType = "object[]"
+					} else {
+						fieldType = fieldSchema.Items.Type + "[]"
+					}
+				}
+
+				fieldPartial := fmt.Sprintf(TemplatePartialUse, GetPartialImportName(fieldFileReference))
 				if ref != "" {
 					if isNameObjectMap && nestedSchema != nil {
 						nameField, ok := nestedSchema.Properties.Get(nameFieldName)
@@ -194,7 +177,38 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 					}
 
 					anchorName := anchorPrefix + fieldName
+
+					fieldContent = GetPartialImport(fieldFileReference, fieldFile) + "\n\n" + fmt.Sprintf(TemplateConfigField, true, " open", headlinePrefix, fieldName, false, fieldType, "", "", anchorName, fieldSchema.Description, fieldPartial)
+
 					fieldPartial = fmt.Sprintf(TemplateConfigField, true, "", headlinePrefix, fieldName, false, fieldType, "", "", anchorName, fieldSchema.Description, fieldPartial)
+				} else {
+					if fieldType == "boolean" {
+						fieldDefault = "false"
+						if required {
+							fieldDefault = "true"
+							required = false
+						}
+					} else {
+						fieldDefault, ok = fieldSchema.Default.(string)
+						if !ok {
+							fieldDefault = ""
+						}
+					}
+
+					enumValues := GetEumValues(fieldSchema, required, &fieldDefault)
+
+					anchorName := anchorPrefix + fieldName
+					fieldContent = fmt.Sprintf(TemplateConfigField, expandable, " open", headlinePrefix, fieldName, required, fieldType, fieldDefault, enumValues, anchorName, fieldSchema.Description, fieldContent)
+				}
+
+				err := os.MkdirAll(filepath.Dir(fieldFileReference), os.ModePerm)
+				if err != nil {
+					panic(err)
+				}
+
+				err = ioutil.WriteFile(fieldFile, []byte(fieldContent), os.ModePerm)
+				if err != nil {
+					panic(err)
 				}
 
 				if groupID != "" {
@@ -217,10 +231,10 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 					}
 
 					group.Content = group.Content + fieldPartial
-					*group.Imports = append(*group.Imports, fieldFile)
+					*group.Imports = append(*group.Imports, fieldFileReference)
 				} else {
 					content = content + "\n\n" + fieldPartial
-					*partialImports = append(*partialImports, fieldFile)
+					*partialImports = append(*partialImports, fieldFileReference)
 				}
 			}
 		}
@@ -230,6 +244,8 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 
 	if prefix == "" {
 		prefix = "reference"
+	} else {
+		prefix = strings.TrimSuffix(prefix, "/") + "_reference"
 	}
 
 	pageFile := fmt.Sprintf("%s%s.mdx", basePath, strings.TrimSuffix(prefix, "/"))
@@ -245,8 +261,6 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 	if err != nil {
 		panic(err)
 	}
-
-	//fmt.Println(content)
 
 	return content
 }

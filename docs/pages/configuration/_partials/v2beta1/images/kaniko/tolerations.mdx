@@ -1,20 +1,17 @@
 
-import PartialKey from "./tolerations/Key.mdx"
-import PartialOperator from "./tolerations/Operator.mdx"
-import PartialValue from "./tolerations/Value.mdx"
-import PartialEffect from "./tolerations/Effect.mdx"
-import PartialTolerationSeconds from "./tolerations/TolerationSeconds.mdx"
-
-<PartialKey />
+import PartialTolerationsreference from "./tolerations_reference.mdx"
 
 
-<PartialOperator />
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+#### `tolerations` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-kaniko-tolerations}
+
+Tolerations is a tolerations list to use for the kaniko pod
+
+</summary>
+
+<PartialTolerationsreference />
 
 
-<PartialValue />
-
-
-<PartialEffect />
-
-
-<PartialTolerationSeconds />
+</details>

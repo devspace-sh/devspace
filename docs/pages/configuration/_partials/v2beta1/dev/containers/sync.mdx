@@ -1,100 +1,17 @@
 
-import PartialPrintLogs from "./sync/printLogs.mdx"
-import PartialStartContainer from "./sync/startContainer.mdx"
-import PartialPath from "./sync/path.mdx"
-import PartialExcludePaths from "./sync/excludePaths.mdx"
-import PartialExcludeFile from "./sync/excludeFile.mdx"
-import PartialDownloadExcludePaths from "./sync/downloadExcludePaths.mdx"
-import PartialDownloadExcludeFile from "./sync/downloadExcludeFile.mdx"
-import PartialUploadExcludePaths from "./sync/uploadExcludePaths.mdx"
-import PartialUploadExcludeFile from "./sync/uploadExcludeFile.mdx"
-import PartialInitialSync from "./sync/initialSync.mdx"
-import PartialInitialSyncCompareBy from "./sync/initialSyncCompareBy.mdx"
-import PartialDisableDownload from "./sync/disableDownload.mdx"
-import PartialDisableUpload from "./sync/disableUpload.mdx"
-import PartialNoWatch from "./sync/noWatch.mdx"
-import PartialPolling from "./sync/polling.mdx"
-import PartialWaitInitialSync from "./sync/waitInitialSync.mdx"
-import PartialBandwidthLimits from "./sync/bandwidthLimits.mdx"
-import PartialOnUpload from "./sync/onUpload.mdx"
-
-<PartialPrintLogs />
+import PartialSyncreference from "./sync_reference.mdx"
 
 
-<PartialStartContainer />
-
-
-<PartialPath />
-
-
-<PartialExcludePaths />
-
-
-<PartialExcludeFile />
-
-
-<PartialDownloadExcludePaths />
-
-
-<PartialDownloadExcludeFile />
-
-
-<PartialUploadExcludePaths />
-
-
-<PartialUploadExcludeFile />
-
-
-<PartialInitialSync />
-
-
-<PartialInitialSyncCompareBy />
-
-
-<PartialDisableDownload />
-
-
-<PartialDisableUpload />
-
-
-<PartialNoWatch />
-
-
-<PartialPolling />
-
-
-<PartialWaitInitialSync />
-
-
-
-<details className="config-field" data-expandable="true">
+<details className="config-field" data-expandable="true" open>
 <summary>
 
-##### `bandwidthLimits` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-containers-sync-bandwidthLimits}
+#### `sync` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-containers-sync}
 
-BandwidthLimits can be used to limit the amount of bytes that are transferred by DevSpace with this
-sync configuration
+Sync allows you to sync certain local paths with paths inside the container
 
 </summary>
 
-<PartialBandwidthLimits />
-
-
-</details>
-
-
-
-<details className="config-field" data-expandable="true">
-<summary>
-
-##### `onUpload` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-containers-sync-onUpload}
-
-OnUpload can be used to execute certain commands on uploading either in the container or locally as
-well as restart the container after a file changed has happened.
-
-</summary>
-
-<PartialOnUpload />
+<PartialSyncreference />
 
 
 </details>

@@ -1,36 +1,17 @@
 
-import PartialName from "./inCluster/name.mdx"
-import PartialNamespace from "./inCluster/namespace.mdx"
-import PartialRootless from "./inCluster/rootless.mdx"
-import PartialImage from "./inCluster/image.mdx"
-import PartialNodeSelector from "./inCluster/nodeSelector.mdx"
-import PartialNoCreate from "./inCluster/noCreate.mdx"
-import PartialNoRecreate from "./inCluster/noRecreate.mdx"
-import PartialNoLoad from "./inCluster/noLoad.mdx"
-import PartialCreateArgs from "./inCluster/createArgs.mdx"
-
-<PartialName />
+import PartialInClusterreference from "./inCluster_reference.mdx"
 
 
-<PartialNamespace />
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+#### `inCluster` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-buildKit-inCluster}
+
+InCluster if specified, DevSpace will use BuildKit to build the image within the cluster
+
+</summary>
+
+<PartialInClusterreference />
 
 
-<PartialRootless />
-
-
-<PartialImage />
-
-
-<PartialNodeSelector />
-
-
-<PartialNoCreate />
-
-
-<PartialNoRecreate />
-
-
-<PartialNoLoad />
-
-
-<PartialCreateArgs />
+</details>

@@ -1,24 +1,17 @@
 
-import PartialHost from "./rules/host.mdx"
-import PartialTls from "./rules/tls.mdx"
-import PartialPath from "./rules/path.mdx"
-import PartialServicePort from "./rules/servicePort.mdx"
-import PartialServiceName from "./rules/serviceName.mdx"
-import PartialPathType from "./rules/pathType.mdx"
-
-<PartialHost />
+import PartialRulesreference from "./rules_reference.mdx"
 
 
-<PartialTls />
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+### `rules` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#ingress-rules}
 
 
-<PartialPath />
+
+</summary>
+
+<PartialRulesreference />
 
 
-<PartialServicePort />
-
-
-<PartialServiceName />
-
-
-<PartialPathType />
+</details>

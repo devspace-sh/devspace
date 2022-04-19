@@ -1,16 +1,17 @@
 
-import PartialName from "./commands/name.mdx"
-import PartialVersionArgs from "./commands/versionArgs.mdx"
-import PartialVersionRegEx from "./commands/versionRegEx.mdx"
-import PartialVersion from "./commands/version.mdx"
-
-<PartialName />
+import PartialCommandsreference from "./commands_reference.mdx"
 
 
-<PartialVersionArgs />
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+### `commands` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#require-commands}
+
+Commands specifies an array of commands that need to be installed locally to use this config
+
+</summary>
+
+<PartialCommandsreference />
 
 
-<PartialVersionRegEx />
-
-
-<PartialVersion />
+</details>

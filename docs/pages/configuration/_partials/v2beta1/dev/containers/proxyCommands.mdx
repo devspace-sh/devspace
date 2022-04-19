@@ -1,16 +1,17 @@
 
-import PartialCommand from "./proxyCommands/command.mdx"
-import PartialLocalCommand from "./proxyCommands/localCommand.mdx"
-import PartialSkipContainerEnv from "./proxyCommands/skipContainerEnv.mdx"
-import PartialEnv from "./proxyCommands/env.mdx"
-
-<PartialCommand />
+import PartialProxyCommandsreference from "./proxyCommands_reference.mdx"
 
 
-<PartialLocalCommand />
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+#### `proxyCommands` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-containers-proxyCommands}
+
+ProxyCommands allow you to proxy certain local commands to the container
+
+</summary>
+
+<PartialProxyCommandsreference />
 
 
-<PartialSkipContainerEnv />
-
-
-<PartialEnv />
+</details>

@@ -1,16 +1,17 @@
 
-import PartialDisableFallback from "./docker/disableFallback.mdx"
-import PartialPreferMinikube from "./docker/preferMinikube.mdx"
-import PartialUseCli from "./docker/useCli.mdx"
-import PartialArgs from "./docker/args.mdx"
-
-<PartialDisableFallback />
+import PartialDockerreference from "./docker_reference.mdx"
 
 
-<PartialPreferMinikube />
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+### `docker` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-docker}
+
+Docker if docker is specified, DevSpace will build the image using the local docker daemon
+
+</summary>
+
+<PartialDockerreference />
 
 
-<PartialUseCli />
-
-
-<PartialArgs />
+</details>

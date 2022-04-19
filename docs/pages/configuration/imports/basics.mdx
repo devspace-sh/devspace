@@ -1,11 +1,90 @@
 ---
-title: Import Other `devspace.yaml` Files
+title: Import Other devspace.yaml Files
 sidebar_label: imports
 ---
 
 import ConfigPartialImports from '../_partials/v2beta1/imports.mdx'
 
 
-## Configuration
+Importing other `devspace.yaml` files is a powerful way to standardize things across multiple projects. Common use cases include:
+- Importing a library of custom [`functions`](../functions/basics.mdx) that should be available in each project
+- Importing a set of standardized [`pipelines`](../pipelines/basics.mdx) to make the `devspace dev` behavior consistent across a set of projects
+- Importing a set of custom [`commands`](../commands/basics.mdx) that should be available for engineers in similar project (e.g. you want that all Java Spring Boot applications should provide a `devspace run migrate-db` command)
+
+
+## Example
+Let's say we have a `devspace.yaml` in `project-a` with the following content:
+```yaml title="File: github.com/project-a/devspace.yaml"
+version: v2beta1
+imports:
+- git: github.com/project-b/devspace.yaml
+  tag: v1.2.0
+- ...
+functions:
+  function_in_project_a_only: |-
+    echo "This is a function only available in project a"
+```
+
+The `devspace.yaml` above imports the `devspace.yaml` from `project-b` which looks like this:
+```yaml title="File: github.com/project-b/devspace.yaml"
+version: v2beta1
+functions:
+  shared_function: |-
+    echo "This is a shared function"
+```
+
+If we run `devspace print` inside `project-a`, it will show the following merged config:
+```yaml title="project-a/ $ devspace print"
+version: v2beta1
+functions:
+  shared_function: |-
+    echo "This is a shared function"
+  function_in_project_a_only: |-
+    echo "This is a function only available in project a"
+```
+
+
+## `imports` vs `dependencies`
+The following table clarifies when to use `imports` and when to use `dependencies`:
+
+| Difference | `imports`                                                                                                                                                                           | `dependencies`                                                                                                                                                                                                       |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Use Case   | Importing shared/standardized functionality (e.g. `functions`, `pipelines`, `commands`) into **independent** projects                                                               | Defining logical dependencies between **inter-dependent** projects (app A requiring app B to be deployed)                                                                                                                                                  |
+| Example    | If projects A and B should both have some shared functionality that is defined in a shared `devspace.yaml`                                                                          | If a project A with requires projectd B and C to be deployed in order to work correctly                                                                                                                              |
+| Impact     | If project A imports a `devspace.yaml` from another `devspace.yaml`, then everything defined in this imported `devspace.yaml` will be merged into the `devspace.yaml` of project A. | If project A has a `devspace.yaml` that defines project B as a git-based `dependency`, then DevSpace will `git clone` project B and deploy it when you run `run_dependency_pipelines b` inside your pipeline script. |
+
+
+## Naming Conflicts
+If a project imports a `devspace.yaml` that defines a named object (e.g. `function`, `pipeline`, etc.), the main `devspace.yaml` that is defining the `imports` takes precedence over the imported `devspace.yaml`.
+
+Let's assume the following `devspace.yaml` inside `project-a`:
+```yaml title="File: github.com/project-a/devspace.yaml"
+version: v2beta1
+imports:
+- git: github.com/project-b/devspace.yaml
+functions:
+  function_x: |-
+    echo "This is a function_x from project-a"
+```
+
+The `devspace.yaml` above imports the `devspace.yaml` from `project-b` which looks like this:
+```yaml title="File: github.com/project-b/devspace.yaml"
+version: v2beta1
+functions:
+  function_x: |-
+    echo "This is function_x from project-b"
+```
+
+If we run `devspace print` inside `project-a`, it will show the following merged config:
+```yaml title="project-a/ $ devspace print"
+version: v2beta1
+functions:
+  function_x: |-
+    echo "This is a function_x from project-a"
+```
+
+
+## Config Reference
+The `imports` section in your `devspace.yaml` file is an array and each entry (import) supports the following fields:
 
 <ConfigPartialImports/>

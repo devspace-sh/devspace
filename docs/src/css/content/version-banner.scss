@@ -1,0 +1,12 @@
+.theme-doc-version-banner {
+    margin-bottom: 2em !important;
+
+    &::before {
+        display: block;
+        content: "You are viewing the documentation of an older DevSpace version. Use the version selector next to the logo to switch to the latest version.";
+    }
+
+    > * {
+        display: none;
+    }
+}

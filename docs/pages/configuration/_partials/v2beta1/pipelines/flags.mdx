@@ -1,20 +1,18 @@
 
-import PartialName from "./flags/name.mdx"
-import PartialShort from "./flags/short.mdx"
-import PartialType from "./flags/type.mdx"
-import PartialDefault from "./flags/default.mdx"
-import PartialDescription from "./flags/description.mdx"
-
-<PartialName />
+import PartialFlagsreference from "./flags_reference.mdx"
 
 
-<PartialShort />
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+### `flags` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#pipelines-flags}
+
+Flags are extra flags that can be used for running the pipeline via
+devspace run-pipeline.
+
+</summary>
+
+<PartialFlagsreference />
 
 
-<PartialType />
-
-
-<PartialDefault />
-
-
-<PartialDescription />
+</details>

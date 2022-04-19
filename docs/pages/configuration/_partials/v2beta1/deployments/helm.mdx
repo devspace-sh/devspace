@@ -1,37 +1,17 @@
 
-import PartialChart from "./helm/chart.mdx"
-import PartialValues from "./helm/values.mdx"
-import PartialValuesFiles from "./helm/valuesFiles.mdx"
-import PartialDisplayOutput from "./helm/displayOutput.mdx"
-import PartialUpgradeArgs from "./helm/upgradeArgs.mdx"
-import PartialTemplateArgs from "./helm/templateArgs.mdx"
+import PartialHelmreference from "./helm_reference.mdx"
 
 
-<details className="config-field" data-expandable="true">
+<details className="config-field" data-expandable="true" open>
 <summary>
 
-#### `chart` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#deployments-helm-chart}
+### `helm` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#deployments-helm}
 
-Chart holds the chart configuration and where DevSpace can find the chart
+Helm tells DevSpace to deploy this deployment via helm
 
 </summary>
 
-<PartialChart />
+<PartialHelmreference />
 
 
 </details>
-
-
-<PartialValues />
-
-
-<PartialValuesFiles />
-
-
-<PartialDisplayOutput />
-
-
-<PartialUpgradeArgs />
-
-
-<PartialTemplateArgs />
