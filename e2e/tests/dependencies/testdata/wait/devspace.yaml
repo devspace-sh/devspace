@@ -9,6 +9,6 @@ dependencies:
 
 pipelines:
   dev: |-
-    run_dependency_pipelines --all
+    run_dependencies --all
     echo "wait" >> out.txt
 

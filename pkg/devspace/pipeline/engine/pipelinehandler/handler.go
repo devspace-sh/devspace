@@ -57,6 +57,9 @@ var PipelineCommands = map[string]func(devCtx devspacecontext.Context, pipeline 
 	"stop_dev": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.StopDev(devCtx, pipeline, args)
 	},
+	"run_dependencies": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.RunDependencyPipelines(devCtx, pipeline, args)
+	},
 	"run_dependency_pipelines": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunDependencyPipelines(devCtx, pipeline, args)
 	},

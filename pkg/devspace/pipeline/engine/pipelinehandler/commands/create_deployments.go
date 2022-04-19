@@ -74,7 +74,7 @@ func CreateDeployments(ctx devspacecontext.Context, pipeline types.Pipeline, arg
 }
 
 func applySetValues(ctx devspacecontext.Context, name, objName string, set, setString, from, fromFiles []string) (devspacecontext.Context, error) {
-	if len(set) == 0 && len(setString) == 0 && len(from) == 0 {
+	if len(set) == 0 && len(setString) == 0 && len(from) == 0 && len(fromFiles) == 0 {
 		return ctx, nil
 	}
 

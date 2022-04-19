@@ -22,7 +22,7 @@ pipelines:
       echo ${devspace.name} > name.txt
       echo ${DEVSPACE_TMPDIR} > temp.txt
       
-      run_dependency_pipelines --all > dependency.txt
+      run_dependencies --all > dependency.txt
       
       run_pipelines import1 > import1.txt
       run_pipelines import2 > import2.txt

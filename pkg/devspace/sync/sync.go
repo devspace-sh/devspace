@@ -111,7 +111,6 @@ func NewSync(ctx context.Context, localPath string, options Options) (*Sync, err
 	// We exclude the sync log to prevent an endless loop in upstream
 	newExcludes := []string{}
 	newExcludes = append(newExcludes, ".devspace/")
-	newExcludes = append(newExcludes, ".git/")
 	newExcludes = append(newExcludes, options.ExcludePaths...)
 	options.ExcludePaths = newExcludes
 

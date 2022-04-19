@@ -443,14 +443,15 @@ echo 'Anyone using this project can invoke it via "devspace run migrate-db"'`,
 
 	// Add pipeline: dev
 	config.Pipelines["dev"] = &latest.Pipeline{
-		Run: `run_dependency_pipelines --all    # 1. Deploy any projects this project needs (see "dependencies")
-create_deployments --all          # 2. Deploy Helm charts and manifests specfied as "deployments"
+		Run: `
+run_dependencies --all     # 1. Deploy any projects this project needs (see "dependencies")
+create_deployments --all   # 2. Deploy Helm charts and manifests specfied as "deployments"
 start_dev ` + imageName + `                     # 3. Start dev mode "` + imageName + `" (see "dev" section)`,
 	}
 
 	// Add pipeline: dev
 	config.Pipelines["deploy"] = &latest.Pipeline{
-		Run: `run_dependency_pipelines --all                    # 1. Deploy any projects this project needs (see "dependencies")
+		Run: `run_dependencies --all                    # 1. Deploy any projects this project needs (see "dependencies")
 build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
 create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"`,
 	}

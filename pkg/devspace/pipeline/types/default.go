@@ -22,7 +22,7 @@ func GetDefaultPipeline(pipeline string) (*latest.Pipeline, error) {
 
 var DefaultDeployPipeline = &latest.Pipeline{
 	Name: "deploy",
-	Run: `run_dependency_pipelines --all
+	Run: `run_dependencies --all
 ensure_pull_secrets --all
 build_images --all
 create_deployments --all`,
@@ -30,7 +30,7 @@ create_deployments --all`,
 
 var DefaultDevPipeline = &latest.Pipeline{
 	Name: "dev",
-	Run: `run_dependency_pipelines --all
+	Run: `run_dependencies --all
 ensure_pull_secrets --all
 build_images --all
 create_deployments --all
@@ -41,11 +41,11 @@ var DefaultPurgePipeline = &latest.Pipeline{
 	Name: "purge",
 	Run: `stop_dev --all
 purge_deployments --all
-run_dependency_pipelines --all --pipeline purge`,
+run_dependencies --all --pipeline purge`,
 }
 
 var DefaultBuildPipeline = &latest.Pipeline{
 	Name: "build",
-	Run: `run_dependency_pipelines --all --pipeline build
+	Run: `run_dependencies --all --pipeline build
 build_images --all`,
 }
