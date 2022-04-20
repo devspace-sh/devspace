@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/loft-sh/devspace/pkg/util/encoding"
 
@@ -32,7 +33,13 @@ func init() {
 	DependencyFolderPath = filepath.Join(homedir, filepath.FromSlash(DependencyFolder))
 }
 
+// downloadMutex makes sure we only download a single dependency at a time
+var downloadMutex = sync.Mutex{}
+
 func DownloadDependency(ctx context.Context, workingDirectory string, source *latest.SourceConfig, log log.Logger) (configPath string, err error) {
+	downloadMutex.Lock()
+	defer downloadMutex.Unlock()
+
 	ID, err := GetDependencyID(source)
 	if err != nil {
 		return "", err
