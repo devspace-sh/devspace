@@ -104,11 +104,9 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 
 			for key, value := range sectionMap {
 				_, ok := mergedMap[section].(map[string]interface{})[key]
-				if ok {
-					return nil, fmt.Errorf("cannot import %s: section %s already has an item with key %s. Please make sure that imported %s keys do not collide across the current config and imported configs", configPath, section, key, section)
+				if !ok {
+					mergedMap[section].(map[string]interface{})[key] = value
 				}
-
-				mergedMap[section].(map[string]interface{})[key] = value
 			}
 		}
 
