@@ -551,6 +551,73 @@ var _ = DevSpaceDescribe("sync", func() {
 		waitGroup.Wait()
 	})
 
+	ginkgo.It("should sync to a pod container with uploadExcludePaths configuration", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-exclude-dir")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Pipeline: "deploy",
+		}
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		cancelCtx, stop := context.WithCancel(context.Background())
+		defer stop()
+
+		// sync command
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Wait: true,
+			Ctx:  cancelCtx,
+		}
+
+		// start the command
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+			err = syncCmd.Run(f)
+			framework.ExpectNoError(err)
+		}()
+
+		// check that uploadExcludePaths folder was not synced
+		framework.ExpectRemoteFileNotFound("alpine", ns, "/app/node_modules")
+
+		// check that included file was synced
+		framework.ExpectRemoteFileContents("alpine", ns, "/app/syncme/file.txt", "I will be synced")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteFileContents("alpine", ns, "/app/watching.txt", payload)
+
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
+	})
+
 	ginkgo.It("should sync to a pod container with excludeFile, downloadExcludeFile, and uploadExcludeFile configuration", func() {
 		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-exclude-file")
 		framework.ExpectNoError(err)
