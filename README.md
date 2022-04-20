@@ -1060,7 +1060,7 @@ This project is mainly written in Golang. If you want to contribute code:
 5. Build the project, e.g. via `go build -o devspace[.exe]`
 6. Evaluate and test your changes `./devspace [SOME_COMMAND]`
 
-See [Contributing Guideslines](CONTRIBUTING.md) for more information.
+See [Contributing Guidelines](CONTRIBUTING.md) for more information.
 
 <br>
 

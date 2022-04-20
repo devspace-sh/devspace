@@ -12,13 +12,13 @@ import (
 	"time"
 )
 
-// streamCommand is the a command whose output is streamed to a log
+// streamCommand is the command whose output is streamed to a log
 type streamCommand struct {
 	cmd         *exec.Cmd
 	killTimeout time.Duration
 }
 
-// newStreamCommand creates a new stram command
+// newStreamCommand creates a new stream command
 func newStreamCommand(command string, args []string) *streamCommand {
 	return &streamCommand{
 		cmd:         exec.Command(command, args...),

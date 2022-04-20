@@ -28,7 +28,7 @@ func ExpectError(err error, explain ...interface{}) {
 	gomega.ExpectWithOffset(1, err).To(gomega.HaveOccurred(), explain...)
 }
 
-// ExpectMatchError expects an error happens and has a message matching the given string, otherwise an exception raises
+// ExpectErrorMatch ExpectMatchError expects an error happens and has a message matching the given string, otherwise an exception raises
 func ExpectErrorMatch(err error, msg string, explain ...interface{}) {
 	gomega.ExpectWithOffset(1, err).To(gomega.HaveOccurred(), explain...)
 	gomega.ExpectWithOffset(1, err, explain...).To(gomega.MatchError(msg), explain...)
