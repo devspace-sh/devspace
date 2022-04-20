@@ -2,6 +2,7 @@ version: v2beta1
 name: import2
 
 vars:
+  TOP: import2
   IMPORT2: import2
 
 pipelines:

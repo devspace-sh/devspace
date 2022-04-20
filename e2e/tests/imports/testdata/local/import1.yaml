@@ -7,6 +7,7 @@ imports:
     enabled: $(is_equal ${BASE} "base")
 
 vars:
+  TOP: import1
   IMPORT1:
     value: import1
 

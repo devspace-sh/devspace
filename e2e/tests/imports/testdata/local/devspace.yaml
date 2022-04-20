@@ -10,6 +10,7 @@ imports:
 
 vars:
   BASE: base
+  TOP: top
 
 dependencies:
   import1:
@@ -21,6 +22,7 @@ pipelines:
     run: |-
       echo ${devspace.name} > name.txt
       echo ${DEVSPACE_TMPDIR} > temp.txt
+      echo ${TOP} > top.txt
       
       run_dependencies --all > dependency.txt
       
