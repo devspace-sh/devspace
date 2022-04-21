@@ -2,15 +2,15 @@ package framework
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"strings"
-	"time"
-
+	"github.com/go-resty/resty/v2"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/onsi/gomega"
 	"github.com/pkg/errors"
+	"io/ioutil"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"os"
+	"strings"
+	"time"
 )
 
 // ExpectEqual expects the specified two are the same, otherwise an exception raises
@@ -70,6 +70,30 @@ func ExpectRemoteFileContents(imageSelector string, namespace string, filePath s
 			return false, nil
 		}
 
+		return strings.TrimSpace(out) == strings.TrimSpace(contents), nil
+	})
+	ExpectNoErrorWithOffset(1, err)
+}
+
+func ExpectLocalCurlContents(urlString string, contents string) {
+	client := resty.New()
+	err := wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		resp, err := client.R().
+			EnableTrace().
+			Get(urlString)
+		return strings.TrimSpace(string(resp.Body())) == strings.TrimSpace(contents), nil
+	})
+	ExpectNoErrorWithOffset(1, err)
+}
+
+func ExpectRemoteCurlContents(imageSelector string, namespace string, urlString string, contents string) {
+	kubeClient, err := kube.NewKubeHelper()
+	ExpectNoErrorWithOffset(1, err)
+	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		out, err := kubeClient.ExecByImageSelector(imageSelector, namespace, []string{"curl", urlString})
+		if err != nil {
+			return false, nil
+		}
 		return strings.TrimSpace(out) == strings.TrimSpace(contents), nil
 	})
 	ExpectNoErrorWithOffset(1, err)

@@ -1,0 +1,17 @@
+version: v2beta1
+name: portforward-ex
+
+deployments:
+  app:
+    helm:
+      values:
+        containers:
+          - image: ghcr.io/vaikunthawasi/portforward-ex
+#            imagePullPolicy: Never
+dev:
+  app:
+    imageSelector: ghcr.io/vaikunthawasi/portforward-ex
+    ports:
+      - port: "3000"
+    reversePorts:
+      - port: "8888"

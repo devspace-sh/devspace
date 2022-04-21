@@ -19,6 +19,7 @@ import (
 	_ "github.com/loft-sh/devspace/e2e/tests/imports"
 	_ "github.com/loft-sh/devspace/e2e/tests/init"
 	_ "github.com/loft-sh/devspace/e2e/tests/pipelines"
+	_ "github.com/loft-sh/devspace/e2e/tests/portforward"
 	_ "github.com/loft-sh/devspace/e2e/tests/proxycommands"
 	_ "github.com/loft-sh/devspace/e2e/tests/pullsecret"
 	_ "github.com/loft-sh/devspace/e2e/tests/render"

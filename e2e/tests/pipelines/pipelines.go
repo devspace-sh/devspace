@@ -14,7 +14,7 @@ import (
 	"github.com/onsi/ginkgo"
 )
 
-var _ = DevSpaceDescribe("portforward", func() {
+var _ = DevSpaceDescribe("pipelines", func() {
 	initialDir, err := os.Getwd()
 	if err != nil {
 		panic(err)
