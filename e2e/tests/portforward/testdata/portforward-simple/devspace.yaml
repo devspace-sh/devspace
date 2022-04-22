@@ -1,0 +1,17 @@
+version: v2beta1
+name: portforward-ex
+
+deployments:
+  app:
+    helm:
+      values:
+        containers:
+          - image: nginx
+#            imagePullPolicy: Never
+dev:
+  app:
+    imageSelector: nginx
+    ports:
+      - port: "3000:80"
+    reversePorts:
+      - port: "8888:8888"

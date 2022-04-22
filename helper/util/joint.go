@@ -58,7 +58,7 @@ func (s *StdStreamJoint) RemoteAddr() net.Addr {
 	return s.remote
 }
 
-// Read impements interface
+// Read implements interface
 func (s *StdStreamJoint) Read(b []byte) (n int, err error) {
 	return s.in.Read(b)
 }

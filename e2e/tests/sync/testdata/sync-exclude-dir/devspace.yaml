@@ -1,0 +1,26 @@
+version: v2beta1
+vars:
+  IMAGE: alpine
+deployments:
+  test:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+          - image: ${IMAGE}
+            command: ["sleep"]
+            args: ["999999999999"]
+pipelines:
+  deploy: |-
+    run_dependencies --all
+    create_deployments --all
+    echo "dep2" >> out.txt
+dev:
+  test:
+    imageSelector: ${IMAGE}
+    sync:
+      - path: ./:/app
+        uploadExcludePaths:
+          - node_modules/
