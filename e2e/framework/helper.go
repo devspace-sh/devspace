@@ -78,7 +78,7 @@ func ExpectRemoteFileContents(imageSelector string, namespace string, filePath s
 func ExpectLocalCurlContents(urlString string, contents string) {
 	client := resty.New()
 	err := wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
-		resp, err := client.R().
+		resp, _ := client.R().
 			EnableTrace().
 			Get(urlString)
 		return strings.TrimSpace(string(resp.Body())) == strings.TrimSpace(contents), nil
