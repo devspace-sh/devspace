@@ -120,6 +120,26 @@ var _ = DevSpaceDescribe("pipelines", func() {
 		}
 	})
 
+	ginkgo.FIt("should get value from config", func() {
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/getconfigvalue")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("pipelines")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "dev",
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+	})
+
 	ginkgo.It("should get value from config", func() {
 		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/getconfigvalue")
 		framework.ExpectNoError(err)
