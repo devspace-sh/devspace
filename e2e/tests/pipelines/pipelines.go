@@ -120,8 +120,43 @@ var _ = DevSpaceDescribe("pipelines", func() {
 		}
 	})
 
-	ginkgo.It("should use --set value from run_pipelines command", func() {
+	ginkgo.It("should use --set and --set-string values from run_pipelines command", func() {
 		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/run_pipelines")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("pipelines")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:     true,
+					Namespace:  ns,
+					ConfigPath: "devspace.yaml",
+				},
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
+			}
+			done <- devCmd.RunDefault(f)
+		}()
+
+		// check if deployments are there
+		framework.ExpectContainerNameAndImageEqual(ns, "dev", "nginx", "mynginx")
+
+		cancel()
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should use --set and --set-string values from run_default_pipeline command", func() {
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/run_default_pipeline")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
