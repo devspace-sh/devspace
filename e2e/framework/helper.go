@@ -1,12 +1,14 @@
 package framework
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	"io/ioutil"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"strings"
@@ -82,6 +84,21 @@ func ExpectLocalCurlContents(urlString string, contents string) {
 			EnableTrace().
 			Get(urlString)
 		return strings.TrimSpace(string(resp.Body())) == strings.TrimSpace(contents), nil
+	})
+	ExpectNoErrorWithOffset(1, err)
+}
+
+func ExpectContainerNameAndImageEqual(namespace, deploymentName, containerImage, containerName string) {
+	kubeClient, err := kube.NewKubeHelper()
+	ExpectNoErrorWithOffset(1, err)
+	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		deploy, err := kubeClient.RawClient().AppsV1().Deployments(namespace).Get(context.TODO(),
+			deploymentName, metav1.GetOptions{})
+		if err != nil {
+			return false, nil
+		}
+		return deploy.Spec.Template.Spec.Containers[0].Name == containerName &&
+			deploy.Spec.Template.Spec.Containers[0].Image == containerImage, nil
 	})
 	ExpectNoErrorWithOffset(1, err)
 }
