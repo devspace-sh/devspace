@@ -1,0 +1,15 @@
+version: v2beta1
+name: run-pipelines-demo
+
+pipelines:
+  dev: |-
+    run_pipelines deploy --set deployments.dev.helm.values.containers[0].image=nginx --set-string deployments.dev.helm.values.containers[0].name=mynginx
+  deploy: |-
+    create_deployments --all
+
+deployments:
+  dev:
+    helm:
+      values:
+        containers:
+          - image: alpine

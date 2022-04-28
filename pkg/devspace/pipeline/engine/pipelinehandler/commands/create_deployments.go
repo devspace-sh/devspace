@@ -147,7 +147,7 @@ func applySetValues(ctx devspacecontext.Context, name, objName string, set, setS
 			continue
 		}
 
-		err = strvals.ParseInto(s, mapObj)
+		err = strvals.ParseIntoString(s, mapObj)
 		if err != nil {
 			return nil, errors.Wrap(err, "parsing --set-string flag")
 		}

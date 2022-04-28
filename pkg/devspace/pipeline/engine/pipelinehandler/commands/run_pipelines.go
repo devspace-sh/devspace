@@ -13,6 +13,8 @@ import (
 
 type RunPipelineOptions struct {
 	types.PipelineOptions
+	Set       []string `long:"set" description:"Set configuration"`
+	SetString []string `long:"set-string" description:"Set configuration as string"`
 }
 
 func RunPipelines(ctx devspacecontext.Context, pipeline types.Pipeline, args []string, environ expand.Environ) error {
@@ -21,6 +23,13 @@ func RunPipelines(ctx devspacecontext.Context, pipeline types.Pipeline, args []s
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
+	}
+
+	if len(args) > 0 {
+		ctx, err = applyPipelineSetValue(ctx, options.Set, options.SetString)
+		if err != nil {
+			return err
+		}
 	}
 
 	pipelines := []*latest.Pipeline{}
