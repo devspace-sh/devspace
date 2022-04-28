@@ -44,7 +44,7 @@ type Pipeline interface {
 	// DependencyRegistry retrieves the dependency registry
 	DependencyRegistry() registry.DependencyRegistry
 
-	// Parent retrieves the pipeline parent or nil if there is non
+	// Parent retrieves the pipeline parent or nil if there is none
 	Parent() Pipeline
 
 	// Exclude locks the upmost parent pipeline in the namespace and ensures only

@@ -34,14 +34,17 @@ func XArgs(ctx context.Context, args []string, handler types.ExecHandler) error 
 		return err
 	}
 
-	addArgs := strings.Split(string(out), options.Delimiter)
+	addArgs := strings.Split(string(out), "\n")
 	for _, addArg := range addArgs {
-		addArg = strings.TrimSpace(addArg)
-		if addArg == "" {
-			continue
-		}
+		splitted := strings.Split(addArg, options.Delimiter)
+		for _, a := range splitted {
+			a = strings.TrimSpace(a)
+			if a == "" {
+				continue
+			}
 
-		args = append(args, addArg)
+			args = append(args, a)
+		}
 	}
 	return handler.ExecHandler(ctx, args)
 }

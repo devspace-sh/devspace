@@ -15,6 +15,6 @@ dependencies:
 pipelines:
   dev:
     run: |-
-      run_dependency_pipelines dependency
-      run_dependency_pipelines dependency-deploy > dependency.txt
+      run_dependencies dependency
+      run_dependencies dependency-deploy > dependency.txt
       dep-test > imports.txt

@@ -6,6 +6,7 @@ imports:
     enabled: $(is_equal ${IMPORT4} "import4")
 
 vars:
+  TOP: import4
   IMPORT4:
     command: echo import4
 

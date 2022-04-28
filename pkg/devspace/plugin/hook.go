@@ -270,7 +270,7 @@ func CallPluginExecutableInBackground(main string, argv []string, extraEnvVars m
 	prog.Stderr = stderrOut
 	if err := prog.Start(); err != nil {
 		if strings.Contains(err.Error(), "no such file or directory") {
-			return fmt.Errorf("the plugin's binary was not found (%v). Please uninstall and reinstall the plugin and make sure there are no other conflicting plugins installed (run 'devspace list plugins' to see all installed plugins)", err)
+			return fmt.Errorf("the plugin's binary was not found (%v). Please reinstall the plugin and make sure there are no other conflicting plugins installed (run 'devspace list plugins' to see all installed plugins)", err)
 		}
 
 		return err

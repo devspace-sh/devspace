@@ -2,6 +2,7 @@ version: v2beta1
 name: import5
 
 vars:
+  TOP: import5
   IMPORT5: $(echo import5)
 
 pipelines:
