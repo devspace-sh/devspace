@@ -45,9 +45,5 @@ go run ./docs/hack/config/partials/main.go
 ```bash
 cd ../ # main project directory
 
-# JSON Schema:
-go run ./docs/hack/config/schema/main.go >docs/schemas/config-jsonschema.json
-
-# Open API Spec:
-go run ./docs/hack/config/schema/main.go true >docs/schemas/config-openapi.json
+go run ./docs/hack/config/schemas/main.go
 ```

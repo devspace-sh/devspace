@@ -3,21 +3,20 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/invopop/jsonschema"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
+const jsonschemaFile = "docs/schemas/config-jsonschema.json"
+const openapiSchemaFile = "docs/schemas/config-openapi.json"
+
 // Run executes the command logic
 func main() {
-	mustGenerateOpenAPISpec := len(os.Args) > 1 && os.Args[1] == "true"
-	prefix := ""
-	if mustGenerateOpenAPISpec {
-		prefix = "      "
-	}
-
 	r := new(jsonschema.Reflector)
 	r.AllowAdditionalProperties = true
 	r.PreferYAMLSchema = true
@@ -32,6 +31,16 @@ func main() {
 
 	schema := r.Reflect(&latest.Config{})
 
+	genSchema(schema, jsonschemaFile)
+	genSchema(schema, openapiSchemaFile)
+}
+
+func genSchema(schema *jsonschema.Schema, schemaFile string) {
+	isOpenAPISpec := schemaFile == openapiSchemaFile
+	prefix := ""
+	if isOpenAPISpec {
+		prefix = "      "
+	}
 	schemaJSON, err := json.MarshalIndent(schema, prefix, "  ")
 	if err != nil {
 		panic(err)
@@ -39,10 +48,10 @@ func main() {
 
 	schemaString := string(schemaJSON)
 
-	if mustGenerateOpenAPISpec {
+	if isOpenAPISpec {
 		schemaString = strings.ReplaceAll(schemaString, "#/$defs/", "#/definitions/Config/$defs/")
 
-		fmt.Printf(`{
+		schemaString = fmt.Sprintf(`{
 	"swagger": "2.0",
 	"info": {
 		"version": "%s",
@@ -54,7 +63,15 @@ func main() {
 	}
 }
 `, latest.Version, schemaString)
-	} else {
-		fmt.Printf(`%s`, schemaString)
+	}
+
+	err = os.MkdirAll(filepath.Dir(schemaFile), os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
+	err = ioutil.WriteFile(schemaFile, []byte(schemaString), os.ModePerm)
+	if err != nil {
+		panic(err)
 	}
 }
