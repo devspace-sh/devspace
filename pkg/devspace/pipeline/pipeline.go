@@ -3,16 +3,17 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"mvdan.cc/sh/v3/expand"
-	"os"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -202,7 +203,7 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 			continue
 		} else if !deployableDependencies[dependency.Name()] {
 			// search for dependency pipeline and wait
-			if p.dependencyRegistry.OwnedDependency(dependency.Name()) {
+			if p.dependencyRegistry.OwnedDependency(dependency.Name()) && !ctx.IsCyclicDependency() {
 				ctx.Log().Infof("Skipping dependency %s as it was already deployed", dependency.Name())
 				waitForDependency(ctx.Context(), p, dependency.Name(), ctx.Log())
 			} else {

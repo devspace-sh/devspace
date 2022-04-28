@@ -105,7 +105,7 @@ func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, paren
 				if _, ok := err.(*graph.CyclicError); !ok {
 					return err
 				}
-
+				ctx.SetIfCyclicDependency(true)
 				ctx.Log().Debugf(err.Error())
 			}
 		} else {

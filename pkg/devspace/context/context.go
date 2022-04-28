@@ -2,6 +2,12 @@ package context
 
 import (
 	context2 "context"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -10,11 +16,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/pkg/errors"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 func NewContext(ctx context2.Context, variables map[string]interface{}, log log.Logger) Context {
@@ -92,6 +93,9 @@ type Context interface {
 	WithEnviron(environ env.Provider) Context
 	WithLogger(logger log.Logger) Context
 	AsDependency(dependency types.Dependency) Context
+
+	SetIfCyclicDependency(isCyclicDependecy bool)
+	IsCyclicDependency() bool
 }
 
 type context struct {
@@ -122,6 +126,8 @@ type context struct {
 
 	// log is the currently used logger
 	log log.Logger
+
+	isCyclicDependecy bool
 }
 
 func (c *context) Environ() env.Provider {
@@ -277,4 +283,12 @@ func (c *context) AsDependency(dependency types.Dependency) Context {
 	n.dependencies = dependency.Children()
 	n.environ = env.NewVariableEnvProvider(env.ConvertMap(n.config.Variables()))
 	return &n
+}
+
+func (c *context) SetIfCyclicDependency(isCyclicDependecy bool) {
+	c.isCyclicDependecy = isCyclicDependecy
+}
+
+func (c *context) IsCyclicDependency() bool {
+	return c.isCyclicDependecy
 }
