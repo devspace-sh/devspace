@@ -243,13 +243,19 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 }
 
 func waitForDependency(ctx context.Context, start types.Pipeline, dependencyName string, log log.Logger) {
+	// parents
+	parents := []string{start.Name()}
+
 	// get top level pipeline
 	for start.Parent() != nil {
 		start = start.Parent()
+		parents = append(parents, start.Name())
 	}
 
-	// now traverse through all dependencies
-	if start.Name() == dependencyName {
+	// if the dependency is cyclic and already executed
+	// as a parent, we skip waiting for it as this would
+	// result in a deadlock.
+	if stringutil.Contains(parents, dependencyName) {
 		return
 	}
 
