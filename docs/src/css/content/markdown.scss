@@ -31,10 +31,16 @@ body .markdown {
   margin-top: 0 !important;
 }
 
-.markdown h2,
-.markdown h3 {
-  margin-top: 2.4em;
+.markdown > h2 {
+  margin-top: 2em !important;
   line-height: 1em;
+  border-top: 1px solid #f1f1f1;
+  padding-top: 1.8em;
+}
+
+.markdown h3 {
+  margin-top: 1.8em;
+  line-height: 0.6em;
 }
 
 .markdown .step_src-components-Step- {
@@ -106,20 +112,22 @@ html body pre.prism-code > button {
 }
 
 .markdown :target,
-.markdown :target ~ *:not(h2:not(:target), h3:not(:target), h4:not(:target), :target ~ h2:not(:target) ~ *, :target ~ h3:not(:target) ~ *, :target ~ h4:not(:target) ~ *) {
+h2:target ~ *:not(h2, h2:target ~ *:is(h2):not(:target) ~ *),
+h3:target ~ *:not(h2, h3, h3:target ~ *:is(h2, h3):not(:target) ~ *),
+h4:target ~ *:not(h2, h3, h4, h4:target ~ *:is(h2, h3, h4):not(:target) ~ *) {
   &::before {
     content: " ";
-    width: 3px;
+    width: 4px;
     position: absolute;
     left: -20px;
     top: -20px;
-    bottom: calc(-1*var(--ifm-paragraph-margin-bottom));
+    bottom: calc(-1.5*var(--ifm-paragraph-margin-bottom));
     background: orange;
     z-index: -1;
 
     @media (min-width: 1500px) {
       & {
-        left: -40px;
+        left: -30px;
       }
     }
   }

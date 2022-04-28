@@ -67,6 +67,22 @@
     padding-right: 2em;
   }
 
+  .prism-code {
+    .token {
+      &.key {
+        color: rgb(45, 178, 255);
+
+        ~ .punctuation  {
+          color: rgb(150, 150, 150) !important;
+        }
+      }
+
+      &.punctuation,
+      &.plain {
+        color: #fff !important;
+      }
+    }
+  }
 
   .markdown *:not(pre) > code,
   .contents code {

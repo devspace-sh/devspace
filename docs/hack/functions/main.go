@@ -367,7 +367,8 @@ var Functions = []Function{
 		Name:        "exec_container",
 		Description: `Executes the command provided as argument inside a container`,
 		Args:        `[command]`,
-		Handler:     basiccommands.Cat,
+		Flags:       commands.ExecContainerOptions{},
+		Handler:     commands.ExecContainer,
 		Group:       groupOther,
 	},
 	{
