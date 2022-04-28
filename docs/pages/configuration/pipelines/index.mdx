@@ -5,26 +5,28 @@ sidebar_label: pipelines
 
 import ConfigPartialPipeline from '../_partials/v2beta1/pipelines.mdx'
 
-Pipelines in DevSpace consists of one or more jobs that are run in parallel and can depend on each other. Each job consists of one or more conditional steps that are executed in order.
+Pipelines allow you to fully customize the execution logic in DevSpace, i.e. they define what happens when a users run commands such as `devspace dev`, `devspace build`, `devspace deploy` or `devspace run-pipeline my-custom-pipeline`
 
-## Workflow
 
+## Using Pipelines
 
 ### 1. Define Pipelines
 An example `pipelines` section could look like this in `devspace.yaml`:
-```yaml
-# File: devspace.yaml
+```yaml title=devspace.yaml
+version: v2beta1
 pipelines:
-  dev: |
+  dev: |-
     run_dependency_pipelines --all    # 1. Deploy any projects this project needs (see "dependencies")
     create_deployments --all          # 2. Deploy Helm charts and manifests specfied as "deployments"
     start_dev app                     # 3. Start dev mode "app" (see "dev" section)
-  deploy: |
+  deploy: |-
     run_dependency_pipelines --all                    # 1. Deploy any projects this project needs (see "dependencies")
     build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
     create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"
-  build: |
-    build_images --all -t $(git describe --always)
+  build:
+    # Here we are using the long-form using `run:` instead of passing the script directly
+    run: |-
+      build_images --all -t $(git describe --always)
   custom: ...
 ```
 
@@ -46,10 +48,11 @@ Write all pipeline scrips in `bash` fashion. DevSpace is using a library to make
 :::
 
 
-## Custom Flags
-
-
 ## Default Pipelines
+DevSpace provides default pipeline scripts for the following top-level commands:
+- [`devspace dev`](#dev)
+- [`devspace deploy`](#deploy)
+- [`devspace build`](#build)
 
 <details>
 <summary>
@@ -100,6 +103,35 @@ build_images --all      # Build, tag (git commit hash) and push all images (see 
 ```
 
 </details>
+
+
+## Custom Flags
+To add custom flags to commands such as `devspace dev` or `devspace run-pipeline my-custom-pipeline`, you can specify the `flags` field for the respective pipeline.
+
+The following example defines two flags for `devspace dev`:
+- `--logs / -l` with `type` not specified (defaults to `bool`)
+- `--env / -e` with `type: stringArray`
+
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  dev:
+    flags:
+    - name: logs
+      short: l
+    - name: env
+      short: e
+      type: stringArray
+    run: |-
+      extraEnv=$(get_flag "env")    # Retrieve the value of the `env` flag and store it in a variable
+      echo ${extraEnv[1]}
+
+      if [ $(get_flag "logs") == "true" ]; then     # Test if --logs/-l flag is used or not
+        start_dev app --set terminal=               # Remove terminal config, so DevSpace falls back to log streaming
+      else
+        start_dev app
+      fi
+```
 
 
 ## Config Reference

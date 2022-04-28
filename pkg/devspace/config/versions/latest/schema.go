@@ -245,10 +245,10 @@ type Image struct {
 
 	// Dockerfile specifies a path (relative or absolute) to the dockerfile. Defaults
 	// to ./Dockerfile
-	Dockerfile string `yaml:"dockerfile" json:"dockerfile" jsonschema:"default=./Dockerfile"`
+	Dockerfile string `yaml:"dockerfile" json:"dockerfile" jsonschema:"default=./Dockerfile" jsonschema_extras:"group=buildConfig"`
 
 	// Context is the context path to build with. Defaults to the current working directory
-	Context string `yaml:"context,omitempty" json:"context,omitempty" jsonschema:"default=./"`
+	Context string `yaml:"context,omitempty" json:"context,omitempty" jsonschema:"default=./" jsonschema_extras:"group=buildConfig"`
 
 	// Entrypoint specifies an entrypoint that will be appended to the dockerfile during
 	// image build in memory. Example: ["sleep", "99999"]
@@ -271,14 +271,6 @@ type Image struct {
 	// Network is the network that should get used to build the image
 	Network string `yaml:"network,omitempty" json:"network,omitempty" jsonschema_extras:"group=buildConfig"`
 
-	// SkipPush will not push the image to a registry if enabled. Only works if docker or buildkit is chosen
-	// as build method
-	SkipPush bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty" jsonschema_extras:"group=buildConfig"`
-
-	// CreatePullSecret specifies if a pull secret should be created for this image in the
-	// target namespace. Defaults to true
-	CreatePullSecret *bool `yaml:"createPullSecret,omitempty" json:"createPullSecret,omitempty" jsonschema:"required" jsonschema_extras:"group=buildConfig"`
-
 	// RebuildStrategy is used to determine when DevSpace should rebuild an image. By default, devspace will
 	// rebuild an image if one of the following conditions is true:
 	// - The dockerfile has changed
@@ -286,6 +278,14 @@ type Image struct {
 	// - A file within the docker context (excluding .dockerignore rules) has changed
 	// This option is ignored for custom builds.
 	RebuildStrategy RebuildStrategy `yaml:"rebuildStrategy,omitempty" json:"rebuildStrategy,omitempty" jsonschema:"enum=default,enum=always,enum=ignoreContextChanges" jsonschema_extras:"group=buildConfig"`
+
+	// SkipPush will not push the image to a registry if enabled. Only works if docker or buildkit is chosen
+	// as build method
+	SkipPush bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty" jsonschema_extras:"group=pushPull,group_name=Push & Pull"`
+
+	// CreatePullSecret specifies if a pull secret should be created for this image in the
+	// target namespace. Defaults to true
+	CreatePullSecret *bool `yaml:"createPullSecret,omitempty" json:"createPullSecret,omitempty" jsonschema:"required" jsonschema_extras:"group=pushPull"`
 
 	// BuildKit if buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit
 	BuildKit *BuildKitConfig `yaml:"buildKit,omitempty" json:"buildKit,omitempty" jsonschema_extras:"group=engines,group_name=Build Engines"`

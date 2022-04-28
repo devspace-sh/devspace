@@ -34,6 +34,7 @@ body .menu {
 
   .code-style {
     font-family: Menlo, 'Courier New', monospace;
+    word-spacing: -0.15em;
   }
 
   .menu__list-item-collapsible {
@@ -134,7 +135,7 @@ body .menu {
         .menu__list {
           /* 4th level links */
           .menu__link {
-            padding-left: 5.3rem;
+            padding-left: 6.5rem;
             font-size: 0.9em;
             
             &:not(.menu__link--active):not(:hover) {

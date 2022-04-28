@@ -19,31 +19,22 @@ module.exports = {
       className: 'code-style',
       link: { type: 'doc', id: 'configuration/reference' },
       items: [
-        'configuration/imports/basics',
-        'configuration/functions/basics',
-        'configuration/pipelines/basics',
+        'configuration/imports/index',
+        'configuration/functions/index',
+        'configuration/pipelines/index',
         {
           type: 'category',
           label: 'images',
-          link: { type: 'doc', id: 'configuration/images/basics' },
+          link: { type: 'doc', id: 'configuration/images/index' },
           items: [
-            {
-              type: 'category',
-              label: '1. Build',
-              link: { type: 'doc', id: 'configuration/images/build' },
-              items: [
-                'configuration/images/build/args',
-                'configuration/images/build/multi-stage',
-                'configuration/images/build/rebuild',
-              ],
-            },
+            'configuration/images/build',
             'configuration/images/tag',
             'configuration/images/push',
             'configuration/images/pull-secrets',
             {
               type: 'category',
               label: 'Registry Auth',
-              link: { type: 'doc', id: 'configuration/images/registries/basics' },
+              link: { type: 'doc', id: 'configuration/images/registries/index' },
               items: [
                 'configuration/images/registries/docker-hub',
                 'configuration/images/registries/github',
@@ -56,7 +47,7 @@ module.exports = {
             {
               type: 'category',
               label: 'Build Engines',
-              link: { type: 'doc', id: 'configuration/images/build-engines/basics' },
+              link: { type: 'doc', id: 'configuration/images/build-engines/index' },
               items: [
                 'configuration/images/build-engines/docker',
                 'configuration/images/build-engines/buildkit',
@@ -69,13 +60,13 @@ module.exports = {
         {
           type: 'category',
           label: 'deployments',
-          link: { type: 'doc', id: 'configuration/deployments/basics' },
+          link: { type: 'doc', id: 'configuration/deployments/index' },
           items: [
             {
               type: 'category',
               label: 'helm',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/deployments/helm/basics' },
+              link: { type: 'doc', id: 'configuration/deployments/helm/index' },
               items: [
                 'configuration/deployments/helm/component-chart',
                 'configuration/deployments/helm/local',
@@ -86,7 +77,7 @@ module.exports = {
               type: 'category',
               label: 'kubectl',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/deployments/kubectl/basics' },
+              link: { type: 'doc', id: 'configuration/deployments/kubectl/index' },
               items: [
                 'configuration/deployments/kubectl/manifests',
                 'configuration/deployments/kubectl/kustomizations',
@@ -97,23 +88,23 @@ module.exports = {
         {
           type: 'category',
           label: 'dev',
-          link: { type: 'doc', id: 'configuration/dev/basics' },
+          link: { type: 'doc', id: 'configuration/dev/index' },
           items: [
             {
               type: 'category',
               label: 'Dev Container',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/dev/container/basics' },
+              link: { type: 'doc', id: 'configuration/dev/container/index' },
               items: [
                 'configuration/dev/container/selector',
-                'configuration/dev/container/basics'
+                'configuration/dev/container/index'
               ],
             },
             {
               type: 'category',
               label: 'Ports',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/dev/ports/basics' },
+              link: { type: 'doc', id: 'configuration/dev/ports/index' },
               items: [
                 'configuration/dev/ports/forwarding',
                 'configuration/dev/ports/reverse-forwarding',
@@ -124,7 +115,7 @@ module.exports = {
               type: 'category',
               label: 'Files',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/dev/files/basics' },
+              link: { type: 'doc', id: 'configuration/dev/files/index' },
               items: [
                 'configuration/dev/files/sync',
                 'configuration/dev/files/persist-paths',
@@ -135,7 +126,7 @@ module.exports = {
               type: 'category',
               label: 'Dev Workflow',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/dev/workflow/basics' },
+              link: { type: 'doc', id: 'configuration/dev/workflow/index' },
               items: [
                 'configuration/dev/workflow/terminal',
                 'configuration/dev/workflow/log-streaming',
@@ -147,11 +138,11 @@ module.exports = {
             },
           ],
         },
-        'configuration/pullSecrets/basics',
+        'configuration/pullSecrets/index',
         {
           type: 'category',
           label: 'vars',
-          link: { type: 'doc', id: 'configuration/variables/basics' },
+          link: { type: 'doc', id: 'configuration/variables/index' },
           items: [
             'configuration/variables/static',
             'configuration/variables/environment',
@@ -161,17 +152,17 @@ module.exports = {
             'configuration/variables/built-in',
           ],
         },
-        'configuration/commands/basics',
+        'configuration/commands/index',
         {
           type: 'category',
           label: 'dependencies',
-          link: { type: 'doc', id: 'configuration/dependencies/basics' },
+          link: { type: 'doc', id: 'configuration/dependencies/index' },
           items: [
             'configuration/dependencies/git-repository',
             'configuration/dependencies/local-folder',
           ],
         },
-        'configuration/require/basics',
+        'configuration/require/index',
       ],
     },
     {
@@ -261,7 +252,7 @@ module.exports = {
         }
       ],
     },
-    "plugins/basics",
+    "plugins/index",
     {
       type: 'link',
       label: '↗️ Component Chart',

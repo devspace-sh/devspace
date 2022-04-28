@@ -1,7 +1,6 @@
 body .markdown .config-field {
     --docusaurus-details-decoration-color: #ccc;
 
-    margin: 0;
     padding: 1em 1.4em;
     border: 1px solid transparent;
     border-bottom-color: #eee;
@@ -10,7 +9,14 @@ body .markdown .config-field {
         border-top-color: #eee;
     }
 
+    margin: var(--ifm-leading) 0 0;
+
+    + .config-field {
+        margin: 0;
+    }
+
     .config-field {
+        margin: 0;
         border-top-color: transparent;
         
         &:last-of-type {

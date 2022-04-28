@@ -11,7 +11,7 @@ import GlobalFunctionRef from '../_partials/functions/reference_global.mdx'
 Functions are bash functions that can be called inside the remainder of `devspace.yaml`. A common use case is to define reusable functionality that is called from within the scripts you specify within the `pipelines` section.
 
 There are two types of functions:
-1. [Custom Functions](#custom-functions) defined in `devspace.yaml` (often added via [`imports`](../imports/basics.mdx))
+1. [Custom Functions](#custom-functions) defined in `devspace.yaml` (often added via [`imports`](../imports/index.mdx))
 2. [Built-In Functions](#built-in-functions) such as `build_images` or `create_deployments`
 
 
@@ -22,7 +22,8 @@ DevSpace provides support for custom functions. To use them, you need to:
 
 ### 1. Declare Functions
 Declaring a function means adding a key with the function name to the `functions` section in `devspace.yaml` as shown in the example below:
-```yaml
+```yaml title=devspace.yaml
+version: v2beta1
 functions:
   hello_world: |-
     echo "Hello World"
@@ -32,7 +33,8 @@ functions:
 
 ### 2. Call Functions
 To call a custom function
-```yaml
+```yaml title=devspace.yaml
+version: v2beta1
 pipelines:
   deploy: |-
     build_images --tag $(get_git_commit)

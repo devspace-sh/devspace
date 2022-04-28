@@ -20,6 +20,7 @@ ul[role="tablist"] li,
 ul[role="tablist"] li:hover {
   background: transparent;
   padding: 0.5em 1.2em;
+  white-space: nowrap;
 }
 
 ul[role="tablist"] li:not([aria-selected="true"]):hover {

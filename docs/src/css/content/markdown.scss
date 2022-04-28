@@ -4,17 +4,16 @@ body .markdown {
   --ifm-list-margin: 0.25em;
 }
 
-.markdown > pre,
-.markdown > ul,
-.markdown > ol,
-.markdown > p {
-  + * {
-    &:is(ul, ol) {
-      margin-top: var(--ifm-list-margin);
-    }
+.markdown pre,
+.markdown ul,
+.markdown ol,
+.markdown p {
+  &:not(:first-child) {
+    margin-top: var(--ifm-leading);
+    margin-bottom: 0;
 
-    &:not(ul, ol, h1, h2, h3, h4) {
-      margin-top: var(--ifm-leading);
+    &:is(ul, ol) {
+      margin-top: calc(2*var(--ifm-list-margin)) !important;
     }
   }
 }
@@ -33,6 +32,9 @@ body .markdown {
 
 .markdown > h2 {
   margin-top: 2em !important;
+}
+
+.markdown > *:not(header) + h2 {
   line-height: 1em;
   border-top: 1px solid #f1f1f1;
   padding-top: 1.8em;
@@ -57,8 +59,12 @@ body .markdown {
   margin-bottom: 0.9em;
 }
 
-.markdown .admonition *:last-child {
-  margin-bottom: 0 !important;
+.markdown .admonition {
+  margin-top: var(--ifm-leading);
+
+  *:last-child {
+    margin-bottom: 0 !important;
+  }
 }
 
 .markdown pre code {
@@ -115,13 +121,13 @@ html body pre.prism-code > button {
 h2:target ~ *:not(h2, h2:target ~ *:is(h2):not(:target) ~ *),
 h3:target ~ *:not(h2, h3, h3:target ~ *:is(h2, h3):not(:target) ~ *),
 h4:target ~ *:not(h2, h3, h4, h4:target ~ *:is(h2, h3, h4):not(:target) ~ *) {
-  &::before {
+  &:is(:not(details *))::before {
     content: " ";
     width: 4px;
     position: absolute;
     left: -20px;
-    top: -20px;
-    bottom: calc(-1.5*var(--ifm-paragraph-margin-bottom));
+    top: -25px;
+    bottom: calc(-1*var(--ifm-paragraph-margin-bottom));
     background: orange;
     z-index: -1;
 
@@ -132,12 +138,22 @@ h4:target ~ *:not(h2, h3, h4, h4:target ~ *:is(h2, h3, h4):not(:target) ~ *) {
     }
   }
 
+  &:is(h2):target::before {
+    top: 25px;
+  }
+
   &.admonition::before {
     margin-left: -4px;
   }
 
-  &:is(details, .group)::before {
+  &:is(.config-field, .group)::before {
     margin-left: -1px;
+  }
+
+  &:is(details) {
+    &::before {
+      margin-left: -4px;
+    }
   }
 }
 
@@ -208,7 +224,7 @@ h3.active-section::before {
   --docusaurus-details-decoration-color: #00bdff;
   --ifm-tabs-color-active-border: #00bdff !important;
   --docusaurus-details-transition: transform var(--ifm-transition-fast) ease;
-  margin: 0 0 var(--ifm-spacing-vertical);
+  margin: var(--ifm-spacing-vertical) 0;
   border-color: #00bdff;
   border-style: solid;
   border-width: var(--ifm-alert-border-width);

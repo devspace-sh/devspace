@@ -135,7 +135,7 @@ deployments:
 ```
 
 ### `updateImageTags`
-The `updateImageTags` option expects a boolean stating if DevSpace should do [Image Tag Replacement](../basics.mdx#3-tag-replacement).
+The `updateImageTags` option expects a boolean stating if DevSpace should do [Image Tag Replacement](../index.mdx#3-tag-replacement).
 
 When set to `true`, DevSpace searches all your values (specified via `values` or `valuesFiles`) for images that are defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it replaces or appends the image tag with the tag it created during the image building process. Image tag replacement makes sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
 
@@ -266,7 +266,7 @@ The `values` option expects an object with values that should be overriding the 
 
 Compared to the `valuesFiles` option, using `values` has the following advantages:
 - It is easier to comprehend and faster to find (no references)
-- It allows you to use [dynamic config variables](../../variables/basics.mdx)
+- It allows you to use [dynamic config variables](../../variables/index.mdx)
 
 :::info
 Because both, `values` and `valuesFiles`, have advantages and disadvantages, it is often useful to combine them. When setting both, values defined in `values` have precedence over values defined in `valuesFiles`.

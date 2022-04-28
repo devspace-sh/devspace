@@ -8,17 +8,11 @@ import TabItem from '@theme/TabItem';
 import FragmentFaqImageContext from '../../_partials/faq-image-context.mdx';
 import WarningBuildToolPriority from '../../_partials/warning-build-tool-priority.mdx';
 import ConfigPartial from '../_partials/v2beta1/images.mdx'
+import PreventBuildTip from './_partials/prevent_build.mdx'
 
-DevSpace can build, tag and push images using a variety of build tools.
+DevSpace can build, tag and push images using a variety of build engines.
 
-:::tip <u>Don't</u> Build Images During Development
-Because image building can waste quite a bit of time, we recomment that you only build images when running DevSpace in your CI/CD pipelines using `devspace build/deploy` but not when a developer runs `devspace dev`.
-
-Instead of image building, the use the following workflow for `devspace dev`:
-1. Deploy your application using prod/stable images
-2. Use the [`devImage` feature](../#TODO) to swap out the prod/stable images in runtime using a prebuilt dev-optimized image.
-3. Use the [`sync` feature](../#TODO) for hot reloading your containers
-:::
+<PreventBuildTip/>
 
 
 ## Workflow
