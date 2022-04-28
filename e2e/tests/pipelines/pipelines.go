@@ -151,8 +151,7 @@ var _ = DevSpaceDescribe("pipelines", func() {
 		framework.ExpectContainerNameAndImageEqual(ns, "dev", "nginx", "mynginx")
 
 		cancel()
-		err = <-done
-		framework.ExpectNoError(err)
+		<-done
 	})
 
 	ginkgo.It("should use --set and --set-string values from run_default_pipeline command", func() {
@@ -186,8 +185,7 @@ var _ = DevSpaceDescribe("pipelines", func() {
 		framework.ExpectContainerNameAndImageEqual(ns, "dev", "nginx", "mynginx")
 
 		cancel()
-		err = <-done
-		framework.ExpectNoError(err)
+		<-done
 	})
 
 	ginkgo.It("should get value from config", func() {
