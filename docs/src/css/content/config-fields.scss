@@ -4,9 +4,10 @@ body .markdown .config-field {
     padding: 1em 1.4em;
     border: 1px solid transparent;
     border-bottom-color: #eee;
+    border-top-color: #eee;
 
-    &:first-of-type {
-        border-top-color: #eee;
+    + .config-field {
+        border-top-color: transparent;
     }
 
     margin: var(--ifm-leading) 0 0;

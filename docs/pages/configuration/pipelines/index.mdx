@@ -126,11 +126,12 @@ pipelines:
       extraEnv=$(get_flag "env")    # Retrieve the value of the `env` flag and store it in a variable
       echo ${extraEnv[1]}
 
+      TERMINAL_ENABLED=true
       if [ $(get_flag "logs") == "true" ]; then     # Test if --logs/-l flag is used or not
-        start_dev app --set terminal=               # Remove terminal config, so DevSpace falls back to log streaming
-      else
-        start_dev app
+        TERMINAL_ENABLED=false                      # Disable terminal, so DevSpace falls back to log streaming
       fi
+
+      start_dev app --set terminal.enabled=$TERMINAL_ENABLED
 ```
 
 
