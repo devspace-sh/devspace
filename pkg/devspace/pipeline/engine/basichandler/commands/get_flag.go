@@ -28,7 +28,7 @@ func GetFlag(ctx context.Context, args []string) error {
 		if !found && f.Name == args[0] {
 			sliceType, ok := f.Value.(flag.SliceValue)
 			if ok {
-				value = strings.Join(sliceType.GetSlice(), ",")
+				value = strings.Join(sliceType.GetSlice(), " ")
 			} else {
 				value = f.Value.String()
 			}
