@@ -23,15 +23,9 @@ var AlwaysResolvePredefinedVars = []string{"DEVSPACE_NAME", "DEVSPACE_TMPDIR", "
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
 func NewResolver(localCache localcache.Cache, predefinedVariableOptions *PredefinedVariableOptions, flags []string, log log.Logger) (Resolver, error) {
 	memoryCache := map[string]interface{}{}
-	for _, cmdVar := range flags {
-		idx := strings.Index(cmdVar, "=")
-		if idx == -1 {
-			return nil, errors.Errorf("wrong --var format: %s, expected 'key=val'", cmdVar)
-		}
-
-		name := strings.TrimSpace(cmdVar[:idx])
-		value := convertStringValue(strings.TrimSpace(cmdVar[idx+1:]))
-		memoryCache[name] = value
+	err := MergeVarsWithFlags(memoryCache, flags)
+	if err != nil {
+		return nil, err
 	}
 
 	return &resolver{
@@ -40,6 +34,21 @@ func NewResolver(localCache localcache.Cache, predefinedVariableOptions *Predefi
 		options:     predefinedVariableOptions,
 		log:         log,
 	}, nil
+}
+
+func MergeVarsWithFlags(vars map[string]interface{}, flags []string) error {
+	for _, cmdVar := range flags {
+		idx := strings.Index(cmdVar, "=")
+		if idx == -1 {
+			return errors.Errorf("wrong --var format: %s, expected 'key=val'", cmdVar)
+		}
+
+		name := strings.TrimSpace(cmdVar[:idx])
+		value := convertStringValue(strings.TrimSpace(cmdVar[idx+1:]))
+		vars[name] = value
+	}
+
+	return nil
 }
 
 type resolver struct {
