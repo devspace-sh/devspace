@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -250,7 +251,18 @@ func set(data map[string]interface{}, key string, val interface{}) {
 	if len(key) == 0 {
 		return
 	}
-	data[key] = val
+
+	rt := reflect.TypeOf(val)
+	switch rt.Kind() {
+	case reflect.String:
+		if len(val.(string)) < 1 {
+			data[key] = nil
+		} else {
+			data[key] = val
+		}
+	default:
+		data[key] = val
+	}
 }
 
 func setIndex(list []interface{}, index int, val interface{}) (l2 []interface{}, err error) {
@@ -271,7 +283,16 @@ func setIndex(list []interface{}, index int, val interface{}) (l2 []interface{},
 		copy(newlist, list)
 		list = newlist
 	}
-	list[index] = val
+	switch reflect.TypeOf(val).Kind() {
+	case reflect.String:
+		if len(val.(string)) > 0 {
+			list[index] = val
+		} else {
+			list[index] = nil
+		}
+	default:
+		list[index] = val
+	}
 	return list, nil
 }
 
