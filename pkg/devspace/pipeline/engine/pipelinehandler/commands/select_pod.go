@@ -22,6 +22,9 @@ type SelectPodOptions struct {
 
 func SelectPod(ctx devspacecontext.Context, args []string) error {
 	hc := interp.HandlerCtx(ctx.Context())
+	if ctx.KubeClient() == nil {
+		return errors.Errorf(ErrMsg)
+	}
 	options := &SelectPodOptions{
 		Namespace: ctx.KubeClient().Namespace(),
 	}

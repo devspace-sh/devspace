@@ -88,10 +88,12 @@ func (p *pipeline) Exclude(ctx devspacecontext.Context) error {
 	p.excluded = true
 
 	// create namespace if necessary
-	p.excludedErr = kubectl.EnsureNamespace(ctx.Context(), ctx.KubeClient(), ctx.KubeClient().Namespace(), ctx.Log())
-	if p.excludedErr != nil {
-		p.excludedErr = errors.Errorf("unable to create namespace: %v", p.excludedErr)
-		return p.excludedErr
+	if ctx.KubeClient() != nil {
+		p.excludedErr = kubectl.EnsureNamespace(ctx.Context(), ctx.KubeClient(), ctx.KubeClient().Namespace(), ctx.Log())
+		if p.excludedErr != nil {
+			p.excludedErr = errors.Errorf("unable to create namespace: %v", p.excludedErr)
+			return p.excludedErr
+		}
 	}
 
 	// exclude ourselves
@@ -99,7 +101,7 @@ func (p *pipeline) Exclude(ctx devspacecontext.Context) error {
 	couldExclude, p.excludedErr = p.dependencyRegistry.MarkDependencyExcluded(ctx, p.name, true)
 	if p.excludedErr != nil {
 		return p.excludedErr
-	} else if !couldExclude {
+	} else if !couldExclude && ctx.KubeClient() != nil {
 		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace instance active in the current namespace right now that uses the same project name (%s)", strings.Join(os.Args, " "), p.name)
 	}
 	ctx.Log().Debugf("Marked project excluded: %v", p.name)

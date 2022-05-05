@@ -29,7 +29,9 @@ func StartDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []strin
 	if err != nil {
 		return err
 	}
-
+	if ctx.KubeClient() == nil {
+		return errors.Errorf(ErrMsg)
+	}
 	options := &StartDevOptions{
 		Options: pipeline.Options().DevOptions,
 	}

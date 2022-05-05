@@ -78,6 +78,63 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectEqual(found, true, "image not found in cache")
 	})
 
+	ginkgo.It("should build dockerfile with docker even when KUBECONFIG is invalid", func() {
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		_ = os.Setenv("KUBECONFIG", "i-am-invalid-config")
+		// create build command
+		buildCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
+			Pipeline: "build",
+		}
+		err = buildCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// create devspace docker client to access docker APIs
+		devspaceDockerClient, err := docker.NewClient(context.TODO(), log)
+		framework.ExpectNoError(err)
+
+		dockerClient := devspaceDockerClient.DockerAPIClient()
+		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		framework.ExpectNoError(err)
+
+		found := false
+	Outer:
+		for _, image := range imageList {
+			for _, tag := range image.RepoTags {
+				if tag == "my-docker-username/helloworld:latest" {
+					found = true
+					break Outer
+				}
+			}
+		}
+		framework.ExpectEqual(found, true, "image not found in cache")
+		_ = os.Unsetenv("KUBECONFIG")
+	})
+
+	ginkgo.It("should not build dockerfile with kaniko when KUBECONFIG is invalid", func() {
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/kaniko")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+		_ = os.Setenv("KUBECONFIG", "i-am-invalid-config")
+		// create build command
+		buildCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
+			Pipeline: "build",
+		}
+		err = buildCmd.RunDefault(f)
+		framework.ExpectError(err)
+		_ = os.Unsetenv("KUBECONFIG")
+	})
+
 	ginkgo.It("should build dockerfile with buildkit", func() {
 		tempDir, err := framework.CopyToTempDir("tests/build/testdata/buildkit")
 		framework.ExpectNoError(err)
