@@ -3,6 +3,7 @@ package values
 import (
 	"context"
 	flag "github.com/spf13/pflag"
+	"strings"
 )
 
 // The key type is unexported to prevent collisions
@@ -18,14 +19,29 @@ const (
 	flagsKey
 )
 
-// WithFlags creates a new context with the dev context
+// WithFlagsMap creates a new context with the given flags
+func WithFlagsMap(parent context.Context, flagsMap map[string]string) context.Context {
+	return WithValue(parent, flagsKey, flagsMap)
+}
+
+// WithFlags creates a new context with the given flags
 func WithFlags(parent context.Context, flagSet *flag.FlagSet) context.Context {
-	return WithValue(parent, flagsKey, flagSet)
+	flagsMap := map[string]string{}
+	flagSet.VisitAll(func(f *flag.Flag) {
+		sliceType, ok := f.Value.(flag.SliceValue)
+		if ok {
+			flagsMap[f.Name] = strings.Join(sliceType.GetSlice(), " ")
+		} else {
+			flagsMap[f.Name] = f.Value.String()
+		}
+	})
+
+	return WithFlagsMap(parent, flagsMap)
 }
 
 // FlagsFrom returns a context used to start and stop dev configurations
-func FlagsFrom(ctx context.Context) (*flag.FlagSet, bool) {
-	flags, ok := ctx.Value(flagsKey).(*flag.FlagSet)
+func FlagsFrom(ctx context.Context) (map[string]string, bool) {
+	flags, ok := ctx.Value(flagsKey).(map[string]string)
 	return flags, ok
 }
 

@@ -13,6 +13,7 @@ import (
 
 type RunPipelineOptions struct {
 	types.PipelineOptions
+
 	Set       []string `long:"set" description:"Set configuration"`
 	SetString []string `long:"set-string" description:"Set configuration as string"`
 }

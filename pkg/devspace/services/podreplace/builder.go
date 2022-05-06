@@ -232,6 +232,9 @@ func replaceWorkingDir(ctx devspacecontext.Context, devPod *latest.DevPod, devCo
 		return err
 	}
 
+	container.ReadinessProbe = nil
+	container.LivenessProbe = nil
+	container.StartupProbe = nil
 	container.WorkingDir = devContainer.WorkingDir
 	podTemplate.Spec.Containers[index] = *container
 	return nil
@@ -258,6 +261,11 @@ func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devConta
 	if err != nil {
 		return err
 	}
+
+	// make sure probes are not set for this container
+	container.ReadinessProbe = nil
+	container.LivenessProbe = nil
+	container.StartupProbe = nil
 
 	// should we inject devspace restart helper?
 	if injectRestartHelper {
@@ -318,9 +326,6 @@ func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devConta
 	if devContainer.Args != nil {
 		container.Args = devContainer.Args
 	}
-	container.ReadinessProbe = nil
-	container.LivenessProbe = nil
-	container.StartupProbe = nil
 	podTemplate.Spec.Containers[index] = *container
 	return nil
 }
@@ -435,6 +440,9 @@ func replaceImage(ctx devspacecontext.Context, devPod *latest.DevPod, devContain
 		return err
 	}
 
+	container.ReadinessProbe = nil
+	container.LivenessProbe = nil
+	container.StartupProbe = nil
 	container.Image = imageStr
 	podTemplate.Spec.Containers[index] = *container
 	return nil

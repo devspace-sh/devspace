@@ -157,7 +157,7 @@ func ExpectRemoteContainerFileContents(labelSelector, container string, namespac
 func ExpectLocalFileContentsImmediately(filePath string, contents string) {
 	out, err := ioutil.ReadFile(filePath)
 	ExpectNoError(err)
-	gomega.ExpectWithOffset(2, string(out)).To(gomega.Equal(contents))
+	gomega.ExpectWithOffset(1, string(out)).To(gomega.Equal(contents))
 }
 
 func ExpectLocalFileContents(filePath string, contents string) {
