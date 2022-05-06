@@ -29,13 +29,17 @@ type CreateDeploymentsOptions struct {
 	All bool `long:"all" description:"Deploy all deployments"`
 }
 
+const ErrMsg = "Please make sure you have an existing valid kube config. You might want to check one of the following things:\n\n* Make sure you can use 'kubectl get namespaces' locally\n* If you are using Loft, you might want to run 'devspace create space' or 'loft create space'\n"
+
 func CreateDeployments(ctx devspacecontext.Context, pipeline types.Pipeline, args []string, stdout io.Writer) error {
 	ctx.Log().Debugf("create_deployments %s", strings.Join(args, " "))
 	err := pipeline.Exclude(ctx)
 	if err != nil {
 		return err
 	}
-
+	if ctx.KubeClient() == nil {
+		return errors.Errorf(ErrMsg)
+	}
 	options := &CreateDeploymentsOptions{
 		Options: pipeline.Options().DeployOptions,
 	}

@@ -17,7 +17,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -32,7 +31,6 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
-	"k8s.io/client-go/kubernetes/fake"
 	"os"
 )
 
@@ -256,7 +254,7 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 		cmd.Ctx = values.WithFlags(cmd.Ctx, cobraCmd.Flags())
 	}
 	options := cmd.BuildOptions(cmd.ToConfigOptions())
-	ctx, err := initialize(cmd.Ctx, f, false, options, cmd.Log)
+	ctx, err := initialize(cmd.Ctx, f, options, cmd.Log)
 	if err != nil {
 		return err
 	}
@@ -277,7 +275,7 @@ type CommandOptions struct {
 	UIPort   int
 }
 
-func initialize(ctx context.Context, f factory.Factory, allowFailingKubeClient bool, options *CommandOptions, logger log.Logger) (devspacecontext.Context, error) {
+func initialize(ctx context.Context, f factory.Factory, options *CommandOptions, logger log.Logger) (devspacecontext.Context, error) {
 	// start file logging
 	log.StartFileLogging()
 
@@ -305,18 +303,9 @@ func initialize(ctx context.Context, f factory.Factory, allowFailingKubeClient b
 	// create kubectl client
 	client, err := f.NewKubeClientFromContext(options.KubeContext, options.Namespace)
 	if err != nil {
-		if allowFailingKubeClient {
-			logger.Warnf("Unable to create new kubectl client: %v", err)
-			logger.Warn("Using fake client to render resources")
-			logger.WriteString(logrus.WarnLevel, "\n")
-
-			kube := fake.NewSimpleClientset()
-			client = &fakekube.Client{
-				Client: kube,
-			}
-		} else {
-			return nil, errors.Errorf("error creating Kubernetes client: %v. Please make sure you have a valid Kubernetes context that points to a working Kubernetes cluster. If in doubt, please check if the following command works locally: `kubectl get namespaces`", err)
-		}
+		logger.Warnf("Unable to create new kubectl client: %v", err)
+		logger.WriteString(logrus.WarnLevel, "\n")
+		client = nil
 	}
 
 	// load generated config
@@ -325,11 +314,13 @@ func initialize(ctx context.Context, f factory.Factory, allowFailingKubeClient b
 		return nil, errors.Errorf("error loading local cache: %v", err)
 	}
 
-	// If the current kube context or namespace is different than old,
-	// show warnings and reset kube client if necessary
-	client, err = kubectl.CheckKubeContext(client, localCache, options.NoWarn, options.SwitchContext, logger)
-	if err != nil {
-		return nil, err
+	if client != nil {
+		// If the current kube context or namespace is different than old,
+		// show warnings and reset kube client if necessary
+		client, err = kubectl.CheckKubeContext(client, localCache, options.NoWarn, options.SwitchContext, logger)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// load config
@@ -370,15 +361,17 @@ func initialize(ctx context.Context, f factory.Factory, allowFailingKubeClient b
 
 func updateLastKubeContext(ctx devspacecontext.Context) error {
 	// Update generated if we deploy the application
-	if ctx.Config() != nil && ctx.Config().LocalCache() != nil {
-		ctx.Config().LocalCache().SetLastContext(&localcache.LastContextConfig{
-			Context:   ctx.KubeClient().CurrentContext(),
-			Namespace: ctx.KubeClient().Namespace(),
-		})
+	if ctx.KubeClient() != nil {
+		if ctx.Config() != nil && ctx.Config().LocalCache() != nil {
+			ctx.Config().LocalCache().SetLastContext(&localcache.LastContextConfig{
+				Context:   ctx.KubeClient().CurrentContext(),
+				Namespace: ctx.KubeClient().Namespace(),
+			})
 
-		err := ctx.Config().LocalCache().Save()
-		if err != nil {
-			return errors.Wrap(err, "save generated")
+			err := ctx.Config().LocalCache().Save()
+			if err != nil {
+				return errors.Wrap(err, "save generated")
+			}
 		}
 	}
 

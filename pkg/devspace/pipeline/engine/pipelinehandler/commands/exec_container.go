@@ -23,6 +23,9 @@ type ExecContainerOptions struct {
 
 func ExecContainer(ctx devspacecontext.Context, args []string) error {
 	hc := interp.HandlerCtx(ctx.Context())
+	if ctx.KubeClient() == nil {
+		return errors.Errorf(ErrMsg)
+	}
 	options := &ExecContainerOptions{
 		Namespace: ctx.KubeClient().Namespace(),
 	}

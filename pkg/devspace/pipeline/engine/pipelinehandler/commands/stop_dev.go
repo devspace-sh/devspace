@@ -23,7 +23,9 @@ func StopDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []string
 	if err != nil {
 		return err
 	}
-
+	if ctx.KubeClient() == nil {
+		return errors.Errorf(ErrMsg)
+	}
 	options := &StopDevOptions{
 		PurgeOptions: pipeline.Options().PurgeOptions,
 	}

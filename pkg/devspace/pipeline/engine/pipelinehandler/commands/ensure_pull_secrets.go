@@ -27,7 +27,9 @@ func EnsurePullSecrets(ctx devspacecontext.Context, pipeline types.Pipeline, arg
 	if err != nil {
 		return err
 	}
-
+	if ctx.KubeClient() == nil {
+		return errors.Errorf(ErrMsg)
+	}
 	options := &EnsurePullSecretsOptions{}
 	args, err = flags.ParseArgs(options, args)
 	if err != nil {
