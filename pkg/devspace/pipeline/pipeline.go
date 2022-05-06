@@ -294,48 +294,6 @@ func findDependencies(start types.Pipeline, dependencyName string) types.Pipelin
 	return nil
 }
 
-func (p *pipeline) startNewDependency(ctx devspacecontext.Context, dependency types2.Dependency, options types.DependencyOptions) error {
-	// find the dependency pipeline to execute
-	executePipeline := options.Pipeline
-	if executePipeline == "" {
-		if dependency.DependencyConfig().Pipeline != "" {
-			executePipeline = dependency.DependencyConfig().Pipeline
-		} else {
-			executePipeline = "deploy"
-		}
-	}
-
-	// find pipeline
-	var (
-		pipelineConfig *latest.Pipeline
-		err            error
-	)
-	if dependency.Config().Config().Pipelines == nil || dependency.Config().Config().Pipelines[executePipeline] == nil {
-		pipelineConfig, err = types.GetDefaultPipeline(executePipeline)
-		if err != nil {
-			return err
-		}
-	} else {
-		pipelineConfig = dependency.Config().Config().Pipelines[executePipeline]
-	}
-
-	devCtx, _ := values.DevContextFrom(ctx.Context())
-	devCtxCancel, cancelDevCtx := context.WithCancel(devCtx)
-	ctx = ctx.WithContext(values.WithDevContext(ctx.Context(), devCtxCancel))
-	dependencyDevPodManager := devpod.NewManager(cancelDevCtx)
-	pip := NewPipeline(dependency.Name(), dependencyDevPodManager, p.dependencyRegistry, pipelineConfig, p.options)
-	pip.(*pipeline).parent = p
-
-	p.m.Lock()
-	p.dependencies[dependency.Name()] = pip
-	p.m.Unlock()
-
-	if streamLogger, ok := ctx.Log().(*log.StreamLogger); !ok || streamLogger.GetFormat() != log.RawFormat {
-		ctx = ctx.WithLogger(ctx.Log().WithPrefix(dependency.Name() + " "))
-	}
-	return pip.Run(ctx.AsDependency(dependency), nil)
-}
-
 func (p *pipeline) StartNewPipelines(ctx devspacecontext.Context, pipelines []*latest.Pipeline, options types.PipelineOptions) error {
 	if options.Background {
 		for _, configPipeline := range pipelines {
@@ -375,6 +333,11 @@ func (p *pipeline) StartNewPipelines(ctx devspacecontext.Context, pipelines []*l
 }
 
 func (p *pipeline) startNewPipeline(ctx devspacecontext.Context, configPipeline *latest.Pipeline, id string, options types.PipelineOptions) error {
+	ctx, err := applyFlags(ctx, configPipeline, options.SetFlag)
+	if err != nil {
+		return err
+	}
+
 	// exchange job if it's not alive anymore
 	j, err := p.createJob(configPipeline, id)
 	if err != nil {
@@ -388,6 +351,70 @@ func (p *pipeline) startNewPipeline(ctx devspacecontext.Context, configPipeline 
 	}
 
 	return nil
+}
+
+func (p *pipeline) startNewDependency(ctx devspacecontext.Context, dependency types2.Dependency, options types.DependencyOptions) error {
+	// find the dependency pipeline to execute
+	executePipeline := options.Pipeline
+	if executePipeline == "" {
+		if dependency.DependencyConfig().Pipeline != "" {
+			executePipeline = dependency.DependencyConfig().Pipeline
+		} else {
+			executePipeline = "deploy"
+		}
+	}
+
+	// find pipeline
+	var (
+		pipelineConfig *latest.Pipeline
+		err            error
+	)
+	if dependency.Config().Config().Pipelines == nil || dependency.Config().Config().Pipelines[executePipeline] == nil {
+		pipelineConfig, err = types.GetDefaultPipeline(executePipeline)
+		if err != nil {
+			return err
+		}
+	} else {
+		pipelineConfig = dependency.Config().Config().Pipelines[executePipeline]
+	}
+
+	ctx, err = applyFlags(ctx, pipelineConfig, options.SetFlag)
+	if err != nil {
+		return err
+	}
+
+	devCtx, _ := values.DevContextFrom(ctx.Context())
+	devCtxCancel, cancelDevCtx := context.WithCancel(devCtx)
+	ctx = ctx.WithContext(values.WithDevContext(ctx.Context(), devCtxCancel))
+	dependencyDevPodManager := devpod.NewManager(cancelDevCtx)
+	pip := NewPipeline(dependency.Name(), dependencyDevPodManager, p.dependencyRegistry, pipelineConfig, p.options)
+	pip.(*pipeline).parent = p
+
+	p.m.Lock()
+	p.dependencies[dependency.Name()] = pip
+	p.m.Unlock()
+
+	if streamLogger, ok := ctx.Log().(*log.StreamLogger); !ok || streamLogger.GetFormat() != log.RawFormat {
+		ctx = ctx.WithLogger(ctx.Log().WithPrefix(dependency.Name() + " "))
+	}
+	return pip.Run(ctx.AsDependency(dependency), nil)
+}
+
+func applyFlags(ctx devspacecontext.Context, pipeline *latest.Pipeline, setFlags []string) (devspacecontext.Context, error) {
+	newFlags := map[string]string{}
+	for _, flag := range pipeline.Flags {
+		newFlags[flag.Name] = fmt.Sprintf("%v", flag.Default)
+	}
+	for _, v := range setFlags {
+		splitted := strings.Split(v, "=")
+		if len(splitted) <= 1 {
+			return nil, fmt.Errorf("error parsing flag %s: expected format flag=value", v)
+		}
+
+		newFlags[splitted[0]] = strings.Join(splitted[1:], "=")
+	}
+
+	return ctx.WithContext(values.WithFlagsMap(ctx.Context(), newFlags)), nil
 }
 
 func (p *pipeline) createJob(configPipeline *latest.Pipeline, id string) (job *Job, err error) {

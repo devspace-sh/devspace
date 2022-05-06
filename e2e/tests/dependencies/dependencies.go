@@ -66,9 +66,7 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out.txt"), `dep3
-dep2
-dep2
-wait
+dep2dep2wait
 `)
 	})
 

@@ -9,5 +9,5 @@ pipelines:
   deploy: |-
     run_dependencies --all
     # We use dep2 here because we don't know if dep1 or dep2 finishs first
-    echo "dep2" >> out.txt
+    echo -n "dep2" >> out.txt
 

@@ -8,5 +8,5 @@ dependencies:
 pipelines:
   deploy: |-
     run_dependencies --all
-    echo "dep2" >> out.txt
+    echo -n "dep2" >> out.txt
 

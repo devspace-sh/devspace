@@ -1,0 +1,43 @@
+version: v2beta1
+name: test
+
+dependencies:
+  dep1:
+    path: dep1.yaml
+
+pipelines:
+  other:
+    flags:
+      - name: other
+        default: test
+        type: string
+      - name: other2
+        default: true
+      - name: other3
+        default: true
+    run: |-
+      if get_flag test; then
+        exit 1
+      fi
+      
+      echo $(get_flag other) > other.txt
+      echo $(get_flag other2) > other2.txt
+      echo $(get_flag other3) > other3.txt
+
+  dev:
+    flags:
+      - name: test
+        default: test
+        type: string
+      - name: test2
+    run: |-
+      echo "$(get_flag test)" > test.txt
+      echo "$(get_flag test2)" > test2.txt
+      
+      run_pipelines other --set-flag other2=false
+      run_dependencies dep1 --set-flag test3=true --pipeline dev
+      
+      
+      
+
+
