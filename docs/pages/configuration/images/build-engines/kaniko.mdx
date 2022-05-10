@@ -288,7 +288,7 @@ images:
 The image `backend` is built using kaniko. Kaniko uses the Kubernete secret, `custom-pull-secret`, to pull images from registries that require authentication.
 
 :::tip Creating Pull Secrets using `pullSecrets`
-If you use the `pullSecret` option, you must create the secret before DevSpace tries to build your images. You can automate this by [using the pullSecrets feature](../../pullSecrets/index.mdx) as shown in this example:
+If you use the `pullSecret` option, you must create the secret before DevSpace tries to build your images. You can automate this by [using the pullSecrets feature](../../pullSecrets/README.mdx) as shown in this example:
 ```yaml
 pullSecrets:
 - registry: my-registry.com:5000

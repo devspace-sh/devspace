@@ -19,22 +19,23 @@ module.exports = {
       className: 'code-style',
       link: { type: 'doc', id: 'configuration/reference' },
       items: [
-        'configuration/imports/index',
-        'configuration/functions/index',
-        'configuration/pipelines/index',
+        'configuration/imports/README',
+        'configuration/functions/README',
+        'configuration/pipelines/README',
         {
           type: 'category',
           label: 'images',
-          link: { type: 'doc', id: 'configuration/images/index' },
+          link: { type: 'doc', id: 'configuration/images/README' },
           items: [
             'configuration/images/build',
             'configuration/images/tag',
             'configuration/images/push',
-            'configuration/images/pull-secrets',
+            'configuration/images/pull',
+            /*
             {
               type: 'category',
               label: 'Registry Auth',
-              link: { type: 'doc', id: 'configuration/images/registries/index' },
+              link: { type: 'doc', id: 'configuration/images/registries/README' },
               items: [
                 'configuration/images/registries/docker-hub',
                 'configuration/images/registries/github',
@@ -43,11 +44,11 @@ module.exports = {
                 'configuration/images/registries/azure',
                 'configuration/images/registries/other',
               ],
-            },
+            },*/
             {
               type: 'category',
               label: 'Build Engines',
-              link: { type: 'doc', id: 'configuration/images/build-engines/index' },
+              link: { type: 'doc', id: 'configuration/images/build-engines/README' },
               items: [
                 'configuration/images/build-engines/docker',
                 'configuration/images/build-engines/buildkit',
@@ -60,13 +61,13 @@ module.exports = {
         {
           type: 'category',
           label: 'deployments',
-          link: { type: 'doc', id: 'configuration/deployments/index' },
+          link: { type: 'doc', id: 'configuration/deployments/README' },
           items: [
             {
               type: 'category',
               label: 'helm',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/deployments/helm/index' },
+              link: { type: 'doc', id: 'configuration/deployments/helm/README' },
               items: [
                 'configuration/deployments/helm/component-chart',
                 'configuration/deployments/helm/local',
@@ -77,7 +78,7 @@ module.exports = {
               type: 'category',
               label: 'kubectl',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/deployments/kubectl/index' },
+              link: { type: 'doc', id: 'configuration/deployments/kubectl/README' },
               items: [
                 'configuration/deployments/kubectl/manifests',
                 'configuration/deployments/kubectl/kustomizations',
@@ -88,23 +89,23 @@ module.exports = {
         {
           type: 'category',
           label: 'dev',
-          link: { type: 'doc', id: 'configuration/dev/index' },
+          link: { type: 'doc', id: 'configuration/dev/README' },
           items: [
             {
               type: 'category',
               label: 'Dev Container',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/dev/container/index' },
+              link: { type: 'doc', id: 'configuration/dev/container/README' },
               items: [
                 'configuration/dev/container/selector',
-                'configuration/dev/container/index'
+                'configuration/dev/container/README'
               ],
             },
             {
               type: 'category',
               label: 'Ports',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/dev/ports/index' },
+              link: { type: 'doc', id: 'configuration/dev/ports/README' },
               items: [
                 'configuration/dev/ports/forwarding',
                 'configuration/dev/ports/reverse-forwarding',
@@ -115,7 +116,7 @@ module.exports = {
               type: 'category',
               label: 'Files',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/dev/files/index' },
+              link: { type: 'doc', id: 'configuration/dev/files/README' },
               items: [
                 'configuration/dev/files/sync',
                 'configuration/dev/files/persist-paths',
@@ -126,7 +127,7 @@ module.exports = {
               type: 'category',
               label: 'Dev Workflow',
               collapsible: false,
-              link: { type: 'doc', id: 'configuration/dev/workflow/index' },
+              link: { type: 'doc', id: 'configuration/dev/workflow/README' },
               items: [
                 'configuration/dev/workflow/terminal',
                 'configuration/dev/workflow/log-streaming',
@@ -138,11 +139,11 @@ module.exports = {
             },
           ],
         },
-        'configuration/pullSecrets/index',
+        'configuration/pullSecrets/README',
         {
           type: 'category',
           label: 'vars',
-          link: { type: 'doc', id: 'configuration/variables/index' },
+          link: { type: 'doc', id: 'configuration/variables/README' },
           items: [
             'configuration/variables/static',
             'configuration/variables/environment',
@@ -152,17 +153,17 @@ module.exports = {
             'configuration/variables/built-in',
           ],
         },
-        'configuration/commands/index',
+        'configuration/commands/README',
         {
           type: 'category',
           label: 'dependencies',
-          link: { type: 'doc', id: 'configuration/dependencies/index' },
+          link: { type: 'doc', id: 'configuration/dependencies/README' },
           items: [
             'configuration/dependencies/git-repository',
             'configuration/dependencies/local-folder',
           ],
         },
-        'configuration/require/index',
+        'configuration/require/README',
       ],
     },
     {
@@ -172,87 +173,13 @@ module.exports = {
       link: { type: 'doc', id: 'commands/devspace' },
       items: [
         {
-          type: "category",
-          label: "devspace add",
-          items: [
-            "commands/devspace_add_plugin",
-          ]
+          type: 'autogenerated',
+          dirName: 'commands',
+          className: 'code-style',
         },
-        "commands/devspace_analyze",
-        "commands/devspace_attach",
-        "commands/devspace_build",
-        "commands/devspace_cleanup_images",
-        "commands/devspace_deploy",
-        "commands/devspace_dev",
-        "commands/devspace_enter",
-        "commands/devspace_init",
-        {
-          type: "category",
-          label: "devspace list",
-          items: [
-            "commands/devspace_list_commands",
-            "commands/devspace_list_contexts",
-            "commands/devspace_list_deployments",
-            "commands/devspace_list_namespaces",
-            "commands/devspace_list_plugins",
-            "commands/devspace_list_ports",
-            "commands/devspace_list_profiles",
-            "commands/devspace_list_sync",
-            "commands/devspace_list_vars"
-          ]
-        },
-        "commands/devspace_logs",
-        "commands/devspace_open",
-        "commands/devspace_print",
-        "commands/devspace_purge",
-        {
-          type: "category",
-          label: "devspace remove",
-          items: [
-            "commands/devspace_remove_context",
-            "commands/devspace_remove_plugin"
-          ]
-        },
-        "commands/devspace_render",
-        {
-          type: "category",
-          label: "devspace reset",
-          items: [
-            "commands/devspace_reset_dependencies",
-            "commands/devspace_reset_vars"
-          ]
-        },
-        "commands/devspace_run",
-        {
-          type: "category",
-          label: "devspace set",
-          items: [
-            "commands/devspace_set_var"
-          ]
-        },
-        "commands/devspace_sync",
-        "commands/devspace_ui",
-        {
-          type: "category",
-          label: "devspace update",
-          items: [
-            "commands/devspace_update_plugin",
-            "commands/devspace_update_dependencies"
-          ]
-        },
-        "commands/devspace_upgrade",
-        {
-          type: "category",
-          label: "devspace use",
-          items: [
-            "commands/devspace_use_context",
-            "commands/devspace_use_namespace",
-            "commands/devspace_use_profile"
-          ]
-        }
       ],
     },
-    "plugins/index",
+    "plugins/README",
     {
       type: 'link',
       label: '↗️ Component Chart',

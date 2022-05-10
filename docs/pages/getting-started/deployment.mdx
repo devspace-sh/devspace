@@ -35,11 +35,11 @@ devspace deploy -p production
 
 Running `devspace deploy -p production` will do the following:
 
-1. **Build the Dockerfile(s)** specified in the [`images` section of the `devspace.yaml`](../configuration/images/index.mdx)
-2. **Tag** the resulting image(s) with an auto-generated tag according to a [customizable tag schema](../configuration/images/index.mdx)
+1. **Build the Dockerfile(s)** specified in the [`images` section of the `devspace.yaml`](../configuration/images/README.mdx)
+2. **Tag** the resulting image(s) with an auto-generated tag according to a [customizable tag schema](../configuration/images/README.mdx)
 3. **Push** the resulting Docker images to the specified registries
 4. **Create image pull secrets** in your Kubernetes namespace (optional, enabled by default)
-5. **Deploy** everything that is defined within the [`deployments` section in the `devspace.yaml`](../configuration/deployments/index.mdx)
+5. **Deploy** everything that is defined within the [`deployments` section in the `devspace.yaml`](../configuration/deployments/README.mdx)
 
 :::note Image Building Only
 If you only want to build, tag and push all images but not deploy anything, run:
