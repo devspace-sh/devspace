@@ -106,7 +106,7 @@ jobs:
           echo "::set-output name=release_version::$RELEASE_VERSION"
       - run: |
           npm ci
-          export NPM_TAG=$RELEASE_VERSION
+          export NPM_TAG=$(node index.js get-tag)
           npm publish --tag $NPM_TAG
         working-directory: ./dist/npm
         env:
