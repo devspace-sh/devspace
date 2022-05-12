@@ -80,18 +80,17 @@ var useOldDryRun = func(path string) (bool, error) {
 	// compare kubectl version for --dry-run flag value
 	out, err := command.NewStreamCommand(path, []string{"version", "--client", "--short"}).Output()
 	if err != nil {
-		return false, err
+		return false, nil
 	}
 
 	v1, err := constraint.NewVersion(strings.TrimPrefix(strings.TrimSpace(string(out)), "Client Version: v"))
 	if err != nil {
-
-		return false, err
+		return false, nil
 	}
 
 	v2, err := constraint.NewVersion("1.18.0")
 	if err != nil {
-		return false, err
+		return false, nil
 	}
 
 	if v1.LessThan(v2) {
