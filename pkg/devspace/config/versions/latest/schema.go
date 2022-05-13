@@ -1392,6 +1392,9 @@ type CommandConfig struct {
 	// Name is the name of a command that is used via `devspace run NAME`
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
+	// Section can be used to group similar commands together in `devspace list commands`
+	Section string `yaml:"section,omitempty" json:"section,omitempty"`
+
 	// Command is the command that should be executed. For example: 'echo 123'
 	Command string `yaml:"command" json:"command"`
 

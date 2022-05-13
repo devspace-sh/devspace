@@ -1,11 +1,13 @@
 package log
 
 import (
-	"os"
-	"strings"
-
+	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/mgutz/ansi"
+	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
+	"io"
+	"os"
+	"runtime"
 )
 
 var baseLog = NewStdoutLogger(os.Stdin, stdout, stderr, logrus.InfoLevel)
@@ -46,77 +48,46 @@ func GetBaseInstance() Logger {
 	return baseLog
 }
 
-// WriteColored writes a message in color
-func writeColored(message string, color string) {
-	defaultLog.WriteString(logrus.InfoLevel, ansi.Color(message, color))
-}
-
-//SetFakePrintTable is a testing tool that allows overwriting the function PrintTable
-func SetFakePrintTable(fake func(s Logger, header []string, values [][]string)) {
-	fakePrintTable = fake
-}
-
-var fakePrintTable func(s Logger, header []string, values [][]string)
-
-// PrintTable prints a table with header columns and string values
 func PrintTable(s Logger, header []string, values [][]string) {
-	if fakePrintTable != nil {
-		fakePrintTable(s, header, values)
-		return
-	}
+	PrintTableWithOptions(s, header, values, nil)
+}
 
-	columnLengths := make([]int, len(header))
-	for k, v := range header {
-		columnLengths[k] = len(v)
-	}
+// PrintTableWithOptions prints a table with header columns and string values
+func PrintTableWithOptions(s Logger, header []string, values [][]string, modify func(table *tablewriter.Table)) {
+	reader, writer := io.Pipe()
+	defer writer.Close()
 
-	// Get maximum column length
-	for _, v := range values {
-		for key, value := range v {
-			if len(value) > 64 {
-				value = value[:61] + "..."
-				v[key] = value
-			}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
 
-			if len(value) > columnLengths[key] {
-				columnLengths[key] = len(value)
-			}
+		sa := scanner.NewScanner(reader)
+		for sa.Scan() {
+			s.WriteString(logrus.InfoLevel, "  "+sa.Text()+"\n")
 		}
-	}
+	}()
 
-	s.WriteString(logrus.InfoLevel, "\n")
-
-	// Print Header
-	for key, value := range header {
-		writeColored(" "+value+"  ", "green+b")
-
-		padding := columnLengths[key] - len(value)
-
-		if padding > 0 {
-			s.WriteString(logrus.InfoLevel, strings.Repeat(" ", padding))
+	table := tablewriter.NewWriter(writer)
+	table.SetHeader(header)
+	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
+		colors := []tablewriter.Colors{}
+		for range header {
+			colors = append(colors, tablewriter.Color(tablewriter.FgGreenColor))
 		}
+		table.SetHeaderColor(colors...)
 	}
 
-	s.WriteString(logrus.InfoLevel, "\n")
-
-	if len(values) == 0 {
-		s.WriteString(logrus.InfoLevel, " No entries found\n")
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetBorders(tablewriter.Border{Left: false, Top: false, Right: false, Bottom: false})
+	table.AppendBulk(values)
+	if modify != nil {
+		modify(table)
 	}
 
-	// Print Values
-	for _, v := range values {
-		for key, value := range v {
-			s.WriteString(logrus.InfoLevel, " "+value+"  ")
-
-			padding := columnLengths[key] - len(value)
-
-			if padding > 0 {
-				s.WriteString(logrus.InfoLevel, strings.Repeat(" ", padding))
-			}
-		}
-
-		s.WriteString(logrus.InfoLevel, "\n")
-	}
-
-	s.WriteString(logrus.InfoLevel, "\n")
+	// Render
+	_, _ = writer.Write([]byte("\n"))
+	table.Render()
+	_, _ = writer.Write([]byte("\n"))
+	_ = writer.Close()
+	<-done
 }
