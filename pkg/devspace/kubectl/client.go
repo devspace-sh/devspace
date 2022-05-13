@@ -294,6 +294,19 @@ func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, aut
 		}
 	}
 
+	// Save changes to cache
+	if localCache != nil {
+		// Save changes to cache
+		localCache.SetLastContext(&localcache.LastContextConfig{
+			Context:   currentConfigContext.Context,
+			Namespace: currentConfigContext.Namespace,
+		})
+		err := localCache.Save()
+		if err != nil {
+			log.Warnf("Error saving cache: %v", err)
+		}
+	}
+
 	// Info messages
 	log.Infof("Using namespace '%s'", ansi.Color(currentConfigContext.Namespace, "white+b"))
 	log.Infof("Using kube context '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
