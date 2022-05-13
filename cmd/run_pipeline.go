@@ -6,7 +6,6 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
@@ -350,32 +349,13 @@ func initialize(ctx context.Context, f factory.Factory, options *CommandOptions,
 	}
 	devCtx = devCtx.WithDependencies(dependencies)
 
-	// update last used kube context & save generated yaml
-	err = updateLastKubeContext(devCtx)
+	// save local cache
+	err = localCache.Save()
 	if err != nil {
-		return nil, errors.Wrap(err, "update last kube context")
+		return nil, errors.Wrap(err, "save cache")
 	}
 
 	return devCtx, nil
-}
-
-func updateLastKubeContext(ctx devspacecontext.Context) error {
-	// Update generated if we deploy the application
-	if ctx.KubeClient() != nil {
-		if ctx.Config() != nil && ctx.Config().LocalCache() != nil {
-			ctx.Config().LocalCache().SetLastContext(&localcache.LastContextConfig{
-				Context:   ctx.KubeClient().CurrentContext(),
-				Namespace: ctx.KubeClient().Namespace(),
-			})
-
-			err := ctx.Config().LocalCache().Save()
-			if err != nil {
-				return errors.Wrap(err, "save generated")
-			}
-		}
-	}
-
-	return nil
 }
 
 func runWithHooks(ctx devspacecontext.Context, command string, fn func() error) (err error) {
