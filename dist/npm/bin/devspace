@@ -35,6 +35,9 @@ if [ ! -f "$BINARY" ] || [ "$STAT" -lt 10000 ]; then
 
     echo "Running: node $BASEDIR/$INDEX_FILE finish-install $BINDIR"
     /usr/bin/env node "$BASEDIR/$INDEX_FILE" finish-install $BINDIR;
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
 
     CMD_BIN=$(command -v cmd.exe)
 
