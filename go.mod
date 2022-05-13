@@ -17,6 +17,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.1.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/gliderlabs/ssh v0.3.3
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/websocket v1.4.2
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
@@ -31,6 +32,7 @@ require (
 	github.com/moby/buildkit v0.8.2
 	github.com/moby/sys/symlink v0.2.0 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/otiai10/copy v0.0.0-20180813030456-0046ee23fdbd
@@ -48,7 +50,7 @@ require (
 	github.com/toqueteos/trie v1.0.0 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-	golang.org/x/net v0.0.0-20210825183410-e898025ed96a
+	golang.org/x/net v0.0.0-20211029224645-99673261e6eb
 	golang.org/x/text v0.3.7
 	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1

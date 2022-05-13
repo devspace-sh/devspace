@@ -7,7 +7,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
+	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
+	"sort"
 
 	"github.com/spf13/cobra"
 )
@@ -32,14 +34,14 @@ devspace.yaml
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunListProfiles(f, cobraCmd, args)
+			return cmd.RunListCommands(f, cobraCmd, args)
 		}}
 
 	return commandsCmd
 }
 
-// RunListCommands runs the list  command logic
-func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+// RunListCommands runs the list command logic
+func (cmd *commandsCmd) RunListCommands(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
 	// Set config root
 	configLoader, err := f.NewConfigLoader("")
@@ -63,24 +65,47 @@ func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 
 	// Specify the table column names
 	headerColumnNames := []string{
+		"Section",
 		"Name",
-		"Command",
 		"Description",
 	}
 
-	rows := [][]string{}
+	sections := map[string][][]string{}
 	for _, command := range commands {
 		if command.Internal {
 			continue
 		}
 
-		rows = append(rows, []string{
+		sections[command.Section] = append(sections[command.Section], []string{
 			command.Name,
-			command.Command,
 			command.Description,
 		})
 	}
 
-	log.PrintTable(logger, headerColumnNames, rows)
+	allRows := [][]string{}
+	for section, r := range sections {
+		sort.Slice(r, func(i, j int) bool {
+			return r[i][0] < r[j][0]
+		})
+		if section == "" && len(sections) == 1 {
+			headerColumnNames = []string{"Name", "Description"}
+			allRows = r
+			break
+		}
+
+		for _, ri := range r {
+			allRows = append(allRows, []string{
+				section,
+				ri[0],
+				ri[1],
+			})
+		}
+	}
+	sort.SliceStable(allRows, func(i, j int) bool {
+		return allRows[i][0] < allRows[j][0]
+	})
+	log.PrintTableWithOptions(logger, headerColumnNames, allRows, func(table *tablewriter.Table) {
+		table.SetAutoMergeCells(true)
+	})
 	return nil
 }
