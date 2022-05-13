@@ -2,11 +2,12 @@ package imageselector
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"
-	"regexp"
-	"strings"
 )
 
 type ImageSelector struct {
@@ -35,7 +36,7 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 		if c.Images != nil && c.Images[configImageName] != nil {
 			if len(c.Images[configImageName].Tags) > 0 {
 				return &ImageSelector{
-					Image: c.Images[configImageName].Image + ":" + strings.Replace(c.Images[configImageName].Tags[0], "#", "x", -1),
+					Image: c.Images[configImageName].Image + ":" + strings.ReplaceAll(c.Images[configImageName].Tags[0], "#", "x"),
 				}, nil
 			}
 
@@ -81,7 +82,7 @@ func CompareImageNames(selector string, image2 string) bool {
 	// we replace possible # with a's here to avoid an parsing error
 	// since the tag is stripped anyways it doesn't really matter if we lose
 	// information where the # were
-	tagStrippedImage1, _, err := dockerfile.GetStrippedDockerImageName(strings.Replace(image1, "#", "a", -1))
+	tagStrippedImage1, _, err := dockerfile.GetStrippedDockerImageName(strings.ReplaceAll(image1, "#", "a"))
 	if err != nil {
 		tagStrippedImage1 = image1
 	}
@@ -98,7 +99,7 @@ func CompareImageNames(selector string, image2 string) bool {
 
 		// if the tag consists of a # we build a regex
 		if strings.Contains(image1, "#") {
-			regex := "^" + strings.Replace(image1, "#", "[a-zA-Z]", -1) + "$"
+			regex := "^" + strings.ReplaceAll(image1, "#", "[a-zA-Z]") + "$"
 			exp, err := regexp.Compile(regex)
 			if err == nil {
 				return exp.MatchString(image2)

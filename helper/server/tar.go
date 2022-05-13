@@ -3,7 +3,6 @@ package server
 import (
 	"archive/tar"
 	"compress/gzip"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 
 	"github.com/pkg/errors"
 )
@@ -275,7 +276,7 @@ func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map
 }
 
 func getRelativeFromFullPath(fullpath string, prefix string) string {
-	return strings.TrimPrefix(strings.Replace(strings.Replace(fullpath[len(prefix):], "\\", "/", -1), "//", "/", -1), ".")
+	return strings.TrimPrefix(strings.ReplaceAll(strings.ReplaceAll(fullpath[len(prefix):], "\\", "/"), "//", "/"), ".")
 }
 
 func createFileInformationFromStat(relativePath string, stat os.FileInfo) *fileInformation {

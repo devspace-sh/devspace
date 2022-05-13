@@ -72,7 +72,7 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 		podTemplate.Labels = t.Spec.Template.Labels
 		podTemplate.Annotations = t.Spec.Template.Annotations
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
-		podTemplate.Spec.Hostname = strings.Replace(t.Name+"-0", ".", "-", -1)
+		podTemplate.Spec.Hostname = strings.ReplaceAll(t.Name+"-0", ".", "-")
 		for _, pvc := range t.Spec.VolumeClaimTemplates {
 			pvcName := pvc.Name
 			if pvcName == "" {

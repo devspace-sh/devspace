@@ -3,6 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -13,10 +17,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"io"
 	"mvdan.cc/sh/v3/interp"
-	"os"
-	"strings"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -284,7 +285,7 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 		if appendArgs {
 			// Append args to shell command
 			for _, arg := range args {
-				arg = strings.Replace(arg, "'", "'\"'\"'", -1)
+				arg = strings.ReplaceAll(arg, "'", "'\"'\"'")
 
 				shellCommand += " '" + arg + "'"
 			}

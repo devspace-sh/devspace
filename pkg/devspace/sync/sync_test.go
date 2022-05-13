@@ -503,13 +503,13 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 func makeRemoteTestCases(testCases testCaseList) testCaseList {
 	for _, f := range testCases {
 		if strings.Contains(f.path, "Upload") {
-			f.path = strings.Replace(f.path, "Upload", "Download", -1)
+			f.path = strings.ReplaceAll(f.path, "Upload", "Download")
 		} else {
-			f.path = strings.Replace(f.path, "Download", "Upload", -1)
+			f.path = strings.ReplaceAll(f.path, "Download", "Upload")
 		}
 
 		remoteEquivalent := checkedFileOrFolder{
-			path:                strings.Replace(f.path, "Local", "Remote", -1),
+			path:                strings.ReplaceAll(f.path, "Local", "Remote"),
 			shouldExistInLocal:  f.shouldExistInRemote,
 			shouldExistInRemote: f.shouldExistInLocal,
 			editLocation:        editInRemote,

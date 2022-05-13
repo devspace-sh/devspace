@@ -135,7 +135,7 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		fileContents, err := ioutil.ReadFile("devspace.yaml")
 		framework.ExpectNoError(err)
 
-		newString := strings.Replace(string(fileContents), "ubuntu:18.04", "alpine:3.14", -1)
+		newString := strings.ReplaceAll(string(fileContents), "ubuntu:18.04", "alpine:3.14")
 		err = ioutil.WriteFile("devspace.yaml", []byte(newString), 0666)
 		framework.ExpectNoError(err)
 
@@ -237,7 +237,7 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		fileContents, err := ioutil.ReadFile("devspace.yaml")
 		framework.ExpectNoError(err)
 
-		newString := strings.Replace(string(fileContents), "ubuntu:18.04", "alpine:3.14", -1)
+		newString := strings.ReplaceAll(string(fileContents), "ubuntu:18.04", "alpine:3.14")
 		err = ioutil.WriteFile("devspace.yaml", []byte(newString), 0666)
 		framework.ExpectNoError(err)
 
