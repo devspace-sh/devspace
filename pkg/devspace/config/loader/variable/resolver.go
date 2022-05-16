@@ -3,13 +3,14 @@ package variable
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"regexp"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
-	"path/filepath"
-	"regexp"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
@@ -233,8 +234,8 @@ func (r *resolver) insertVariableGraph(g *graph.Graph, node *latest.Variable) er
 func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{}, includedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range includedPaths {
-		path = strings.Replace(path, "*", "[^/]+", -1)
-		path = strings.Replace(path, "**", ".+", -1)
+		path = strings.ReplaceAll(path, "*", "[^/]+")
+		path = strings.ReplaceAll(path, "**", ".+")
 		path = "^" + path
 		expr, err := regexp.Compile(path)
 		if err != nil {
@@ -263,8 +264,8 @@ func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{
 func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{}, excludedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range excludedPaths {
-		path = strings.Replace(path, "*", "[^/]+", -1)
-		path = strings.Replace(path, "**", ".+", -1)
+		path = strings.ReplaceAll(path, "*", "[^/]+")
+		path = strings.ReplaceAll(path, "**", ".+")
 		path = "^" + path
 		expr, err := regexp.Compile(path)
 		if err != nil {

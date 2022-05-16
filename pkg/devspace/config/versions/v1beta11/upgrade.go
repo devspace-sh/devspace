@@ -388,7 +388,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	devPipeline := deployPipeline + "\n" + "start_dev --all" + "\n"
 	if c.Dev.Terminal != nil && c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0 && len(c.Dev.Terminal.Command) > 0 {
 		for _, c := range c.Dev.Terminal.Command {
-			devPipeline += "'" + strings.Replace(c, "'", "'\"'\"'", -1) + "' "
+			devPipeline += "'" + strings.ReplaceAll(c, "'", "'\"'\"'") + "' "
 		}
 
 		devPipeline += "\n"

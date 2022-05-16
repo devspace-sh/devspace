@@ -2,6 +2,11 @@ package deploy
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
@@ -9,11 +14,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
-	"io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 var _ = DevSpaceDescribe("deploy", func() {
@@ -107,8 +108,8 @@ var _ = DevSpaceDescribe("deploy", func() {
 		out, err := ioutil.ReadFile(manifests)
 		framework.ExpectNoError(err)
 
-		data := strings.Replace(string(out), "###NAMESPACE1###", ns, -1)
-		data = strings.Replace(data, "###NAMESPACE2###", ns2, -1)
+		data := strings.ReplaceAll(string(out), "###NAMESPACE1###", ns)
+		data = strings.ReplaceAll(data, "###NAMESPACE2###", ns2)
 
 		err = ioutil.WriteFile(manifests, []byte(data), 0777)
 		framework.ExpectNoError(err)

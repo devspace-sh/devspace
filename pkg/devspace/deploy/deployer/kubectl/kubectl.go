@@ -62,7 +62,7 @@ func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (de
 
 	manifests := []string{}
 	for _, ptrManifest := range deployConfig.Kubectl.Manifests {
-		manifest := strings.Replace(ptrManifest, "*", "", -1)
+		manifest := strings.ReplaceAll(ptrManifest, "*", "")
 		if deployConfig.Kubectl.Kustomize != nil && *deployConfig.Kubectl.Kustomize {
 			manifest = strings.TrimSuffix(manifest, "kustomization.yaml")
 		}
