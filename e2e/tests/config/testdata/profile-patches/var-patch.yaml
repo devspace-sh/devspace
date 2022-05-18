@@ -1,0 +1,26 @@
+version: v1beta11
+
+vars:
+  - name: LABELS
+    value:
+      app: sample
+  - name: BIN
+    value: sample
+
+images:
+  test:
+    image: ${BIN}
+    build:
+      kaniko:
+        labels: ${LABELS}
+
+profiles:
+  - name: alt
+    patches:
+      - op: replace
+        path: vars.name=LABELS.value
+        value:
+          app: sample-alt
+      - op: replace
+        path: vars.name=BIN.value
+        value: sample-alt
