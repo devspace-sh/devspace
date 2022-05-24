@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -30,6 +32,8 @@ type localCommandHook struct {
 	Stderr io.Writer
 }
 
+var EnvironmentVariableRegEx = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+
 func (l *localCommandHook) Execute(ctx devspacecontext.Context, hook *latest.HookConfig, cmdExtraEnv map[string]string) error {
 	// Create extra env variables
 	osArgsBytes, err := json.Marshal(os.Args)
@@ -45,6 +49,13 @@ func (l *localCommandHook) Execute(ctx devspacecontext.Context, hook *latest.Hoo
 	}
 	for k, v := range cmdExtraEnv {
 		extraEnv[k] = v
+	}
+	for k, v := range ctx.Config().Variables() {
+		if !EnvironmentVariableRegEx.MatchString(k) {
+			continue
+		}
+
+		extraEnv[k] = fmt.Sprintf("%v", v)
 	}
 
 	// resolve hook command and args
