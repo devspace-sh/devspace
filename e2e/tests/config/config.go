@@ -56,6 +56,28 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(config.Config().Dev["sync-0"].Terminal.Command, "test")
 	})
 
+	ginkgo.It("should patch correctly", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// reload it
+		config, _, err := framework.LoadConfigWithOptions(f, kubeClient.Client(), "var-patch.yaml", &loader.ConfigOptions{})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Images), 1)
+		framework.ExpectEqual(config.Config().Images["test"].Image, "sample")
+		framework.ExpectEqual(config.Config().Images["test"].Kaniko.Labels, map[string]string{"app": "sample"})
+
+		// with profile
+		config, _, err = framework.LoadConfigWithOptions(f, kubeClient.Client(), "var-patch.yaml", &loader.ConfigOptions{Profiles: []string{"alt"}})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Images), 1)
+		framework.ExpectEqual(config.Config().Images["test"].Image, "sample-alt")
+		framework.ExpectEqual(config.Config().Images["test"].Kaniko.Labels, map[string]string{"app": "sample-alt"})
+	})
+
 	ginkgo.It("should resolve runtime environment variables correctly", func() {
 		tempDir, err := framework.CopyToTempDir("tests/config/testdata/runtime-variables")
 		framework.ExpectNoError(err)
@@ -1737,8 +1759,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// check if variables were loaded correctly
-		fmt.Println(config.Variables())
-		framework.ExpectEqual(len(config.Variables()), 4+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(len(config.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(config.LocalCache().ListVars()), 1)
 		test1, _ := config.LocalCache().GetVar("TEST_1")
 		framework.ExpectEqual(test1, "test")
@@ -1767,7 +1788,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// config
-		framework.ExpectEqual(len(config.Variables()), 4+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(len(config.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(config.LocalCache().ListVars()), 2)
 		notUsed, _ = config.LocalCache().GetVar("NOT_USED2")
 		framework.ExpectEqual(notUsed, "test")
@@ -1792,7 +1813,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// check if default config variables were loaded correctly
-		framework.ExpectEqual(len(config.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(len(config.Variables()), 2+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(config.LocalCache().ListVars()), 1)
 		value, _ := config.LocalCache().GetVar("NAME")
 		framework.ExpectEqual(value, "default")
@@ -1808,7 +1829,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// check if custom config variables were loaded correctly
-		framework.ExpectEqual(len(customConfig.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(len(customConfig.Variables()), 2+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(customConfig.LocalCache().ListVars()), 1)
 		value, _ = customConfig.LocalCache().GetVar("NAME")
 		framework.ExpectEqual(value, "custom")

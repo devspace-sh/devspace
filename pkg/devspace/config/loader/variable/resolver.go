@@ -115,7 +115,7 @@ func (r *resolver) replaceString(ctx context.Context, str string) (interface{}, 
 	})
 }
 
-func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, error) {
+func (r *resolver) findVariablesInclude(haystack interface{}, include []*regexp.Regexp) ([]*latest.Variable, error) {
 	// find out what vars are really used
 	varsUsed := map[string]bool{}
 	switch t := haystack.(type) {
@@ -125,7 +125,11 @@ func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, erro
 			return "", nil
 		})
 	case map[string]interface{}:
-		err := walk.Walk(t, varMatchFn, func(_, value string) (interface{}, error) {
+		err := walk.Walk(t, varMatchFn, func(path, value string) (interface{}, error) {
+			if expression.ExcludedPath(path, nil, include) {
+				return value, nil
+			}
+
 			_, _ = varspkg.ParseString(value, func(v string) (interface{}, error) {
 				varsUsed[v] = true
 				return "", nil
@@ -140,7 +144,7 @@ func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, erro
 
 	// add always resolve variables
 	for _, v := range r.vars {
-		if v.AlwaysResolve || v.Value != nil {
+		if v.AlwaysResolve {
 			varsUsed[v.Name] = true
 		}
 	}
@@ -153,6 +157,10 @@ func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, erro
 	}
 
 	return r.orderVariables(varsUsed)
+}
+
+func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, error) {
+	return r.findVariablesInclude(haystack, nil)
 }
 
 func (r *resolver) orderVariables(vars map[string]bool) ([]*latest.Variable, error) {
@@ -296,7 +304,7 @@ func (r *resolver) FillVariables(ctx context.Context, haystack interface{}) (int
 }
 
 func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{}, exclude, include []*regexp.Regexp) (interface{}, error) {
-	varsUsed, err := r.FindVariables(haystack)
+	varsUsed, err := r.findVariablesInclude(haystack, include)
 	if err != nil {
 		return nil, err
 	}
