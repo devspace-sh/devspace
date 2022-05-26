@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -87,8 +88,13 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 		log.Warnf("Unable to create new kubectl client: %v", err)
 	}
 
+	localCache, err := configLoader.LoadLocalCache()
+	if err != nil {
+		return err
+	}
+
 	// load config
-	config, err := configLoader.Load(context.Background(), client, configOptions, log)
+	config, err := configLoader.LoadWithParser(context.Background(), localCache, client, loader.NewEagerParser(), configOptions, log)
 	if err != nil {
 		return err
 	}
