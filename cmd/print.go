@@ -88,13 +88,10 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 		log.Warnf("Unable to create new kubectl client: %v", err)
 	}
 
-	localCache, err := configLoader.LoadLocalCache()
-	if err != nil {
-		return err
-	}
+	parser := loader.NewEagerParser()
 
 	// load config
-	config, err := configLoader.LoadWithParser(context.Background(), localCache, client, loader.NewEagerParser(), configOptions, log)
+	config, err := configLoader.LoadWithParser(context.Background(), nil, client, parser, configOptions, log)
 	if err != nil {
 		return err
 	}
@@ -105,7 +102,7 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 		WithKubeClient(client)
 
 	// resolve dependencies
-	dependencies, err := dependency.NewManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
+	dependencies, err := dependency.NewManagerWithParser(ctx, configOptions, parser).ResolveAll(ctx, dependency.ResolveOptions{})
 	if err != nil {
 		log.Warnf("Error resolving dependencies: %v", err)
 	}
