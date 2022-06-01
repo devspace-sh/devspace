@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -87,8 +88,10 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 		log.Warnf("Unable to create new kubectl client: %v", err)
 	}
 
+	parser := loader.NewEagerParser()
+
 	// load config
-	config, err := configLoader.Load(context.Background(), client, configOptions, log)
+	config, err := configLoader.LoadWithParser(context.Background(), nil, client, parser, configOptions, log)
 	if err != nil {
 		return err
 	}
@@ -99,7 +102,7 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 		WithKubeClient(client)
 
 	// resolve dependencies
-	dependencies, err := dependency.NewManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
+	dependencies, err := dependency.NewManagerWithParser(ctx, configOptions, parser).ResolveAll(ctx, dependency.ResolveOptions{})
 	if err != nil {
 		log.Warnf("Error resolving dependencies: %v", err)
 	}

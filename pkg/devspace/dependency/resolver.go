@@ -24,6 +24,7 @@ import (
 // ResolverInterface defines the resolver interface that takes dependency configs and resolves them
 type ResolverInterface interface {
 	Resolve(ctx devspacecontext.Context) ([]types.Dependency, error)
+	WithParser(parser loader.Parser) ResolverInterface
 }
 
 // Resolver implements the resolver interface
@@ -32,6 +33,7 @@ type resolver struct {
 
 	BaseCache  localcache.Cache
 	BaseConfig *latest.Config
+	BaseParser loader.Parser
 
 	ConfigOptions *loader.ConfigOptions
 }
@@ -88,6 +90,16 @@ func (r *resolver) Resolve(ctx devspacecontext.Context) ([]types.Dependency, err
 	}
 
 	return children, nil
+}
+
+func (r *resolver) WithParser(parser loader.Parser) ResolverInterface {
+	if r == nil {
+		return nil
+	}
+
+	n := *r
+	n.BaseParser = parser
+	return &n
 }
 
 func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, parentConfigName string, currentDependency *Dependency, dependencies []*latest.DependencyConfig) error {
@@ -206,7 +218,11 @@ func (r *resolver) resolveDependency(ctx devspacecontext.Context, dependencyConf
 			return err
 		}
 
-		dConfigWrapper, err = configLoader.Load(ctx.Context(), client, cloned, ctx.Log())
+		if r.BaseParser == nil {
+			dConfigWrapper, err = configLoader.Load(ctx.Context(), client, cloned, ctx.Log())
+		} else {
+			dConfigWrapper, err = configLoader.LoadWithParser(ctx.Context(), nil, client, r.BaseParser, cloned, ctx.Log())
+		}
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", dependencyName))
 		}
