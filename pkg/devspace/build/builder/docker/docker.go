@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	command2 "github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
@@ -182,6 +183,27 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 		}
 	} else {
 		ctx.Log().Infof("Skip image push for %s", b.helper.ImageName)
+		//load image if it is a kind-context
+		if ctx.KubeClient() != nil && kubectl.IsKindContext(ctx.KubeClient().CurrentContext()) {
+			for _, tag := range buildOptions.Tags {
+				command := []string{"kind", "load", "docker-image", tag}
+				completeArgs := []string{}
+				completeArgs = append(completeArgs, command[1:]...)
+				// Determine output writer
+				var writeCloser io.WriteCloser
+				if ctx.Log() == logpkg.GetInstance() {
+					writeCloser = logpkg.WithNopCloser(stdout)
+				} else {
+					writeCloser = ctx.Log().Writer(logrus.InfoLevel, false)
+				}
+				defer writeCloser.Close()
+				err = command2.CommandWithEnv(ctx.Context(), ctx.WorkingDir(), writeCloser, writeCloser, nil, nil, command[0], completeArgs...)
+				if err != nil {
+					ctx.Log().Info(errors.Errorf("error during image load to kind cluster: %v", err))
+				}
+				ctx.Log().Info("Image loaded to kind cluster")
+			}
+		}
 	}
 
 	return nil

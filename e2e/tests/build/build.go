@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -78,6 +79,52 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectEqual(found, true, "image not found in cache")
 	})
 
+	ginkgo.It("should build dockerfile with docker and load in kind cluster", func() {
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// create build command
+		buildCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
+			Pipeline: "build",
+		}
+		err = buildCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// create devspace docker client to access docker APIs
+		devspaceDockerClient, err := docker.NewClient(context.TODO(), log)
+		framework.ExpectNoError(err)
+
+		dockerClient := devspaceDockerClient.DockerAPIClient()
+		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		framework.ExpectNoError(err)
+
+		found := false
+	Outer:
+		for _, image := range imageList {
+			for _, tag := range image.RepoTags {
+				if tag == "my-docker-username/helloworld:latest" {
+					found = true
+					break Outer
+				}
+			}
+		}
+		framework.ExpectEqual(found, true, "image not found in cache")
+
+		var stdout, stderr bytes.Buffer
+		cmd := exec.Command("kind", "load", "docker-image", "my-docker-username/helloworld:latest")
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err = cmd.Run()
+		framework.ExpectNoError(err)
+		err = stderrContains(stderr.String(), "found to be already present")
+		framework.ExpectNoError(err)
+	})
+
 	ginkgo.It("should build dockerfile with docker even when KUBECONFIG is invalid", func() {
 		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker")
 		framework.ExpectNoError(err)
@@ -133,6 +180,50 @@ var _ = DevSpaceDescribe("build", func() {
 		err = buildCmd.RunDefault(f)
 		framework.ExpectError(err)
 		_ = os.Unsetenv("KUBECONFIG")
+	})
+
+	ginkgo.It("should build dockerfile with buildkit and load in kind cluster", func() {
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/buildkit")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// create build command
+		buildCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
+			Pipeline: "build",
+		}
+		err = buildCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// create devspace docker client to access docker APIs
+		devspaceDockerClient, err := docker.NewClient(context.TODO(), log)
+		framework.ExpectNoError(err)
+
+		dockerClient := devspaceDockerClient.DockerAPIClient()
+		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		framework.ExpectNoError(err)
+
+		for _, image := range imageList {
+			if len(image.RepoTags) > 0 && image.RepoTags[0] == "my-docker-username/helloworld-buildkit:latest" {
+				err = nil
+				break
+			} else {
+				err = errors.New("image not found")
+			}
+		}
+		framework.ExpectNoError(err)
+
+		var stdout, stderr bytes.Buffer
+		cmd := exec.Command("kind", "load", "docker-image", "my-docker-username/helloworld-buildkit:latest")
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err = cmd.Run()
+		framework.ExpectNoError(err)
+		err = stderrContains(stderr.String(), "found to be already present")
+		framework.ExpectNoError(err)
 	})
 
 	ginkgo.It("should build dockerfile with buildkit", func() {
@@ -420,6 +511,13 @@ var _ = DevSpaceDescribe("build", func() {
 
 func stdoutContains(stdout, content string) error {
 	if strings.Contains(stdout, content) {
+		return nil
+	}
+	return fmt.Errorf("%s found in output", content)
+}
+
+func stderrContains(stderr, content string) error {
+	if strings.Contains(stderr, content) {
 		return nil
 	}
 	return fmt.Errorf("%s found in output", content)

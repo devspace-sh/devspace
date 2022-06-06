@@ -204,8 +204,27 @@ func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.
 			return fmt.Errorf("error retrieving minikube environment with 'minikube docker-env --shell none'. Try setting the option preferMinikube to false: %v", err)
 		}
 	}
+	err = command2.CommandWithEnv(ctx, dir, writer, writer, context, minikubeEnv, command[0], completeArgs...)
+	if err != nil {
+		return err
+	}
+	//load image if it is a kind-context
+	if skipPush && kubeClient != nil && kubectl.IsKindContext(kubeClient.CurrentContext()) {
+		if len(options.Tags) > 0 {
+			for _, tag := range options.Tags {
+				command := []string{"kind", "load", "docker-image", tag}
+				completeArgs := []string{}
+				completeArgs = append(completeArgs, command[1:]...)
+				err = command2.CommandWithEnv(ctx, dir, writer, writer, nil, minikubeEnv, command[0], completeArgs...)
+				if err != nil {
+					log.Info(errors.Errorf("error during image load to kind cluster: %v", err))
+				}
+				log.Info("Image loaded to kind cluster")
+			}
+		}
+	}
 
-	return command2.CommandWithEnv(ctx, dir, writer, writer, context, minikubeEnv, command[0], completeArgs...)
+	return nil
 }
 
 type NodeGroup struct {
