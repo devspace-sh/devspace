@@ -69,9 +69,18 @@ module.exports = {
               collapsible: false,
               link: { type: 'doc', id: 'configuration/deployments/helm/README' },
               items: [
-                'configuration/deployments/helm/component-chart',
-                'configuration/deployments/helm/local',
-                'configuration/deployments/helm/remote',
+                {
+                  type: 'category',
+                  label: 'Chart',
+                  collapsible: false,
+                  link: { type: 'doc', id: 'configuration/deployments/helm/chart/README' },
+                  items: [
+                    'configuration/deployments/helm/chart/component-chart',
+                    'configuration/deployments/helm/chart/local',
+                    'configuration/deployments/helm/chart/remote',
+                  ],
+                },
+                'configuration/deployments/helm/values',
               ],
             },
             {

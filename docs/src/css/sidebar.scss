@@ -142,6 +142,18 @@ body .menu {
               opacity: 0.6;
             }
           }
+  
+          .menu__list {
+            /* 5th level links */
+            .menu__link {
+              padding-left: 7.5rem;
+              font-size: 0.85em;
+              
+              &:not(.menu__link--active):not(:hover) {
+                opacity: 0.6;
+              }
+            }
+          }
         }
       }
     }

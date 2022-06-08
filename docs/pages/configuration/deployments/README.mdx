@@ -3,172 +3,88 @@ title: Deployments
 sidebar_label: Basics
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-import FragmentWorkflowDeployDependencies from '../../_partials/workflow-deploy-dependencies.mdx';
-import FragmentWorkflowBuildImages from '../../_partials/workflow-build-images.mdx';
-import FragmentWorkflowReplaceTags from '../../_partials/workflow-replace-tags.mdx';
-import FragmentWorkflowDeployProject from '../../_partials/workflow-deploy-project.mdx';
 import ConfigPartialDeployments from '../_partials/v2beta1/deployments.mdx'
 
-Deployments are configured within the `deployments` section of the `devspace.yaml`.
 
-## Examples
+## Deploy with DevSpace
 
-<Tabs
-  defaultValue="mixed"
-  values={[
-    { label: 'Mixed', value: 'mixed', },
-    { label: 'Component Chart', value: 'component', },
-    { label: 'Custom Helm Chart', value: 'helm', },
-    { label: 'Manifests', value: 'manifests', },
-    { label: 'Kustomizations', value: 'kustomize', },
-  ]
-}>
-<TabItem value="mixed">
-
-```yaml
+### 1. Define Deployments
+To deploy to Kubernetes using DevSpace, we need to define `deployments` in `devspace.yaml`:
+```yaml title=devspace.yaml
+version: v2beta1
 deployments:
-  deployment-1:               # Name of this deployment
-    helm:                     # Deploy using the Component Helm Chart
-      values: ...             # See: https://devspace.sh/component-chart/docs/introduction
-  
-  deployment-2:               # Name of this deployment
-    kubectl:                  # Deploy Kubernetes manifests or Kustomizations
+  configs:
+    kubectl:
       manifests:
-      - app/manifests/
-      - db/deployment.yaml
-
-  deployment-3:               # Name of this deployment
-    helm:                     # Deploy a Helm Chart
+      - ./api/deploy/configmap.yaml
+      - ./payments/deploy/configmap.yaml
+  api:
+    helm:
       chart:
-        name: bitnami/mysql   # Deploy chart from bitnami registry
-      values: ...
-
-  deployment-4:               # Name of this deployment
-    helm: ...                 # Deploy another Helm Chart
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+          - image: ghcr.io/loft-sh/devspace-example-api
+        service:
+          ports:
+            - port: 8080
+  payments:
+    helm:
       chart:
-        name: ./chart         # Deploy chart from local folder
-      values: ...
-```
-
-</TabItem>
-<TabItem value="component">
-
-```yaml
-deployments:
-  deployment-1:               # Name of this deployment
-    helm:                     # Deploy using the Component Helm Chart
-      values: ...             # See: https://devspace.sh/component-chart/docs/introduction
-```
-
-</TabItem>
-<TabItem value="helm">
-
-```yaml
-deployments:
-  database:                   # Name of this deployment
-    helm:                     # Deploy a Helm Chart
+        name: ./payments/chart/
+      valuesFiles:
+      - ./payments/helm-values-dev.yaml
+  auth:
+    helm:
       chart:
-        name: bitnami/mysql   # Deploy chart from bitnami registry
-      values: ...
-  backend:                    # Name of this deployment
-    helm: ...                 # Deploy another Helm Chart
-      chart:
-        name: ./chart         # Deploy chart from local folder
-      values: ...
+        name: auth-server-chart
+        version: 3.2.1
+        repo: https://mycompany.tld/helm/
+      values:
+        ...
 ```
+The example above defines 4 deployments:
+- `configs` which deploys two ConfigMap objects to Kubernetes from plain manifest files
+- `api` which is deployed from the component chart provided by DevSpace
+- `payments` which is deployed using a local Helm chart that is located in a folder
+- `auth` which is deployed from a chart that has been pushed to a Helm repository
 
-</TabItem>
-<TabItem value="manifests">
 
-```yaml
+### 2. Call `create_deployments` in Pipeline
+DevSpace deploys resources to Kubernetes when the [`create_deployments` function](../functions/README.mdx#create_deployments) is called within `pipelines` as shown in this example:
+
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  # highlight-start
+  dev: |-
+    create_deployments --all
+    start_dev --all
+  deploy: |-
+    build_images --all
+    create_deployments --all
+  deploy-api: |-
+    create_deployments api
+  deploy-ordered: |-
+    create_deployments auth
+    create_deployments api payments
+  # highlight-end
+
 deployments:
-  backend:                    # Name of this deployment
-    kubectl:                  # Deploy Kubernetes manifests or Kustomizations
-      manifests:
-      - app/manifests/
-      - db/deployment.yaml
+  api: ...          # see example above
+  payments: ...     # see example above
+  auth: ...         # see example above
 ```
 
-</TabItem>
-<TabItem value="kustomize">
 
-```yaml
-deployments:
-  backend:                    # Name of this deployment
-    kubectl:                  # Deploy Kubernetes manifests or Kustomizations
-      kustomize: true
-      manifests:
-      - app/kustomization/
-```
-
-</TabItem>
-</Tabs>
-
-:::info Sequential and Concurrent Deployment
-Deployments, like images, will be processed in parallel by default. To process deployments sequentially, you can specify it as a dependency, or override the pipeline and call [create_deployments](../../configuration/functions/README.mdx#create_deployments) sequentially.
-:::
-
-## Run Deployments
-When you run one of the following commands, DevSpace will run the deployment process:
-- `devspace deploy` (before deploying the application)
-- `devspace dev` (before deploying the application and starting the development mode)
-
-### Important Flags
-The following flags are available for all commands that trigger the deployment process:
-- `-d / --force-deploy` redeploy all deployments (even if they could be skipped because they have not changed)
-- `-b / --force-build` rebuild all images (even if they could be skipped because context and Dockerfile have not changed)
-
-
-## Deployment Process
-DevSpace loads the `deployments` configuration from `devspace.yaml` and by default deploys each deployment sequentially in the order that they are specified in the `deployments` array. Alternatively, some or all deployments can be configured to deploy in parallel by setting `concurrent: true`. Deployments with concurrency enabled will deploy before sequential deployments. Additionally, DevSpace also deploys related projects specified in `dependencies`.
-
-:::warning Helm hooks and concurrency
-When using concurrency for Helm deployments that have Helm hooks, be cautious if those hooks depend on resources created by other deployments. You may want such a deployments to be run sequentially after concurrent deployments are completed. Otherwise, appropriate retry logic will be necessary for the affected Helm hook in order to avoid deployment failure.
-:::
-
-### 1. Deploy Dependencies
-
-<FragmentWorkflowDeployDependencies/>
-
-
-### 2. Build, Tag &amp; Push Images
-
-<FragmentWorkflowBuildImages/>
-
-
-### 3. Tag Replacement
-
-<FragmentWorkflowReplaceTags/>
-
-
-### 4. Deploy Project
-
-<FragmentWorkflowDeployProject/>
-
-<br/>
-
----
-
-## Useful Commands
-
-### `devspace list deployments`
-This command lists all deployments and their status:
-```bash
-devspace list deployments
-```
-
-### `devspace render`
-This command prints all Kubernetes manifests that would be created when running `devspace deploy` or `devspace dev` but without actually deploying them to the cluster:
-```bash
-devspace render
-```
-In case of Helm deployments, this command behaves similar to `helm install --dry-run --debug`
-
-:::info Image Building & Tag Replacement
-This command will build images (if necessary) and update the tags within manifests and Helm chart values.
-:::
+### 3. Run Pipeline
+Given the example above, you can now run:
+- `devspace deploy` or `devspace dev` to deploy all deployments
+- `devspace run-pipeline deploy-api` to deploy only the component chart deployment named `api`
+- `devspace run-pipeline deploy-ordered` to  
+  1. First deploy `auth` (blocking)
+  2. Then deploy `api` and `payments` in parallel
 
 
 ## Configuration
