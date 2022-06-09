@@ -212,6 +212,7 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 				}
 
 				if groupID != "" {
+					groupID = strings.ToLower(groupID)
 					group, ok := groups[groupID]
 					if !ok {
 						group = &Group{
