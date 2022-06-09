@@ -24,12 +24,15 @@ type DependencyOptions struct {
 	Exclude    []string `long:"exclude" description:"Dependencies to exclude"`
 	Only       []string `long:"only" description:"Dependencies to include"`
 	Sequential bool     `long:"sequential" description:"Run dependencies one after another"`
+
+	SetFlag []string `long:"set-flag" description:"Set a pipeline flag"`
 }
 
 // PipelineOptions describe how pipelines should be run
 type PipelineOptions struct {
-	Background bool `long:"background" description:"Run the pipeline in the background"`
-	Sequential bool `long:"sequential" description:"Run pipelines one after another"`
+	Background bool     `long:"background" description:"Run the pipeline in the background"`
+	Sequential bool     `long:"sequential" description:"Run pipelines one after another"`
+	SetFlag    []string `long:"set-flag" description:"Set a pipeline flag"`
 
 	Environ expand.Environ
 }

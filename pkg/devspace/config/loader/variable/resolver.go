@@ -3,13 +3,14 @@ package variable
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"regexp"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
-	"path/filepath"
-	"regexp"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
@@ -23,15 +24,9 @@ var AlwaysResolvePredefinedVars = []string{"DEVSPACE_NAME", "DEVSPACE_TMPDIR", "
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
 func NewResolver(localCache localcache.Cache, predefinedVariableOptions *PredefinedVariableOptions, flags []string, log log.Logger) (Resolver, error) {
 	memoryCache := map[string]interface{}{}
-	for _, cmdVar := range flags {
-		idx := strings.Index(cmdVar, "=")
-		if idx == -1 {
-			return nil, errors.Errorf("wrong --var format: %s, expected 'key=val'", cmdVar)
-		}
-
-		name := strings.TrimSpace(cmdVar[:idx])
-		value := convertStringValue(strings.TrimSpace(cmdVar[idx+1:]))
-		memoryCache[name] = value
+	err := MergeVarsWithFlags(memoryCache, flags)
+	if err != nil {
+		return nil, err
 	}
 
 	return &resolver{
@@ -40,6 +35,21 @@ func NewResolver(localCache localcache.Cache, predefinedVariableOptions *Predefi
 		options:     predefinedVariableOptions,
 		log:         log,
 	}, nil
+}
+
+func MergeVarsWithFlags(vars map[string]interface{}, flags []string) error {
+	for _, cmdVar := range flags {
+		idx := strings.Index(cmdVar, "=")
+		if idx == -1 {
+			return errors.Errorf("wrong --var format: %s, expected 'key=val'", cmdVar)
+		}
+
+		name := strings.TrimSpace(cmdVar[:idx])
+		value := convertStringValue(strings.TrimSpace(cmdVar[idx+1:]))
+		vars[name] = value
+	}
+
+	return nil
 }
 
 type resolver struct {
@@ -105,7 +115,7 @@ func (r *resolver) replaceString(ctx context.Context, str string) (interface{}, 
 	})
 }
 
-func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, error) {
+func (r *resolver) findVariablesInclude(haystack interface{}, include []*regexp.Regexp) ([]*latest.Variable, error) {
 	// find out what vars are really used
 	varsUsed := map[string]bool{}
 	switch t := haystack.(type) {
@@ -115,7 +125,11 @@ func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, erro
 			return "", nil
 		})
 	case map[string]interface{}:
-		err := walk.Walk(t, varMatchFn, func(_, value string) (interface{}, error) {
+		err := walk.Walk(t, varMatchFn, func(path, value string) (interface{}, error) {
+			if expression.ExcludedPath(path, nil, include) {
+				return value, nil
+			}
+
 			_, _ = varspkg.ParseString(value, func(v string) (interface{}, error) {
 				varsUsed[v] = true
 				return "", nil
@@ -130,7 +144,7 @@ func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, erro
 
 	// add always resolve variables
 	for _, v := range r.vars {
-		if v.AlwaysResolve || v.Value != nil {
+		if v.AlwaysResolve {
 			varsUsed[v.Name] = true
 		}
 	}
@@ -143,6 +157,10 @@ func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, erro
 	}
 
 	return r.orderVariables(varsUsed)
+}
+
+func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, error) {
+	return r.findVariablesInclude(haystack, nil)
 }
 
 func (r *resolver) orderVariables(vars map[string]bool) ([]*latest.Variable, error) {
@@ -224,8 +242,8 @@ func (r *resolver) insertVariableGraph(g *graph.Graph, node *latest.Variable) er
 func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{}, includedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range includedPaths {
-		path = strings.Replace(path, "*", "[^/]+", -1)
-		path = strings.Replace(path, "**", ".+", -1)
+		path = strings.ReplaceAll(path, "*", "[^/]+")
+		path = strings.ReplaceAll(path, "**", ".+")
 		path = "^" + path
 		expr, err := regexp.Compile(path)
 		if err != nil {
@@ -254,8 +272,8 @@ func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{
 func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{}, excludedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range excludedPaths {
-		path = strings.Replace(path, "*", "[^/]+", -1)
-		path = strings.Replace(path, "**", ".+", -1)
+		path = strings.ReplaceAll(path, "*", "[^/]+")
+		path = strings.ReplaceAll(path, "**", ".+")
 		path = "^" + path
 		expr, err := regexp.Compile(path)
 		if err != nil {
@@ -286,7 +304,7 @@ func (r *resolver) FillVariables(ctx context.Context, haystack interface{}) (int
 }
 
 func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{}, exclude, include []*regexp.Regexp) (interface{}, error) {
-	varsUsed, err := r.FindVariables(haystack)
+	varsUsed, err := r.findVariablesInclude(haystack, include)
 	if err != nil {
 		return nil, err
 	}

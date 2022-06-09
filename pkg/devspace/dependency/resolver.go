@@ -24,6 +24,7 @@ import (
 // ResolverInterface defines the resolver interface that takes dependency configs and resolves them
 type ResolverInterface interface {
 	Resolve(ctx devspacecontext.Context) ([]types.Dependency, error)
+	WithParser(parser loader.Parser) ResolverInterface
 }
 
 // Resolver implements the resolver interface
@@ -32,6 +33,7 @@ type resolver struct {
 
 	BaseCache  localcache.Cache
 	BaseConfig *latest.Config
+	BaseParser loader.Parser
 
 	ConfigOptions *loader.ConfigOptions
 }
@@ -39,7 +41,17 @@ type resolver struct {
 // NewResolver creates a new resolver for resolving dependencies
 func NewResolver(ctx devspacecontext.Context, configOptions *loader.ConfigOptions) ResolverInterface {
 	return &resolver{
-		DependencyGraph: graph.NewGraph(graph.NewNode(ctx.Config().Config().Name, &Dependency{name: ctx.Config().Config().Name, root: true})),
+		DependencyGraph: graph.NewGraph(graph.NewNode(ctx.Config().Config().Name, &Dependency{
+			name:         ctx.Config().Config().Name,
+			absolutePath: ctx.Config().Path(),
+			localConfig:  ctx.Config(),
+			dependencyConfig: &latest.DependencyConfig{
+				Name: ctx.Config().Config().Name,
+			},
+			dependencyCache: ctx.Config().LocalCache(),
+			kubeClient:      ctx.KubeClient(),
+			root:            true,
+		})),
 
 		BaseConfig: ctx.Config().Config(),
 		BaseCache:  ctx.Config().LocalCache(),
@@ -80,6 +92,16 @@ func (r *resolver) Resolve(ctx devspacecontext.Context) ([]types.Dependency, err
 	return children, nil
 }
 
+func (r *resolver) WithParser(parser loader.Parser) ResolverInterface {
+	if r == nil {
+		return nil
+	}
+
+	n := *r
+	n.BaseParser = parser
+	return &n
+}
+
 func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, parentConfigName string, currentDependency *Dependency, dependencies []*latest.DependencyConfig) error {
 	if currentDependency != nil {
 		currentDependency.children = []types.Dependency{}
@@ -96,7 +118,7 @@ func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, paren
 		)
 		if n, ok := r.DependencyGraph.Nodes[dependencyConfig.Name]; ok {
 			child = n.Data.(*Dependency)
-			if child.Config().Path() != dependencyConfigPath {
+			if child != nil && child.Config() != nil && child.Config().Path() != dependencyConfigPath {
 				ctx.Log().Warnf("Seems like you have multiple dependencies with name %s, but they use different source settings (%s != %s). This can lead to unexpected results and you should make sure that the devspace.yaml name is unique across your dependencies or that you use the dependencies.overrideName option", child.name, child.Config().Path(), dependencyConfigPath)
 			}
 
@@ -196,7 +218,11 @@ func (r *resolver) resolveDependency(ctx devspacecontext.Context, dependencyConf
 			return err
 		}
 
-		dConfigWrapper, err = configLoader.Load(ctx.Context(), client, cloned, ctx.Log())
+		if r.BaseParser == nil {
+			dConfigWrapper, err = configLoader.Load(ctx.Context(), client, cloned, ctx.Log())
+		} else {
+			dConfigWrapper, err = configLoader.LoadWithParser(ctx.Context(), nil, client, r.BaseParser, cloned, ctx.Log())
+		}
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", dependencyName))
 		}

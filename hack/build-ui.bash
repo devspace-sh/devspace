@@ -3,7 +3,6 @@
 set -e
 
 DEVSPACE_ROOT=$(git rev-parse --show-toplevel)
-VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
 
 # Install dependencies
 cd ui && npm install && npm run build

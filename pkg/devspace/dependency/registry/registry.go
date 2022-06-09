@@ -133,7 +133,7 @@ func (d *dependencyRegistry) MarkDependenciesExcluded(ctx devspacecontext.Contex
 
 func (d *dependencyRegistry) excludeDependencies(ctx devspacecontext.Context, dependencyNames []string, forceLeader bool, retries int) (map[string]bool, error) {
 	retMap := map[string]bool{}
-	if len(dependencyNames) == 0 {
+	if len(dependencyNames) == 0 || ctx.KubeClient() == nil {
 		return retMap, nil
 	}
 

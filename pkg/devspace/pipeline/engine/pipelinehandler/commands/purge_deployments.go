@@ -27,7 +27,9 @@ func PurgeDeployments(ctx devspacecontext.Context, pipeline types.Pipeline, args
 	if err != nil {
 		return err
 	}
-
+	if ctx.KubeClient() == nil {
+		return errors.Errorf(ErrMsg)
+	}
 	options := &PurgeDeploymentsOptions{
 		PurgeOptions: pipeline.Options().PurgeOptions,
 	}

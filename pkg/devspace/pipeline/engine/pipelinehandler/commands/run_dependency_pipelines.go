@@ -65,7 +65,6 @@ func RunDependencyPipelines(ctx devspacecontext.Context, pipeline types.Pipeline
 	if pluginErr != nil {
 		return pluginErr
 	}
-
 	err = pipeline.StartNewDependencies(ctx, deployDependencies, options.DependencyOptions)
 	if err != nil {
 		return err

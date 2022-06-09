@@ -1,9 +1,7 @@
 version: v1beta11
+name: root
+
 dependencies:
 - name: dependency
   source:
     path: dependency
-dev:
-  # Open terminal to the pod with the imageName created in dependency1
-  terminal:
-    imageSelector: image(dependency.default)

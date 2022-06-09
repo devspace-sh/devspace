@@ -2,13 +2,13 @@ package legacy
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 	"regexp"
 	"strings"
 
 	buildtypes "github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -132,7 +132,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 
 		// does the config have a tag defined?
 		if tag == "" && len(configImage.Tags) > 0 {
-			tag = strings.Replace(configImage.Tags[0], "#", "x", -1)
+			tag = strings.ReplaceAll(configImage.Tags[0], "#", "x")
 		}
 
 		// only return the tag

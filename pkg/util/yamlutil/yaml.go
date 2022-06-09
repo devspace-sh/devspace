@@ -44,11 +44,11 @@ func prettifyError(data []byte, err error) error {
 	// check if type error
 	if typeError, ok := err.(*yaml.TypeError); ok {
 		for i := range typeError.Errors {
-			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!seq", "an array", -1)
-			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!str", "string", -1)
-			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!map", "an object", -1)
-			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!int", "number", -1)
-			typeError.Errors[i] = strings.Replace(typeError.Errors[i], "!!bool", "boolean", -1)
+			typeError.Errors[i] = strings.ReplaceAll(typeError.Errors[i], "!!seq", "an array")
+			typeError.Errors[i] = strings.ReplaceAll(typeError.Errors[i], "!!str", "string")
+			typeError.Errors[i] = strings.ReplaceAll(typeError.Errors[i], "!!map", "an object")
+			typeError.Errors[i] = strings.ReplaceAll(typeError.Errors[i], "!!int", "number")
+			typeError.Errors[i] = strings.ReplaceAll(typeError.Errors[i], "!!bool", "boolean")
 
 			// add line to error
 			match := lineRegEx.FindSubmatch([]byte(typeError.Errors[i]))

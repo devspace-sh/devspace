@@ -31,6 +31,12 @@ func NewManager(ctx devspacecontext.Context, configOptions *loader.ConfigOptions
 	}
 }
 
+func NewManagerWithParser(ctx devspacecontext.Context, configOptions *loader.ConfigOptions, parser loader.Parser) Manager {
+	return &manager{
+		resolver: NewResolver(ctx, configOptions).WithParser(parser),
+	}
+}
+
 type ResolveOptions struct {
 	SkipDependencies []string
 	Dependencies     []string

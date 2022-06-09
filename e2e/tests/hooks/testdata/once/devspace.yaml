@@ -13,6 +13,9 @@ deployments:
             args: ["999999999999"]
 hooks:
   - command: |
+      echo -n $DEVSPACE_NAMESPACE > namespace.txt
+    events: ["after:deploy"]
+  - command: |
       mkdir -p /app
       echo -n $RANDOM > /app/once.out
     container:

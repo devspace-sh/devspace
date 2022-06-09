@@ -66,9 +66,7 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out.txt"), `dep3
-dep2
-dep2
-wait
+dep2dep2wait
 `)
 	})
 
@@ -455,10 +453,17 @@ wait
 		framework.ExpectEqual(len(list.Items), 0)
 	})
 
-	ginkgo.It("should resolve cyclic dependencies", func() {
+	ginkgo.It("should resolve and deploy cyclic dependencies", func() {
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/cyclic")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dependencies")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
 
 		// load it from the regular path first
 		_, dependencies, err := framework.LoadConfig(f, kubeClient.Client(), filepath.Join(tempDir, "devspace.yaml"))
@@ -467,5 +472,24 @@ wait
 		// check if dependencies were loaded correctly
 		framework.ExpectEqual(len(dependencies), 1)
 		framework.ExpectEqual(dependencies[0].Name(), "dependency")
+
+		// create a new deploy command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// expect single deployment
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "nginx", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "nginx2", metav1.GetOptions{})
+		framework.ExpectNoError(err)
 	})
 })

@@ -1,18 +1,12 @@
-version: v1beta11
+version: v2beta1
+
 dependencies:
- - name: root-devspace
-   source:
-     path: ../
+  dependency2:
+    path: ../dependency2
+
 deployments:
-- name: nginx
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: nginx
-dev:
-  ports:
-  - imageSelector: nginx
-    forward:
-      - port: 8080
-        remotePort: 80
+  nginx:
+    helm:
+      values:
+        containers:
+          - image: nginx

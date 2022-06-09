@@ -85,8 +85,7 @@ var useOldDryRun = func(ctx context.Context, dir, path string) (bool, error) {
 
 	v1, err := constraint.NewVersion(strings.TrimPrefix(strings.TrimSpace(string(out)), "Client Version: v"))
 	if err != nil {
-
-		return false, err
+		return false, nil
 	}
 
 	v2, err := constraint.NewVersion("1.18.0")

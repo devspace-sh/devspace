@@ -2106,7 +2106,7 @@ profiles:
 	// Execute test cases
 	for index, testCase := range testCases {
 		testMap := map[string]interface{}{}
-		err := yaml.Unmarshal([]byte(strings.Replace(testCase.in.config, "	", "  ", -1)), &testMap)
+		err := yaml.Unmarshal([]byte(strings.ReplaceAll(testCase.in.config, "	", "  ")), &testMap)
 		if err != nil {
 			t.Fatal(err)
 		}

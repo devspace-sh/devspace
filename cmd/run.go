@@ -3,6 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -13,10 +17,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"io"
 	"mvdan.cc/sh/v3/interp"
-	"os"
-	"strings"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -77,7 +78,7 @@ devspace --dependency my-dependency run any-command --any-command-flag
 
 	if rawConfig != nil && rawConfig.Config != nil {
 		for _, cmd := range rawConfig.Config.Commands {
-			runCmd.AddCommand(NewSpecificRunCommand(f, globalFlags, cmd, rawConfig.Resolver.ResolvedVariables()))
+			runCmd.AddCommand(NewSpecificRunCommand(cmd))
 		}
 	}
 	runCmd.Flags().StringVar(&cmd.Dependency, "dependency", "", "Run a command from a specific dependency")
@@ -284,7 +285,7 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 		if appendArgs {
 			// Append args to shell command
 			for _, arg := range args {
-				arg = strings.Replace(arg, "'", "'\"'\"'", -1)
+				arg = strings.ReplaceAll(arg, "'", "'\"'\"'")
 
 				shellCommand += " '" + arg + "'"
 			}
@@ -309,7 +310,7 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 	return command.CommandWithEnv(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, shellArgs...)
 }
 
-// RunCommandCmd holds the cmd flags of an run command
+// RunCommandCmd holds the cmd flags of a run command
 type RunCommandCmd struct {
 	*flags.GlobalFlags
 
@@ -321,15 +322,7 @@ type RunCommandCmd struct {
 }
 
 // NewSpecificRunCommand creates a new run command
-func NewSpecificRunCommand(f factory.Factory, globalFlags *flags.GlobalFlags, command *latest.CommandConfig, variables map[string]interface{}) *cobra.Command {
-	cmd := &RunCommandCmd{
-		GlobalFlags: globalFlags,
-		Command:     command,
-		Variables:   variables,
-		Stdout:      os.Stdout,
-		Stderr:      os.Stderr,
-	}
-
+func NewSpecificRunCommand(command *latest.CommandConfig) *cobra.Command {
 	description := command.Description
 	longDescription := command.Description
 	if description == "" {
@@ -348,24 +341,9 @@ func NewSpecificRunCommand(f factory.Factory, globalFlags *flags.GlobalFlags, co
 		Long:  longDescription,
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(cobraCmd *cobra.Command, originalArgs []string) error {
-			args, err := ParseArgs(cobraCmd, cmd.GlobalFlags, f.GetLog())
-			if err != nil {
-				return err
-			}
-
-			if cmd.ConfigPath != "" {
-				return cobraCmd.Parent().RunE(cobraCmd, originalArgs)
-			}
-
-			plugin.SetPluginCommand(cobraCmd, args)
-			return cmd.Run(f, args)
+			return cobraCmd.Parent().RunE(cobraCmd, originalArgs)
 		},
 	}
 	runCmd.DisableFlagParsing = true
 	return runCmd
-}
-
-func (cmd *RunCommandCmd) Run(f factory.Factory, args []string) error {
-	devCtx := devspacecontext.NewContext(context.Background(), cmd.Variables, f.GetLog())
-	return executeCommandWithAfter(devCtx.Context(), cmd.Command, args, cmd.Variables, devCtx.WorkingDir(), cmd.Stdout, cmd.Stderr, os.Stdin, devCtx.Log())
 }

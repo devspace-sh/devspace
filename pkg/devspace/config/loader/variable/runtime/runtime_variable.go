@@ -2,12 +2,13 @@ package runtime
 
 import (
 	"fmt"
+	"strings"
+
 	buildtypes "github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 var Locations = []string{
@@ -181,7 +182,7 @@ func BuildImageString(c config.Config, name string, fallbackImage string, fallba
 	if imageCache.Tag != "" {
 		tag = imageCache.Tag
 	} else if fallbackTag != "" {
-		tag = strings.Replace(fallbackTag, "#", "x", -1)
+		tag = strings.ReplaceAll(fallbackTag, "#", "x")
 	}
 
 	// only return the tag
