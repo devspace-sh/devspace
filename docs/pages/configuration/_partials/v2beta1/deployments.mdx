@@ -1,0 +1,32 @@
+
+import PartialDeploymentsreference from "./deployments_reference.mdx"
+
+
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+## `deployments` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;deployment_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#deployments}
+
+Deployments holds configuration of how DevSpace should deploy resources to Kubernetes. By default, DevSpace will deploy all defined deployments.
+If you are using a custom pipeline, you can dynamically define which deployment is deployed at which time during the
+execution.
+
+</summary>
+
+
+<details className="config-field" data-expandable="true"open>
+<summary>
+
+## `<deployment_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#deployments-name}
+
+Name of the deployment
+
+</summary>
+
+<PartialDeploymentsreference />
+
+
+</details>
+
+
+</details>

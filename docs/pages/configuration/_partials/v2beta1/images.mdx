@@ -1,0 +1,32 @@
+
+import PartialImagesreference from "./images_reference.mdx"
+
+
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+## `images` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;image_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images}
+
+Images holds configuration of how DevSpace should build images. By default, DevSpace will build all defined images.
+If you are using a custom pipeline, you can dynamically define which image is built at which time during the
+execution.
+
+</summary>
+
+
+<details className="config-field" data-expandable="true"open>
+<summary>
+
+## `<image_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-name}
+
+Name of the image, will be filled automatically
+
+</summary>
+
+<PartialImagesreference />
+
+
+</details>
+
+
+</details>

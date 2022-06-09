@@ -1,0 +1,68 @@
+
+import PartialBuildKitreference from "./buildKit_reference.mdx"
+import PartialDockerreference from "./docker_reference.mdx"
+import PartialKanikoreference from "./kaniko_reference.mdx"
+import PartialCustomreference from "./custom_reference.mdx"
+
+<div className="group" data-group="engines">
+<div className="group-name">Build Engines</div>
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `buildKit` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-buildKit}
+
+BuildKit if buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit
+
+</summary>
+
+<PartialBuildKitreference />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `docker` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-docker}
+
+Docker if docker is specified, DevSpace will build the image using the local docker daemon
+
+</summary>
+
+<PartialDockerreference />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `kaniko` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-kaniko}
+
+Kaniko if kaniko is specified, DevSpace will build the image in-cluster with kaniko
+
+</summary>
+
+<PartialKanikoreference />
+
+
+</details>
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `custom` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-custom}
+
+Custom if custom is specified, DevSpace will build the image with the help of
+a custom script.
+
+</summary>
+
+<PartialCustomreference />
+
+
+</details>
+
+</div>
