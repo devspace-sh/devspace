@@ -10,7 +10,7 @@ DevSpace allows you to modify the selected dev container to optimize it for deve
 
 ## How does it work?
 When any modifications are defined for a dev container, DevSpace will do the following:
-1. Find the Kubernetes pod that contains the dev container according to the [selectors](./selector.mdx) defined for this dev container.
+1. Find the Kubernetes pod that contains the dev container according to the [selectors](../selectors/README.mdx) defined for this dev container.
 2. Find the replica owner that this pod was created from (e.g. Deployment, StatefulSet, etc.)
 3. Scale down the replica number for the replica owner object, i.e. set `replicas: 0` for the Deployment, StatefulSet, etc.
 4. Clone the replica owner object to create a new Deployment/StatefulSet with the name `[old-object-name]-devspace`

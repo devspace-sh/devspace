@@ -890,7 +890,7 @@ type DevContainer struct {
 	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty" jsonschema_extras:"group=modifications"`
 
 	// ReversePorts are port mappings to make local ports available inside the container
-	ReversePorts []*PortMapping `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty" jsonschema_extras:"group=ports,group_name=Ports Forwarding"`
+	ReversePorts []*PortMapping `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty" jsonschema_extras:"group=ports,group_name=Port Forwarding"`
 
 	// Sync allows you to sync certain local paths with paths inside the container
 	Sync []*SyncConfig `yaml:"sync,omitempty" json:"sync,omitempty" jsonschema_extras:"group=sync,group_name=File Sync"`
