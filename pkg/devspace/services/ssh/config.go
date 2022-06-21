@@ -30,8 +30,14 @@ func configureSSHConfig(host, port string, log log.Logger) error {
 		return errors.Wrap(err, "get home dir")
 	}
 
+	devSpaceSSHConfigPath := filepath.Join(homeDir, ".ssh", "devspace_config")
+	newFile, err := addHost(devSpaceSSHConfigPath, host, port)
+	if err != nil {
+		return errors.Wrap(err, "parse devspace ssh config")
+	}
+
 	sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
-	newFile, err := addHost(sshConfigPath, host, port)
+	newSSHFile, err := includeDevSpaceConfig(sshConfigPath)
 	if err != nil {
 		return errors.Wrap(err, "parse ssh config")
 	}
@@ -41,9 +47,16 @@ func configureSSHConfig(host, port string, log log.Logger) error {
 		log.Debugf("error creating ssh directory: %v", err)
 	}
 
-	err = ioutil.WriteFile(sshConfigPath, []byte(newFile), 0600)
+	if newSSHFile != "" {
+		err = ioutil.WriteFile(sshConfigPath, []byte(newSSHFile), 0600)
+		if err != nil {
+			return errors.Wrap(err, "write ssh config")
+		}
+	}
+
+	err = ioutil.WriteFile(devSpaceSSHConfigPath, []byte(newFile), 0600)
 	if err != nil {
-		return errors.Wrap(err, "write ssh config")
+		return errors.Wrap(err, "write devspace ssh config")
 	}
 
 	return nil
@@ -105,6 +118,42 @@ func ParseDevSpaceHosts(path string) ([]DevSpaceSSHEntry, error) {
 	}
 
 	return entries, nil
+}
+
+func includeDevSpaceConfig(path string) (string, error) {
+	var reader io.Reader
+	f, err := os.Open(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+
+		reader = strings.NewReader("")
+	} else {
+		reader = f
+		defer f.Close()
+	}
+
+	configScanner := scanner.NewScanner(reader)
+	newLines := []string{}
+	startMarker := "# DevSpace Start"
+	for configScanner.Scan() {
+		text := configScanner.Text()
+		if strings.HasPrefix(text, startMarker) {
+			return "", nil
+		}
+
+		newLines = append(newLines, text)
+	}
+	if configScanner.Err() != nil {
+		return "", errors.Wrap(err, "parse ssh config")
+	}
+
+	// add new section
+	newLines = append(newLines, startMarker)
+	newLines = append(newLines, "Include devspace_config")
+	newLines = append(newLines, "# DevSpace End")
+	return strings.Join(newLines, "\n"), nil
 }
 
 func addHost(path, host, port string) (string, error) {
