@@ -107,7 +107,7 @@ func (d *downstream) collectChanges(skipIgnore bool) ([]*remote.Change, error) {
 		changeChunk, err := changesClient.Recv()
 		if changeChunk != nil {
 			for _, change := range changeChunk.Changes {
-				if !skipIgnore && d.ignoreMatcher.Matches(change.Path, change.IsDir) {
+				if !skipIgnore && d.ignoreMatcher != nil && d.ignoreMatcher.Matches(change.Path, change.IsDir) {
 					continue
 				}
 				if !d.shouldKeep(change) {

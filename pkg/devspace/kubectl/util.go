@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/transport/spdy"
 	"net"
 	"net/http"
+	"strings"
 )
 
 const minikubeContext = "minikube"
@@ -200,5 +201,11 @@ func NewPortForwarder(client Client, pod *corev1.Pod, ports []string, addresses 
 
 // IsLocalKubernetes returns true if the context belongs to a local Kubernetes cluster
 func IsLocalKubernetes(context string) bool {
-	return context == minikubeContext || context == dockerDesktopContext || context == dockerForDesktopContext
+	if context == minikubeContext || context == dockerDesktopContext || context == dockerForDesktopContext {
+		return true
+	} else if strings.HasPrefix(context, "vcluster_") && (strings.HasSuffix(context, minikubeContext) || strings.HasSuffix(context, dockerDesktopContext) || strings.HasSuffix(context, dockerForDesktopContext)) {
+		return true
+	}
+
+	return false
 }
