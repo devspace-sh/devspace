@@ -1,0 +1,51 @@
+---
+title: Access Local Commands In A Dev Container
+sidebar_label: Proxy Commands
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/proxyCommands.mdx'
+
+
+Proxy commands are commands that are available within a dev container whose execution output is redirected to the local computer. They can be very useful for:
+- Remote IDE's that want to access local git
+- Making local credentials helper (AWS, docker, GCLOUD etc) available in the container
+- Exposing devspace, kubectl and other kubernetes tools into the container
+- Keeping the development container footprint small
+
+:::warning Careless definitions of proxy commands pose a security risk
+Allowing proxy commands such as `bash`, `sh` etc. essentially allows you to remotely execute commands on a developer's machine. While this is sometimes wanted, it also enables **everybody** that can access the development container to execute proxy commands on the developers machine if DevSpace is currently running.
+:::
+
+For example:
+```yaml
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: john/devbackend
+
+dev:
+  my-dev:
+    imageSelector: john/devbackend
+    terminal: {}
+    proxyCommands:
+    - command: git
+    - command: devspace
+    - command: kubectl
+```
+
+This allows you to use the commands `git`, `devspace` and `kubectl` in the terminal that is forwarded by DevSpace.
+
+:::info
+DevSpace also tries it best to rewrite paths that are returned from the command as well as provided through an argument, so calling for example `git rev-parse --show-toplevel` within the container should print a rewritten path
+:::
+
+
+## How does it work?
+In order for this to work, DevSpace will start a custom SSH server locally that accepts connections to execute the defined `proxyCommands`. This SSH server is then reverse port-forwarded into the container and can be accessed there through the DevSpace helper binary.
+
+
+## Config Reference
+
+<ConfigPartial/>

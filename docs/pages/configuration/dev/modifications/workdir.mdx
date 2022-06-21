@@ -1,0 +1,25 @@
+---
+title: Change Working Directory Of Dev Containers
+sidebar_label: Working Directory
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/workingDir.mdx'
+
+The working directory is the folder inside the container's filesystem where the entrypoint command is executed and where (by default) terminal sessions start. To change the working directory, specify the `workingDir` field.
+
+```yaml title=devspace.yaml
+dev:
+  backend:
+    imageSelector: ghcr.io/org/project/image
+    devImage: ghcr.io/loft-sh/devspace-containers/python:3-alpine
+    command: ["npm"]
+    args: ["run", "start"]
+    # highlight-start
+    workingDir: /app/dev
+    # highlight-end
+```
+
+
+## Config Reference
+
+<ConfigPartial/>

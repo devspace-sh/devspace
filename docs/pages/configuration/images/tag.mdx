@@ -9,7 +9,7 @@ DevSpace always instructs the build engine to tag any images that are being buil
 ## `--tag / -t` Flag
 One option to tell DevSpace to use one or multiple custom tags is to use the `--tag / -t` flag for the pipeline function `build_images`, either by providing it inside the pipeline script or by passing it when invoking a `devspace` command that runs the respective pipeline.
 
-### For `build_images`
+### via `build_images`
 The [`build_images` function](../functions/README.mdx#build_images) provides a `--tag / -t` flag that can be passed multiple times to the function to specify one or more tags that DevSpace should use to tag the respective images.
 
 ```yaml title=devspace.yaml
@@ -27,7 +27,7 @@ images:
 ```
 
 
-### For `devspace build/dev/deploy/...`
+### via `devspace build/dev/deploy/...`
 DevSpace also provides a `--tag / -t` flag for pipeline-based commands such as `devspace build`, `devspace deploy` or `devspace run-pipeline [name]` which is passed to every `build_images` call.
 
 ```bash

@@ -62,19 +62,19 @@ docker login ghcr.io
 :::tip Verify Registry Authentication
 An easy way to verify if you are successfully authenticated with your registry is to manually run the push command via:
 ```bash
-docker push $registry/$image:$tag
+docker push $REGISTRY/$IMAGE:$TAG
 ```
 If this command works for your registry, image and tag combination, then DevSpace should also be able to push to the registry.
 :::
 
 
 ## Skip Push
-In some cases you may want to skip image building entirely. The most common case is when you are working with a localhost Kubernetes cluster.
+In some cases you may want to skip image building entirely. The most common case is when you are working with a localhost Kubernetes cluster such as Docker Desktop or Minikube.
 
-### Automatic
-Devspace will automatically try to skip pushing images if it detects that you are working with a localhost Kubernetes cluster, e.g. Minikube, Docker Desktop. This is possible if DevSpace is able to build the image with the Docker daemon that powers your Kubernetes cluster (i.e. you are not using kaniko, for example, and the Kubernetes cluster's Docker daemon is reachable for DevSpace).
+### Automatic Skip Push
+DevSpace will automatically try to skip pushing images if it detects that you are working with a localhost Kubernetes cluster. This is only possible if DevSpace is able to build the image with the Docker daemon that powers your Kubernetes cluster (i.e. you are not using kaniko, for example, and the Kubernetes cluster's Docker daemon is reachable for DevSpace).
 
-### Manual
+### Manual Skip Push
 To manually skip image building, you have the following options:
 1. Pass the `--skip-push` flag to `build_images` inside your `pipelines` section of `devspace.yaml`.
 2. Pass the `--skip-push` flag to the DevSpace command you are running, e.g. `devspace dev` or `devspace run-pipeline mypipeline` which in turn passes the flag through to every `build_images` call in the respective pipeline that will be executed.

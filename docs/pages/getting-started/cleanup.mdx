@@ -1,9 +1,36 @@
 ---
 title: Cleanup
-sidebar_label: 5. Cleanup
+sidebar_label: 4. Cleanup
 ---
 
+DevSpace provides several commands that help you clean up things locally and in your Kubernetes cluster.
+
+
+## Reset Dev Container
+The idea behind the dev container in DevSpace is that DevSpace deploys your application using your prod/stable Kubernetes manifests or Helm charts, etc. and then, DevSpace selects one of your containers, changes this container (e.g. swap out the prod/stable image with a prebuilt dev image), and then connects to this dev container using file sync, port forwarding, terminal session, etc.
+
+To reverse the changes that DevSpace makes when the `start_dev` command is called within a pipeline, you can run:
+```bash
+devspace reset pods
+```
+
+
+## Purge Project From Cluster
 To tell DevSpace to remove the deployments from your cluster again, run:
 ```bash
 devspace purge
+```
+
+
+## Reset Variables
+If you are using any variables in DevSpace and you provided values for these variables, you can reset them using:
+```bash
+devspace reset vars
+```
+
+
+## Cleanup Images
+If you are building images using DevSpace (e.g. via `devspace build`) and your local Docker daemon now has 100s of images with different tags, you can clean them up via:
+```bash
+devspace cleanup images
 ```

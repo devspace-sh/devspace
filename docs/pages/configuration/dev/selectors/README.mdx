@@ -1,0 +1,26 @@
+---
+title: Select Container as Dev Container
+sidebar_label: 1. Select Dev Container
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/group_selector.mdx'
+
+
+The first step to turn a regular container deployed to your cluster into a dev container is to tell DevSpace how to find this container inside the cluster. You can achieve this by defining one or multiple selectors.
+
+DevSpace supports the following selectors:
+1. [`imageSelector`](./image.mdx) to select based on the image running the container
+2. [`labelSelector`](#select-by-pod-labels) to select based on Kubernetes pod labels
+
+Additionally, the following two fields can be used:
+- `container` to select one specific container if a pod has multiple containers
+- `namespace` to select containers from another namespace
+
+:::tip Logical `&&` For Selectors
+If multiple selectors (e.g. `imageSelector` and `labelSelector`) are specified, DevSpace will combine them with a logical AND (`&&`) when looking for a pod/container to match the specified conditions.
+:::
+
+
+## Config Reference
+
+<ConfigPartial/>

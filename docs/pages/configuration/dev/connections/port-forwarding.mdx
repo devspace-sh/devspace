@@ -1,0 +1,83 @@
+---
+title: Port Forwarding
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/group_ports.mdx'
+
+
+DevSpace allows you to forward network traffic from your local machine to the dev container and vice versa:
+- [Port forwarding](#port-forwarding) for traffic forwarding from local machine to the dev container
+- [Reverse port forwarding](#reverse-forwarding) for traffic forwarding from the dev container to your local machine (e.g. to let your application connect to your IDE for debugging)
+
+:::tip Think `kubectl port-forward` on Steroids
+You can think of the port forwarding in DevSpace as a much faster and smarter version of `kubectl port-forward` that continuously reconnect whenever the connection gets lost and that is also able to reverse port forward from the container to your local machine.
+:::
+
+
+## Port Forwarding vs Reverse Port Forwarding
+When you define `8080:80`:
+- as value in `ports` then you can connect to `localhost:8080` on your local machine and it will be the same as connecting to `localhost:80` from within the container
+- as value in `reversePorts` then a service inside your dev container can connect to `localhost:80` from inside the container and it will be the same as connecting to `localhost:8080` on your local machine
+
+Port-forwarding allows you to access your application on `localhost:[PORT]` by forwarding the network traffic from a localhost port to a specified port of a container.
+
+
+## Port Forwarding
+When starting the development mode, DevSpace starts port forwarding as configured in the `dev.*.ports` section of the `devspace.yaml`.
+```yaml title=devspace.yaml
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: john/devbackend
+
+dev:
+  app:
+    imageSelector: ghcr.io/org/project/image    # The dev container you are selecting
+    # highlight-start
+    ports:
+    - port: "8080:80"   # Map localhost port 8080 to container port 80
+    # highlight-end
+```
+
+:::warning Unique Local Port
+The localhost port must be unique to avoid conflicting ports.
+:::
+
+:::warning System Ports
+Using a `port` < 1024 is likely to cause problems as these ports are reserved as system ports.
+:::
+
+
+## Reverse Port Forwarding
+Reverse port-forwarding allows you to forward traffic from within your containers to your local machine. This can be useful when:
+- using certain remote debuggers that connect to your IDE instead of the other way around
+- developing a service on localhost which should be accessed from other services that run within the cluster, i.e. using the [Telepresence development model](https://www.telepresence.io/discussion/why-telepresence) but with DevSpace to get better performance and cross-platform support
+
+With reverse port-forwarding, you can access `localhost:[PORT]` inside the container and it will redirect to a program that runs on your local dev machine.
+
+When starting the development mode, DevSpace starts reverse port-forwarding as configured in the `dev.*.reversePorts` section of the `devspace.yaml`.
+```yaml title=devspace.yaml
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: ghcr.io/org/project/image
+
+dev:
+  app:
+    imageSelector: ghcr.io/org/project/image
+    ports:
+    - port: "8080:80"     # Map localhost port 8080 to remote port 80
+    # highlight-start
+    reversePorts:
+    - port: "5678:6678"   # Map localhost port 5678 to remote port 6678
+    # highlight-end
+```
+
+
+## Config Reference
+
+<ConfigPartial/>

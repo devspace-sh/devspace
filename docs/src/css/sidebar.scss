@@ -216,3 +216,7 @@ body .menu {
 .theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) + .theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) {
   border-top-color: rgba(0, 0, 0, 0.1);
 }
+
+.theme-doc-sidebar-item-category.extra-indent .menu__list .menu__link {
+  text-indent: 1.1em;
+}

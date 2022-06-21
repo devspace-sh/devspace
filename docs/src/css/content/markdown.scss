@@ -65,6 +65,13 @@ body .markdown {
   *:last-child {
     margin-bottom: 0 !important;
   }
+
+  .admonition-heading {
+    code {
+      text-transform: none;
+      padding: 0.3em 0.5em;
+    }
+  }
 }
 
 .markdown pre code {
@@ -95,12 +102,6 @@ code {
   outline: none;
 }
 
-.markdown [role="tab"] .comment,
-.markdown .prism-code .comment,
-code .comment {
-  user-select: none;
-}
-
 html body .markdown button[aria-label="Copy code to clipboard"],
 html body pre.prism-code > button {
   margin-top: 0.45em !important;
@@ -125,13 +126,13 @@ h4:target ~ *:not(h2, h3, h4, h4:target ~ *:is(h2, h3, h4):not(:target) ~ *) {
     content: " ";
     width: 4px;
     position: absolute;
-    left: -20px;
-    top: -25px;
-    bottom: calc(-1*var(--ifm-paragraph-margin-bottom));
+    left: -16px;
+    top: -40px;
+    bottom: calc(-1.5*var(--ifm-paragraph-margin-bottom));
     background: orange;
     z-index: -1;
 
-    @media (min-width: 1500px) {
+    @media (min-width: 1660px) {
       & {
         left: -30px;
       }

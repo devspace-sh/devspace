@@ -1,0 +1,84 @@
+---
+title: Restart Helper
+sidebar_label: Restart Container
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/restartHelper.mdx'
+
+DevSpace provides a small shell script that can used as container entrypoint (PID 1 process) to start the container instead of your actual container start command.
+
+For example, if your entrypoint would be `pyhton main.py`, DevSpace would rewrite the container start command to:
+```bash
+/.devspace/devspace-restart-helper python main.py
+```
+
+This has the advantage that DevSpace (or you) can restart your application without crashing the contianer because normally, the python command would be the PID 1 and if that gets killed, the container will be destroyed. If the restart helper script is PID 1, we can kill the python process without impacting the container. Then, the restart helper will just restart the python command again.
+
+
+## Inject Restart Helper
+To tell DevSpace to inject the restart helper into the container, set `inject: true` for the `restartHelper` field:
+
+```yaml title=devspace.yaml
+dev:
+  app:
+    imageSelector: ghcr.io/org/project/image
+    restartHelper:
+      inject: true
+```
+
+
+## Trigger Restarts
+The restart helper per se does not do much except restarting your application if it has been killed. You can either manually kill your application to trigger a restart or you can configure DevSpace to trigger a restart automatically, e.g. when the file sync changes specific files.
+
+### Manually
+You can manually trigger a restart using the `devspace restart` command:
+```
+devspace restart
+devspace restart -n my-namespace --pod my-pod
+devspace restart -n my-namespace --label-selector abc=def
+```
+
+You can also trigger a restart manually via `kubectl`:
+```
+kubectl exec my-pod -- sh -c 'PID=$(cat /.devspace/devspace-pid) && rm /.devspace/devspace-pid && kill -9 -$PID' 
+```
+
+Here is a more verbose version of the above `kubectl exec` command as it will be run inside the container:
+```bash
+# 1. Get the PID of your applications process
+PID=$(cat /.devspace/devspace-pid)
+
+# 2. Remove the PID file to tell the restart helper that this is an intended restart
+# (otherwise the restart helper will terminate as well which will kill the container)
+rm /.devspace/devspace-pid
+
+# 3. Kill the application process group (restart helper on PID 1 will detect this and restart it again)
+kill -9 -$PID
+```
+
+### On File Sync
+You can use the [sync-triggered action `restartContainer: true`](./file-sync#restart-container) to restart your application inside the container every time DevSpace syncs files into the container.
+
+
+## Restart Helper Script
+To view the script used for the restart helper, [view this link to the DevSpace source code](https://github.com/loft-sh/devspace/blob/main/pkg/devspace/build/builder/restart/restart.go#L33-L123).
+
+
+## Custom Restart Helper Script
+To provide a custom script instead of using the default restart helper in DevSpace, use the `path` option to point to a script:
+
+```yaml title=devspace.yaml
+dev:
+  app:
+    imageSelector: ghcr.io/org/project/image
+    restartHelper:
+      inject: true
+      path: ./my-custom-script.sh
+```
+
+In the example above, DevSpace would inject the script you provide into the dev container instead of using the default script.
+
+
+## Config Reference
+
+<ConfigPartial/>

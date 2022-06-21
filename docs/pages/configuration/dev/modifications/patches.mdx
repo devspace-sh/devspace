@@ -1,0 +1,92 @@
+---
+title: Custom Patches To Dev Containers' Pods
+sidebar_label: Pod Patches
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/patches.mdx'
+
+Besides the common shortcut modifications such as setting `devImage`, DevSpace also allows you to write custom patches to the Kubernetes PodSpec when a pod is being replaced to turn one (or multiple) of its containers into a dev container.
+
+### Custom Patches
+For advanced use cases, DevSpace provides a feature for custom patches to the Kubernetes PodSpec when a pod is being replaced. To add custom patches, add them to the `patches` field.
+
+```yaml title=devspace.yaml
+dev:
+  backend:
+    imageSelector: ghcr.io/org/project/image
+    devImage: ghcr.io/loft-sh/devspace-containers/python:3-alpine
+    # highlight-start
+    patches:
+    - op: replace
+      path: spec.terminationGracePeriodSeconds
+      value: 3
+    - op: remove
+      path: spec.securityContext
+    - op: add
+      path: spec.containers.name=backend.command
+      value: ""
+    # highlight-end
+```
+
+:::info Patch Specification
+Patches in DevSpace generally follow the JSON Patch standard ([RFC 9602](https://datatracker.ietf.org/doc/html/rfc6902)) as implemented by the [yaml-jsonpath](https://github.com/vmware-labs/yaml-jsonpath) library.
+:::
+
+:::caution `add` Operation
+Using `op: add` only works as expected when path points to an array/list. Using `op: add` to add fields to an object/map will **not** work and instead replace all existing properties.
+:::
+
+:::tip `path` + Arrays/Lists
+When you want to define a `path` that contains an array (e.g. `spec.containers`), you have several options:
+
+1. Use the index of the array item you want to patch, e.g. `spec.containers[0]`
+2. Use a property selector matching the array item(s) you want to patch, e.g. `spec.containers.name=backend`
+3. Use a wildcard selector to match all array item(s), e.g. `spec.containers.*`
+4. Use a comparison selector matching the array item(s) you want to patch, e.g. `spec.containers[?(@.image=='ghcr.io/loft-sh/image')]`
+5. Use a regular expression selector matching the array item(s) you want to patch, e.g. `spec.containers[?(@.name=~/^production/)]`
+
+Using a selector rather than the array index is often better because it is more resilient and will not cause any issues even if the order of an array's items is changed later on. A selector is also able to select multiple array items if all of them have the same value for this property.
+:::
+
+### Implicit Patches
+DevSpace adds certain modifications and patches in-memory if certain conditions are met. This helps to keep `devspace.yaml` shorter and makes its configuration easier. The following table shows a list of implicit modifications and patches added by DevSpace:
+
+<table>
+<thead>
+  <tr>
+    <th>Condition</th>
+    <th>Implicit Configuration</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+<td>
+
+`terminal` enabled
+
+</td>
+<td>
+
+```yaml title=devspace.yaml
+dev:
+  $name:
+    command: ["sleep"]
+    args: ["1000000000"]
+    patches:
+    - op: remove
+      path: spec.containers[].livenessProbe
+    - op: remove
+      path: spec.containers[].readinessProbe
+    - op: remove
+      path: spec.containers[].startupProbe
+```
+
+</td>
+  </tr>
+</tbody>
+</table>
+
+
+## Config Reference
+
+<ConfigPartial/>

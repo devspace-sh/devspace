@@ -43,41 +43,100 @@ info Detecting programming language...
   python
 ```
 
-DevSpace will ask you a couple of questions about this project and then generate a `devspace.yaml` for you to start with. If you are using the quickstart projects, choose `Component Helm Chart` for the first question.
+DevSpace will ask you a couple of questions about this project, e.g. which programming language the application is written in, how to deploy the project, etc.
 
-After running `devspace init`, you will see a `devspace.yaml` file in your project which should look like this:
-```yaml
-version: v1beta10
+After running `devspace init`, you will see 3 changes in your project:
+1. New file `devspace.yaml` (tells DevSpace how this project should be build, deployed, and developed)
+2. New file `devspace_start.yaml` (is used to show information to the user when the terminal for the dev container opens)
+3. Added `.devspace/` folder to `.gitignore` (the `.devspace/` folder is used by DevSpace to store some information locally when you are working with this project, e.g. caching to speed up things)
 
-# `images` specifies all images that may need to be built for this project
+The `devspace.yaml` should look similar to this one:
+```yaml title=devspace.yaml
+version: v2beta1
+name: devspace-quickstart-golang
+
+# This is a list of `pipelines` that DevSpace can execute (you can define your own)
+pipelines:
+  # This is the pipeline for the main command: `devspace dev` (or `devspace run-pipeline dev`)
+  dev:
+    run: |-
+      run_dependencies --all       # 1. Deploy any projects this project needs (see "dependencies")
+      create_deployments --all     # 2. Deploy Helm charts and manifests specfied as "deployments"
+      start_dev app                # 3. Start dev mode "app" (see "dev" section)
+  # You can run this pipeline via `devspace deploy` (or `devspace run-pipeline deploy`)
+  deploy:
+    run: |-
+      run_dependencies --all                            # 1. Deploy any projects this project needs (see "dependencies")
+      build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
+      create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"
+
+# This is a list of `images` that DevSpace can build for this project
+# We recommend to skip image building during development (devspace dev) as much as possible
 images:
-  app: # This image is called `app` and this name `app` is referenced multiple times in the config below
-    image: registry.tld/username/image
+  app:
+    image: ghcr.io/loft-sh/devspace/app
     dockerfile: ./Dockerfile
-    build:
-      disabled: true
 
-# `deployments` tells DevSpace how to deploy this project
+# This is a list of `deployments` that DevSpace can create for this project
 deployments:
-- name: quickstart-kubectl
-  # This deployment uses `kubectl` but you can also define `helm` deployments
-  kubectl:
-    manifests:
-    - kube/deployment.yaml
-# OR:
-- name: quickstart-helm                   # Name of this deployment
-  helm:                                   # Deploy using Helm
-    componentChart: true                  # Use the Component Helm Chart
-    values:                               # Override Values for chart (can also be set using valuesFiles option)
-      containers:                         # Defines an array of containers that run in the same pods started by this component
-      - image: image(app):tag(app)        # Image of this container
-      service:                            # Expose this component with a Kubernetes service
-        ports:                            # Array of container ports to expose through the service
-        - port: 3000                      # Exposes container port 3000 on service port 3000
+  app:
+    # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    helm:
+      # We are deploying this project with the Helm chart you provided
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      # You may also use `valuesFiles` to load values from files, e.g. valuesFiles: ["values.yaml"]
+      values:
+        containers:
+          - image: gentele/app
+        service:
+          ports:
+            - port: 8080
 
-# Settings for development mode (will be explained later)
-dev: ...
+# This is a list of `dev` containers that are based on the containers created by your deployments
+dev:
+  app:
+    # Search for the container that runs this image
+    imageSelector: ghcr.io/loft-sh/devspace/app
+    # Replace the container image with this dev-optimized image (allows to skip image building during development)
+    devImage: ghcr.io/loft-sh/devspace-containers/go:1.18-alpine
+    # Forward the following ports to be able access your application via localhost
+    ports:
+      - port: "2345"
+      - port: "8080"
+    # Open the following URLs once they return an HTTP status code other than 502 or 503
+    open:
+      - url: http://localhost:8080
+    # Open a terminal and use the following command to start it
+    terminal:
+      command: ./devspace_start.sh
+    # Sync files between the local filesystem and the development container
+    sync:
+      - path: ./
+    # Inject a lightweight SSH server into the container (so your IDE can connect to the remote dev env)
+    ssh:
+      enabled: true
+    # Make the following commands from my local machine available inside the dev container
+    proxyCommands:
+      - command: devspace
+      - command: kubectl
+      - command: helm
+      - command: git
 
-# Settings for development mode (will be explained later)
-profiles: ...
+# Use the `commands` section to define repeatable dev workflows for this project 
+commands:
+  migrate-db:
+    command: |-
+      echo 'This is a cross-platform, shared command that can be used to codify any kind of dev task.'
+      echo 'Anyone using this project can invoke it via "devspace run migrate-db"'
+
+# Define dependencies to other projects with a devspace.yaml
+# dependencies:
+#   api:
+#     git: https://...  # Git-based dependencies
+#     tag: v1.0.0
+#   ui:
+#     path: ./ui        # Path-based dependencies (for monorepos)
 ```

@@ -1,0 +1,29 @@
+---
+title: Dev-Optimized Images For Dev Containers
+sidebar_label: Dev Image
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/devImage.mdx'
+
+One of the most common modifications for a dev container is to replace the stable/prod image of the container with a generic prebuilt dev image.
+
+```yaml title=devspace.yaml
+dev:
+  backend:
+    # highlight-start
+    imageSelector: ghcr.io/org/project/image
+    devImage: ghcr.io/loft-sh/devspace-containers/python:3-alpine
+    # highlight-end
+```
+
+The example above selects the container with the stable/prod image `ghcr.io/org/project/image` and replaces the image with the prebuilt dev-optimized image `ghcr.io/loft-sh/devspace-containers/python:3-alpine`.
+
+:::tip Prebuilt Dev Images = Generic Images Without Source Code
+Prebuilt images used for development are usually generic images that do **not** contain your application or any source code. They often only contain the necessary tooling to build, run, and debug your application in the appropriate language.
+
+In our example above, the image `ghcr.io/loft-sh/devspace-containers/python:3-alpine` is a generic image for the development of Python based applications, so it contains tools like `python` and `pip` but does not contain any Python source code. Instead, you would be using the [file sync feature](../connections/file-sync.mdx) in DevSpace to sync your source code from your local computer into the dev container to then be able to build and run your Python application using the tools provided inside the container.
+:::
+
+## Config Reference
+
+<ConfigPartial/>

@@ -3,6 +3,7 @@ title: Deploy Remote Charts
 sidebar_label: Remote Chart
 ---
 
+import HelmRepoChartConfigPartial from '../../../_partials/v2beta1/deployments/helm/chart/group_repo.mdx'
 import GitChartConfigPartial from '../../../_partials/v2beta1/deployments/helm/chart/group_git.mdx'
 
 
@@ -18,8 +19,10 @@ To deploy Helm charts from Artifact Hub, follow the instructions for [Charts fro
 ## Remote Charts vs Dependencies
 If you have several other microservices that are required to work on the current project, you may want to consider if these microservices already have a `devspace.yaml` or should ideally have one at some point. DevSpace provides a feature called [`dependencies`](../../../dependencies/README.mdx) which allows you to define relationships between `devspace.yaml` files to allow users to start working on a service while DevSpace stands up and maintains dependent microservices if needed.
 
+Everything that belongs to the current project itself and is not directly developed by you (e.g. a mysql database, a redis cache, etc.) should be defined as a `deployment` in this project. However, any other related microservices that you own and develop separately should rather be defined a [`dependencies`](../../../dependencies/README.mdx) instead of as remote chart deployments.
 
-## Remote Helm Charts
+
+## Source
 
 ### From Helm Repository
 To deploy a Helm chart from a Helm repository, specify at least `name` and `repo` for the respective Helm deployment in `devspace.yaml`.
@@ -30,16 +33,53 @@ deployments:
   database:
     helm:
       chart:
+        // highlight-start
         name: mysql
         repo: https://charts.bitnami.com/bitnami
         version: 9.0.0
+        // highlight-end
       values:
         ...
 ```
 
-:::info Authentication
-If you need to authenticate with the Helm repository, you can provide the `username` and `password` fields.
-:::
+
+<details>
+<summary>
+
+#### Config Reference For Helm Repository Charts
+
+</summary>
+
+<HelmRepoChartConfigPartial/>
+
+</details>
+
+<details>
+<summary>
+
+#### Authentication For Helm Repositories
+
+</summary>
+
+If you need to authenticate with the Helm repository, you can provide the `username` and `password` fields:
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  database:
+    helm:
+      chart:
+        name: mysql
+        repo: https://charts.bitnami.com/bitnami
+        version: 9.0.0
+        // highlight-start
+        username: john
+        password: ${HELM_REPO_PASSWORD}
+        // highlight-end
+      values:
+        ...
+```
+
+</details>
 
 :::caution Local Repo Names
 When deploying charts, make sure to specify the full URL to the Helm chart repository that contains the respective chart. Do **not** use the local shortcut name for your repository.

@@ -1,0 +1,28 @@
+---
+title: Open Links in Browser
+sidebar_label: Auto-Open URLs
+---
+
+import FragmentWorkflowOpenLinks from '../../../_partials/workflow-open-links.mdx';
+import ConfigPartial from '../../_partials/v2beta1/dev/restartHelper.mdx'
+
+
+DevSpace allows you to define URLs that should open after deploying an application in development mode, i.e. using `devspace dev`.
+
+The configuration for automatically opening URLs can be found in the `dev.*.open` section of `devspace.yaml`.
+```yaml
+dev:
+  my-dev:
+    open:
+    - url: http://localhost:3000/dashboard    # Open the dashboard page of your app UI
+    - url: http://localhost:8089/             # Open DevSpace UI
+```
+
+
+## How does it work?
+<FragmentWorkflowOpenLinks/>
+
+
+## Config Reference
+
+<ConfigPartial/>

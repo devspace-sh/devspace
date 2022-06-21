@@ -7,10 +7,6 @@ import ConfigPartial from '../../_partials/v2beta1/images/kaniko.mdx'
 
 Using [kaniko](https://github.com/GoogleContainerTools/kaniko) as build tool allows you to build images directly inside your Kubernetes cluster without a Docker daemon. DevSpace simply starts a build pod and builds the image using `kaniko`.
 
-:::note Automatic Cleanup
-After the build process completes, the build pod started for the kaniko build process will be deleted again.
-:::
-
 To set `kaniko` as default build tool, use the following configuration:
 ```yaml
 images:
@@ -18,6 +14,11 @@ images:
     image: john/appbackend
     kaniko: {}
 ```
+
+:::note Automatic Cleanup
+After the build process completes, the build pod started for the kaniko build process will be deleted again.
+:::
+
 
 ## Flags & Arguments
 

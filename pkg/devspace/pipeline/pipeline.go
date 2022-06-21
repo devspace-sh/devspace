@@ -3,16 +3,17 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"mvdan.cc/sh/v3/expand"
-	"os"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -102,7 +103,12 @@ func (p *pipeline) Exclude(ctx devspacecontext.Context) error {
 	if p.excludedErr != nil {
 		return p.excludedErr
 	} else if !couldExclude && ctx.KubeClient() != nil {
-		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace instance active in the current namespace right now that uses the same project name (%s)", strings.Join(os.Args, " "), p.name)
+		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace session for the project (%s) already running inside this namespace\n\n%s\n ", strings.Join(os.Args, " "), p.name, `You may want to use one of these commands instead:
+- devspace enter: opens a terminal session for a container
+- devspace attach: attaches to the PID 1 process (entrypoint) of a container
+- devspace logs: streams the logs of a container
+- devspace sync: syncs files between your local filesyste and a container's filesystem
+- devspace ui: starts the DevSpace localhost UI`)
 	}
 	ctx.Log().Debugf("Marked project excluded: %v", p.name)
 	return nil

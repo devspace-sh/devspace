@@ -66,7 +66,7 @@ images:
 
 ### 3. Run Pipeline
 Given the example above, you can now run:
-- `devspace build` to build all 3 images in Parallel
+- `devspace build` to build all 3 images in parallel
 - `devspace run-pipeline build-api` to build only the image named `api`
 - `devspace run-pipeline build-ordered` to  
   1. First build the image `auth` (blocking)
@@ -187,7 +187,7 @@ images:
 
 
 ### Dockerfile Overwrites
-
+DevSpace provides several config options to make in-memory changes to the build process without the need to change your Dockerfile:
 
 <ConfigPartialOverwrites/>
 

@@ -1,0 +1,42 @@
+---
+title: Inject An SSH Server Into Dev Container
+sidebar_label: SSH Server
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/ssh.mdx'
+
+
+DevSpace allows you to start an SSH server in the target container, to easily connect to your development environment. This has the following advantages:
+- Since IDE's have a great remote SSH integration you can use that directly for your Kubernetes containers
+- Use all SSH features and tools such as scp or terminal with your development container
+
+DevSpace will make sure that ssh is properly configured locally and automatically add an entry to your `~/.ssh/config` as well as create an appropriate ssh key pair in `~/.devspace/ssh/id_devspace_rsa` to establish a secure connection with the remote container.
+You can then connect to the container with `ssh <dev-config-name>.<devspace-name>.devspace`, where `<dev-config-name>` denotes the name of the dev config and `<devspace-name>` the name of the devspace.yaml file.
+
+For example, to start ssh for an ubuntu container:
+```yaml
+name: my-devspace-project
+
+deployments:
+  my-deployment:
+    helm:
+      values:
+        containers:
+        - image: ubuntu
+
+dev:
+  my-dev:
+    imageSelector: ubuntu
+    ssh: {}
+```
+
+After starting `devspace dev`, you will be able to connect to the ubuntu container with `ssh my-dev.my-devspace-project.devspace`.
+
+
+## How does it work?
+DevSpace will inject a small helper binary into the running container that contains an SSH server. Then DevSpace will port-forward a random local port to the remote SSH port and configure the local `~/.ssh/config` accordingly.
+
+
+## Config Reference
+
+<ConfigPartial/>
