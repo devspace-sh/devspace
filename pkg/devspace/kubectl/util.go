@@ -17,6 +17,7 @@ import (
 )
 
 const minikubeContext = "minikube"
+const kindContext = "kind-kind"
 const dockerDesktopContext = "docker-desktop"
 const dockerForDesktopContext = "docker-for-desktop"
 
@@ -201,11 +202,19 @@ func NewPortForwarder(client Client, pod *corev1.Pod, ports []string, addresses 
 
 // IsLocalKubernetes returns true if the context belongs to a local Kubernetes cluster
 func IsLocalKubernetes(context string) bool {
-	if context == minikubeContext || context == dockerDesktopContext || context == dockerForDesktopContext {
+	if context == minikubeContext ||
+		context == kindContext ||
+		context == dockerDesktopContext ||
+		context == dockerForDesktopContext {
 		return true
 	} else if strings.HasPrefix(context, "vcluster_") && (strings.HasSuffix(context, minikubeContext) || strings.HasSuffix(context, dockerDesktopContext) || strings.HasSuffix(context, dockerForDesktopContext)) {
 		return true
 	}
 
 	return false
+}
+
+// IsKindContext returns true if the context is a kind Kubernetes cluster
+func IsKindContext(context string) bool {
+	return context == kindContext
 }
