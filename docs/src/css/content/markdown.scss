@@ -12,7 +12,7 @@ body .markdown {
     margin-top: var(--ifm-leading);
     margin-bottom: 0;
 
-    &:is(ul, ol) {
+    &:where(ul, ol) {
       margin-top: calc(2*var(--ifm-list-margin)) !important;
     }
   }
@@ -119,10 +119,10 @@ html body pre.prism-code > button {
 }
 
 .markdown :target,
-h2:target ~ *:not(h2, h2:target ~ *:is(h2):not(:target) ~ *),
-h3:target ~ *:not(h2, h3, h3:target ~ *:is(h2, h3):not(:target) ~ *),
-h4:target ~ *:not(h2, h3, h4, h4:target ~ *:is(h2, h3, h4):not(:target) ~ *) {
-  &:is(:not(details *))::before {
+h2:target ~ *:not(h2, h2:target ~ *:where(h2):not(:target) ~ *),
+h3:target ~ *:not(h2, h3, h3:target ~ *:where(h2, h3):not(:target) ~ *),
+h4:target ~ *:not(h2, h3, h4, h4:target ~ *:where(h2, h3, h4):not(:target) ~ *) {
+  &:where(:not(details *))::before {
     content: " ";
     width: 4px;
     position: absolute;
@@ -139,7 +139,7 @@ h4:target ~ *:not(h2, h3, h4, h4:target ~ *:is(h2, h3, h4):not(:target) ~ *) {
     }
   }
 
-  &:is(h2):target::before {
+  &:where(h2):target::before {
     top: 25px;
   }
 
@@ -147,11 +147,11 @@ h4:target ~ *:not(h2, h3, h4, h4:target ~ *:is(h2, h3, h4):not(:target) ~ *) {
     margin-left: -4px;
   }
 
-  &:is(.config-field, .group)::before {
+  &:where(.config-field, .group)::before {
     margin-left: -1px;
   }
 
-  &:is(details) {
+  &:where(details) {
     &::before {
       margin-left: -4px;
     }
