@@ -491,9 +491,6 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 	for _, exclude := range options.ExcludePaths {
 		downstreamArgs = append(downstreamArgs, "--exclude", exclude)
 	}
-	for _, exclude := range options.DownloadExcludePaths {
-		downstreamArgs = append(downstreamArgs, "--exclude", exclude)
-	}
 	downstreamArgs = append(downstreamArgs, containerPath)
 
 	downStdinReader, downStdinWriter := io.Pipe()

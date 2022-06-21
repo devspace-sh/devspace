@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"io/ioutil"
@@ -25,6 +26,8 @@ type downstream struct {
 	reader io.ReadCloser
 	writer io.WriteCloser
 	client remote.DownstreamClient
+
+	ignoreMatcher ignoreparser.IgnoreParser
 
 	unarchiver *Unarchiver
 }
@@ -52,12 +55,19 @@ func newDownstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*do
 		return nil, errors.Wrap(err, "new client connection")
 	}
 
+	// Create download exclude paths
+	ignoreMatcher, err := ignoreparser.CompilePaths(sync.Options.DownloadExcludePaths, sync.log)
+	if err != nil {
+		return nil, errors.Wrap(err, "compile paths")
+	}
+
 	return &downstream{
-		sync:       sync,
-		reader:     reader,
-		writer:     writer,
-		client:     remote.NewDownstreamClient(conn),
-		unarchiver: NewUnarchiver(sync, false, sync.log),
+		sync:          sync,
+		reader:        reader,
+		writer:        writer,
+		client:        remote.NewDownstreamClient(conn),
+		ignoreMatcher: ignoreMatcher,
+		unarchiver:    NewUnarchiver(sync, false, sync.log),
 	}, nil
 }
 
@@ -65,7 +75,7 @@ func (d *downstream) populateFileMap() error {
 	d.sync.fileIndex.fileMapMutex.Lock()
 	defer d.sync.fileIndex.fileMapMutex.Unlock()
 
-	changes, err := d.collectChanges()
+	changes, err := d.collectChanges(true)
 	if err != nil {
 		return errors.Wrap(err, "collect changes")
 	}
@@ -79,7 +89,7 @@ func (d *downstream) populateFileMap() error {
 	return nil
 }
 
-func (d *downstream) collectChanges() ([]*remote.Change, error) {
+func (d *downstream) collectChanges(skipIgnore bool) ([]*remote.Change, error) {
 	d.sync.log.Debugf("Downstream - Start collecting changes")
 	defer d.sync.log.Debugf("Downstream - Done collecting changes")
 
@@ -97,9 +107,14 @@ func (d *downstream) collectChanges() ([]*remote.Change, error) {
 		changeChunk, err := changesClient.Recv()
 		if changeChunk != nil {
 			for _, change := range changeChunk.Changes {
-				if d.shouldKeep(change) {
-					changes = append(changes, change)
+				if !skipIgnore && d.ignoreMatcher != nil && d.ignoreMatcher.Matches(change.Path, change.IsDir) {
+					continue
 				}
+				if !d.shouldKeep(change) {
+					continue
+				}
+
+				changes = append(changes, change)
 			}
 		}
 
@@ -168,7 +183,7 @@ func (d *downstream) mainLoop() error {
 		// Compare change amount
 		if lastAmountChanges > 0 && (time.Now().After(changeTimer) || changeAmount.Amount > 25000 || changeAmount.Amount == lastAmountChanges) {
 			d.sync.fileIndex.fileMapMutex.Lock()
-			changes, err := d.collectChanges()
+			changes, err := d.collectChanges(false)
 			d.sync.fileIndex.fileMapMutex.Unlock()
 			if err != nil {
 				return errors.Wrap(err, "collect changes")

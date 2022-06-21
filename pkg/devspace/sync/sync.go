@@ -342,6 +342,9 @@ func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone ch
 	downloadChanges := make(map[string]*FileInformation)
 	s.fileIndex.fileMapMutex.Lock()
 	for key, element := range s.fileIndex.fileMap {
+		if s.downloadIgnoreMatcher != nil && s.downloadIgnoreMatcher.Matches(element.Name, element.IsDirectory) {
+			continue
+		}
 		if element.IsSymbolicLink {
 			continue
 		}
