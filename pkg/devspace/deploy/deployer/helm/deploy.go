@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"io"
 	"os"
@@ -218,11 +219,10 @@ func (d *DeployConfig) getDeploymentValues(ctx devspacecontext.Context) (bool, m
 	if d.DeploymentConfig.Helm.ValuesFiles != nil {
 		for _, overridePath := range d.DeploymentConfig.Helm.ValuesFiles {
 			overwriteValuesPath := ctx.ResolvePath(overridePath)
-
 			overwriteValuesFromPath := map[string]interface{}{}
 			err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValuesFromPath)
 			if err != nil {
-				ctx.Log().Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
+				return false, nil, fmt.Errorf("error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
 			}
 
 			// Replace image names
