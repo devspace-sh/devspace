@@ -669,9 +669,15 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		devConfig.Sync = []*latest.SyncConfig{}
 	}
 
-	devConfig.Sync = append(devConfig.Sync, &latest.SyncConfig{
+	syncConfig := &latest.SyncConfig{
 		Path: "./",
-	})
+	}
+
+	if _, err := os.Stat(".dockerignore"); err == nil {
+		syncConfig.UploadExcludeFile = ".dockerignore"
+	}
+
+	devConfig.Sync = append(devConfig.Sync, syncConfig)
 
 	devConfig.Terminal = &latest.Terminal{
 		Command: "./" + startScriptName,
