@@ -731,6 +731,7 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 		SkipBuild:    true,
 		Render:       true,
 		RenderWriter: writer,
+		Log:          &log.DiscardLogger{},
 	}
 	err = renderCmd.RunDefault(f)
 	if err != nil {
