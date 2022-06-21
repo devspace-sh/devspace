@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -152,15 +153,23 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				requestURL := ""
 
 				if chartLocation == chartRepo {
-					helmConfig.Chart.RepoURL, err = m.log.Question(&survey.QuestionOptions{
-						Question:               "Please specify the full URL of the chart repo (e.g. https://charts.org.tld/)",
-						ValidationRegexPattern: "^http(s)?://.*",
+					tempChartRepoURL, err := m.log.Question(&survey.QuestionOptions{
+						Question: "Please specify the full URL of the chart repo (e.g. https://charts.org.tld/)",
+						ValidationFunc: func(value string) error {
+							_, err := url.ParseRequestURI(chartRepoURL(value))
+							if err != nil {
+								return err
+							}
+							return nil
+						},
 					})
 					if err != nil {
 						return err
 					}
 
-					requestURL = helmConfig.Chart.RepoURL + "/index.yaml"
+					helmConfig.Chart.RepoURL = chartRepoURL(tempChartRepoURL)
+
+					requestURL = strings.TrimRight(helmConfig.Chart.RepoURL, "/") + "/index.yaml"
 
 					helmConfig.Chart.Name, err = m.log.Question(&survey.QuestionOptions{
 						Question:               "Please specify the name of the chart within your chart repository (e.g. payment-service)",
@@ -353,4 +362,12 @@ func (m *manager) AddComponentDeployment(deploymentName, image string, servicePo
 	}
 
 	return nil
+}
+
+func chartRepoURL(url string) string {
+	repoURL := url
+	if !(strings.HasPrefix(url, "https://") || strings.HasPrefix(url, "http://")) {
+		repoURL = "https://" + url
+	}
+	return repoURL
 }
