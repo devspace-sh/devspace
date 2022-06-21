@@ -15,9 +15,9 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
-const cliDocsDir = "./docs/pages/commands"
+const cliDocsDir = "./docs/pages/cli"
 const headerTemplate = `---
-title: "%s"
+title: "%s --help"
 sidebar_label: %s
 ---
 
@@ -46,11 +46,14 @@ func main() {
 			}
 		}
 
-		return fmt.Sprintf(headerTemplate, "Command - "+title, sidebarLabel)
+		return fmt.Sprintf(headerTemplate, title, sidebarLabel)
 	}
 
 	linkHandler := func(name string) string {
 		base := strings.TrimSuffix(name, path.Ext(name))
+		if base == "devspace" {
+			base = "README"
+		}
 		return strings.ToLower(base) + ".md"
 	}
 
@@ -85,6 +88,10 @@ func main() {
 		err = ioutil.WriteFile(path, []byte(newContents), 0)
 		if err != nil {
 			return err
+		}
+
+		if info.Name() == "devspace.md" {
+			os.Rename(path, filepath.Join(cliDocsDir, "..", "cli.md"))
 		}
 
 		return nil
