@@ -119,9 +119,9 @@ html body pre.prism-code > button {
 }
 
 .markdown :target,
-h2:target ~ *:not(h2, h2:target ~ *:where(h2):not(:target) ~ *),
-h3:target ~ *:not(h2, h3, h3:target ~ *:where(h2, h3):not(:target) ~ *),
-h4:target ~ *:not(h2, h3, h4, h4:target ~ *:where(h2, h3, h4):not(:target) ~ *) {
+h2:target ~ *:not(h2, h2:target ~ *:where(h1, h2):not(:target) ~ *),
+h3:target ~ *:not(h2, h3, h3:target ~ *:where(h1, h2, h3):not(:target) ~ *),
+h4:target ~ *:not(h2, h3, h4, h4:target ~ *:where(h1, h2, h3, h4):not(:target) ~ *) {
   &:where(:not(details *))::before {
     content: " ";
     width: 4px;
@@ -139,7 +139,7 @@ h4:target ~ *:not(h2, h3, h4, h4:target ~ *:where(h2, h3, h4):not(:target) ~ *) 
     }
   }
 
-  &:where(h2):target::before {
+  &:where(h1, h2):target::before {
     top: 25px;
   }
 
