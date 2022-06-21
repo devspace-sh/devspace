@@ -45,15 +45,19 @@ type Config struct {
 	// Version holds the config version. DevSpace will always convert older configs to the current latest
 	// config version, which makes it possible to use the newest DevSpace version also with older config
 	// versions.
-	Version string `yaml:"version" json:"version"`
+	Version string `yaml:"version" json:"version" jsonschema:"required"`
 
 	// Name specifies the name of the DevSpace project and uniquely identifies a project.
 	// DevSpace will not allow multiple active projects with the same name in the same Kubernetes namespace.
-	Name string `yaml:"name" json:"name"`
+	Name string `yaml:"name" json:"name" jsonschema:"required"`
 
 	// Imports merges specified config files into this one. This is very useful to split up your DevSpace configuration
 	// into multiple files and reuse those through git, a remote url or common local path.
 	Imports []Import `yaml:"imports,omitempty" json:"imports,omitempty"`
+
+	// Functions are POSIX functions that can be used within pipelines. Those functions can also be imported by
+	// imports.
+	Functions map[string]string `yaml:"functions,omitempty" json:"functions,omitempty"`
 
 	// Pipelines are the work blocks that DevSpace should execute when devspace dev, devspace build, devspace deploy or devspace purge
 	// is called. Pipelines are defined through a special POSIX script that allows you to use special commands
@@ -62,10 +66,6 @@ type Config struct {
 	// the default functionality of the respective command if defined. All other pipelines can be either run
 	// via the devspace run-pipeline command or used within another pipeline through run_pipelines.
 	Pipelines map[string]*Pipeline `yaml:"pipelines,omitempty" json:"pipelines,omitempty"`
-
-	// Functions are POSIX functions that can be used within pipelines. Those functions can also be imported by
-	// imports.
-	Functions map[string]string `yaml:"functions,omitempty" json:"functions,omitempty"`
 
 	// Images holds configuration of how DevSpace should build images. By default, DevSpace will build all defined images.
 	// If you are using a custom pipeline, you can dynamically define which image is built at which time during the
@@ -91,18 +91,9 @@ type Config struct {
 	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
 	Vars map[string]*Variable `yaml:"vars,omitempty" json:"vars,omitempty"`
 
-	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
-	// during devspace dev or devspace deploy. DevSpace will merge all defined pull secrets into a single
-	// one or the one specified.
-	PullSecrets map[string]*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
-
 	// Commands are custom commands that can be executed via 'devspace run COMMAND'. These commands are run within a pseudo bash
 	// that also allows executing special commands such as run_watch or is_equal.
 	Commands map[string]*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty"`
-
-	// Require defines what DevSpace, plugins and command versions are required to use this config and if a condition is not
-	// fulfilled, DevSpace will fail.
-	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
 
 	// Dependencies are sub devspace projects that lie in a local folder or remote git repository that can be executed
 	// from within the pipeline. In contrast to imports, these projects pose as separate fully functional DevSpace projects
@@ -111,22 +102,31 @@ type Config struct {
 	// the same project multiple times, make sure to use a different name for each of those instances.
 	Dependencies map[string]*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 
+	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
+	// during devspace dev or devspace deploy. DevSpace will merge all defined pull secrets into a single
+	// one or the one specified.
+	PullSecrets map[string]*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
+
+	// Require defines what DevSpace, plugins and command versions are required to use this config and if a condition is not
+	// fulfilled, DevSpace will fail.
+	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
+
 	// Profiles can be used to change the current configuration and change the behavior of devspace. They are deprecated and
 	// imports should be used instead.
-	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
+	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty" jsonschema:"-"`
 
 	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
 	// in the order they are specified. They are deprecated and pipelines should be used instead.
-	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty" jsonschema:"-"`
 }
 
 // Import specifies the source of the devspace config to merge
 type Import struct {
+	// Enabled specifies if the given import should be enabled
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" jsonschema:"required"`
+
 	// SourceConfig defines the source for this import
 	SourceConfig `yaml:",inline" json:",inline"`
-
-	// Enabled specifies if the given import should be enabled
-	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 }
 
 // Pipeline defines what DevSpace should do. A pipeline consists of one or more
@@ -134,7 +134,10 @@ type Import struct {
 // of one or more conditional steps that are executed in order.
 type Pipeline struct {
 	// Name of the pipeline, will be filled automatically
-	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty" jsonschema:"enum=dev,enum=deploy,enum=build,enum=purge,enum=.*"`
+
+	// Run is the actual shell command that should be executed during this pipeline
+	Run string `yaml:"run,omitempty" json:"run,omitempty" jsonschema:"required"`
 
 	// Flags are extra flags that can be used for running the pipeline via
 	// devspace run-pipeline.
@@ -143,9 +146,6 @@ type Pipeline struct {
 	// ContinueOnError will not fail the whole job and pipeline if
 	// a call within the step fails.
 	ContinueOnError bool `yaml:"continueOnError,omitempty" json:"continueOnError,omitempty"`
-
-	// Run is the actual shell command that should be executed during this pipeline
-	Run string `yaml:"run,omitempty" json:"run,omitempty"`
 }
 
 // PipelineFlag defines an extra pipeline flag
@@ -156,8 +156,8 @@ type PipelineFlag struct {
 	// Short is optional and is the shorthand name for this flag. E.g. 'g' converts to '-g'
 	Short string `yaml:"short,omitempty" json:"short,omitempty"`
 
-	// Type is the type of the flag. Defaults to bool if empty
-	Type PipelineFlagType `yaml:"type,omitempty" json:"type,omitempty"`
+	// Type is the type of the flag. Defaults to `bool`
+	Type PipelineFlagType `yaml:"type,omitempty" json:"type,omitempty" jsonschema:"enum=bool,enum=int,enum=string,enum=stringArray"`
 
 	// Default is the default value for this flag
 	Default interface{} `yaml:"default,omitempty" json:"default,omitempty"`
@@ -210,15 +210,15 @@ type RequireConfig struct {
 
 type RequirePlugin struct {
 	// Name of the plugin that should be installed
-	Name string `yaml:"name" json:"name"`
+	Name string `yaml:"name" json:"name" jsonschema:"required"`
 
 	// Version constraint of the plugin that should be installed
-	Version string `yaml:"version" json:"version"`
+	Version string `yaml:"version" json:"version" jsonschema:"required"`
 }
 
 type RequireCommand struct {
 	// Name is the name of the command that should be installed
-	Name string `yaml:"name" json:"name"`
+	Name string `yaml:"name" json:"name" jsonschema:"required"`
 
 	// VersionArgs are the arguments to retrieve the version of the command
 	VersionArgs []string `yaml:"versionArgs,omitempty" json:"versionArgs,omitempty"`
@@ -237,7 +237,7 @@ type Image struct {
 
 	// Image is the complete image name including registry and repository
 	// for example myregistry.com/mynamespace/myimage
-	Image string `yaml:"image" json:"image"`
+	Image string `yaml:"image" json:"image" jsonschema:"required"`
 
 	// Tags is an array that specifies all tags that should be build during
 	// the build process. If this is empty, devspace will generate a random tag
@@ -245,36 +245,31 @@ type Image struct {
 
 	// Dockerfile specifies a path (relative or absolute) to the dockerfile. Defaults
 	// to ./Dockerfile
-	Dockerfile string `yaml:"dockerfile,omitempty" json:"dockerfile,omitempty"`
+	Dockerfile string `yaml:"dockerfile" json:"dockerfile" jsonschema:"default=./Dockerfile" jsonschema_extras:"group=buildConfig"`
 
 	// Context is the context path to build with. Defaults to the current working directory
-	Context string `yaml:"context,omitempty" json:"context,omitempty"`
+	Context string `yaml:"context,omitempty" json:"context,omitempty" jsonschema:"default=./" jsonschema_extras:"group=buildConfig"`
 
 	// Entrypoint specifies an entrypoint that will be appended to the dockerfile during
 	// image build in memory. Example: ["sleep", "99999"]
-	Entrypoint []string `yaml:"entrypoint,omitempty" json:"entrypoint,omitempty"`
+	Entrypoint []string `yaml:"entrypoint,omitempty" json:"entrypoint,omitempty" jsonschema_extras:"group=overwrites,group_name=In-Memory Overwrites"`
 
 	// Cmd specifies the arguments for the entrypoint that will be appended
 	// during build in memory to the dockerfile
-	Cmd []string `yaml:"cmd,omitempty" json:"cmd,omitempty"`
-
-	// CreatePullSecret specifies if a pull secret should be created for this image in the
-	// target namespace. Defaults to true
-	CreatePullSecret *bool `yaml:"createPullSecret,omitempty" json:"createPullSecret,omitempty"`
-
-	// InjectRestartHelper will inject a small restart script into the container and wraps the entrypoint of that
-	// container, so that devspace is able to restart the complete container during sync.
-	// Please make sure you either have an Entrypoint defined in the devspace config or in the
-	// dockerfile for this image, otherwise devspace will fail.
-	InjectRestartHelper bool `yaml:"injectRestartHelper,omitempty" json:"injectRestartHelper,omitempty"`
-
-	// RestartHelperPath will load the restart helper from this location instead of using the bundled
-	// one within DevSpace. Can be either a local path or an URL where to find the restart helper.
-	RestartHelperPath string `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
+	Cmd []string `yaml:"cmd,omitempty" json:"cmd,omitempty" jsonschema_extras:"group=overwrites"`
 
 	// AppendDockerfileInstructions are instructions that will be appended to the Dockerfile that is build
 	// at the current build target and are appended before the entrypoint and cmd instructions
-	AppendDockerfileInstructions []string `yaml:"appendDockerfileInstructions,omitempty" json:"appendDockerfileInstructions,omitempty"`
+	AppendDockerfileInstructions []string `yaml:"appendDockerfileInstructions,omitempty" json:"appendDockerfileInstructions,omitempty" jsonschema_extras:"group=overwrites"`
+
+	// BuildArgs are the build args that are to the build
+	BuildArgs map[string]*string `yaml:"buildArgs,omitempty" json:"buildArgs,omitempty" jsonschema_extras:"group=buildConfig,group_name=Build Configuration"`
+
+	// Target is the target that should get used during the build. Only works if the dockerfile supports this
+	Target string `yaml:"target,omitempty" json:"target,omitempty" jsonschema_extras:"group=buildConfig"`
+
+	// Network is the network that should get used to build the image
+	Network string `yaml:"network,omitempty" json:"network,omitempty" jsonschema_extras:"group=buildConfig"`
 
 	// RebuildStrategy is used to determine when DevSpace should rebuild an image. By default, devspace will
 	// rebuild an image if one of the following conditions is true:
@@ -282,33 +277,38 @@ type Image struct {
 	// - The configuration within the devspace.yaml for the image has changed
 	// - A file within the docker context (excluding .dockerignore rules) has changed
 	// This option is ignored for custom builds.
-	RebuildStrategy RebuildStrategy `yaml:"rebuildStrategy,omitempty" json:"rebuildStrategy,omitempty"`
-
-	// Target is the target that should get used during the build. Only works if the dockerfile supports this
-	Target string `yaml:"target,omitempty" json:"target,omitempty"`
-
-	// Network is the network that should get used to build the image
-	Network string `yaml:"network,omitempty" json:"network,omitempty"`
-
-	// BuildArgs are the build args that are to the build
-	BuildArgs map[string]*string `yaml:"buildArgs,omitempty" json:"buildArgs,omitempty"`
+	RebuildStrategy RebuildStrategy `yaml:"rebuildStrategy,omitempty" json:"rebuildStrategy,omitempty" jsonschema:"enum=default,enum=always,enum=ignoreContextChanges" jsonschema_extras:"group=buildConfig"`
 
 	// SkipPush will not push the image to a registry if enabled. Only works if docker or buildkit is chosen
 	// as build method
-	SkipPush bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
+	SkipPush bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty" jsonschema_extras:"group=pushPull,group_name=Push & Pull"`
 
-	// Docker if docker is specified, DevSpace will build the image using the local docker daemon
-	Docker *DockerConfig `yaml:"docker,omitempty" json:"docker,omitempty"`
-
-	// Kaniko if kaniko is specified, DevSpace will build the image in-cluster with kaniko
-	Kaniko *KanikoConfig `yaml:"kaniko,omitempty" json:"kaniko,omitempty"`
+	// CreatePullSecret specifies if a pull secret should be created for this image in the
+	// target namespace. Defaults to true
+	CreatePullSecret *bool `yaml:"createPullSecret,omitempty" json:"createPullSecret,omitempty" jsonschema:"required" jsonschema_extras:"group=pushPull"`
 
 	// BuildKit if buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit
-	BuildKit *BuildKitConfig `yaml:"buildKit,omitempty" json:"buildKit,omitempty"`
+	BuildKit *BuildKitConfig `yaml:"buildKit,omitempty" json:"buildKit,omitempty" jsonschema_extras:"group=engines,group_name=Build Engines"`
+
+	// Docker if docker is specified, DevSpace will build the image using the local docker daemon
+	Docker *DockerConfig `yaml:"docker,omitempty" json:"docker,omitempty" jsonschema_extras:"group=engines"`
+
+	// Kaniko if kaniko is specified, DevSpace will build the image in-cluster with kaniko
+	Kaniko *KanikoConfig `yaml:"kaniko,omitempty" json:"kaniko,omitempty" jsonschema_extras:"group=engines"`
 
 	// Custom if custom is specified, DevSpace will build the image with the help of
 	// a custom script.
-	Custom *CustomConfig `yaml:"custom,omitempty" json:"custom,omitempty"`
+	Custom *CustomConfig `yaml:"custom,omitempty" json:"custom,omitempty" jsonschema_extras:"group=engines"`
+
+	// InjectRestartHelper will inject a small restart script into the container and wraps the entrypoint of that
+	// container, so that devspace is able to restart the complete container during sync.
+	// Please make sure you either have an Entrypoint defined in the devspace config or in the
+	// dockerfile for this image, otherwise devspace will fail.
+	InjectRestartHelper bool `yaml:"injectRestartHelper,omitempty" json:"injectRestartHelper,omitempty" jsonschema:"-"`
+
+	// RestartHelperPath will load the restart helper from this location instead of using the bundled
+	// one within DevSpace. Can be either a local path or an URL where to find the restart helper.
+	RestartHelperPath string `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty" jsonschema:"-"`
 }
 
 // RebuildStrategy is the type of a image rebuild strategy
@@ -323,27 +323,27 @@ const (
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type DockerConfig struct {
+	// DisableFallback allows you to turn off kaniko building if docker isn't installed
+	DisableFallback *bool `yaml:"disableFallback,omitempty" json:"disableFallback,omitempty"`
 	// PreferMinikube allows you to turn off using the minikube docker daemon if the minikube
 	// context is used.
 	PreferMinikube *bool `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
-	// DisableFallback allows you to turn off kaniko building if docker isn't installed
-	DisableFallback *bool `yaml:"disableFallback,omitempty" json:"disableFallback,omitempty"`
 	// UseCLI specifies if DevSpace should use the docker cli for building
 	UseCLI bool `yaml:"useCli,omitempty" json:"useCli,omitempty"`
 	// Args are additional arguments to pass to the docker cli
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
 
 	// DEPRECATED: UseBuildKit
-	UseBuildKit bool `yaml:"useBuildKit,omitempty" json:"useBuildKit,omitempty"`
+	UseBuildKit bool `yaml:"useBuildKit,omitempty" json:"useBuildKit,omitempty" jsonschema:"-"`
 }
 
 // BuildKitConfig tells the DevSpace CLI to
 type BuildKitConfig struct {
-	// PreferMinikube if false, will not try to use the minikube docker daemon to build the image
-	PreferMinikube *bool `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
-
 	// InCluster if specified, DevSpace will use BuildKit to build the image within the cluster
 	InCluster *BuildKitInClusterConfig `yaml:"inCluster,omitempty" json:"inCluster,omitempty"`
+
+	// PreferMinikube if false, will not try to use the minikube docker daemon to build the image
+	PreferMinikube *bool `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
 
 	// Args are additional arguments to call docker buildx build with
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
@@ -561,17 +561,17 @@ type CustomConfig struct {
 	OnChange []string `yaml:"onChange,omitempty" json:"onChange,omitempty"`
 
 	// DEPRECATED: Commands
-	Commands []CustomConfigCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Commands []CustomConfigCommand `yaml:"commands,omitempty" json:"commands,omitempty" jsonschema:"-"`
 	// DEPRECATED: Args
-	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
+	Args []string `yaml:"args,omitempty" json:"args,omitempty" jsonschema:"-"`
 	// DEPRECATED: AppendArgs
-	AppendArgs []string `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
+	AppendArgs []string `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty" jsonschema:"-"`
 	// DEPRECATED: ImageFlag
-	ImageFlag string `yaml:"imageFlag,omitempty" json:"imageFlag,omitempty"`
+	ImageFlag string `yaml:"imageFlag,omitempty" json:"imageFlag,omitempty" jsonschema:"-"`
 	// DEPRECATED: ImageTagOnly
-	ImageTagOnly bool `yaml:"imageTagOnly,omitempty" json:"imageTagOnly,omitempty"`
+	ImageTagOnly bool `yaml:"imageTagOnly,omitempty" json:"imageTagOnly,omitempty" jsonschema:"-"`
 	// DEPRECATED: SkipImageArg
-	SkipImageArg *bool `yaml:"skipImageArg,omitempty" json:"skipImageArg,omitempty"`
+	SkipImageArg *bool `yaml:"skipImageArg,omitempty" json:"skipImageArg,omitempty" jsonschema:"-"`
 }
 
 // CustomConfigCommand holds the information about a command on a specific operating system
@@ -586,16 +586,18 @@ type CustomConfigCommand struct {
 type DeploymentConfig struct {
 	// Name of the deployment
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
-	// Namespace where to deploy this deployment
-	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	// UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the
-	// images section with their most recent built tag.
-	UpdateImageTags *bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
 
 	// Helm tells DevSpace to deploy this deployment via helm
 	Helm *HelmConfig `yaml:"helm,omitempty" json:"helm,omitempty"`
 	// Kubectl tells DevSpace to deploy this deployment via kubectl or kustomize
 	Kubectl *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
+
+	// UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the
+	// images section with their most recent built tag.
+	UpdateImageTags *bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
+
+	// Namespace where to deploy this deployment
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 }
 
 // ComponentConfig holds the component information
@@ -779,7 +781,7 @@ type RollingUpdateConfig struct {
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
 	// Chart holds the chart configuration and where DevSpace can find the chart
-	Chart *ChartConfig `yaml:"chart,omitempty" json:"chart,omitempty"`
+	Chart *ChartConfig `yaml:"chart,omitempty" json:"chart,omitempty" jsonschema:"required"`
 	// Values are additional values that should get passed to deploying this chart
 	Values map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
 	// ValuesFiles are additional files that hold values for deploying this chart
@@ -787,47 +789,47 @@ type HelmConfig struct {
 	// DisplayOutput allows you to display the helm output to the console
 	DisplayOutput bool `yaml:"displayOutput,omitempty" json:"output,omitempty"`
 
-	// TemplateArgs are additional arguments to pass to `helm template`
-	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
 	// UpgradeArgs are additional arguments to pass to `helm upgrade`
 	UpgradeArgs []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
+	// TemplateArgs are additional arguments to pass to `helm template`
+	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
 }
 
 // ChartConfig defines the helm chart options
 type ChartConfig struct {
+	// Name is the name of the helm chart to deploy. Can also be a local path
+	Name string `yaml:"name,omitempty" json:"name,omitempty" jsonschema:"required" jsonschema_extras:"group=repo,group_name=Source: Helm Repository"`
+	// Version is the version of the helm chart to deploy
+	Version string `yaml:"version,omitempty" json:"version,omitempty" jsonschema_extras:"group=repo"`
+	// RepoURL is the url of the repo to deploy the chart from
+	RepoURL string `yaml:"repo,omitempty" json:"repo,omitempty" jsonschema_extras:"group=repo"`
+	// Username is the username to authenticate to the chart repo
+	Username string `yaml:"username,omitempty" json:"username,omitempty" jsonschema_extras:"group=repo"`
+	// Password is the password to authenticate to the chart repo
+	Password string `yaml:"password,omitempty" json:"password,omitempty" jsonschema_extras:"group=repo"`
 	// Source can be used to reference an helm chart from a distant location
 	// such as a git repository
 	Source *SourceConfig `yaml:",inline" json:",inline"`
-	// Name is the name of the helm chart to deploy. Can also be a local path
-	Name string `yaml:"name,omitempty" json:"name,omitempty"`
-	// Version is the version of the helm chart to deploy
-	Version string `yaml:"version,omitempty" json:"version,omitempty"`
-	// RepoURL is the url of the repo to deploy the chart from
-	RepoURL string `yaml:"repo,omitempty" json:"repo,omitempty"`
-	// Username is the username to authenticate to the chart repo
-	Username string `yaml:"username,omitempty" json:"username,omitempty"`
-	// Password is the password to authenticate to the chart repo
-	Password string `yaml:"password,omitempty" json:"password,omitempty"`
 }
 
 // KubectlConfig defines the specific kubectl options used during deployment
 type KubectlConfig struct {
 	// Manifests is a list of files or folders that will be deployed by DevSpace using kubectl
 	// or kustomize
-	Manifests []string `yaml:"manifests,omitempty" json:"manifests,omitempty"`
-	// Kustomize can be used to enable kustomize instead of kubectl
-	Kustomize *bool `yaml:"kustomize,omitempty" json:"kustomize,omitempty"`
-	// KustomizeArgs are extra arguments for `kustomize build` which will be run before `kubectl apply`
-	KustomizeArgs []string `yaml:"kustomizeArgs,omitempty" json:"kustomizeArgs,omitempty"`
-	// CreateArgs are extra arguments for `kubectl create` which will be run before `kubectl apply`
-	CreateArgs []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
+	Manifests []string `yaml:"manifests,omitempty" json:"manifests,omitempty" jsonschema:"required"`
 	// ApplyArgs are extra arguments for `kubectl apply`
 	ApplyArgs []string `yaml:"applyArgs,omitempty" json:"applyArgs,omitempty"`
-
-	// KustomizeBinaryPath is the optional path where to find the kustomize binary
-	KustomizeBinaryPath string `yaml:"kustomizeBinaryPath,omitempty" json:"kustomizeBinaryPath,omitempty"`
+	// CreateArgs are extra arguments for `kubectl create` which will be run before `kubectl apply`
+	CreateArgs []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
 	// KubectlBinaryPath is the optional path where to finde the kubectl binary
 	KubectlBinaryPath string `yaml:"kubectlBinaryPath,omitempty" json:"kubectlBinaryPath,omitempty"`
+
+	// Kustomize can be used to enabdevle kustomize instead of kubectl
+	Kustomize *bool `yaml:"kustomize,omitempty" json:"kustomize,omitempty" jsonschema_extras:"group=kustomize,group_name=Kustomize"`
+	// KustomizeArgs are extra arguments for `kustomize build` which will be run before `kubectl apply`
+	KustomizeArgs []string `yaml:"kustomizeArgs,omitempty" json:"kustomizeArgs,omitempty" jsonschema_extras:"group=kustomize"`
+	// KustomizeBinaryPath is the optional path where to find the kustomize binary
+	KustomizeBinaryPath string `yaml:"kustomizeBinaryPath,omitempty" json:"kustomizeBinaryPath,omitempty" jsonschema_extras:"group=kustomize"`
 }
 
 // DevPod holds configurations for selecting a pod and starting dev services for that pod
@@ -835,76 +837,79 @@ type DevPod struct {
 	// Name of the dev configuration
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 	// ImageSelector to select a pod
-	ImageSelector string `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
+	ImageSelector string `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty" jsonschema_extras:"group=selector"`
 	// LabelSelector to select a pod
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty" jsonschema_extras:"group=selector"`
 	// Namespace where to select the pod
-	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-
-	// Ports defines port mappings from the remote pod that should be forwarded to your local
-	// computer
-	Ports []*PortMapping `yaml:"ports,omitempty" json:"ports,omitempty"`
-
-	// Open defines urls that should be opened as soon as they are reachable
-	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty" jsonschema_extras:"group=selector"`
 
 	// DevContainer can either be defined inline if the pod only has a single container or
 	// containers can be used to define configurations for multiple containers in the same
 	// pod.
 	DevContainer `yaml:",inline" json:",inline"`
-	Containers   map[string]*DevContainer `yaml:"containers,omitempty" json:"containers,omitempty"`
+
+	// Ports defines port mappings from the remote pod that should be forwarded to your local
+	// computer
+	Ports []*PortMapping `yaml:"ports,omitempty" json:"ports,omitempty" jsonschema_extras:"group=ports"`
+
+	// PersistenceOptions are additional options for persisting paths within this pod
+	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty" jsonschema_extras:"group=modifications"`
 
 	// Patches are additional changes to the pod spec that should be applied
-	Patches []*PatchConfig `yaml:"patches,omitempty" json:"patches,omitempty"`
-	// PersistenceOptions are additional options for persisting paths within this pod
-	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
+	Patches []*PatchConfig `yaml:"patches,omitempty" json:"patches,omitempty" jsonschema_extras:"group=modifications"`
+
+	// Open defines urls that should be opened as soon as they are reachable
+	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty" jsonschema_extras:"group=workflows_background,group_name=Background Dev Workflows"`
+
+	Containers map[string]*DevContainer `yaml:"containers,omitempty" json:"containers,omitempty" jsonschema_extras:"group=selector"`
 }
 
 // DevContainer holds options for dev services that should
 // get started within a certain container of the selected pod
 type DevContainer struct {
 	// Container is the container name these services should get started.
-	Container string `yaml:"container,omitempty" json:"container,omitempty"`
-
-	// DevImage is the image to use for this container and will replace the existing image
-	// if necessary.
-	DevImage string `yaml:"devImage,omitempty" json:"devImage,omitempty"`
+	Container string `yaml:"container,omitempty" json:"container,omitempty" jsonschema_extras:"group=selector,group_name=Selector"`
 
 	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64, but
 	// devspace tries to find out the architecture by itself by looking at the node this container runs on.
-	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
-	// RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
-	// the container and restarting it and is injected via an annotation in the replaced pod.
-	RestartHelper *RestartHelper `yaml:"restartHelper,omitempty" json:"restartHelper,omitempty"`
+	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema_extras:"group=selector"`
 
-	// ReversePorts are port mappings to make local ports available inside the container
-	ReversePorts []*PortMapping `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty"`
+	// DevImage is the image to use for this container and will replace the existing image
+	// if necessary.
+	DevImage string `yaml:"devImage,omitempty" json:"devImage,omitempty" jsonschema_extras:"group=modifications,group_name=Modifications"`
 	// Command can be used to override the entrypoint of the container
-	Command []string `yaml:"command,omitempty" json:"command,omitempty"`
+	Command []string `yaml:"command,omitempty" json:"command,omitempty" jsonschema_extras:"group=modifications"`
 	// Args can be used to override the args of the container
-	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
+	Args []string `yaml:"args,omitempty" json:"args,omitempty" jsonschema_extras:"group=modifications"`
 	// WorkingDir can be used to override the working dir of the container
-	WorkingDir string `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
-	// Resources can be used to override the resource definitions of the container
-	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
+	WorkingDir string `yaml:"workingDir,omitempty" json:"workingDir,omitempty" jsonschema_extras:"group=modifications"`
 	// Env can be used to add environment variables to the container. DevSpace will
 	// not replace existing environment variables if an environment variable is defined here.
-	Env []EnvVar `yaml:"env,omitempty" json:"env,omitempty"`
+	Env []EnvVar `yaml:"env,omitempty" json:"env,omitempty" jsonschema_extras:"group=modifications"`
+	// Resources can be used to override the resource definitions of the container
+	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty" jsonschema_extras:"group=modifications"`
+
+	// ReversePorts are port mappings to make local ports available inside the container
+	ReversePorts []*PortMapping `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty" jsonschema_extras:"group=ports,group_name=Port Forwarding"`
+
+	// Sync allows you to sync certain local paths with paths inside the container
+	Sync []*SyncConfig `yaml:"sync,omitempty" json:"sync,omitempty" jsonschema_extras:"group=sync,group_name=File Sync"`
+	// SSH allows you to create an SSH tunnel to this container
+	PersistPaths []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty" jsonschema_extras:"group=modifications"`
 
 	// Terminal allows you to tell DevSpace to open a terminal with screen support to this container
-	Terminal *Terminal `yaml:"terminal,omitempty" json:"terminal,omitempty"`
+	Terminal *Terminal `yaml:"terminal,omitempty" json:"terminal,omitempty" jsonschema_extras:"group=workflows,group_name=Foreground Dev Workflows"`
 	// Logs allows you to tell DevSpace to stream logs from this container to the console
-	Logs *Logs `yaml:"logs,omitempty" json:"logs,omitempty"`
+	Logs *Logs `yaml:"logs,omitempty" json:"logs,omitempty" jsonschema_extras:"group=workflows"`
 	// Attach allows you to tell DevSpace to attach to this container
-	Attach *Attach `yaml:"attach,omitempty" json:"attach,omitempty"`
+	Attach *Attach `yaml:"attach,omitempty" json:"attach,omitempty" jsonschema_extras:"group=workflows"`
 	// PersistPaths allows you to persist certain paths within this container with a persistent volume claim
-	PersistPaths []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
-	// Sync allows you to sync certain local paths with paths inside the container
-	Sync []*SyncConfig `yaml:"sync,omitempty" json:"sync,omitempty"`
-	// SSH allows you to create an SSH tunnel to this container
-	SSH *SSH `yaml:"ssh,omitempty" json:"ssh,omitempty"`
+	SSH *SSH `yaml:"ssh,omitempty" json:"ssh,omitempty" jsonschema_extras:"group=workflows_background"`
 	// ProxyCommands allow you to proxy certain local commands to the container
-	ProxyCommands []*ProxyCommand `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty"`
+	ProxyCommands []*ProxyCommand `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty" jsonschema_extras:"group=workflows_background"`
+	// RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
+	// the container and restarting it and is injected via an annotation in the replaced pod.
+	RestartHelper *RestartHelper `yaml:"restartHelper,omitempty" json:"restartHelper,omitempty" jsonschema_extras:"group=workflows_background"`
 }
 
 type RestartHelper struct {
@@ -1038,55 +1043,58 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
-	// PrintLogs defines if sync logs should be displayed on the terminal
-	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty"`
-
-	// StartContainer will start the container after initial sync is done. This will
-	// inject a devspacehelper into the pod and you need to define dev.*.command for
-	// this to work.
-	StartContainer bool `yaml:"startContainer,omitempty" json:"startContainer,omitempty"`
-
 	// Path is the path to sync. This can be defined in the form localPath:remotePath. You can also use '.'
 	// to specify either the local or remote working directory. This is valid for example: .:.
 	Path string `yaml:"path,omitempty" json:"path,omitempty"`
 
 	// ExcludePaths is an array of file patterns in gitignore format to exclude.
-	ExcludePaths []string `yaml:"excludePaths,omitempty" json:"excludePaths,omitempty"`
+	ExcludePaths []string `yaml:"excludePaths,omitempty" json:"excludePaths,omitempty" jsonschema_extras:"group=exclude,group_name=Exclude Paths From File Sync"`
 	// ExcludeFile loads the file patterns to exclude from a file.
-	ExcludeFile string `yaml:"excludeFile,omitempty" json:"excludeFile,omitempty"`
+	ExcludeFile string `yaml:"excludeFile,omitempty" json:"excludeFile,omitempty" jsonschema_extras:"group=exclude"`
 	// DownloadExcludePaths is an array of file patterns in gitignore format to exclude from downloading
-	DownloadExcludePaths []string `yaml:"downloadExcludePaths,omitempty" json:"downloadExcludePaths,omitempty"`
+	DownloadExcludePaths []string `yaml:"downloadExcludePaths,omitempty" json:"downloadExcludePaths,omitempty" jsonschema_extras:"group=exclude"`
 	// DownloadExcludeFile loads the file patterns to exclude from downloading from a file.
-	DownloadExcludeFile string `yaml:"downloadExcludeFile,omitempty" json:"downloadExcludeFile,omitempty"`
+	DownloadExcludeFile string `yaml:"downloadExcludeFile,omitempty" json:"downloadExcludeFile,omitempty" jsonschema_extras:"group=exclude"`
 	// UploadExcludePaths is an array of file patterns in gitignore format to exclude from uploading
-	UploadExcludePaths []string `yaml:"uploadExcludePaths,omitempty" json:"uploadExcludePaths,omitempty"`
+	UploadExcludePaths []string `yaml:"uploadExcludePaths,omitempty" json:"uploadExcludePaths,omitempty" jsonschema_extras:"group=exclude"`
 	// UploadExcludeFile loads the file patterns to exclude from uploading from a file.
-	UploadExcludeFile string `yaml:"uploadExcludeFile,omitempty" json:"uploadExcludeFile,omitempty"`
+	UploadExcludeFile string `yaml:"uploadExcludeFile,omitempty" json:"uploadExcludeFile,omitempty" jsonschema_extras:"group=exclude"`
+
+	// StartContainer will start the container after initial sync is done. This will
+	// inject a devspacehelper into the pod and you need to define dev.*.command for
+	// this to work.
+	StartContainer bool `yaml:"startContainer,omitempty" json:"startContainer,omitempty" jsonschema_extras:"group=actions,group_name=Sync-Triggered Actions"`
+
+	// OnUpload can be used to execute certain commands on uploading either in the container or locally as
+	// well as restart the container after a file changed has happened.
+	OnUpload *SyncOnUpload `yaml:"onUpload,omitempty" json:"onUpload,omitempty" jsonschema_extras:"group=actions"`
 
 	// InitialSync defines the initial sync strategy to use when this sync starts. Defaults to mirrorLocal
-	InitialSync InitialSyncStrategy `yaml:"initialSync,omitempty" json:"initialSync,omitempty"`
-	// InitialSyncCompareBy defines if the sync should only compare by the given type. Either mtime or size are possible
-	InitialSyncCompareBy InitialSyncCompareBy `yaml:"initialSyncCompareBy,omitempty" json:"initialSyncCompareBy,omitempty"`
-
-	// DisableDownload will disable downloading completely
-	DisableDownload bool `yaml:"disableDownload,omitempty" json:"disableDownload,omitempty"`
-	// DisableUpload will disable uploading completely
-	DisableUpload bool `yaml:"disableUpload,omitempty" json:"disableUpload,omitempty"`
-	// NoWatch will terminate the sync after the initial sync is done
-	NoWatch bool `yaml:"noWatch,omitempty" json:"noWatch,omitempty"`
-
-	// Polling will tell the remote container to use polling instead of inotify
-	Polling bool `yaml:"polling,omitempty" json:"polling,omitempty"`
+	InitialSync InitialSyncStrategy `yaml:"initialSync,omitempty" json:"initialSync,omitempty" jsonschema_extras:"group=initial_sync,group_name=Initial Sync"`
 
 	// WaitInitialSync can be used to tell DevSpace to not wait until the initial sync is done
-	WaitInitialSync *bool `yaml:"waitInitialSync,omitempty" json:"waitInitialSync,omitempty"`
+	WaitInitialSync *bool `yaml:"waitInitialSync,omitempty" json:"waitInitialSync,omitempty" jsonschema_extras:"group=initial_sync"`
+
+	// InitialSyncCompareBy defines if the sync should only compare by the given type. Either mtime or size are possible
+	InitialSyncCompareBy InitialSyncCompareBy `yaml:"initialSyncCompareBy,omitempty" json:"initialSyncCompareBy,omitempty" jsonschema_extras:"group=initial_sync"`
+
+	// DisableDownload will disable downloading completely
+	DisableDownload bool `yaml:"disableDownload,omitempty" json:"disableDownload,omitempty" jsonschema_extras:"group=one_direction,group_name=One-Directional Sync"`
+	// DisableUpload will disable uploading completely
+	DisableUpload bool `yaml:"disableUpload,omitempty" json:"disableUpload,omitempty" jsonschema_extras:"group=one_direction"`
+
 	// BandwidthLimits can be used to limit the amount of bytes that are transferred by DevSpace with this
 	// sync configuration
 	BandwidthLimits *BandwidthLimits `yaml:"bandwidthLimits,omitempty" json:"bandwidthLimits,omitempty"`
 
-	// OnUpload can be used to execute certain commands on uploading either in the container or locally as
-	// well as restart the container after a file changed has happened.
-	OnUpload *SyncOnUpload `yaml:"onUpload,omitempty" json:"onUpload,omitempty"`
+	// Polling will tell the remote container to use polling instead of inotify
+	Polling bool `yaml:"polling,omitempty" json:"polling,omitempty"`
+
+	// NoWatch will terminate the sync after the initial sync is done
+	NoWatch bool `yaml:"noWatch,omitempty" json:"noWatch,omitempty"`
+
+	// PrintLogs defines if sync logs should be displayed on the terminal
+	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty"`
 }
 
 type ContainerArchitecture string
@@ -1220,66 +1228,66 @@ type Terminal struct {
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	// Source holds the dependency project
-	Source *SourceConfig `yaml:",inline" json:",inline"`
-
 	// Name is used internally
 	Name string `yaml:"name" json:"name"`
 
+	// Source holds the dependency project
+	Source *SourceConfig `yaml:",inline" json:",inline"`
+
 	// Pipeline is the pipeline to deploy by default. Defaults to 'deploy'
-	Pipeline string `yaml:"pipeline,omitempty" json:"pipeline,omitempty"`
-
-	// Profiles specifies which profiles should be applied while loading the dependency
-	Profiles []string `yaml:"profiles,omitempty" json:"profiles,omitempty"`
-
-	// DisableProfileActivation disabled automatic profile activation of dependency profiles
-	DisableProfileActivation bool `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
+	Pipeline string `yaml:"pipeline,omitempty" json:"pipeline,omitempty" jsonschema:"default=deploy" jsonschema_extras:"group=execution,group_name=Execution"`
 
 	// Vars are variables that should be passed to the dependency
-	Vars map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
+	Vars map[string]string `yaml:"vars,omitempty" json:"vars,omitempty" jsonschema_extras:"group=execution"`
 
 	// OverwriteVars specifies if DevSpace should pass the parent variables to the dependency
-	OverwriteVars bool `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
+	OverwriteVars bool `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty" jsonschema_extras:"group=execution"`
 
 	// IgnoreDependencies defines if dependencies of the dependency should be excluded
-	IgnoreDependencies bool `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
+	IgnoreDependencies bool `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty" jsonschema_extras:"group=execution"`
 
 	// Namespace specifies the namespace this dependency should be deployed to
-	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty" jsonschema_extras:"group=execution"`
+
+	// Profiles specifies which profiles should be applied while loading the dependency
+	Profiles []string `yaml:"profiles,omitempty" json:"profiles,omitempty" jsonschema:"-"`
+
+	// DisableProfileActivation disabled automatic profile activation of dependency profiles
+	DisableProfileActivation bool `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty" jsonschema:"-"`
 }
 
 // SourceConfig defines an artifact source
 type SourceConfig struct {
+	// Path is the local path where DevSpace can find the artifact.
+	// This option is mutually exclusive with the path option.
+	Path string `yaml:"path,omitempty" json:"path,omitempty" jsonschema_extras:"group=path,group_name=Source: Local Filesystem"`
+
 	// Git is the remote repository to download the artifact from. You can either use
 	// https projects or ssh projects here, but need to make sure git can pull the project.
 	// This option is mutually exclusive with the path option.
-	Git string `yaml:"git,omitempty" json:"git,omitempty"`
+	Git string `yaml:"git,omitempty" json:"git,omitempty" jsonschema_extras:"group=git,group_name=Source: Git Repository"`
+
+	// SubPath is a path within the git repository where the artifact lies in
+	SubPath string `yaml:"subPath,omitempty" json:"subPath,omitempty" jsonschema_extras:"group=git"`
+
+	// Branch is the git branch to pull
+	Branch string `yaml:"branch,omitempty" json:"branch,omitempty" jsonschema_extras:"group=git"`
+
+	// Tag is the tag to pull
+	Tag string `yaml:"tag,omitempty" json:"tag,omitempty" jsonschema_extras:"group=git"`
+
+	// Revision is the git revision to pull
+	Revision string `yaml:"revision,omitempty" json:"revision,omitempty" jsonschema_extras:"group=git"`
 
 	// CloneArgs are additional arguments that should be supplied to the git CLI
-	CloneArgs []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty"`
+	CloneArgs []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty" jsonschema_extras:"group=git"`
 
 	// DisableShallow can be used to turn off shallow clones as these are the default used
 	// by devspace
-	DisableShallow bool `yaml:"disableShallow,omitempty" json:"disableShallow,omitempty"`
+	DisableShallow bool `yaml:"disableShallow,omitempty" json:"disableShallow,omitempty" jsonschema_extras:"group=git"`
 
 	// DisablePull will disable pulling every time DevSpace is reevaluating this source
-	DisablePull bool `yaml:"disablePull,omitempty" json:"disablePull,omitempty"`
-
-	// SubPath is a path within the git repository where the artifact lies in
-	SubPath string `yaml:"subPath,omitempty" json:"subPath,omitempty"`
-
-	// Branch is the git branch to pull
-	Branch string `yaml:"branch,omitempty" json:"branch,omitempty"`
-
-	// Tag is the tag to pull
-	Tag string `yaml:"tag,omitempty" json:"tag,omitempty"`
-
-	// Revision is the git revision to pull
-	Revision string `yaml:"revision,omitempty" json:"revision,omitempty"`
-
-	// Path is the local path where DevSpace can find the artifact.
-	// This option is mutually exclusive with the path option.
-	Path string `yaml:"path,omitempty" json:"path,omitempty"`
+	DisablePull bool `yaml:"disablePull,omitempty" json:"disablePull,omitempty" jsonschema_extras:"group=git"`
 }
 
 // HookConfig defines a hook
@@ -1396,16 +1404,7 @@ type CommandConfig struct {
 	Section string `yaml:"section,omitempty" json:"section,omitempty"`
 
 	// Command is the command that should be executed. For example: 'echo 123'
-	Command string `yaml:"command" json:"command"`
-
-	// After is executed after the command was run. It is executed also when
-	// the command was interrupted which will set the env variable COMMAND_INTERRUPT
-	// to true as well as when the command errored which will set the error string to
-	// COMMAND_ERROR.
-	After string `yaml:"after,omitempty" json:"after,omitempty"`
-
-	// Internal commands are not show in list and are usable through run_command
-	Internal bool `yaml:"internal,omitempty" json:"internal,omitempty"`
+	Command string `yaml:"command" json:"command" jsonschema:"required"`
 
 	// Args are optional and if defined, command is not executed within a shell
 	// and rather directly.
@@ -1417,6 +1416,15 @@ type CommandConfig struct {
 
 	// Description describes what the command is doing and can be seen in `devspace list commands`
 	Description string `yaml:"description,omitempty" json:"description,omitempty"`
+
+	// Internal commands are not show in list and are usable through run_command
+	Internal bool `yaml:"internal,omitempty" json:"internal,omitempty"`
+
+	// After is executed after the command was run. It is executed also when
+	// the command was interrupted which will set the env variable COMMAND_INTERRUPT
+	// to true as well as when the command errored which will set the error string to
+	// COMMAND_ERROR.
+	After string `yaml:"after,omitempty" json:"after,omitempty"`
 }
 
 type CommandFlag struct {
@@ -1449,46 +1457,46 @@ type Variable struct {
 	// Name is the name of the variable
 	Name string `yaml:"name" json:"name"`
 
+	// Value is a shortcut for using source: none and default: my-value
+	Value interface{} `yaml:"value,omitempty" json:"value,omitempty" jsonschema:"oneof_type=string;integer;boolean" jsonschema_extras:"group=static,group_name=Static Value"`
+
 	// Question can be used to define a custom question if the variable was not yet used
-	Question string `yaml:"question,omitempty" json:"question,omitempty"`
+	Question string `yaml:"question,omitempty" json:"question,omitempty" jsonschema_extras:"group=question,group_name=Value From Input (Question)"`
+
+	// Default is the default value the variable should have if not set by the user
+	Default interface{} `yaml:"default,omitempty" json:"default,omitempty" jsonschema:"oneof_type=string;integer;boolean" jsonschema_extras:"group=question"`
 
 	// Options are options that can be selected when the variable question is asked
-	Options []string `yaml:"options,omitempty" json:"options,omitempty"`
+	Options []string `yaml:"options,omitempty" json:"options,omitempty" jsonschema_extras:"group=question"`
 
 	// Password signals that this variable should not be visible if entered
-	Password bool `yaml:"password,omitempty" json:"password,omitempty"`
+	Password bool `yaml:"password,omitempty" json:"password,omitempty" jsonschema_extras:"group=question"`
 
 	// ValidationPattern can be used to verify the user input
-	ValidationPattern string `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty"`
+	ValidationPattern string `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty" jsonschema_extras:"group=question"`
 
 	// ValidationMessage can be used to tell the user the format of the variable value
-	ValidationMessage string `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
+	ValidationMessage string `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty" jsonschema_extras:"group=question"`
 
 	// NoCache can be used to prompt the user on every run for this variable
-	NoCache bool `yaml:"noCache,omitempty" json:"noCache,omitempty"`
+	NoCache bool `yaml:"noCache,omitempty" json:"noCache,omitempty" jsonschema_extras:"group=question"`
+
+	// Command is the command how to retrieve the variable. If args is omitted, command is parsed as a shell
+	// command.
+	Command string `yaml:"command,omitempty" json:"command,omitempty" jsonschema_extras:"group=execution,group_name=Value From Command"`
+
+	// Args are optional args that will be used for the command
+	Args []string `yaml:"args,omitempty" json:"args,omitempty" jsonschema_extras:"group=execution"`
+
+	// Commands are additional commands that can be used to run a different command on a different operating
+	// system.
+	Commands []VariableCommand `yaml:"commands,omitempty" json:"commands,omitempty" jsonschema_extras:"group=execution"`
 
 	// AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere
 	AlwaysResolve bool `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
 
-	// Value is a shortcut for using source: none and default: my-value
-	Value interface{} `yaml:"value,omitempty" json:"value,omitempty"`
-
-	// Default is the default value the variable should have if not set by the user
-	Default interface{} `yaml:"default,omitempty" json:"default,omitempty"`
-
 	// Source defines where the variable should be taken from
-	Source VariableSource `yaml:"source,omitempty" json:"source,omitempty"`
-
-	// Command is the command how to retrieve the variable. If args is omitted, command is parsed as a shell
-	// command.
-	Command string `yaml:"command,omitempty" json:"command,omitempty"`
-
-	// Args are optional args that will be used for the command
-	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
-
-	// Commands are additional commands that can be used to run a different command on a different operating
-	// system.
-	Commands []VariableCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Source VariableSource `yaml:"source,omitempty" json:"source,omitempty" jsonschema:"enum=all,enum=env,enum=input,enum=command,enum=none"`
 }
 
 func (v *Variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -1520,16 +1528,16 @@ func (v *Variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type VariableCommand struct {
+	// OperatingSystem is optional and defines the operating system this
+	// command should be executed on
+	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
+
 	// Command is the command to use to retrieve the value for this variable. If no
 	// args are specified the command is run within a pseudo shell.
 	Command string `yaml:"command,omitempty" json:"command,omitempty"`
 
 	// Args are optional arguments for the command
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
-
-	// OperatingSystem is optional and defines the operating system this
-	// command should be executed on
-	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
 }
 
 // VariableSource is type of a variable source
@@ -1599,19 +1607,19 @@ type ProfileConfigStructure struct {
 	Hooks *[]interface{} `yaml:"hooks,omitempty" json:"hooks,omitempty"`
 
 	// DEPRECATED: OldDeployments references the old deployments
-	OldDeployments *[]interface{} `yaml:"oldDeployments,omitempty" json:"oldDeployments,omitempty"`
+	OldDeployments *[]interface{} `yaml:"oldDeployments,omitempty" json:"oldDeployments,omitempty" jsonschema:"-"`
 
 	// DEPRECATED: OldDependencies references the old dependencies
-	OldDependencies *[]interface{} `yaml:"oldDependencies,omitempty" json:"oldDependencies,omitempty"`
+	OldDependencies *[]interface{} `yaml:"oldDependencies,omitempty" json:"oldDependencies,omitempty" jsonschema:"-"`
 
 	// DEPRECATED: OldCommands references the old commands
-	OldCommands *[]interface{} `yaml:"oldCommands,omitempty" json:"oldCommands,omitempty"`
+	OldCommands *[]interface{} `yaml:"oldCommands,omitempty" json:"oldCommands,omitempty" jsonschema:"-"`
 
 	// DEPRECATED: OldPullSecrets references the old pullsecrets
-	OldPullSecrets *[]interface{} `yaml:"oldPullSecrets,omitempty" json:"oldPullSecrets,omitempty"`
+	OldPullSecrets *[]interface{} `yaml:"oldPullSecrets,omitempty" json:"oldPullSecrets,omitempty" jsonschema:"-"`
 
 	// DEPRECATED: OldVars references the old vars
-	OldVars *[]interface{} `yaml:"oldVars,omitempty" json:"oldVars,omitempty"`
+	OldVars *[]interface{} `yaml:"oldVars,omitempty" json:"oldVars,omitempty" jsonschema:"-"`
 }
 
 // ProfileParent defines where to load the profile from
@@ -1654,7 +1662,7 @@ type PullSecretConfig struct {
 	// The registry to create the image pull secret for.
 	// Empty string == docker hub
 	// e.g. gcr.io
-	Registry string `yaml:"registry,omitempty" json:"registry"`
+	Registry string `yaml:"registry,omitempty" json:"registry" jsonschema:"required"`
 
 	// The username of the registry. If this is empty, devspace will try
 	// to receive the auth data from the local docker

@@ -1,0 +1,17 @@
+If the `updateImageTags` field is set to `true` for a deployment, DevSpace will replace/update all image tags before deploying the project.
+
+When enabled, DevSpace searches all your manifests for images that are defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it replaces or appends the image tag with the tag it created during the image building process. Image tag replacement makes sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
+
+#### Example: Enable Tag Updates
+```yaml {3}
+deployments:
+  backend:
+    updateImageTags: true
+    kubectl:
+      manifests:
+      - backend/
+```
+
+:::info In-Memory Tag Replacement
+Tag replacement takes place **in-memory** and is **not** writing anything to the filesystem, i.e. it will **never** change any of your configuration files.
+:::

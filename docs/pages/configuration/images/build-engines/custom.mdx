@@ -1,0 +1,53 @@
+---
+title: Custom Build Scripts
+sidebar_label: custom
+---
+
+import ConfigPartial from '../../_partials/v2beta1/images/custom.mdx'
+
+
+Using `custom` as build tool allows you to define a custom command for building images. This is particularly useful if you want to use a remote build system such as Google Cloud Build.
+
+#### Example: Building Images With `custom` Build Command
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    tags:
+    - dev-latest
+    custom:
+      command: |-
+        # This bash-like script works on all platforms including Windows
+        docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
+```
+The image `backend` would be built using the following command: 
+```
+docker build -t john/appbackend:dev-latest . -f custom/Dockerfile"
+```
+
+:::warning
+Make sure your `custom` build command terminates with exit code 0 when the build process was successful.
+:::
+
+
+## Rebuild Cache
+The `onChange` option expects an array of strings which represent paths to files or folders that should be watched for changes. DevSpace uses these paths, and the hash values it stores about these paths, to evaluate if an image should be rebuilt, or if the image building can be skipped because the context of the image has not changed.
+
+#### Example: OnChange Option For custom Build Command
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    custom:
+      command: ./build
+      imageFlag: "--image"
+      onChange:
+      - some/path/
+      - another/path/file.txt
+```
+The image `backend` is built using the command `./build --image "[IMAGE]:[TAG]"`, and DevSpace skips the build if none of the files within `some/path/`, nor the file `another/path/file.txt`, has changed since the last build.
+
+
+## Config Reference
+
+<ConfigPartial/>

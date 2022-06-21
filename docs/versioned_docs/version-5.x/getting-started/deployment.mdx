@@ -1,0 +1,76 @@
+---
+title: Deployment with DevSpace
+sidebar_label: 4. Deployment
+---
+
+import KubeContextFragment from '../fragments/kube-context.mdx';
+
+
+Once you are done with developing your application or you just want to test if it works even outside of development mode with your actual container image, you can start a clean deployment.
+
+<figure class="frame">
+  <video controls loop autoplay="true">
+    <source src={require('@site/static/img/devspace-deploy.mp4').default} type="video/mp4" />
+  </video>
+  <figcaption>DevSpace CLI - Deployment</figcaption>
+</figure>
+
+
+## Kube-Context & Namespace
+For this clean deployment, you may want to switch to a different namespace or even to a different cluster to test your application in a cloud-powered cluster, for example.
+
+<KubeContextFragment/>
+
+
+## Deploy Project
+Run the local deployment pipeline using this command:
+```bash
+devspace deploy -p production
+```
+
+<figure>
+  <img src={require('@site/static/img/deployment-process-devspace.svg').default} alt="Deployment Workflow" />
+  <figcaption>DevSpace CLI - Deployment Workflow</figcaption>
+</figure>
+
+Running `devspace deploy -p production` will do the following:
+
+1. **Build the Dockerfile(s)** specified in the [`images` section of the `devspace.yaml`](../configuration/images/basics.mdx)
+2. **Tag** the resulting image(s) with an auto-generated tag according to a [customizable tag schema](../configuration/images/basics.mdx)
+3. **Push** the resulting Docker images to the specified registries
+4. **Create image pull secrets** in your Kubernetes namespace (optional, enabled by default)
+5. **Deploy** everything that is defined within the [`deployments` section in the `devspace.yaml`](../configuration/deployments/basics.mdx)
+
+:::note Image Building Only
+If you only want to build, tag and push all images but not deploy anything, run:
+```bash
+devspace build
+```
+:::
+
+
+<br/>
+
+## Understand Profiles
+As shown earlier, DevSpace is by default configured to skip image building, for example. However, to fully test your containerized application you may want to create a fresh image and push this image to a registry.
+
+Profiles allow you to apply modifications to your `devspace.yaml` configuration for certain use cases or for different deployment targets (e.g. dev vs testing vs production).
+
+By default, `devspace init` adds a small example profile called `production` which only removes the `disabled: true` statement from our `images` section which in turn enables image building:
+```yaml
+profiles:
+- name: production
+  patches:
+  - op: remove
+    path: images.app.build.disabled
+```
+
+You can print the config after a profile has been applied to see what the profile actually changes:
+```bash
+devspace print -p production
+```
+
+The flag `-p / --profile` is global, so we can also use them for other commands and define profiles that apply to different workflows for commands such as `devspace dev`:
+```bash
+devspace dev -p start-debugger
+```

@@ -1,0 +1,15 @@
+.step_src-components-Step-.active-section::before,
+.step_src-components-Step- + h2.active-section::before,
+.step_src-components-Step- + h3.active-section::before,
+.step_src-components-Step- + h4.active-section::before {
+  display: none;
+}
+
+.step_src-components-Step- + h2.active-section + .active-section::before {
+  top: -5rem;
+}
+
+.step_src-components-Step- + h3.active-section + .active-section::before,
+.step_src-components-Step- + h4.active-section + .active-section::before {
+  top: -3.5rem;
+}

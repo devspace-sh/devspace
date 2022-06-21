@@ -1,0 +1,612 @@
+{
+  "version-5.x/adminSidebar": [
+    {
+      "type": "doc",
+      "id": "version-5.x/introduction"
+    },
+    {
+      "collapsed": false,
+      "type": "category",
+      "label": "Getting Started",
+      "items": [
+        {
+          "type": "doc",
+          "id": "version-5.x/quickstart"
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "Full Guide",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/getting-started/installation"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/getting-started/initialize-project"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/getting-started/development"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/getting-started/deployment"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/getting-started/cleanup"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/getting-started/next-steps"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "type": "category",
+      "label": "Configuration",
+      "items": [
+        {
+          "type": "doc",
+          "id": "version-5.x/configuration/reference"
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "images",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/images/basics"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/images/image-tagging"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/images/dockerfile-context"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/images/entrypoint-cmd"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/images/append-dockerfile-instructions"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/images/inject-restart-helper"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/images/rebuild-strategy"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/images/pull-secrets"
+            },
+            {
+              "collapsed": true,
+              "type": "category",
+              "label": "build",
+              "items": [
+                {
+                  "type": "doc",
+                  "id": "version-5.x/configuration/images/docker"
+                },
+                {
+                  "type": "doc",
+                  "id": "version-5.x/configuration/images/buildkit"
+                },
+                {
+                  "type": "doc",
+                  "id": "version-5.x/configuration/images/kaniko"
+                },
+                {
+                  "type": "doc",
+                  "id": "version-5.x/configuration/images/custom"
+                },
+                {
+                  "type": "doc",
+                  "id": "version-5.x/configuration/images/disabled"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "deployments",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/deployments/basics"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/deployments/helm-charts"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/deployments/kubernetes-manifests"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/deployments/kustomizations"
+            },
+            {
+              "type": "link",
+              "label": "↗️ Component Chart",
+              "href": "https://devspace.sh/component-chart/docs"
+            }
+          ]
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "dev",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/development/basics"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/development/port-forwarding"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/development/reverse-port-forwarding"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/development/open-links"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/development/file-synchronization"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/development/terminal"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/development/log-streaming"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/development/replace-pods"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/development/auto-reloading"
+            }
+          ]
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "dependencies",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/dependencies/basics"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/dependencies/git-repository"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/dependencies/local-folder"
+            }
+          ]
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "vars",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/variables/basics"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/variables/source-env"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/variables/source-input"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/variables/source-command"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/variables/source-none"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/variables/predefined-variables"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/variables/runtime-variables"
+            }
+          ]
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "profiles",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/profiles/basics"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/profiles/replace"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/profiles/merge"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/profiles/patches"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/profiles/parents"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/configuration/profiles/activation"
+            }
+          ]
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/configuration/pullSecrets/basics"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/configuration/commands/basics"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/configuration/hooks/basics"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/configuration/require/basics"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/configuration/expressions"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/configuration/env-file"
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "type": "category",
+      "label": "Guides & Best Practices",
+      "items": [
+        {
+          "type": "doc",
+          "id": "version-5.x/guides/basics"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/guides/localhost-ui"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/guides/networking-domains"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/guides/file-synchronization"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/guides/ci-cd-integration"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/guides/dev-staging-production"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/guides/image-building"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/guides/plugins"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/guides/remote-debugging"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/guides/community-projects"
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "type": "category",
+      "label": "Tutorials",
+      "items": [
+        {
+          "type": "link",
+          "label": "Ruby on Rails",
+          "href": "https://devspace.cloud/blog/2019/10/21/deploy-ruby-on-rails-to-kubernetes"
+        },
+        {
+          "type": "link",
+          "label": "Python Django",
+          "href": "https://devspace.cloud/blog/2019/10/18/deploy-django-to-kubernetes"
+        },
+        {
+          "type": "link",
+          "label": "PHP Laravel",
+          "href": "https://devspace.cloud/blog/2019/10/16/deploy-laravel-to-kubernetes"
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "Node / JavaScript",
+          "items": [
+            {
+              "type": "link",
+              "label": "Express.js",
+              "href": "https://devspace.cloud/blog/2019/10/15/deploy-express.js-server-to-kubernetes"
+            },
+            {
+              "type": "link",
+              "label": "React.js",
+              "href": "https://devspace.cloud/blog/2019/03/07/deploy-react-js-to-kubernetes"
+            },
+            {
+              "type": "link",
+              "label": "Vue.js",
+              "href": "https://devspace.cloud/blog/2019/09/30/deploy-vue-js-to-kubernetes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "type": "category",
+      "label": "CLI Commands",
+      "items": [
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "devspace add",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_add_plugin"
+            }
+          ]
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_analyze"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_attach"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_build"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_cleanup_images"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_deploy"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_dev"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_enter"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_init"
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "devspace list",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_list_commands"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_list_contexts"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_list_deployments"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_list_namespaces"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_list_plugins"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_list_ports"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_list_profiles"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_list_sync"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_list_vars"
+            }
+          ]
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_logs"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_open"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_print"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_purge"
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "devspace remove",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_remove_context"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_remove_plugin"
+            }
+          ]
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_render"
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "devspace reset",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_reset_dependencies"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_reset_vars"
+            }
+          ]
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_run"
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "devspace set",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_set_var"
+            }
+          ]
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_sync"
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_ui"
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "devspace update",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_update_plugin"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_update_dependencies"
+            }
+          ]
+        },
+        {
+          "type": "doc",
+          "id": "version-5.x/commands/devspace_upgrade"
+        },
+        {
+          "collapsed": true,
+          "type": "category",
+          "label": "devspace use",
+          "items": [
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_use_context"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_use_namespace"
+            },
+            {
+              "type": "doc",
+              "id": "version-5.x/commands/devspace_use_profile"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "link",
+      "label": "↗️ Component Chart",
+      "href": "https://devspace.sh/component-chart/docs"
+    },
+    {
+      "type": "link",
+      "label": "↗️ Open-Source by Loft Labs",
+      "href": "https://loft.sh/"
+    }
+  ]
+}

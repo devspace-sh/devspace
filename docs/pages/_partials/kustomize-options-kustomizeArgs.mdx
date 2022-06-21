@@ -1,0 +1,20 @@
+The `kustomizeArgs` option expects an array of strings stating additional arguments (and flags) that should be used when calling `kustomize build`.
+
+#### Example: Custom Kustomize Args & Flags
+```yaml
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    kustomize: true
+    kustomizeArgs:
+    - "--timeout"
+    - "10s"
+    - "--grace-period"
+    - "30"
+```
+Deploying the above example would roughly be equivalent to this command:
+```bash
+kustomize build --timeout=10s --grace-period=30 -f backend/
+```

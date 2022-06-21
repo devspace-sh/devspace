@@ -1,0 +1,3 @@
+:::warning
+Running `devspace dev` multiple times in parallel for the <u>same project</u> does not work and returns a fatal error because multiple instances of port forwarding and file sync will disturb each other. However, running `devspace dev` for several different projects (i.e. 2 different `devspace.yaml` files with different `name`) works seamlessly.
+:::

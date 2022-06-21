@@ -1,0 +1,224 @@
+---
+title: Config Variables
+sidebar_label: ${VARIABLES}
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import ConfigPartial from './_partials/v2beta1/vars.mdx'
+
+DevSpace allows you to make your configuration dynamic by using variables.
+
+While there is no need to explicitly define a config variable, it allows you to customize the behavior of DevSpace when working with the variable. If you do not explicitly define a variable, DevSpace will try to load it from the user's local environment variables.
+
+
+## Built-In Variables
+DevSpace provides a set of built-in variables:
+- `${DEVSPACE_NAMESPACE}` contains the current namespace
+- `${DEVSPACE_CONTEXT}` contains the name of the current kube-context (e.g. `minikube`)
+- `${DEVSPACE_NAME}` contains the value of the `name` field of the current `devspace.yaml` file
+- `${DEVSPACE_GIT_BRANCH}` contains the name of the local git branch that the user is currently on
+- `${DEVSPACE_GIT_COMMIT}` contains the hash of the latest git commit in the current repository
+- `${DEVSPACE_TIMESTAMP}` contains the current UNIX timestamp
+- `${DEVSPACE_USER_HOME}` contains the path to the current user's home directory
+- `${DEVSPACE_TMPDIR}` contains a path to a temporary folder that DevSpace cleans up after the `devspace` command terminates
+- `${DEVSPACE_PROFILE}` contains the profile that is currently active in DevSpace (e.g. the string provided via `-p / --profile` in a command such as `devspace dev -p my-profile`)
+- `${DEVSPACE_VERSION}` contains the version of DevSpace that is currently running
+
+
+## Custom Variables
+DevSpace lets you define custom varables inside `devspace.yaml` within the `vars` section.
+
+:::tip Mix & Match Variable Types
+You can define several types of variables in the same config file, e.g. one `devspace.yaml` can contain static variables, env variables and more.
+:::
+
+### With Static Value
+To add variables with static value, just provide the value for the respective variable:
+```yaml title=devspace.yaml
+vars:
+  MY_VAR: "some value"
+  ANOTHER_VAR: "some value"
+```
+
+:::note On-Demand Overwrite
+If you want to overwrite a static variable, you can use the `--var MY_VAR=new-value` flag, e.g. `devspace dev --var MY_VAR=value`.
+::: 
+
+
+### From Env Vars
+To load variables from the user's environment variables, you can just use them in the config as `${VAR_NAME}` without the need to explictly define them.
+
+
+### From Command
+You can load the values from commands from custom commands via [config expressions](./expressions.mdx) or using the long form by specifying the `command` field:
+```yaml title=devspace.yaml
+vars:
+  VAR_FROM_COMMAND: $(git rev-parse HEAD)
+  ANOTHER_VAR_FROMCOMMAND:
+    command: git
+    args: ["rev-parse", "HEAD"]
+```
+
+
+### From User Input (Question)
+DevSpace can also ask the user to provide a value for a variable and you can provide a custom question and configure other input attributes for the question:
+
+<Tabs
+  defaultValue="question"
+  values={[
+    { label: 'Question', value: 'question', },
+    { label: 'Options/Picker', value: 'options', },
+    { label: 'Password', value: 'password', },
+    { label: 'No Cache', value: 'noCache', },
+  ]
+}>
+<TabItem value="question">
+
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+  MYSQL_VERSION: 
+    question: Which mysql version do you want to use?
+    default: "5.7"
+```
+
+</TabItem>
+<TabItem value="options">
+
+```yaml {3,5-10}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+  MYSQL_VERSION: 
+    question: Which mysql version do you want to use?
+    default: "5.7"
+    options:
+    - "5.5"
+    - "5.6"
+    - "5.7"
+```
+
+</TabItem>
+<TabItem value="password">
+
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+  MYSQL_VERSION: 
+    question: Which mysql version do you want to use?
+    password: true
+```
+
+</TabItem>
+<TabItem value="noCache">
+
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+  MYSQL_VERSION: 
+    question: Which mysql version do you want to use?
+    noCache: true
+```
+
+</TabItem>
+</Tabs>
+
+
+### From `.env` File
+DevSpace also reads environment variables from the `.env` file inside your project. The syntax of the `.env` file is the [same as for docker-compose](https://docs.docker.com/compose/env-file/):
+
+- Each line should have the format `VAR_NAME=VAR_VALUE`.
+- **There is *no* special handling of quotation marks. This means that they are part of the `VAR_VALUE`.**
+- Lines beginning with # are processed as comments and ignored.
+
+:::info Precedence
+- Environment variables defined in your terminal session (including system variables) always take precendence over the variables in your `.env` file.
+- Variables defined in your `.env` file take precende over the default values defined for config variables (configured in the `vars` section of `devspace.yaml`).
+:::
+
+
+## `$DEVSPACE_FLAGS` For Default Flags
+A common use case for the `.env` file is to set default flags for the `devspace` commands such as `devspace dev` or `devspace deploy`. You can define the following environment variables to set default flags:
+- `DEVSPACE_FLAGS` for global flags that should be added to each commands (e.g. `DEVSPACE_FLAGS=-s -p dev`)
+- `DEVSPACE_[COMMAND]_FLAGS` to add default flags for single commands (e.g. `DEVSPACE_DEV_FLAGS=-s --verbose-dependencies`)
+
+```bash title="File: .env"
+DEVSPACE_FLAGS=-s -p dev
+DEVSPACE_DEV_FLAGS=-s --verbose-dependencies
+```
+
+:::note Overwrite Default Flags
+Specifying flags for a command will overwrite the default flags, e.g. if `DEVSPACE_FLAGS=-s -p dev` is configured and you run `devspace dev -p production`, the following command would be executed: `devspace dev -s -p production`
+:::
+
+
+
+## Useful Commands
+
+### `devspace list vars`
+To get a list of all variables defined in the `devspace.yaml`, you can run this command:
+```bash
+devspace list vars
+```
+
+### `devspace reset vars`
+Once DevSpace asks you to provide a value for a variable, this value will be stored in the variables cache, so you will not asked about this variable again. To reset the variables cache, run:
+```bash
+devspace reset vars
+```
+
+DevSpace will fill the variables cache again, once you run the next build or deployment command.
+
+### `devspace print`
+The following command prints the config after all variables have been replaced:
+```bash
+devspace print
+```
+You can optionally add the `-p / --profiles` flag to this command.
+
+### `export VAR_NAME=value`
+The value for a config variable can also be set by defining an environment variable named `[VAR_NAME]`. Setting the value of a config variable with name `${IMAGE_NAME}` would be possible by setting an environment value `IMAGE_NAME`.
+
+
+<Tabs
+  defaultValue="windows"
+  values={[
+    { label: 'Windows Powershell', value: 'windows', },
+    { label: 'Mac Terminal', value: 'mac', },
+    { label: 'Linux Bash', value: 'linux', },
+  ]}>
+<TabItem value="windows">
+
+```powershell
+$env:IMAGE_NAME = "some-value"
+```
+
+</TabItem>
+<TabItem value="mac">
+
+```bash
+export IMAGE_NAME="some-value"
+```
+
+</TabItem>
+<TabItem value="linux">
+
+```bash
+export IMAGE_NAME="some-value"
+```
+
+</TabItem>
+</Tabs>
+
+
+## Config Reference
+
+<ConfigPartial/>

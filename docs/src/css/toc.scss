@@ -1,0 +1,43 @@
+.table-of-contents__link {
+  position: relative;
+
+  &[href="#config-reference"] {
+    color: var(--ifm-color-warning);
+
+    display: block;
+    margin-top: 2em;
+
+    &::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      margin-top: -1em;
+      margin-left: -1.2em;
+      width: 3em;
+      height: 1px;
+      background: var(--ifm-toc-border-color);
+    }
+
+    &::after {
+      background: var(--ifm-color-warning);
+    }
+  }
+}
+
+.table-of-contents__link--active::after {
+  content: " ";
+  background: var(--ifm-color-primary);
+  position: absolute;
+  left: -17px;
+  top: -5px;
+  bottom: -5px;
+  width: 6px;
+
+  ul ul & {
+    left: -32px;
+  }
+
+  ul ul ul & {
+    left: -48px;
+  }
+}

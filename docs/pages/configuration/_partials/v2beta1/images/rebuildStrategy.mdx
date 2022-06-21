@@ -1,0 +1,18 @@
+
+<details className="config-field" data-expandable="false" open>
+<summary>
+
+### `rebuildStrategy` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">string</span> <span className="config-field-default">default</span> <span className="config-field-enum"><span>default<br/>always<br/>ignoreContextChanges</span></span> {#images-rebuildStrategy}
+
+RebuildStrategy is used to determine when DevSpace should rebuild an image. By default, devspace will
+rebuild an image if one of the following conditions is true:
+- The dockerfile has changed
+- The configuration within the devspace.yaml for the image has changed
+- A file within the docker context (excluding .dockerignore rules) has changed
+This option is ignored for custom builds.
+
+</summary>
+
+
+
+</details>

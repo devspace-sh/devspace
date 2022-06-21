@@ -1,0 +1,100 @@
+---
+title: Deployments
+sidebar_label: Basics
+---
+
+import ConfigPartialDeployments from '../_partials/v2beta1/deployments.mdx'
+
+
+The `deployments` section in `devspace.yaml` defines Helm charts, Kubernetes manifests and Kustomizations that can deployed using the [`create_deployments` function](../functions/README.mdx#create_deployments).
+
+
+## Workflow
+To deploy resources with DevSpace, you need to:
+1. Define the `deployments` section of `devspace.yaml`
+2. Call the `create_deployments` function inside the `pipelines` section of `devspace.yaml`
+3. Execute the respective pipeline
+
+
+### 1. Define Deployments
+To deploy to Kubernetes using DevSpace, we need to define `deployments` in `devspace.yaml`:
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  configs:
+    kubectl:
+      manifests:
+      - ./api/deploy/configmap.yaml
+      - ./payments/deploy/configmap.yaml
+  api:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+          - image: ghcr.io/loft-sh/devspace-example-api
+        service:
+          ports:
+            - port: 8080
+  payments:
+    helm:
+      chart:
+        name: ./payments/chart/
+      valuesFiles:
+      - ./payments/helm-values-dev.yaml
+  auth:
+    helm:
+      chart:
+        name: auth-server-chart
+        version: 3.2.1
+        repo: https://mycompany.tld/helm/
+      values:
+        ...
+```
+The example above defines 4 deployments:
+- `configs` which deploys two ConfigMap objects to Kubernetes from plain manifest files
+- `api` which is deployed from the component chart provided by DevSpace
+- `payments` which is deployed using a local Helm chart that is located in a folder
+- `auth` which is deployed from a chart that has been pushed to a Helm repository
+
+
+### 2. Call `create_deployments` in Pipeline
+DevSpace deploys resources to Kubernetes when the [`create_deployments` function](../functions/README.mdx#create_deployments) is called within `pipelines` as shown in this example:
+
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  # highlight-start
+  dev: |-
+    create_deployments --all
+    start_dev --all
+  deploy: |-
+    build_images --all
+    create_deployments --all
+  deploy-api: |-
+    create_deployments api
+  deploy-ordered: |-
+    create_deployments auth
+    create_deployments api payments
+  # highlight-end
+
+deployments:
+  api: ...          # see example above
+  payments: ...     # see example above
+  auth: ...         # see example above
+```
+
+
+### 3. Run Pipeline
+Given the example above, you can now run:
+- `devspace deploy` or `devspace dev` to deploy all deployments
+- `devspace run-pipeline deploy-api` to deploy only the component chart deployment named `api`
+- `devspace run-pipeline deploy-ordered` to  
+  1. First deploy `auth` (blocking)
+  2. Then deploy `api` and `payments` in parallel
+
+
+## Configuration
+
+<ConfigPartialDeployments/>

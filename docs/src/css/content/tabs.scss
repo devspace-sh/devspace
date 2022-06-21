@@ -1,0 +1,53 @@
+.tabs {
+  border-bottom: 1px solid var(--ifm-color-primary-lightest);
+}
+
+.tabs > .tab-item {
+  border-radius: 0;
+  padding: 0.6em 1.2em;
+}
+
+.tabs > .tab-item:focus,
+.tabs > .tab-item:hover {
+  background-color: #f2f9fb;
+}
+
+ul[role="tablist"] {
+  border-bottom: none;
+}
+
+ul[role="tablist"] li,
+ul[role="tablist"] li:hover {
+  background: transparent;
+  padding: 0.5em 1.2em;
+  white-space: nowrap;
+}
+
+ul[role="tablist"] li:not([aria-selected="true"]):hover {
+  border-bottom-color: #a6acd0;
+}
+
+[role="tabpanel"] {
+  background-color: #fff;
+  padding: 1.3em;
+  margin: -1em -5px 0;
+  border: 1px solid #d2e8fd !important;
+  border-radius: 5px;
+}
+
+.tabs-container:last-child > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+[role="tabpanel"] > :first-child {
+  margin-top: 0;
+}
+
+[role="tabpanel"] > :last-child {
+  margin-bottom: 0;
+}
+
+.tabs__item {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}

@@ -1,0 +1,59 @@
+---
+title: Deploy Local Charts
+sidebar_label: Local Chart
+---
+
+DevSpace can deploy Helm charts located on the same filesystem as the `devspace.yaml` file.
+
+
+## Local Charts vs Dependencies
+If you have multiple services located in the same git repository (monorepo), you may be tempted to have a single `devspace.yaml` at the root of the git repository and then specify one deployment for each service using a local path to each service's chart folder, for example. However, ideally you want to encapsule the build, deployment and development logic for each service inside a separate devspace.yaml that is located very closely to the actual code. 
+
+Instead of creating one giant `devspace.yaml` at the root of a monorepo, it's recommended to create separate `devspace.yaml` files in each sub-project contained in the monorepo because this has several benefits:
+1. It keeps the `devspace.yaml` for each microservice small and bundled with the actual microservice itself. 
+2. It allows you work on microservices independenctly (start a `devspace dev` session for each service if needed)
+3. It only pulls in and deploys other microservices if they are actually needed. 
+
+**Dependencies:** DevSpace provides a feature called [`dependencies`](../../../dependencies/README.mdx) which allows you to define relationships between `devspace.yaml` files to allow users to start working on a service while DevSpace stands up and maintains dependent microservices if needed.
+
+
+## Chart Sources
+To deploy a local Helm chart, you need to tell DevSpace where to locate the chart.
+
+### From Folder
+A common structure is to have a folder in your git repository which contains the Helm chart for this service. In this case, use the `path` field to specify the path to the Helm chart folder relative to the `devspace.yaml` file.
+
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  payments:
+    helm:
+      chart:
+        // highlight-start
+        path: ./payments/chart/
+        // highlight-end
+      values:
+        key: value
+        ...
+      valuesFiles:
+      - ./payments/helm-values-dev.yaml
+```
+
+### From Tar Archive
+In case you want to deploy a Helm chart that has been archived to a `tar` file (or a compressed `.tar.gz` for example), you can use the `path` field to specify the path to the archive file relative to the `devspace.yaml` file.
+
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  payments:
+    helm:
+      chart:
+        // highlight-start
+        path: ./payments/chart.tar.gz
+        // highlight-end
+      values:
+        key: value
+        ...
+      valuesFiles:
+      - ./payments/helm-values-dev.yaml
+```

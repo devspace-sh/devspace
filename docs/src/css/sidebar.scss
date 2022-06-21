@@ -1,0 +1,222 @@
+body .menu {
+  margin: 0;
+  padding: 0;
+  scrollbar-gutter: stable;
+  border-right: 1px solid #fff;
+  position: relative;
+
+  /* Add border on the right-hand side */
+  &::after {
+    content: " ";
+    width: 1px;
+    height: 100%;
+    min-height: calc(100vh - 60px - 90px);
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgb(218, 221, 225);
+  }
+
+  /* Add scrollbar (appears only if many sections expanded) */
+  &::-webkit-scrollbar,
+  &::-webkit-scrollbar-thumb,
+  &::-webkit-scrollbar-track {
+    transition: all 0.3s !important;
+    border-radius: 0 !important;
+  }
+
+  /* Hide scrollbar (if menu is not hovered) */
+  &:not(:hover)::-webkit-scrollbar,
+  &:not(:hover)::-webkit-scrollbar-thumb,
+  &:not(:hover)::-webkit-scrollbar-track {
+    background-color: #fff !important;
+  }
+
+  .code-style {
+    font-family: Menlo, 'Courier New', monospace;
+    word-spacing: -0.15em;
+  }
+
+  .menu__list-item-collapsible {
+    &,
+    &:hover {
+      background: transparent;
+    }
+  }
+
+  .menu__list {
+    &, 
+    .menu__list-item,
+    .menu__list-item-collapsible {
+      position: relative;
+      margin: 0;
+      padding: 0;
+      border-radius: 0;
+    }
+
+
+    /* 1st level links */
+    .menu__link {
+      display: block;
+      width: 100%;
+      padding: 0.8rem 1.8rem;
+      font-weight: 600;
+      outline: none;
+      border-radius: 0;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+
+      /* Link hover effects */
+      &[href]:not([href="#"]):not([href=""]) {
+        /* Blue dot indicator */
+        &::before {
+          content: "";
+          right: 100%;
+          margin-right: -1.2rem;
+          top: 50%;
+          margin-top: -4px;
+          height: 8px;
+          position: absolute;
+          width: 8px;
+          border-radius: 4px;
+          background-color: var(--ifm-color-info);
+          transform: scale(0);
+          transition: .4s cubic-bezier(.4,0,.2,1);
+        }
+
+        /* Background and dot for hover/active links */
+        &:hover,
+        &[aria-current="page"] {
+          background-color: rgb(195 207 211 / 16%) !important;
+
+          /* Show dot */
+          &::before {
+            transform: scale(1);
+          }
+        }
+
+        /* Turn dot into line for active link */
+        &[aria-current="page"]::before {
+          width: 2em;
+        }
+      }
+    }
+  
+    .menu__list {
+      /* 2nd level links */
+      .menu__link {
+        padding: 0.5rem 0 0.5rem 2.8rem;
+        font-weight: 400;
+        transition: 0.3s;
+      }
+  
+      .menu__list {
+        /* 3rd level links */
+        .menu__link {
+          padding-left: 4.3rem;
+          font-size: 0.9em;
+          
+          &:not(:hover) {
+            opacity: 0.9;
+          }
+        }
+
+        /* 3rd level links that are categories */
+        .menu__list-item-collapsible .menu__link {
+          //text-decoration: underline;
+
+          /* Prevent attribute propagation to next level */
+          .menu__link {
+            text-decoration: none;
+          }
+        }
+  
+        .menu__list {
+          /* 4th level links */
+          .menu__link {
+            padding-left: 6rem;
+            font-size: 0.9em;
+            
+            &:not(.menu__link--active):not(:hover) {
+              opacity: 0.6;
+            }
+          }
+  
+          .menu__list {
+            /* 5th level links */
+            .menu__link {
+              padding-left: 7.5rem;
+              font-size: 0.85em;
+              
+              &:not(.menu__link--active):not(:hover) {
+                opacity: 0.6;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/* 1st level categories: add a grey background when expanded (= not collapsed) OR active */
+.theme-doc-sidebar-item-category-level-1.menu__list-item:not(.menu__list-item--collapsed),
+.theme-doc-sidebar-item-category-level-1.menu__list-item.menu__list-item--active,
+.theme-doc-sidebar-item-category-level-2.menu__list-item:not(.menu__list-item--collapsed),
+.theme-doc-sidebar-item-category-level-2.menu__list-item.menu__list-item--active {
+  &,
+  + .menu__list {
+    background-color: rgb(195 207 211 / 14%);
+  }
+}
+
+/* Collapse/Expand icon */
+.menu__caret {
+  background-color: transparent !important;
+  position: absolute;
+  top: 0;
+  left: auto;
+  right: 0;
+  bottom: 0;
+  padding-right: 20px;
+  align-items: center;
+  z-index: 1;
+
+  &::before {
+    margin-right: 0;
+    margin-left: auto;
+  }
+
+  /* Make sure that clicking on icon opens category overview page (only if category is collapsed) */
+  .menu__list-item.menu__list-item--collapsed & {
+    z-index: -1;
+  }
+}
+
+/* Extra padding bottom for expanded categories */
+.theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) > .menu__list {
+  padding-bottom: 1.2rem;
+
+  .theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) > .menu__list {
+    padding-bottom: 0.4rem;
+  }
+}
+
+.menu .menu__link--sublist {
+  color: var(--ifm-menu-color) !important;
+}
+
+/* Add line between two expanded sections (transparent) */
+.theme-doc-sidebar-menu > .theme-doc-sidebar-item-category {
+  border-top: 0.5px solid transparent;
+}
+
+/* Add line between two expanded sections (grey once expanded) */
+.theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) + .theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+.theme-doc-sidebar-item-category.extra-indent .menu__list .menu__link {
+  text-indent: 1.1em;
+}

@@ -1,0 +1,131 @@
+---
+title: DevSpace Localhost UI
+sidebar_label: DevSpace UI
+---
+
+DevSpace provides a powerful client-only UI for Kubernetes development. 
+
+<figure class="frame">
+  <img src={require('@site/static/img/localhost-ui/devspace-localhost-ui.png').default} alt="DevSpace Localhost UI" />
+  <figcaption>DevSpace Localhost UI - Overview</figcaption>
+</figure>
+
+## Open The UI
+Running `devspace dev` will automatically start the UI in the background and then show a log output similar to this one:
+```bash
+#########################################################
+[info]   DevSpace UI available at: http://localhost:8090
+#########################################################
+```
+By default, DevSpace starts the UI on port `8090` but it chooses a different port if the default port is already in use by another process.
+
+To access the UI started by `devspace dev`, just copy and paste the URL shown in the output of the command (see example above) into the address bar of your browser.
+
+Additionally, you can also start the UI using the following command:
+```bash
+devspace ui
+```
+
+:::info Use without Config
+The advantage of `devspace ui` is that it does not require a `devspace.yaml` and can be run from anywhere no matter what your current working directory is.
+:::
+
+:::note
+If you run `devspace ui` while `devspace dev` is already running, the command will not start a second command and will rather open the existing UI started by the `devspace dev` command.
+:::
+
+## Logs
+The logs view is the central point for development. Here, you can find your pods and containers, stream logs, start interactive terminal sessions and more.
+
+### Inspecting Pods &amp; Containers
+The logs view allows you to:
+- switch the kube-context and namespace
+- list all containers (grouped by pods) in a namespace
+- observe the status of all containers and detect issues
+- view the YAML definition of each pod
+- [stream the logs of a container](#stream-logs)
+- [start interactive terminal sessions for a container](#start-terminals)
+
+<figure class="frame">
+  <img src={require('@site/static/img/localhost-ui/devspace-localhost-ui-namespace-inspection.png').default} alt="DevSpace Localhost UI" />
+  <figcaption>DevSpace Localhost UI - Inspecting Pods &amp; Containers</figcaption>
+</figure>
+
+
+### Stream Logs
+To stream the logs of a container, just click on the name of the container on the right-hand side of the logs view.
+
+<figure class="frame">
+  <img src={require('@site/static/img/localhost-ui/devspace-localhost-ui-log-streaming.png').default} alt="DevSpace Localhost UI" />
+  <figcaption>DevSpace Localhost UI - Streaming Container Logs</figcaption>
+</figure>
+
+If you want to stream the logs of all containers that `devspace dev` has deployed using an image that is specified in the `devspace.yaml` of your current project, click on "All deployed containers (merged logs)". This feature is only available when you start the UI via `devspace dev` or by running `devspace ui` within a project that contains a `devspace.yaml`.
+
+**To close the log stream**, click on the trash icon on the right upper corner of the log stream window.
+
+**To maximize the log stream**, click on the maximize icon on the right upper corner of the log stream window.
+
+:::info Last 100 Lines
+The log stream prints the last 100 log lines and then starts streaming the logs in real-time.
+:::
+
+:::note Streaming in the background
+Once you start the log stream for a container, DevSpace will keep the streaming connection open even if you switch to the logs of another container. This will allow you to quickly switch between log streams without having to wait until the connection has to be re-established.
+:::
+
+
+### Start Terminals
+To start an interactive terminal session for running commands inside a container, just click on the `>_` icon next to the container's name.
+
+<figure class="frame">
+  <img src={require('@site/static/img/localhost-ui/devspace-localhost-ui-terminal.gif').default} alt="DevSpace Localhost UI" />
+  <figcaption>DevSpace Localhost UI - Starting Interactive Terminals</figcaption>
+</figure>
+
+The terminal session will stay open even if you click on a container name to stream the logs of this container. The `>_` icon will be highlighted using a blue color to indicate that the terminal session is still running. Click on the icon to resume the terminal session.
+
+**To close a terminal** using the kill command, click on the trash icon on the right upper corner of the terminal window.
+
+**To maximize a terminal**, click on the maximize icon on the right upper corner of the terminal window.
+
+
+### Open / 1-Click Port-Forwarding
+If you want to access an application running inside a container, you can click on the "Open" icon next to the container's name. After clicking on this icon, DevSpace will start a port-forwarding process between a randomly chosen local port and the application's port inside the container. After the port-forwarding connection is established, DevSpace will open the application on `localhost` using the randomly selected local port.
+
+:::info Service Required
+This feature is only available for containers inside pods that are selected by the `labelSelector` of at least one service (i.e. the pod must be an endpoint of the service).
+:::
+
+<figure class="frame">
+  <img src={require('@site/static/img/localhost-ui/devspace-localhost-ui-port-forwarding.gif').default} alt="DevSpace Localhost UI" />
+  <figcaption>DevSpace Localhost UI - Open Applications in Containers (via 1-Click Port-Forwarding)</figcaption>
+</figure>
+
+
+## Stack
+If you open the stack view, DevSpace will show:
+- the config that is currently loaded (in-memory, after applying [config patches defined in profiles](../configuration/profiles/basics.mdx) and after filling [config variables](../configuration/variables/basics.mdx))
+- the [config profile](../configuration/profiles/basics.mdx) that was used to load the config
+- the [config variables](../configuration/variables/basics.mdx) available for this project
+
+<figure class="frame">
+  <img src={require('@site/static/img/localhost-ui/devspace-localhost-ui-stack-config.png').default} alt="DevSpace Localhost UI" />
+  <figcaption>DevSpace Localhost UI - Stack: Config, Profile, Variables </figcaption>
+</figure>
+
+
+## Commands
+DevSpace allows you to [define custom commands](../configuration/commands/basics.mdx) in your project's `devspace.yaml` which allows you to store and execute commonly used commands and share them with other developers.
+
+The localhost UI of DevSpace provides a view that shows all available commands defined in your project's `devspace.yaml`. You can view the commands definition and execute the command by clicking on the "Play" button. 
+
+<figure class="frame">
+  <img src={require('@site/static/img/localhost-ui/devspace-localhost-ui-commands.gif').default} alt="DevSpace Localhost UI" />
+  <figcaption>DevSpace Localhost UI - Open Containers (via 1-Click Port-Forwarding)</figcaption>
+</figure>
+
+Clicking the "Play" button for a command with name `my-command` is equivalent to running the following command in your terminal:
+```bash
+devspace run my-command
+```

@@ -1,0 +1,74 @@
+---
+title: Development Mode
+sidebar_label: Basics
+---
+
+import FragmentWarningMultipleDev from '../../_partials/warning-multiple-dev.mdx';
+import FragmentWorkflowDeployDependencies from '../../_partials/workflow-deploy-dependencies.mdx';
+import FragmentWorkflowBuildImages from '../../_partials/workflow-build-images.mdx';
+import FragmentWorkflowReplaceTags from '../../_partials/workflow-replace-tags.mdx';
+import FragmentWorkflowDeployProject from '../../_partials/workflow-deploy-project.mdx';
+import FragmentNoteGeneralPurposeCommand from '../../_partials/note-general-purpose-command.mdx';
+import FragmentWorkflowOpenLinks from '../../_partials/workflow-open-links.mdx';
+import ConfigPartial from '../_partials/v2beta1/dev.mdx'
+import ConfigPartialSelector from '../_partials/v2beta1/dev/group_selector.mdx'
+import ConfigPartialModifications from '../_partials/v2beta1/dev/group_modifications.mdx'
+
+A lot of teams configure DevSpace so that the development experience is very similar to using `docker-compose` but with the additional benefits of running inside Kubernetes, having a reproducible dev environment that is as close to production as it gets. If an engineer is already familiar with how to develop with `docker-compose`, DevSpace will be easy to get started with.
+
+
+## Dev Containers
+Dev containers are central to the DevSpace-based development experience. A dev container serves as a remote work environment for the engineer that is connected to the local machine of the engineer via port forwarding, file sync, etc. These connections allow engineers to work with their local IDE or with any cloud IDE without having to change their habits and familiar workflows.
+
+DevSpace can turn any container into a dev container, no matter if this container has been deployed by DevSpace or by another tool. That means you could use a GitOps tool like ArgoCD for deployment of your dev environments and then use DevSpace to connect to the deployed applications to debug and develop them inside your dev cluster.
+
+To define a dev container, you need to configure the `dev` section of `devspace.yaml` and first:
+1. [Define a selector](#1-select-container) that matches a pod/container running inside your Kubernetes cluster
+2. [Modify selected container](#2-modify-container-for-development) to prepare it for the use as remote development environment
+3. Optionally [modify the dev container](#3-modify-container-for-development) to optimize it for the use as remote development environment
+
+
+## 1. Select Container
+DevSpace provides several ways to select a pod/container. The most common option to select a container is by defining an `imageSelector` which selects the container that runs the specified image. Alternatively, you could also use the `labelSelector` that is a common pattern in Kubernetes to select objects in a cluster.
+
+<ConfigPartialSelector/>
+
+:::tip Logical `&&` For Selectors
+If multiple selectors (e.g. `imageSelector` and `labelSelector`) are specified, DevSpace will combine them with a logical AND (`&&`) when looking for a pod/container to match the specified conditions.
+:::
+
+
+## 2. Add Dev Connections
+Dev connections defines how your local machine and IDE is connected to the dev container that runs in Kubernetes.
+
+Common dev connections include:
+- **[Bi-directional file sync](./connections/file-sync.mdx)** to make sure files on localhost and inside the containers main working dir are kept in sync
+- **[Port forwarding (and reverse port forwarding)](./connections/port-forwarding.mdx)** to allow engineers to access services inside the dev container via localhost on their local machine (and vice versa)
+- **[Connecting the local terminal to the dev container](./connections/terminal.mdx)** either by starting a new terminal session, by attaching the container's entrypoint process, or by simply streaming the container logs
+- **[Injecting an SSH server into the dev container](./connections/ssh.mdx)** to SSH into the container, e.g. to use the remote environment capabilities in IDEs such as VS Code
+- **[Auto-restart the container](./connections/restart-helper.mdx)** to create a hot reloading experience without the need for image building
+- **[Proxy certain commands](./connections/proxy-commands.mdx)** to make commands on the local machine accessible inside the container (e.g. be able to run `kubectl` commands inside the dev container without having to copy credentials inside the dev container)
+- **[Auto-open URLs](./connections/open.mdx)** to provide a starting point for the engineer when the dev container is ready to go
+
+
+## 3. Modify Container For Development
+Because the idea behing dev containers is that you just deploy your prod/stable containers and then turn one or even multiple containers into dev containers later on when you actually want to work on them, DevSpace allows you to make modifications for these containers on-the-fly.
+
+A common example for modifying a container to optimize it for development would be to use the `devImage` feature which tells DevSpace to swap out the container's prod/stable image with a prebuilt dev-optimized image (e.g. that contains a remote debugger and other dev tooling).
+
+<ConfigPartialModifications/>
+
+
+
+## Start Development Mode
+Start the development mode using this command:
+```bash
+devspace dev
+```
+
+<FragmentWarningMultipleDev/>
+
+
+## Config Reference
+
+<ConfigPartial/>

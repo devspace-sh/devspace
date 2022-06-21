@@ -1,0 +1,20 @@
+---
+title: Push
+sidebar_label: 4. Pull
+---
+
+If you want to deploy containers that run based on images from a private registry, your Kubernetes cluster needs credentials for the registry in order to pull these images. 
+
+
+## Create Pull Secrets
+In many cases, DevSpace automatically creates pull secrets for you but you can also manually create them.
+
+### Automatic
+DevSpace can automatically create pull secrets to provide registry credentials for Kubernetes to pull images from these private registries. DevSpace retrieves the credentials from your local credentials store in Docker.
+
+The following functions can be called in the scripts defined in your `pipelines` section and when DevSpace executes them, it triggers pull secrets to be created:
+1. `build_images` (unless `createPullSecrets` is `false` for the respective image in the `images` section of `devspace.yaml`)
+2. `ensure_pull_secrets`
+
+### Manual
+Instead of letting DevSpace automatically create pull secrets, you can also manually create them by using the [`pullSecrets` section in `devspace.yaml`](../pullSecrets/README.mdx)

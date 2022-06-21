@@ -1,0 +1,68 @@
+body {
+  overflow-y: scroll;
+}
+
+:root {
+  --ifm-color-info: #077EEC;
+  --ifm-color-success: rgb(64, 185, 255);
+  --ifm-color-warning: #ED7200;
+  --ifm-color-error: #C21B1B;
+  --ifm-footer-background-color: var(--ifm-color-secondary);
+}
+
+.embed-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.embed-container iframe,
+.embed-container object,
+.embed-container embed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+table thead > tr {
+  border-top: none;
+}
+
+table th:first-child:empty {
+  opacity: 0;
+  border: none;
+}
+
+.container > .row > .col > div {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Button: Edit this page */
+.container > .row > .col > div > .margin-vert--xl {
+  order: -1;
+  height: 3em;
+  margin: 0 !important;
+  text-align: right;
+}
+
+/* Button: Edit this page */
+.container > .row > .col > div > .margin-vert--xl a {
+  padding: 0.3em 0.5em;
+  background: var(--ifm-color-primary-lighter);
+  color: #fff;
+  font-size: 0.8em;
+  font-weight: 600;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.3s;
+}
+
+/* Button: Edit this page */
+.container > .row > .col > div > .margin-vert--xl a:hover {
+  background: var(--ifm-color-primary);
+}

@@ -1,0 +1,81 @@
+---
+title: Persist Paths In Dev Containers
+sidebar_label: Persistent Paths
+---
+
+import ConfigPartialPersistPaths from '../../_partials/v2beta1/dev/persistPaths.mdx'
+import ConfigPartialPersistanceOptions from '../../_partials/v2beta1/dev/persistenceOptions.mdx'
+
+DevSpace offers you the ability to easily persist certain folders in an exchanged pod through a [persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims). This might be useful if you have to sync large amounts of files that are needed in multiple containers or the replaced pod might get rescheduled or killed often.
+
+:::info Cleanup of Persistent Volume Claims
+If DevSpace creates the persistent volume claim, it will also get cleaned up on a `devspace reset pods` or if config changes in the `replacePods` section are detected.
+:::
+
+### Persist Paths In Dev Container
+
+The `persistPaths` option expects an array of paths that should get persisted on the replaced pod.
+
+#### Example: Persist the folders
+```yaml
+dev:
+  my-dev:
+    imageSelector: my-app/dev
+    persistPaths:
+    - path: /app
+      # Optional path on the persistent volume to mount
+      # volumePath: my-volume/app
+      # Optional name of the container to persist this path
+      # containerName: my-container
+```
+
+**Explanation:**
+- The `imageSelector` would select the pod with image `my-app/dev`.
+- DevSpace would create a new persistent volume claim for the pod if the pod was not yet replaced
+- DevSpace would replace the pod with a pod which has a volume mount for the path `/app` that references the created persistent volume claim
+
+
+## Persistence Options
+
+`persistenceOptions` is an object that defines additional options for `persistPaths`. You can configure the following options:
+
+- `size`: the size of the persistent volume to request. (Defaults to `10Gi`)
+- `storageClassName`: the storage class name to use for the persistent volume claim. (Defaults to empty)
+- `accessModes`: the access modes to use for the persistent volume claim. (Defaults to `ReadWriteOnce`)
+- `readOnly`: if the persistent volume claim should get mounted in read only mode. (Defaults to `false`)
+- `name`: the name of the persistent volume claim to use or create. (Defaults to name of the replaced pod)
+
+#### Example: Share a single persistent volume across two pods
+```yaml
+dev:
+  frontend:
+    imageSelector: my-image/frontend
+    sync:
+    - path: .:/app
+    persistPaths:
+    - path: /app
+      volumePath: app
+    persistenceOptions:
+      name: my-pvc
+
+  backend:
+    imageSelector: my-image/backend
+    persistPaths:
+    - path: /backend
+      volumePath: app
+    persistenceOptions:
+      name: my-pvc
+      readOnly: true
+```
+
+**Explanation:**
+- DevSpace will create a persistent volume claim `my-pvc` if it does not exist
+- DevSpace will replace the pods with image `my-image/frontend` and `my-image/backend` with pods that mount the persistent volume claim called `my-pvc`
+- DevSpace will sync the local files into the persisted folder `/app` of the replaced pod with image `my-image/frontend`. Since the replaced pods share a common persistent volume claim, also the backend container will get the updated files.
+
+
+
+## Config Reference
+
+<ConfigPartialPersistPaths/>
+<ConfigPartialPersistanceOptions/>

@@ -1,0 +1,51 @@
+---
+title: Change Entrypoint Command & Args
+sidebar_label: Entrypoint
+---
+
+import ConfigPartialCommand from '../../_partials/v2beta1/dev/command.mdx'
+import ConfigPartialArgs from '../../_partials/v2beta1/dev/args.mdx'
+
+To change the start command for your dev container, you can use the following options:
+- `command` to change the entrypoint
+- `args` to change the arguments provided to the entrypoint command
+
+```yaml title=devspace.yaml
+dev:
+  backend:
+    imageSelector: ghcr.io/org/project/image
+    devImage: ghcr.io/loft-sh/devspace-containers/python:3-alpine
+    # highlight-start
+    command: ["npm"]
+    args: ["run", "start"]
+    # highlight-end
+```
+
+The dev container shown in the example above would be started with the command `npm run start`.
+
+:::tip Automatic Sleep Modification For Terminal
+If you [enable the `terminal`](../connections/terminal) for this dev container, DevSpace will assume that you manually want to start your application using the terminal session and it automatically changes the container entrypoint to `sleep`:
+
+```yaml title=devspace.yaml
+dev:
+  backend:
+    imageSelector: ghcr.io/org/project/image
+    devImage: ghcr.io/loft-sh/devspace-containers/python:3-alpine
+    # Terminal is enabled
+    terminal:
+      command: ./devspace_start.sh
+    # highlight-start
+    # The following will automatically be added by DevSpace in-memory:
+    # command: ["sleep"]
+    # args: ["1000000000"]
+    # highlight-end
+```
+
+To disable the automatic modifications of the entrypoint for terminal-enabled dev containers, add `disableReplace: true` under the `terminal` settings.
+:::
+
+
+## Config Reference
+
+<ConfigPartialCommand/>
+<ConfigPartialArgs/>

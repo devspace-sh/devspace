@@ -1,0 +1,19 @@
+
+import PartialOnBatchreference from "./onBatch_reference.mdx"
+
+
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+###### `onBatch` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-sync-onUpload-execRemote-onBatch}
+
+OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish
+and then will continue execution. This is useful for commands
+that shouldn't be executed after every single change that may take a little bit longer like recompiling etc.
+
+</summary>
+
+<PartialOnBatchreference />
+
+
+</details>

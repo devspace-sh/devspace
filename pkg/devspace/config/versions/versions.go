@@ -3,13 +3,14 @@ package versions
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta11"
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta11"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta10"
@@ -37,7 +38,7 @@ type loader struct {
 	New config.New
 }
 
-var versionLoader = map[string]*loader{
+var VersionLoader = map[string]*loader{
 	v1beta1.Version:  {New: v1beta1.New},
 	v1beta2.Version:  {New: v1beta2.New},
 	v1beta3.Version:  {New: v1beta3.New},
@@ -125,7 +126,7 @@ func Parse(data map[string]interface{}, log log.Logger) (*latest.Config, error) 
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
 	}
 
-	loader, ok := versionLoader[version]
+	loader, ok := VersionLoader[version]
 	if !ok {
 		return nil, errors.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
 	}

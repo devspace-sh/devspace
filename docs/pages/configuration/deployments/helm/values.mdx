@@ -1,0 +1,82 @@
+---
+title: Specifying Helm Values
+sidebar_label: Values
+---
+
+DevSpace allows you to pass values to your Helm charts either inline within `devspace.yaml` or using external yaml files.
+
+
+## Inline Values
+To specify the values for a Helm deployment directly within `devspace.yaml`, use the `values` field and define the values according to the values specification of the Helm chart that you are deploying.
+
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  api:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      // highlight-start
+      values:
+        containers:
+          - image: ghcr.io/loft-sh/devspace-example-api
+        service:
+          ports:
+            - port: 8080
+      // highlight-end
+```
+
+## Load Values From Files
+DevSpace allows you to load Helm values from one or even multiple yaml files using the `valuesFiles` field.
+
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  api:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        service:
+          port: ${SERVICE_PORT}
+      // highlight-start
+      valuesFiles:
+      - chart/values_common.yaml
+      - chart/values_dev.yaml
+      // highlight-end
+```
+
+:::info Precedence
+The `valuesFiles` field is an ordered array, i.e. that yaml fields from the beginning of the array can be overwritten by values specified in other yaml files that are further down in the `valuesFiles` list.
+:::
+
+:::caution Limitations
+If you use the `valuesFiles` feature, it is important to understand that the values are loaded as static yaml values. That means that DevSpace features such as `${VARIABLES}`, inline `$(COMMANDS)` and other templating options are **not** available.
+
+To overcome such limitations, define inline values via the `values` fields for everything that needs these features (see example above). You can always combine `values` and `valuesFiles`.
+:::
+
+
+## Combine `values` + `valuesFiles`
+Combine inline and file-based values
+DevSpace allows you to specify `values` (for inline values) and `valuesFiles` (for loading values from external yaml files) alongside each other.
+
+
+## Update Image Tags
+If the `updateImageTags` is set to `true`, DevSpace searches through the Helm values for this deployment (specified via `values` or `valuesFiles`) and tries to find any images in the Helm values that are also defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it updates the image tag in the Helm values dynamically, so the tag in the Helm values matches the tag that DevSpace created during the most recent image building process for this image. Image tag updates make sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
+
+#### Example: Enable Tag Updates
+```yaml {3}
+deployments:
+  database:
+    updateImageTags: true
+    helm:
+      chart:
+        name: bitnami/mysql
+```
+
+:::info In-Memory Tag Replacement
+Updating image tags takes place **in-memory** and DevSpace will **not** write anything to the filesystem, i.e. it will **never** change any of your configuration or Helm values files.
+:::

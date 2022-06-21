@@ -1,0 +1,440 @@
+---
+title: Configure File Synchronization
+sidebar_label: File Sync
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/sync.mdx'
+
+
+File sync in DevSpace establishes an ultra-fast sync connection between your local filesystem and your dev container and makes sure that all both filesystems are always in sync depending on which folders you map inside the `dev` section of `devspace.yaml`.
+
+:::tip Think `kubectl cp` on Steroids
+You can think of the file sync in DevSpace as a much faster and smarter version of `kubectl cp` that continuously copies files whenever they change.
+:::
+
+
+When starting the development mode by running `start_dev` inside a pipeline, DevSpace starts the file sync as configured in the `dev.*.sync` section of the `devspace.yaml`.
+```yaml title=devspace.yaml
+deployments:
+ my-deployment:
+  helm:
+    values:
+      containers:
+      - image: ghcr.io/org/project/image
+
+dev:
+  app:
+    imageSelector: ghcr.io/org/project/image
+    # highlight-start
+    sync:
+    # Map the local path "./" (= local working directory / project root) to the container path "/app"
+    - path: ./:/app
+      excludePaths:
+      - node_modules/
+    # highlight-end
+```
+
+:::info Start Sync Only
+To only start the file sync without the other functions of the development mode, use a custom pipeline or run the `devspace sync` command.
+:::
+
+
+## Sync Path Mapping
+The following snippet shows a file sync configuration with 3 different path mappings:
+```yaml title=devspace.yaml
+dev:
+  app:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./              # Map local working directory $workdir to remote working directory $remoteWorkdir
+    - path: my-folder:/tmp  # Map local $workdir/my-folder to remote folder /tmp
+    - path: my-folder       # Map local $workdir/my-folder to remote $remoteWorkdir/my-folder
+```
+
+
+### Exclude Paths Inline
+The config options for excluding paths use the same syntax as `.gitignore`.
+
+:::note
+An exclude path that matches a folder recursively excludes all files and sub-folders within this folder.
+:::
+
+The `excludePaths` option expects an array of strings with paths that should not be synchronized between the local filesystem and the remote container filesystem.
+
+```yaml {11-19}
+deployments:
+ app-backend:
+  helm:
+    values:
+      containers:
+      - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./
+      excludePaths:
+      - logs/
+      - more/logs/
+      uploadExcludePaths:
+      - node_modules/
+      downloadExcludePaths:
+      - tmp/
+```
+**Explanation:**
+- Files in `logs/` and in `more/logs/` would not be synchronized at all.
+- Files in `node_modules/` would only be synchronized from the container to the local filesystem, but not the other way around.
+- Files in `tmp/` would only be synchronized from the local to the container filesystem, but not the other way around.
+
+#### Example: Only Sync Specific Folders
+
+```yaml {11-16}
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./
+      excludePaths:
+      - '**'
+      - '!/my-folder-1/'
+      - '!/my-folder-2/'
+```
+**Explanation:**
+- All files will be excluded except those in folders `./my-folder-1/` and `./my-folder-2/`
+
+### Exclude Paths From File
+The `excludeFile` option expects a path to a file from which the exclude paths can be loaded. Once loaded, the behavior is identical to the `excludePaths` option. This is useful for sharing a common list of exclude paths between many components. The earlier example, [Exclude Paths from Synchronization](#example-exclude-paths-from-synchronization), can be converted to files as follows:
+
+```yaml {11-15}
+deployments:
+ app-backend:
+  helm:
+    values:
+      containers:
+      - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./
+      excludeFile: .gitignore
+      uploadExcludeFile: upload.gitignore
+      downloadExcludeFile: download.gitignore
+```
+
+
+:::info
+This option is often useful if you want to download a dependency folder (e.g. `node_modules/`) for code completion but you never want to upload anything from there because of compiled binaries that are not portable between local filesystem and container filesystem (e.g. when your local system is Windows but your containers run Linux).
+:::
+
+
+## Sync-Triggered Actions
+Sometimes it is useful to execute commands after the sync uploads files/directories between the local filesystem and the container.
+
+:::warning
+Make sure that post-sync commands will **<u>not</u>** trigger a new sync process. This could lead to an **endless loop**.
+:::
+
+### Delay Container Start
+The `startContainer` option can be used to delay starting a container until sync has finished uploading all files initially. This is very useful if your container entrypoint requires certain files. This option requires `command` to be set because otherwise DevSpace will not know which command to start your container with.
+
+#### Example: Enable Container start
+```yaml
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    # required as DevSpace otherwise doesn't know
+    # what to start.
+    command: ["entrypoint", "to", "container"]
+    sync:
+    - path: ./
+      startContainer: true # Will start the container after sync is done
+```
+
+:::note Multiple `startContainer`
+If multiple sync paths with `startContainer` exist, DevSpace will wait for all to finish before starting the container. You can combine `startContainer` sync configurations and non `startContainer` configurations to customize when the container is actually started.
+:::
+
+
+### Restart Container
+The `restartContainer` option expects a boolean which defines if DevSpace should restart the container every time either a single file or even a batch of files have been uploaded to the container using file sync.
+
+:::caution Restart Helper Required
+Setting `restartContainer: true` requires you to also set `command: ["my", "container", "entrypoint"]`. Otherwise, DevSpace will not know which command to restart.
+:::
+
+:::note When not to use this option
+Using `restartContainer: true` is most useful if your application runs based on a compiled language and you are **not** using a framework or language specific tool which provides hot reloading capabilities. If you are using tools like nodemon or frameworks like React, Rails or Flask, they allow you to enable hot reloading which may be much faster than restarting the entire container. In this case you should disable `restartContainer`.
+:::
+
+#### Example: Enable Container Restart
+
+```yaml {17}
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    # required as DevSpace otherwise doesn't know
+    # what to restart.
+    command: ["entrypoint", "to", "container"]
+    sync:
+    - path: ./
+      onUpload:
+        restartContainer: true
+```
+
+### Run Command
+The `onUpload.exec` option defines command(s) that should be executed after DevSpace uploaded files and folder to the container. DevSpace will ensure that those commands are not executed while initially syncing the state, and command execution will also halt any syncing activities.
+
+If this is defined together with `onUpload.restartContainer`, DevSpace will ensure that the commands are always executed **before** the container is restarted.
+
+#### Example: Post-Upload Commands
+```yaml {14-29}
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./
+      onUpload:
+        # These post-sync commands will be executed after DevSpace synced changes to the container in the given order
+        exec:
+        - command: |-
+            npm install
+          onChange: ["./package.json"]
+        - command: |-
+            echo 123 > local.txt
+          local: true                   # Execute this command locally instead of in the container
+        - command: "touch abc.txt"      # string   | Command that should be executed after DevSpace made changes
+          args: []                      # string[] | Optional args that will force DevSpace to not execute the command in a shell
+          failOnError: false            # bool     | If true, DevSpace will restart the sync if the command fails (default: false)
+	      local: false                  # bool     | If true, DevSpace will run the command locally instead of in the container (default: false)
+	      onChange: ["package.json"]    # string[] | Optional array of file patterns that will trigger this command
+	      name: my-command              # string   | DevSpace will print this name instead of the command when executing
+```
+
+
+## Initial Sync
+
+### Initial Sync Strategy
+The `initialSync` option expects a string with an initial sync strategy. The following strategies are available:
+
+`mirrorLocal` mirrors the local filesystem inside the container (default)  
+  1. deletes all files inside the conainer that are not existing on the local filesystem
+  2. uploads all files which are existing on the local filesystem but are missing within the container
+  3. resolves all file conflicts (different content on local filesystem than in inside the container) by preferring the file on the local filesystem (i.e. all files in the container will be replaced if they are different than on the local filesystem)
+
+`preferLocal` is like `mirrorLocal` but skips step 1.
+
+`mirrorRemote` mirrors the container files to the local filesystem:  
+  1. deletes all files on the local filesystem that do not exist inside the container
+  2. downloads all files that exist inside the container, but are missing on the local filesystem
+  3. resolves all file conflicts (different content on local filesystem than inside the container) by preferring the file within the container (i.e. all files on the local filesystem will be replaced if they are different than inside the container)
+
+`preferRemote` is like `mirrorRemote` but skips step 1.
+
+`preferNewest` merges local and remote filesystem while resolving all conflicts  
+  1. uploads all files which are existing on the local filesystem but are missing within the container
+  2. downloads all files which are existing inside the container but are missing on the local filesystem
+  3. resolves all file conflicts (different content on local filesystem than inside the container) by preferring the newest file (i.e. compares last modified timestamps and replaces all outdated files)
+
+`keepAll` merges local and remote filesystem without resolving any conflicts
+
+1. uploads all files which are existing on the local filesystem but are missing within the container
+2. downloads all files which are existing inside the container but are missing on the local filesystem
+
+
+```yaml
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./
+      excludePaths:
+      - node_modules/*
+    - path: ./node_modules/:/app/node_modules/
+      initialSync: preferRemote
+```
+**Explanation:**
+With this configuration, `devspace dev` performs the following tasks:
+- DevSpace would start port-forwarding and file synchronzation.
+- Initial sync is started automatically.
+- The first sync config section synchronizes all files except files within `node_modules/`. This means that during initial sync, all remote files that do not already exist locally are deleted, and other files are updated to the most recent version.
+- The second sync config section only synchronizes files within `node_modules/`. Because of `initialSync: preferRemote`, DevSpace downloads all remote files which are not present on the local filesystem and overrides all local files which are different than the files within the container.
+
+### Wait For Initial Sync
+The `waitInitialSync` option expects a boolean which defines if DevSpace should wait until the initial sync process has terminated before opening the container terminal or the multi-container log streaming.
+
+```yaml
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./
+      waitInitialSync: false
+```
+**Explanation:**
+With the configuration `devspace dev` does the following:
+- DevSpace starts port-forwarding and file synchronization.
+- Initial sync would be started automatically.
+
+- Before the initial sync process is finished, DevSpace starts the log streaming.
+
+
+
+## Advanced
+
+### One-Directional Sync
+These flags allow for local or remote container file systems to be ignored during synchronization.
+
+```yaml
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./
+      disableDownload: true
+```
+
+### Bandwidth Limits
+Sometimes it is useful to throttle the file synchronization, especially when large files or a large number of files are expected to change during development. The following config options provide these capabilities:
+
+The `bandwidthLimits` options expect integer values representing the max file upload/download speed in KB/s, e.g. `download: 100` would limit the file sync to a download speed of `100 KB/s`.
+
+:::note
+By default, the file synchronization algorithm uses the maximum bandwidth possible to make the sync process as fast as possible.
+:::
+
+```yaml
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./
+      bandwidthLimits:
+        download: 200 # 200 KB/s
+        upload: 100   # 100 KB/s
+```
+**Explanation:**
+- Downloading files from the container to the local filesystem is limited to a transfer speed of `200 KB/s`.
+- Upload files from the local filesystem to the container is limited to a transfer speed of `100 KB/s`.
+
+
+
+### File Watchers vs Polling
+By default, DevSpace uses [inotify](https://man7.org/linux/man-pages/man7/inotify.7.html) to detect changes. This can be more efficient, however, sometimes it might be unsupported or not feasible in certain situations, in which case, polling might be preferred.
+
+Polling can help fix issues with file watchers. Enabling polling tells DevSpace to traverse over all watched files and folders periodically in the container to identify file changes. 
+
+```yaml
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./
+      polling: true
+```
+
+:::info
+Polling might increase CPU consumption of the container drastically, depending on the amount of files and folders watched
+:::
+
+### Disable File Watchers
+If the `noWatch` option is specified, DevSpace will stop syncing after initially comparing and resolving differences. This is useful if you want a one-time sync, but then continue doing other steps in your pipeline.
+
+
+
+## FAQ
+
+<details>
+<summary>How does the sync work?</summary>
+
+DevSpace establishes a bi-directional code synchronization between the specified local folders and the remote container folders. It automatically recognizes any changes within the specified folders during the session and will update the corresponding files locally and remotely in the background. It uses a small helper binary that is injected into the target container to accomplish this.
+
+The algorithm roughly works like this:
+
+1. Inject a small helper binary via `kubectl cp` into the target container
+2. Run initial sync accoring to the [`initialSync` config option](#initial-sync)
+3. Watch for file changes on both sides (local and remote) and sync them according to the [sync path mappings](#sync-path-mapping)
+4. After every sync process, [restart the container](#onuploadrestartcontainer) or run other custom [post-sync commands](#post-sync-commands) (optional)
+
+</details>
+
+<details>
+<summary>Are there any requirements for the sync to work?</summary>
+
+The `tar` command has to be present in the container, otherwise `kubectl cp` will not work and the helper binary cannot be injected into the container.
+
+No server-side component or special container privileges for code synchronization are required, since the sync algorithm runs completely client-only within DevSpace. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
+
+</details>
+
+
+
+
+## Config Reference
+
+<ConfigPartial/>

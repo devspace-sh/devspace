@@ -1,0 +1,110 @@
+---
+title: Configure Terminal
+sidebar_label: Terminal
+---
+
+import ConfigPartialTerminal from '../../_partials/v2beta1/dev/terminal.mdx'
+import ConfigPartialAttach from '../../_partials/v2beta1/dev/attach.mdx'
+import ConfigPartialLogs from '../../_partials/v2beta1/dev/logs.mdx'
+
+
+DevSpace provides three modes for connecting your terminal to the dev container:
+- **[Start a new terminal session](#start-new-terminal-session)** and connect to it (think `kubectl exec -it [pod] -c [container]`)
+- **[Attach to the dev container's entrypoint process](#attach-to-entrypoint)** (i.e. PID 1 inside the container, think `kubectl attach [pod] -c [container]`)
+- **[Stream the dev container's logs](#stream-logs)** (i.e. stdout of the container, think `kubectl logs [pod] -c [container]`)
+
+
+:::caution Mutual Exclusive
+Beware that you can only enable one of the three modes since you only have one terminal locally. 
+
+However, if you open a second terminal locally, you could run on-demand commands such as `devspace enter`, `devspace attach`, or `devspace logs` which may achieve similar results but they will **not** do any implicit patches to your dev container.
+
+Alternatively, the pipelines in your `devspace.yaml` could introduce custom flags such as `--terminal` or `--attach` to let the user pick which mode to enable.
+:::
+
+
+## Start New Terminal Session
+Using the `dev.*.terminal` section in the `devspace.yaml`, you can tell DevSpace to start a terminal session inside the dev container and then connect to it as part of the `start_dev` process:
+```yaml
+deployments:
+  app:
+    helm:
+      values:
+        containers:
+        - image: myregistry/myapp
+
+dev:
+  my-dev:
+    imageSelector: myregistry/myapp
+    terminal: {}
+```
+
+Under the hood DevSpace will replace the running pod and apply the following changes, before actually starting a terminal to it:
+- Remove `readinessProbes`, `startupProbes` & `livenessProbes`
+- Change the entrypoint of the container to `sleep 100000`
+
+:::info POD REPLACE
+If you do not want DevSpace to replace the pod with a modified version, use `disableReplace: true`
+:::
+
+:::info SCREEN
+DevSpace will also try to install and use [screen](https://linuxize.com/post/how-to-use-linux-screen/) to start the terminal session, as this allows you to reconnect to your existing session after losing connection. You can disable this via the `disableScreen: true` option
+:::
+
+
+## Attach To Entrypoint
+Attach can be used to attach to a process that is already running inside an existing container, typically the PID 1 process (container entrypoint). 
+
+Under the hood this mode is effectively calling [`kubectl attach`](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#attach).
+
+```yaml
+deployments:
+  my-deployment:
+    helm:
+      values:
+        containers:
+        - image: ubuntu
+
+dev:
+  my-dev:
+    imageSelector: ubuntu
+    attach: {}
+```
+
+Under the hood DevSpace will replace the running pod and apply the following changes, before actually attaching to it:
+- Remove `readinessProbes`, `startupProbes` & `livenessProbes`
+- Add `stdin: true` and `tty: true` to the container spec
+
+:::info
+If you don't want DevSpace to replace the pod with a modified version, use `disableReplace: true`
+:::
+
+
+## Stream Logs
+Instead of starting an interactive terminal session or attaching to the container, you can also just stream the logs of the dev container.
+
+The benefit of log streaming may be that you can stream the logs of multiple dev containers in parallel whereas a terminal connection can only be established to a single container at the time.
+
+To configure log streaming, set the `dev.*.logs` field in the `devspace.yaml for the respective dev container:
+```yaml
+dev:
+  my-dev-1:
+    imageSelector: ...
+    logs: {}
+  my-dev-2:
+    imageSelector: ...
+    logs: {}
+  my-dev-3:
+    imageSelector: ...
+    logs:
+      lastLines: 100
+```
+
+DevSpace will continously check what pods match the given selectors and start or end log streaming accordingly.
+
+
+## Config Reference
+
+<ConfigPartialTerminal/>
+<ConfigPartialAttach/>
+<ConfigPartialLogs/>

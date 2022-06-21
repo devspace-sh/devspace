@@ -1,0 +1,27 @@
+---
+title: Change Env Vars For Development
+sidebar_label: Env Vars
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/env.mdx'
+
+To add additional environment variables or change the value of existing environment variables for your dev container, you can specify the `env` field.
+
+```yaml title=devspace.yaml
+dev:
+  backend:
+    imageSelector: ghcr.io/org/project/image
+    devImage: ghcr.io/loft-sh/devspace-containers/python:3-alpine
+    # highlight-start
+    env:
+    - name: DEBUG
+      value: "true"
+    - name: APP_PORT
+      value: "8080"
+    # highlight-end
+```
+
+
+## Config Reference
+
+<ConfigPartial/>

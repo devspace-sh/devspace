@@ -443,15 +443,14 @@ echo 'Anyone using this project can invoke it via "devspace run migrate-db"'`,
 
 	// Add pipeline: dev
 	config.Pipelines["dev"] = &latest.Pipeline{
-		Run: `
-run_dependencies --all     # 1. Deploy any projects this project needs (see "dependencies")
-create_deployments --all   # 2. Deploy Helm charts and manifests specfied as "deployments"
-start_dev ` + imageName + `                     # 3. Start dev mode "` + imageName + `" (see "dev" section)`,
+		Run: `run_dependencies --all       # 1. Deploy any projects this project needs (see "dependencies")
+create_deployments --all     # 2. Deploy Helm charts and manifests specfied as "deployments"
+start_dev ` + imageName + `                # 3. Start dev mode "` + imageName + `" (see "dev" section)`,
 	}
 
 	// Add pipeline: dev
 	config.Pipelines["deploy"] = &latest.Pipeline{
-		Run: `run_dependencies --all                    # 1. Deploy any projects this project needs (see "dependencies")
+		Run: `run_dependencies --all                            # 1. Deploy any projects this project needs (see "dependencies")
 build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
 create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"`,
 	}
@@ -670,9 +669,15 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		devConfig.Sync = []*latest.SyncConfig{}
 	}
 
-	devConfig.Sync = append(devConfig.Sync, &latest.SyncConfig{
+	syncConfig := &latest.SyncConfig{
 		Path: "./",
-	})
+	}
+
+	if _, err := os.Stat(".dockerignore"); err == nil {
+		syncConfig.UploadExcludeFile = ".dockerignore"
+	}
+
+	devConfig.Sync = append(devConfig.Sync, syncConfig)
 
 	devConfig.Terminal = &latest.Terminal{
 		Command: "./" + startScriptName,

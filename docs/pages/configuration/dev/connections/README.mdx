@@ -1,0 +1,39 @@
+---
+title: Dev Workflows
+---
+
+import ConfigPartialSync from '../../_partials/v2beta1/dev/sync.mdx'
+import ConfigPartialPorts from '../../_partials/v2beta1/dev/ports.mdx'
+import ConfigPartialReversePorts from '../../_partials/v2beta1/dev/reversePorts.mdx'
+import ConfigPartialTerminal from '../../_partials/v2beta1/dev/terminal.mdx'
+import ConfigPartialAttach from '../../_partials/v2beta1/dev/attach.mdx'
+import ConfigPartialLogs from '../../_partials/v2beta1/dev/logs.mdx'
+import ConfigPartialSSH from '../../_partials/v2beta1/dev/ssh.mdx'
+import ConfigPartialRestartHelper from '../../_partials/v2beta1/dev/restartHelper.mdx'
+import ConfigPartialProxyCommands from '../../_partials/v2beta1/dev/proxyCommands.mdx'
+import ConfigPartialOpen from '../../_partials/v2beta1/dev/open.mdx'
+
+Dev connections defines how your local machine and IDE is connected to the dev container that runs in Kubernetes.
+
+Common dev connections include:
+- **[Bi-directional file sync](./file-sync.mdx)** to make sure files on localhost and inside the containers main working dir are kept in sync
+- **[Port forwarding (and reverse port forwarding)](./port-forwarding.mdx)** to allow engineers to access services inside the dev container via localhost on their local machine (and vice versa)
+- **[Connecting the local terminal to the dev container](./terminal.mdx)** either by starting a new terminal session, by attaching the container's entrypoint process, or by simply streaming the container logs
+- **[Injecting an SSH server into the dev container](./ssh.mdx)** to SSH into the container, e.g. to use the remote environment capabilities in IDEs such as VS Code
+- **[Auto-restart the container](./restart-helper.mdx)** to create a hot reloading experience without the need for image building
+- **[Proxy certain commands](./proxy-commands.mdx)** to make commands on the local machine accessible inside the container (e.g. be able to run `kubectl` commands inside the dev container without having to copy credentials inside the dev container)
+- **[Auto-open URLs](./open.mdx)** to provide a starting point for the engineer when the dev container is ready to go
+
+
+## Config Reference
+
+<ConfigPartialSync/>
+<ConfigPartialPorts/>
+<ConfigPartialReversePorts/>
+<ConfigPartialTerminal/>
+<ConfigPartialAttach/>
+<ConfigPartialLogs/>
+<ConfigPartialSSH/>
+<ConfigPartialRestartHelper/>
+<ConfigPartialProxyCommands/>
+<ConfigPartialOpen/>

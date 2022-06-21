@@ -13,27 +13,34 @@ import (
 type conn struct {
 	io.Reader
 	io.WriteCloser
+	// this is the same allocator used in packet manager
+	alloc      *allocator
 	sync.Mutex // used to serialise writes to sendPacket
-	// sendPacketTest is needed to replicate packet issues in testing
-	sendPacketTest func(w io.Writer, m encoding.BinaryMarshaler) error
 }
 
-func (c *conn) recvPacket() (uint8, []byte, error) {
-	return recvPacket(c)
+// the orderID is used in server mode if the allocator is enabled.
+// For the client mode just pass 0
+func (c *conn) recvPacket(orderID uint32) (uint8, []byte, error) {
+	return recvPacket(c, c.alloc, orderID)
 }
 
 func (c *conn) sendPacket(m encoding.BinaryMarshaler) error {
 	c.Lock()
 	defer c.Unlock()
-	if c.sendPacketTest != nil {
-		return c.sendPacketTest(c, m)
-	}
+
 	return sendPacket(c, m)
+}
+
+func (c *conn) Close() error {
+	c.Lock()
+	defer c.Unlock()
+	return c.WriteCloser.Close()
 }
 
 type clientConn struct {
 	conn
-	wg         sync.WaitGroup
+	wg sync.WaitGroup
+
 	sync.Mutex                          // protects inflight
 	inflight   map[uint32]chan<- result // outstanding requests
 
@@ -66,29 +73,54 @@ func (c *clientConn) loop() {
 // recv continuously reads from the server and forwards responses to the
 // appropriate channel.
 func (c *clientConn) recv() error {
-	defer func() {
-		c.conn.Lock()
-		c.conn.Close()
-		c.conn.Unlock()
-	}()
+	defer c.conn.Close()
+
 	for {
-		typ, data, err := c.recvPacket()
+		typ, data, err := c.recvPacket(0)
 		if err != nil {
 			return err
 		}
-		sid, _ := unmarshalUint32(data)
-		c.Lock()
-		ch, ok := c.inflight[sid]
-		delete(c.inflight, sid)
-		c.Unlock()
+		sid, _, err := unmarshalUint32Safe(data)
+		if err != nil {
+			return err
+		}
+
+		ch, ok := c.getChannel(sid)
 		if !ok {
 			// This is an unexpected occurrence. Send the error
 			// back to all listeners so that they terminate
 			// gracefully.
-			return errors.Errorf("sid: %v not fond", sid)
+			return errors.Errorf("sid not found: %d", sid)
 		}
+
 		ch <- result{typ: typ, data: data}
 	}
+}
+
+func (c *clientConn) putChannel(ch chan<- result, sid uint32) bool {
+	c.Lock()
+	defer c.Unlock()
+
+	select {
+	case <-c.closed:
+		// already closed with broadcastErr, return error on chan.
+		ch <- result{err: ErrSSHFxConnectionLost}
+		return false
+	default:
+	}
+
+	c.inflight[sid] = ch
+	return true
+}
+
+func (c *clientConn) getChannel(sid uint32) (chan<- result, bool) {
+	c.Lock()
+	defer c.Unlock()
+
+	ch, ok := c.inflight[sid]
+	delete(c.inflight, sid)
+
+	return ch, ok
 }
 
 // result captures the result of receiving the a packet from the server
@@ -103,36 +135,48 @@ type idmarshaler interface {
 	encoding.BinaryMarshaler
 }
 
-func (c *clientConn) sendPacket(p idmarshaler) (byte, []byte, error) {
-	ch := make(chan result, 2)
+func (c *clientConn) sendPacket(ch chan result, p idmarshaler) (byte, []byte, error) {
+	if cap(ch) < 1 {
+		ch = make(chan result, 1)
+	}
+
 	c.dispatchRequest(ch, p)
 	s := <-ch
 	return s.typ, s.data, s.err
 }
 
+// dispatchRequest should ideally only be called by race-detection tests outside of this file,
+// where you have to ensure two packets are in flight sequentially after each other.
 func (c *clientConn) dispatchRequest(ch chan<- result, p idmarshaler) {
-	c.Lock()
-	c.inflight[p.id()] = ch
-	c.Unlock()
+	sid := p.id()
+
+	if !c.putChannel(ch, sid) {
+		// already closed.
+		return
+	}
+
 	if err := c.conn.sendPacket(p); err != nil {
-		c.Lock()
-		delete(c.inflight, p.id())
-		c.Unlock()
-		ch <- result{err: err}
+		if ch, ok := c.getChannel(sid); ok {
+			ch <- result{err: err}
+		}
 	}
 }
 
 // broadcastErr sends an error to all goroutines waiting for a response.
 func (c *clientConn) broadcastErr(err error) {
 	c.Lock()
-	listeners := make([]chan<- result, 0, len(c.inflight))
-	for _, ch := range c.inflight {
-		listeners = append(listeners, ch)
+	defer c.Unlock()
+
+	bcastRes := result{err: ErrSSHFxConnectionLost}
+	for sid, ch := range c.inflight {
+		ch <- bcastRes
+
+		// Replace the chan in inflight,
+		// we have hijacked this chan,
+		// and this guarantees always-only-once sending.
+		c.inflight[sid] = make(chan<- result, 1)
 	}
-	c.Unlock()
-	for _, ch := range listeners {
-		ch <- result{err: err}
-	}
+
 	c.err = err
 	close(c.closed)
 }
@@ -141,6 +185,6 @@ type serverConn struct {
 	conn
 }
 
-func (s *serverConn) sendError(p ider, err error) error {
-	return s.sendPacket(statusFromError(p, err))
+func (s *serverConn) sendError(id uint32, err error) error {
+	return s.sendPacket(statusFromError(id, err))
 }

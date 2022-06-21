@@ -1,0 +1,94 @@
+.theme-code-block {
+  margin-top: var(--ifm-pre-padding);
+}
+
+.docusaurus-highlight-code-line {
+    background-color: rgb(72, 77, 91);
+    display: block;
+    margin: 0 calc(-1 * var(--ifm-pre-padding));
+    padding: 0 var(--ifm-pre-padding);
+  }
+  
+  html body .markdown button[aria-label="Copy code to clipboard"],
+  html body pre.prism-code > button {
+    z-index: 1;
+    border: none;
+    background: var(--ifm-color-primary-lighter);
+    color: #fff;
+    text-transform: uppercase;
+    font-size: 0.8em;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 0.6em 0.8em;
+    margin-top: -0.2em;
+    letter-spacing: 0.1em;
+    transition: background-color 0.3s;
+  }
+  
+  html body .markdown button[aria-label="Copy code to clipboard"]:hover,
+  html body pre.prism-code > button:hover {
+    background: var(--ifm-color-primary-darker);
+  }
+  
+  .theme-code-block {
+    border-radius: 4px;
+  }
+  
+  body .prism-code,
+  code {
+      counter-reset: linenumber;
+  }
+  
+  body .prism-code .token-line,
+  code > .token-line {
+    counter-increment: linenumber;
+  }
+  
+  body .prism-code .token-line::before,
+  code > .token-line::before {
+    width: 1em;
+    content: counter(linenumber);
+    color: #fff;
+    display: block;
+    float: left;
+    padding-right: 0.8em;
+    text-align: right;
+    opacity: 0.6;
+  
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+  }
+  
+  body .prism-code .token-line:first-child:last-child::before,
+  code > .token-line:first-child:last-child::before {
+    display: none;
+  }
+  
+  body .prism-code .token-line,
+  code .token-line {
+    padding-right: 2em;
+  }
+
+  .prism-code {
+    .token {
+      &.key {
+        color: rgb(45, 178, 255);
+
+        ~ .punctuation  {
+          color: rgb(150, 150, 150) !important;
+        }
+      }
+
+      &.punctuation,
+      &.plain {
+        color: #fff !important;
+      }
+    }
+  }
+
+  .markdown *:not(pre) > code,
+  .contents code {
+    white-space: nowrap;
+  }

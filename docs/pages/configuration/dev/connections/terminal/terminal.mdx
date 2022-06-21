@@ -1,0 +1,40 @@
+---
+title: Configure Terminal
+sidebar_label: terminal
+---
+
+import ConfigPartial from '../../../_partials/v2beta1/dev/terminal.mdx'
+
+
+In the `dev.*.terminal` section in the `devspace.yaml` you can configure the terminal:
+```yaml
+deployments:
+  app:
+    helm:
+      values:
+        containers:
+        - image: myregistry/myapp
+
+dev:
+  my-dev:
+    imageSelector: myregistry/myapp
+    terminal: {}
+```
+
+## How does it work?
+
+Under the hood DevSpace will replace the running pod and apply the following changes, before actually starting a terminal to it:
+- Remove `readinessProbes`, `startupProbes` & `livenessProbes`
+- Change the entrypoint of the container to `sleep 100000`
+:::info POD REPLACE
+If you don't want DevSpace to replace the pod with a modified version, use `disableReplace: true`
+:::
+
+:::info SCREEN
+DevSpace will also try to install and use [screen](https://linuxize.com/post/how-to-use-linux-screen/) to start the terminal session, as this allows you to reconnect to your existing session after losing connection. You can disable this via the `disableScreen: true` option
+:::
+
+
+## Config Reference
+
+<ConfigPartial/>

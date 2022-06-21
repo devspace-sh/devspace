@@ -1,0 +1,183 @@
+---
+title: Dependencies
+sidebar_label: "Basics"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+DevSpace allows you to define dependencies between several software projects that have a `devspace.yaml`, e.g. across different git repositories or local folders. This makes DevSpace a great tool for building and deploying software that consists of several microservices. Primary use cases of dependencies are:
+
+- You want to reuse an already existing `devspace.yaml` of another project
+- You want to define a more complex pipeline with multiple build, hook and deploy steps
+- You want to define a common build / deploy step for other projects
+
+Dependencies for DevSpace projects are defined within the `dependencies` section of `devspace.yaml`.
+
+<Tabs
+  defaultValue="git"
+  values={[
+    { label: 'Git Repository', value: 'git', },
+    { label: 'Local Path', value: 'path', },
+  ]
+}>
+<TabItem value="git">
+
+```yaml
+dependencies:
+- name: api-server 
+  source:
+    git: https://github.com/my-api-server
+    branch: stable
+  dev:
+    ports: true
+- name: auth-server
+  source:
+    git: https://github.com/my-auth-server
+    revision: c967392
+  profile: production
+- name: database-server
+  source:
+    git: https://github.com/my-database-server
+    tag: v3.0.1
+    subPath: /configuration
+  vars:
+    - name: ROOT_PASSWORD
+      value: ${ROOT_PASSWORD}
+```
+
+</TabItem>
+<TabItem value="path">
+
+```yaml
+dependencies:
+- name: component-1
+  source:
+    path: ./component-1
+- name: component-2
+  source:
+    path: ./component-2
+```
+
+</TabItem>
+</Tabs>
+
+## Dependency Source
+DevSpace is able to work with dependencies from the following sources:
+- [`git` repository](../../configuration/dependencies/git-repository.mdx) as dependency that has a devspace configuration
+- [`path` to a local folder](../../configuration/dependencies/local-folder.mdx) that contains a dependency (path is relative to the current project's root directory)
+
+
+## Execution Order
+
+Dependencies will be executed in the order that they are specified under `dependencies` and always before image building and deployments defined in the top-level `devspace.yaml`. `dev` configuration that should be reused from a dependency will be executed alongside regular `dev` configuration specified in the top-level `devspace.yaml` after the DevSpace deployment pipeline ran through. Example:
+```yaml
+dependencies:
+- name: dep1
+  source:
+    path: dep1
+  dev:
+    sync: true
+- name: dep2
+  source:
+    path: dep2
+  dev:
+    ports: true
+images:
+  image1:
+    image: myimage/image
+deployments:
+- name: deployment1
+  helm:
+    ...
+dev:
+  ports: ...
+  sync: ...
+```
+
+### Explanation
+In the above `devspace.yaml`, execution order would be as followed:
+* Execute dependency dep1's pull secrets, image building & deployments (if dep1 has other dependencies as well, execute those first)
+* Execute dependency dep2's pull secrets, image building & deployments
+* Build image `image1`
+* Deploy deployment `deployment1`
+* Start merged portforwarding from `dep2` and `dev.ports`
+* Start sync from `dep1` and `dev.sync`
+
+## Referencing Dependencies
+
+### Reference Image Names
+You can reference dependencies images via `my-dependency.image` in the `./devspace.yaml`:
+```yaml
+dependencies:
+- name: dep1
+  source:
+    path: dep1
+dev:
+  # Will open a terminal to the pod with the 
+  # image from dep1
+  terminal:
+    imageSelector: ${runtime.dependencies.dep1.images.image1}
+```
+
+With `dep1/devspace.yaml`:
+```yaml
+images:
+  image1:
+    image: myusername/devspace
+deployments:
+  - name: quickstart
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: myusername/devspace
+```
+
+### Referencing Dependencies in Deployment Values / Manifests
+
+It is also possible to reference a dependency's image with runtime variables in a deployment:
+```yaml
+dependencies:
+- name: dep1
+  source:
+    path: dep1
+deployments:
+  - name: quickstart
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: ${runtime.dependencies.dep1.image1.image}:${runtime.dependencies.dep1.image1.tag} # -> replaced with 'myusername/devspace:xxxx' 
+```
+
+With a dependency `dep1/devspace.yaml` that looks like:
+```yaml
+images:
+  image1:
+    image: myusername/devspace
+```
+
+## Dependency Resolution
+When a DevSpace project has dependencies, DevSpace will:
+
+1. Resolve all dependencies in a recursive manner and give the dependency an ID based on its path or git repository
+2. Build a non-cyclic dependency tree where each dependency only occurs once (but could have multiple edges)
+3. Choose a leave node from the dependency tree, build its images (unless skip is defined) and deploy its deployments as well as execute defined hooks or pull secrets
+4. Remove the leave node from the tree and repeat step 3 until everything has been deployed
+
+The algorithm used by DevSpace for building and deploying dependencies ensures that all dependencies have been deployed in the correct order before the project you are calling DevSpace from will be built and deployed.
+
+### Redundant Dependencies
+If DevSpace detects that two projects within the dependency tree define the same child-dependency (i.e. a redundant dependency), DevSpace will try to resolve this by removing the dependency that is "higher" (i.e. found first when resolving dependencies) within the tree.
+
+### Circular Dependencies
+If DevSpace detects two projects which define each other as dependencies (either directly or via child-dependencies), DevSpace will print a warning showing the problematic dependency path within the dependency tree.
+
+## Useful Commands
+
+### `devspace update dependencies`
+If you want to force DevSpace to update the dependencies (e.g. git fetch & pull), you can run the following command:
+```bash
+devspace update dependencies
+```

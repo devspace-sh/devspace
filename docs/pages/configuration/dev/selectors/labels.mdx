@@ -1,0 +1,72 @@
+---
+title: Select Container as Dev Container
+sidebar_label: By Pod Labels
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/group_selector.mdx'
+
+To use standard Kubernetes label selectors to select a dev container, specify the `labelSelector` field which first selects a Kubernetes pod and then the appropriate container inside of it.
+
+```yaml title=devspace.yaml
+dev:
+  backend:
+    # highlight-start
+    labelSelector:
+      app.kubernetes.io/name: payment-service
+      app.kubernetes.io/component: rest-api
+    # highlight-end
+```
+
+:::caution Selects Pod, Not Container
+Because Kubernetes does not provide labels for container, DevSpace will select a pod if you specify the `labelSelector` field. If the pod has only one container, DevSpace will use that container. If the pod has multiple contianers, make sure to also specify the `container` field.
+:::
+
+
+## Common Scenarios
+It is key to make sure that your combination of selectors clearly selects one single container. If there is ambiguity because multiple pod and/or containers could be selected, DevSpace will require that you increase the specificity of your selectors. Here are a few common cases that may require you to combine multiple selectors:
+
+### Pods with Multiple Containers
+If you are using the `labelSelector` and DevSpace selects a pod with multiple containers, make sure you add the container name using the `container` field to tell DevSpace which of the containers to select as dev container.
+
+:::tip Image Selector
+If a pod has multiple containers but each container has a different image, you could use the `imageSelector` instead of setting `labelSelector + container`.
+:::
+
+### Multiple Dev Containers Per Pod
+If you want to make modifications for development for multiple containers in the same pod, you need to use the `containers` field because some of the modifications you can define for dev containers actually apply to the pod itself and you want to reduce issues with conflicting modifications.
+
+```yaml title=devspace.yaml
+dev:
+  backend:
+    # Select the pod via labelSelector:
+    labelSelector:
+      app.kubernetes.io/name: payment-service
+      app.kubernetes.io/component: rest-api
+    # Specify ports (not reversePorts) for the entire pod, not per container
+    ports:
+    - port: 3000
+    # Make modifications for each container separately
+    # highlight-start
+    containers:
+      api:
+        container: api
+        devImage: ghcr.io/org/project/image
+        reversePort:
+        - port: 3306
+      cache:
+        container: redis
+        env:
+          DEBUG: true
+    # highlight-end
+```
+
+:::tip `containers` + Dev Connections
+When using the `containers` option, you should also specify the sections `files`, `persistPaths`, `reversePorts`, etc. for each individual container.
+
+However, since pods share the same network stack, the `ports` option needs to be on the top-level instead of for each container individually.
+:::
+
+
+## Config Reference
+
+<ConfigPartial/>

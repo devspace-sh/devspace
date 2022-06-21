@@ -1,0 +1,140 @@
+---
+title: Pipelines
+sidebar_label: pipelines
+---
+
+import ConfigPartialPipeline from '../_partials/v2beta1/pipelines.mdx'
+
+Pipelines allow you to fully customize the execution logic in DevSpace, i.e. they define what happens when a users run commands such as `devspace dev`, `devspace build`, `devspace deploy` or `devspace run-pipeline my-custom-pipeline`
+
+
+## Using Pipelines
+
+### 1. Define Pipelines
+An example `pipelines` section could look like this in `devspace.yaml`:
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  dev: |-
+    run_dependency_pipelines --all    # 1. Deploy any projects this project needs (see "dependencies")
+    create_deployments --all          # 2. Deploy Helm charts and manifests specfied as "deployments"
+    start_dev app                     # 3. Start dev mode "app" (see "dev" section)
+  deploy: |-
+    run_dependency_pipelines --all                    # 1. Deploy any projects this project needs (see "dependencies")
+    build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
+    create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"
+  build:
+    # Here we are using the long-form using `run:` instead of passing the script directly
+    run: |-
+      build_images --all -t $(git describe --always)
+  custom: ...
+```
+
+Pipelines can:
+- Call built-in functions such as `build_images`, `create_deployments` or `start_dev`
+- Call functions defined in `devspace.yaml` or in any `import`
+- Use bash-like syntax including `if []; then ... fi`, `&&`, `||` or `;`
+- Access environment variables and DevSpace variables
+
+
+### 2. Run Pipelines
+Pipelines are invoked via:
+```bash
+devspace run-pipeline [name]
+```
+
+:::info Cross-Platform Execution
+Write all pipeline scrips in `bash` fashion. DevSpace is using a library to make them cross-platform executable.
+:::
+
+
+## Default Pipelines
+DevSpace provides default pipeline scripts for the following top-level commands:
+- [`devspace dev`](#dev)
+- [`devspace deploy`](#deploy)
+- [`devspace build`](#build)
+
+<details>
+<summary>
+
+### `dev`
+
+</summary>
+
+The `dev` pipeline is executed by running `devspace dev` and has the following default workflow:
+
+```bash
+run_dependency_pipelines --all      # 1. Deploy any projects this project needs (see "dependencies")
+create_deployments --all            # 2. Deploy Helm charts and manifests specfied as "deployments"
+start_dev --all                     # 3. Start all dev modes
+```
+
+</details>
+
+<details>
+<summary>
+
+### `deploy`
+
+</summary>
+
+The `deploy` pipeline is executed by running `devspace deploy` and has the following default workflow:
+
+```bash
+run_dependency_pipelines --all      # 1. Deploy any projects this project needs (see "dependencies")
+build_images --all                  # 2. Build, tag (git commit hash) and push all images (see "images")
+create_deployments --all            # 3. Deploy Helm charts and manifests specfied as "deployments"
+```
+
+</details>
+
+
+<details>
+<summary>
+
+### `build`
+
+</summary>
+
+The `build` pipeline is executed by running `devspace build` and has the following default workflow:
+
+```bash
+build_images --all      # Build, tag (git commit hash) and push all images (see "images")
+```
+
+</details>
+
+
+## Custom Flags
+To add custom flags to commands such as `devspace dev` or `devspace run-pipeline my-custom-pipeline`, you can specify the `flags` field for the respective pipeline.
+
+The following example defines two flags for `devspace dev`:
+- `--logs / -l` with `type` not specified (defaults to `bool`)
+- `--env / -e` with `type: stringArray`
+
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  dev:
+    flags:
+    - name: logs
+      short: l
+    - name: env
+      short: e
+      type: stringArray
+    run: |-
+      extraEnv=$(get_flag "env")    # Retrieve the value of the `env` flag and store it in a variable
+      echo ${extraEnv[1]}
+
+      TERMINAL_ENABLED=true
+      if [ $(get_flag "logs") == "true" ]; then     # Test if --logs/-l flag is used or not
+        TERMINAL_ENABLED=false                      # Disable terminal, so DevSpace falls back to log streaming
+      fi
+
+      start_dev app --set terminal.enabled=$TERMINAL_ENABLED
+```
+
+
+## Config Reference
+
+<ConfigPartialPipeline/>

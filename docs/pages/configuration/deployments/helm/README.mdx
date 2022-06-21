@@ -1,0 +1,109 @@
+---
+title: Deploy Helm Charts
+sidebar_label: helm
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import ConfigPartial from '../../_partials/v2beta1/deployments/helm.mdx'
+import FragmentInfoComponentChart from '../../../_partials/info-component-chart.mdx';
+
+To deploy Helm charts, you need to configure them within the `deployments` section of the `devspace.yaml`.
+
+## Examples
+
+<Tabs
+  defaultValue="component"
+  values={[
+    { label: 'Component Chart', value: 'component', },
+    { label: 'Custom Chart', value: 'remote', },
+    { label: 'Local Chart', value: 'local', },
+    { label: 'Git Chart Repo', value: 'git', },
+  ]
+}>
+<TabItem value="component">
+
+```yaml
+deployments:
+  backend:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+        - image: reg.tld/username/devspace
+        service:
+          ports:
+          - port: 3000
+```
+
+<FragmentInfoComponentChart/>
+
+</TabItem>
+<TabItem value="remote">
+
+```yaml {4-6}
+deployments:
+  backend:
+    helm:
+      chart:
+        name: chart-name
+        repo: https://my-charts.company.tld/
+      values:
+        # If registry.url/repo/image was found under images as well, will be
+        # rewritten to registry.url/repo/image:generated_tag
+        imageWithTag: registry.url/repo/image
+        # If registry.url/repo/image was found under images.app as well, will be
+        # rewritten to registry.url/repo/image
+        imageWithoutTag: ${runtime.images.app.image}
+        # If registry.url/repo/image was found under images.app as well, will be
+        # rewritten to generated_tag
+        onlyTag: ${runtime.images.app.tag}
+```
+
+</TabItem>
+<TabItem value="local">
+
+```yaml {5}
+deployments:
+  backend:
+    helm:
+      chart:
+        name: ./path/to/chart
+      values:
+        # If registry.url/repo/image was found under images as well, will be
+        # rewritten to registry.url/repo/image:generated_tag
+        imageWithTag: registry.url/repo/image
+        # If registry.url/repo/image was found under images.app as well, will be
+        # rewritten to registry.url/repo/image
+        imageWithoutTag: ${runtime.images.app.image}
+        # If registry.url/repo/image was found under images.app as well, will be
+        # rewritten to generated_tag
+        onlyTag: ${runtime.images.app.tag}
+```
+
+</TabItem>
+
+<TabItem value="git">
+
+```yaml {5}
+deployments:
+  backend:
+    helm:
+      chart:
+        git: https://github.com/<org>/<repo>.git
+        # optional git configs
+        branch: branchName
+        tag: tag
+        revision: revision
+        subPath: subpath/chartdir
+```
+
+</TabItem>
+</Tabs>
+
+
+## Config Reference
+
+<ConfigPartial/>

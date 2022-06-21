@@ -1,0 +1,38 @@
+
+import PartialDevspace from "./require/devspace.mdx"
+import PartialCommandsreference from "./require/commands_reference.mdx"
+import PartialPluginsreference from "./require/plugins_reference.mdx"
+
+<PartialDevspace />
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `commands` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#require-commands}
+
+Commands specifies an array of commands that need to be installed locally to use this config
+
+</summary>
+
+<PartialCommandsreference />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `plugins` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#require-plugins}
+
+Plugins specifies an array of plugins that need to be installed locally
+
+</summary>
+
+<PartialPluginsreference />
+
+
+</details>

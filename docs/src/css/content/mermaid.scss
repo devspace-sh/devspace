@@ -1,0 +1,65 @@
+.mermaid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 3em 0 3.5em;
+}
+
+.mermaid img {
+  max-width: none;
+}
+
+.mermaid .node rect {
+  transform: scale(0.96) translateX(2px);
+}
+
+.mermaid .nodeLabel {
+  padding: 0.3em;
+}
+
+.mermaid .edgeLabel {
+  padding: 0.3em 0.5em;
+  text-align: center;
+  border-radius: 5px;
+}
+
+.mermaid .edgeLabel:empty {
+  display: none;
+}
+
+.mermaid .node.loft rect {
+  fill: #00bdff !important;
+}
+
+.mermaid .node.loft img {
+  max-width: none;
+  padding-top: 5px;
+  padding-left: 5px;
+  filter: grayscale(1) brightness(100);
+}
+
+.mermaid .node.code rect {
+  fill: #263544 !important;
+}
+
+.mermaid .node.yaml foreignObject {
+  padding-top: 0.2em;
+}
+
+.mermaid code, .mermaid pre {
+  display: inline-block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.mermaid code::before {
+  display: inline-block;
+  content: '$';
+  font-weight: bold;
+  padding-right: 0.5em;
+  color: #00bdff;
+  transform: translateY(-0.06em)
+}

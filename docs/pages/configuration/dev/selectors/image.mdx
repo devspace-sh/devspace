@@ -1,0 +1,32 @@
+---
+title: Select Container as Dev Container
+sidebar_label: By Container Image
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/group_selector.mdx'
+
+To select a container based on the image it is running, specify the `imageSelector` field.
+
+```yaml title=devspace.yaml
+dev:
+  backend:
+    # highlight-start
+    imageSelector: ghcr.io/org/project/image
+    # highlight-end
+```
+
+:::tip Image Tags
+If the image you provide as `imageSelector` is an image that has previously been built by DevSpace, DevSpace will automatically match the most recently built tag. To define a static tag for the selector, add append the tag to the `imageSelector` value.
+:::
+
+
+## Common Scenarios
+It is key to make sure that your combination of selectors clearly selects one single container. If there is ambiguity because multiple pod and/or containers could be selected, DevSpace will require that you increase the specificity of your selectors. Here are a few common cases that may require you to combine multiple selectors:
+
+### Multiple Containers Use Same Image
+If you are using the `imageSelector` but multiple containers in your namespace run the same image with different arguments or entrypoints (very common for Ruby applications), it will be easier for you to use the `labelSelector` and optionally specify the `container` field if needed.
+
+
+## Config Reference
+
+<ConfigPartial/>

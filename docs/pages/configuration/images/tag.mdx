@@ -1,0 +1,64 @@
+---
+title: Tagging Images with DevSpace
+sidebar_label: 2. Tag
+---
+
+DevSpace always instructs the build engine to tag any images that are being built. By default, DevSpace uses a random string to tag each image. However, you can customize how DevSpace should tag your images.
+
+
+## `--tag / -t` Flag
+One option to tell DevSpace to use one or multiple custom tags is to use the `--tag / -t` flag for the pipeline function `build_images`, either by providing it inside the pipeline script or by passing it when invoking a `devspace` command that runs the respective pipeline.
+
+### via `build_images`
+The [`build_images` function](../functions/README.mdx#build_images) provides a `--tag / -t` flag that can be passed multiple times to the function to specify one or more tags that DevSpace should use to tag the respective images.
+
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  build: |-
+    GIT_TAG_OR_HASH=$(git describe --always)
+    # highlight-next-line
+    build_images api -t latest -t $GIT_TAG_OR_HASH
+
+images:
+  api: ...          # see example above
+  payments: ...     # see example above
+  auth: ...         # see example above
+```
+
+
+### via `devspace build/dev/deploy/...`
+DevSpace also provides a `--tag / -t` flag for pipeline-based commands such as `devspace build`, `devspace deploy` or `devspace run-pipeline [name]` which is passed to every `build_images` call.
+
+```bash
+devspace build -t latest -t $CUSTOM_HASH
+```
+
+
+## `tags` Field in `devspace.yaml`
+Instead of using the `--tag` flags, you can also statically define tags for each image in your `images` section and `build_images` will respect them for each image independently:
+
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  build: |-
+    build_images --all
+
+images:
+  api:
+    image: ghcr.io/loft-sh/devspace-example-api
+    # highlight-start
+    tags:
+    - dev-latest
+    - $(git describe --always)
+    # highlight-end
+  payments:
+    image: ghcr.io/loft-sh/devspace-example-payments
+    dockerfile: ./payments/Dockerfile
+    context: ./payments/
+    # highlight-start
+    tags:
+    - some-tag
+    - another-tag
+    # highlight-end
+```

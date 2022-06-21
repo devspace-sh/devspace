@@ -1,0 +1,78 @@
+---
+title: Custom Commands
+sidebar_label: commands
+---
+
+import ConfigPartialCommands from '../_partials/v2beta1/commands.mdx'
+
+The idea of custom commands is that someone on a team defines a set of useful commands and stores them in the `devspace.yaml`, then commits and pushes this config to the code repository. Now, others can run these custom commands without having to remember all the details or having to read through endless pages of documentation.
+
+Custom commands are being shared in the `commands` section of `devspace.yaml`:
+```yaml
+# File: devspace.yaml
+images:
+  default:
+    image: john/backend
+commands:
+- name: debug-backend
+  command: "devspace dev --profile=debug-backend $@"
+profiles:
+- name: debug-backend
+  patches:
+  - op: replace
+    path: images.default.entrypoint
+    value: ["npm", "run", "debug"]
+```
+
+:::note
+Custom commands can be used for more than just running `devspace` commands, e.g. they can run any other script or command, set environment variables etc. If you are familiar with the `scripts` section of the `package.json` for Node.js, you will find that `devspace run [name]` works pretty much the same way as `npm run [name]`
+:::
+
+The above example configuration would allow everyone to run the custom command `debug-backend` like this:
+```bash
+devspace run debug-backend
+devspace run debug-backend --verbose-dependencies
+devspace run debug-backend -- --verbose-dependencies -s
+```
+
+And `devspace run` would execute the following commands internally:
+```bash
+devspace dev --profile=debug-backend
+devspace dev --profile=debug-backend --verbose-dependencies
+devspace dev --profile=debug-backend --verbose-dependencies -s
+```
+
+:::note `--` End of Options Separator
+The `--` between the command name and the additional flags for the command tells your terminal that the arguments and flags that follow after the `--` do not belong to `devspace run` and should not be parsed. It is not required but often helpful to use `--` when executing commands using `devspace run`.
+:::
+
+:::info Interactive Commands
+Custom commands proxy input and output streams, so you can even share interactive commands such as `devspace enter`.
+:::
+
+
+## Configuration
+
+<ConfigPartialCommands/>
+
+
+<br/>
+
+## Useful Commands
+
+### `devspace list commands`
+Run this command to list all custom commands that are configured:
+```bash
+devspace list commands
+```
+
+
+### `devspace run dependency1.command`
+You can run a command defined in one of the dependencies of the current project like this:
+```bash
+devspace run [dependency].[command] [command-flags-and-args]
+```
+
+:::note Working Directory
+When running a command of a dependency, DevSpace will use the root folder of the dependency as current working directory when executing the command.
+:::

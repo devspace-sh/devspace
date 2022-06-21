@@ -1,0 +1,67 @@
+---
+title: Functions
+sidebar_label: functions
+---
+
+import ConfigPartial from '../_partials/v2beta1/functions.mdx'
+import PipelineFunctionRef from '../_partials/functions/reference_pipeline.mdx'
+import GlobalFunctionRef from '../_partials/functions/reference_global.mdx'
+
+
+Functions are bash functions that can be called inside the remainder of `devspace.yaml`. A common use case is to define reusable functionality that is called from within the scripts you specify within the `pipelines` section.
+
+There are two types of functions:
+1. [Custom Functions](#custom-functions) defined in `devspace.yaml` (often added via [`imports`](../imports/README.mdx))
+2. [Built-In Functions](#built-in-functions) such as `build_images` or `create_deployments`
+
+
+## Custom Functions
+DevSpace provides support for custom functions. To use them, you need to:
+1. Declare your custom functions within the `functions` section of `devspace.yaml`
+2. Call custom functions from any scripted field in `devspace.yaml` such as in `pipelines` or in any value defined using an inline script such as `$(command)`
+
+### 1. Declare Functions
+Declaring a function means adding a key with the function name to the `functions` section in `devspace.yaml` as shown in the example below:
+```yaml title=devspace.yaml
+version: v2beta1
+functions:
+  hello_world: |-
+    echo "Hello World"
+  get_tag: |-
+    echo $(git rev-parse --short HEAD)
+```
+
+### 2. Call Functions
+To call a custom function
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  deploy: |-
+    build_images --tag $(get_git_commit)
+    create_deployments --all
+  dev: |-
+    hello_world
+    run_default_pipeline
+```
+
+
+## Built-In Functions
+DevSpace provides a set of built-in functions. There are two types of functions:
+1. [Pipeline-Only Functions](#pipeline-only-functions)
+2. [Global Functions](#global-functions)
+
+### Pipeline-Only Functions
+Pipeline-only functions can only be used inside the scripts within the `pipelines` section of `devspace.yaml`.
+
+<PipelineFunctionRef/>
+
+
+### Global Functions
+Global functions can be used anywhere in `devspace.yaml`, either in config fields that expect a bash script such as within `functions` or using [`$(command)` vars](../variables.mdx#from-commands) in any other config field.
+
+<GlobalFunctionRef/>
+
+
+## Config Reference
+
+<ConfigPartial/>

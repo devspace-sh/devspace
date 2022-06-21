@@ -1,0 +1,89 @@
+---
+title: Image Building
+sidebar_label: Basics
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import FragmentFaqImageContext from '../../_partials/faq-image-context.mdx';
+import WarningBuildToolPriority from '../../_partials/warning-build-tool-priority.mdx';
+import ConfigPartial from '../_partials/v2beta1/images.mdx'
+import PreventBuildTip from './_partials/prevent_build.mdx'
+
+DevSpace can build, tag and push images using a variety of build engines.
+
+<PreventBuildTip/>
+
+
+## Workflow
+To build, tag and push images with DevSpace, you need to:
+1. Define your images in the `images` section of `devspace.yaml`
+2. Call the `build_images` function inside the `pipelines` section of `devspace.yaml`
+3. Execute the respective pipeline
+
+
+### 1. Define `images`
+Define as many images as need in your `devspace.yaml`:
+```yaml
+images:
+  backend:
+    dockerfile: ./Dockerfile
+  frontend:
+    dockerfile: ./frontend/Dockerfile
+    context: ./frontend
+  other: ...
+```
+
+
+### 2. Call `build_images` in Pipeline
+
+<Tabs
+  defaultValue="all"
+  values={[
+    { label: 'Build All Images', value: 'all', },
+    { label: 'Build Single Image', value: 'single', },
+    { label: 'Build Multiple Images', value: 'multiple', },
+  ]
+}>
+<TabItem value="all">
+
+```yaml
+pipelines:
+  build:
+    run: |
+      build_images --all
+```
+
+</TabItem>
+<TabItem value="single">
+
+```yaml
+pipelines:
+  build:
+    run: |
+      build_images backend
+```
+
+</TabItem>
+<TabItem value="multiple">
+
+```yaml
+pipelines:
+  build:
+    run: |
+      build_images backend frontend
+```
+
+</TabItem>
+</Tabs>
+
+
+### 3. Run Pipeline
+Any of the pipelines shown above can be executed via:
+- `devspace build` (shortcut)
+- `devspace run-pipeline build` (long form)
+
+
+## Config Reference
+
+<ConfigPartial/>

@@ -1,0 +1,31 @@
+---
+title: Dev Container Modifications
+sidebar_label: 2. Modify Container
+---
+
+import ConfigPartial from '../../_partials/v2beta1/dev/group_modifications.mdx'
+
+DevSpace allows you to modify the selected dev container to optimize it for development.
+
+
+## How does it work?
+When any modifications are defined for a dev container, DevSpace will do the following:
+1. Find the Kubernetes pod that contains the dev container according to the [selectors](../selectors/README.mdx) defined for this dev container.
+2. Find the replica owner that this pod was created from (e.g. Deployment, StatefulSet, etc.)
+3. Scale down the replica number for the replica owner object, i.e. set `replicas: 0` for the Deployment, StatefulSet, etc.
+4. Clone the replica owner object to create a new Deployment/StatefulSet with the name `[old-object-name]-devspace`
+5. Apply the modifications to the newly created Deployment/StatefulSet, e.g. swap out the image, add env vars, etc.
+6. Wait until the a new pod was created from the new Deployment/StatefulSet
+
+
+## Undo Modifications
+To undo the changes that DevSpace made to create the modified version of our dev container, you can run:
+
+```bash
+devspace reset pods
+```
+
+
+## Config Reference
+
+<ConfigPartial/>

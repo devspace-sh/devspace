@@ -1,0 +1,270 @@
+---
+title: Initialize a Project
+sidebar_label: 2. Initialize Project
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Step from '@site/src/components/Step/Step';
+import FragmentTipUseNamespace from '../fragments/tip-use-namespace.mdx';
+import FragmentNoteCreateSpace from '../fragments/note-create-space.mdx';
+
+## Choose a Project
+You can either deploy one of your own projects or alternatively, checkout one of our demo applications using git:
+
+<Tabs
+  defaultValue="node"
+  values={[
+    { label: 'Node.js', value: 'node', },
+    { label: 'Python', value: 'python', },
+    { label: 'Java', value: 'java', },
+    { label: 'Ruby', value: 'ruby', },
+    { label: 'Golang', value: 'golang', },
+    { label: 'PHP', value: 'php', },
+    { label: 'ASP.NET', value: 'dotnet', },
+    { label: 'Your Own Project', value: 'custom', },
+  ]
+}>
+<TabItem value="node">
+
+```bash
+git clone https://github.com/devspace-cloud/quickstart-nodejs
+cd quickstart-nodejs
+```
+
+:::note Tutorials
+After finishing this Getting Started Guide, make sure to also check out one of these tutorials:
+- [Deploy an Express.js Server to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/10/15/deploy-express.js-server-to-kubernetes)
+- [Deploy React.js Apps to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/03/07/deploy-react-js-to-kubernetes)
+- [Deploy Vue.js Apps to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/09/30/deploy-vue-js-to-kubernetes)
+:::
+
+</TabItem>
+<TabItem value="python">
+
+```bash
+git clone https://github.com/devspace-cloud/quickstart-python
+cd quickstart-python
+```
+
+:::note Tutorial
+After finishing this Getting Started Guide, make sure to also check out the tutorial: [Deploy Django Projects to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/10/18/deploy-django-to-kubernetes)
+:::
+
+</TabItem>
+<TabItem value="ruby">
+
+```bash
+git clone https://github.com/devspace-cloud/quickstart-ruby
+cd quickstart-ruby
+```
+
+:::note Tutorial
+After finishing this Getting Started Guide, make sure to also check out the tutorial: [Deploy Ruby on Rails to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/10/21/deploy-ruby-on-rails-to-kubernetes)
+:::
+
+</TabItem>
+<TabItem value="golang">
+
+```bash
+git clone https://github.com/devspace-cloud/quickstart-golang
+cd quickstart-golang
+```
+
+</TabItem>
+<TabItem value="php">
+
+```bash
+git clone https://github.com/devspace-cloud/quickstart-php
+cd quickstart-php
+```
+
+:::note Tutorial
+After finishing this Getting Started Guide, make sure to also check out the tutorial: [Deploy Laravel Projects to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/10/16/deploy-laravel-to-kubernetes)
+:::
+
+</TabItem>
+<TabItem value="java">
+
+```bash
+git clone https://github.com/devspace-cloud/quickstart-java
+cd quickstart-java
+```
+
+</TabItem>
+<TabItem value="dotnet">
+
+```bash
+git clone https://github.com/devspace-cloud/quickstart-asp-dotnet
+cd quickstart-asp-dotnet
+```
+
+</TabItem>
+<TabItem value="custom">
+
+```bash
+# Navigate to the root directory of your project
+cd /path/to/your/project
+```
+
+:::info 
+If you are using DevSpace for the first time, it is highly recommended that you use one of the demo projects.
+:::
+
+</TabItem>
+</Tabs>
+
+
+<br/>
+
+## Initialize Your Project
+Run this command in your project directory to create a `devspace.yaml` config file for your project:
+```bash
+devspace init
+```
+
+<figure class="frame">
+  <video controls loop autoplay="true">
+    <source src={require('@site/static/img/devspace-init.mp4').default} type="video/mp4" />
+  </video>
+  <figcaption>DevSpace CLI - Initialize Project</figcaption>
+</figure>
+
+While initializing your project, DevSpace will ask you a couple of questions and then create the config file `devspace.yaml` which will look similar to this one:
+
+```yaml
+# Config version
+version: v1beta9
+
+# Defines all Dockerfiles that DevSpace will build, tag and push
+images:
+  app:                                  # Key 'app' = Name of this image
+    image: reg.tld/username/devspace    # Registry and image name for pushing the image
+    preferSyncOverRebuild: true
+    injectRestartHelper: true
+    build: ...
+
+# Defines an array of everything (component, Helm chart, Kubernetes maninfests) 
+# that will be deployed with DevSpace in the specified order
+deployments:
+- name: quickstart                        # Name of this deployment
+  helm:                                   # Deploy using Helm
+    componentChart: true                  # Use the Component Helm Chart
+    values:                               # Override Values for chart (can also be set using valuesFiles option)
+      containers:                         # Defines an array of containers that run in the same pods started by this component
+      - image: reg.tld/username/devspace  # Image of this container
+      service:                            # Expose this component with a Kubernetes service
+        ports:                            # Array of container ports to expose through the service
+        - port: 3000                      # Exposes container port 3000 on service port 3000
+
+# Settings for development mode (will be explained later)
+dev: ...
+
+# Settings for development mode (will be explained later)
+profiles: ...
+```
+
+<br/>
+
+## Prepare Kube-Context
+To develop and deploy your project with DevSpace, you need a valid kube-context because DevSpace uses the kube-config file just like kubectl or helm.
+
+<Tabs
+  defaultValue="demo"
+  values={[
+    { label: 'Demo Cluster', value: 'demo', },
+    { label: 'Local Cluster', value: 'local', },
+    { label: 'Remote Cluster', value: 'remote', },
+  ]
+}>
+<TabItem value="demo">
+
+:::info Free Demo Namespace
+If you don't have a Kubernetes cluster or simply want to test DevSpace without using your own cluster, choose the free demo namespaces sponsored by DevSpace Cloud. [Learn more about Demo Spaces.](https://devspace.cloud/products/devspace-cloud#pricing)
+:::
+
+Run the following command to create a free Kubernetes namespace:
+```bash
+devspace create space my-app    # requires login via GitHub or email
+```
+
+<FragmentNoteCreateSpace/>
+
+</TabItem>
+<TabItem value="local">
+
+:::note Local Clusters
+Local clusters run on your local dev machine and include: minikube, kind, k3s, mikrok8s etc.
+:::
+
+If you want to deploy to a local Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
+
+```bash
+devspace use namespace my-namespace   # will be automatically created during deployment
+```
+
+<FragmentTipUseNamespace/>
+
+</TabItem>
+<TabItem value="remote">
+
+:::note Remote Clusters
+Remote clusters run in a cloud or private data center and include: GKE, EKS, AKS, bare metal etc.
+:::
+
+When using a remote cluster, you can either use it just for yourself or you can share the cluster with your colleagues.
+
+<Tabs
+  defaultValue="alone"
+  values={[
+    { label: 'Use cluster alone', value: 'alone', },
+    { label: 'Share cluster with others', value: 'shared', },
+  ]
+}>
+<TabItem value="alone">
+
+```bash
+devspace use namespace my-namespace   # will be automatically created during deployment
+```
+
+<FragmentTipUseNamespace/>
+
+</TabItem>
+<TabItem value="shared">
+
+<br/>
+<Step>1</Step>
+
+Connect cluster to DevSpace Cloud
+```bash
+devspace connect cluster
+```
+Learn more about connecting cluster in the [documentation of DevSpace Cloud](https://devspace.cloud/cloud/docs/admin/getting-started/connect-clusters).
+
+:::info DevSpace Cloud On-Premise
+Instead of using the SaaS edition of DevSpace Cloud, you can also [install the on-premise edition in your own cluster](https://devspace.cloud/cloud/docs/admin/getting-started/setup#choose-saas-vs-on-premise).
+:::
+
+<br/>
+<Step>2</Step>
+
+Create isolated namespace (= Space)
+
+```bash
+devspace create space my-app    # requires login via GitHub or email
+```
+
+<FragmentNoteCreateSpace/>
+
+<br/>
+<Step>3</Step>
+
+Add cluster users and allow them to create Spaces
+
+Learn more about how to do this in the [documentation of DevSpace Cloud](https://devspace.cloud/cloud/docs/admin/getting-started/cluster-users).
+
+</TabItem>
+</Tabs>
+
+</TabItem>
+</Tabs>

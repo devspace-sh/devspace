@@ -1,0 +1,238 @@
+---
+title: Image Building with DevSpace
+sidebar_label: 1. Build
+---
+
+import ConfigPartialBuildConfig from '../_partials/v2beta1/images/group_buildconfig.mdx'
+import ConfigPartialOverwrites from '../_partials/v2beta1/images/group_overwrites.mdx'
+import ConfigPartialRebuildStrategy from '../_partials/v2beta1/images/rebuildStrategy.mdx'
+import PreventBuildTip from './_partials/prevent_build.mdx'
+
+DevSpace can build images using a variety of build engines.
+
+<PreventBuildTip/>
+
+
+## Building Images
+
+### 1. Define Images
+In build images with DevSpace, we need to add them to the `images` section of `devspace.yaml`:
+```yaml title=devspace.yaml
+version: v2beta1
+images:
+  api:
+    image: ghcr.io/loft-sh/devspace-example-api
+  payments:
+    image: ghcr.io/loft-sh/devspace-example-payments
+    dockerfile: ./payments/Dockerfile
+    context: ./payments/
+  auth:
+    image: ghcr.io/loft-sh/devspace-example-auth
+    dockerfile: ./auth/Dockerfile
+    context: ./auth/
+    target: production
+    buildArgs:
+      SOME_ARG: "value"
+      ANOTHER_ARG: "some other value"
+```
+The example above defines 3 images:
+- `api` with Dockerfile in `./Dockerfile` and build context in `./` (default values)
+- `payments` with Dockerfile in `./payments/Dockerfile` and build context in `./payments/`
+- `auth` with Dockerfile in `./auth/Dockerfile` and build context in `./auth/`  
+   Additionally, the image `auth` also defines a few [`buildArgs`](#buildargs) and a [build `target`](#target-for-multi-stage-builds) for multi-stage builds.
+
+
+### 2. Call `build_images` in Pipeline
+DevSpace builds images when the [`build_image` function](../functions/README.mdx#build_images) is called within `pipelines` as shown in this example:
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  # highlight-start
+  build: |-
+    build_images --all
+  build-api: |-
+    build_images api
+  build-ordered: |-
+    build_images auth
+    build_images api payments
+  # highlight-end
+
+images:
+  api: ...          # see example above
+  payments: ...     # see example above
+  auth: ...         # see example above
+```
+
+
+### 3. Run Pipeline
+Given the example above, you can now run:
+- `devspace build` to build all 3 images in parallel
+- `devspace run-pipeline build-api` to build only the image named `api`
+- `devspace run-pipeline build-ordered` to  
+  1. First build the image `auth` (blocking)
+  2. Then build the images `api` and `payments` in parallel
+
+
+## Build Configuration
+DevSpace lets you customize the build process for each image using the following config fields:
+
+<ConfigPartialBuildConfig/>
+
+
+### `buildArgs`
+Your Dockerfile can use the `ARG` instruction to define arguments that will be used in other build instructions as this example shows:
+```Dockerfile title=Dockerfile
+ARG  JDK_VERSION=17
+FROM maven:3-openjdk-${JDK_VERSION}-slim
+```
+By default, this Dockerfile uses `maven:3-openjdk-7-slim` as base image but you can pass the build arg `JDK_VERSION` to change this dynamically.
+
+There are two options to provide build args in `devspace.yaml`:
+
+<details>
+<summary>
+
+#### 1. Setting `buildArgs` in the `images` section
+
+</summary>
+
+```yaml title=devspace.yaml
+version: v2beta1
+images:
+  auth:
+    image: ghcr.io/loft-sh/devspace-example-auth
+    # highlight-start
+    buildArgs:
+      JDK_VERSION: 8
+      ANOTHER_ARG: "some other value"
+    # highlight-end
+```
+
+</details>
+
+<details>
+<summary>
+
+#### 2. Calling `build_images` with the `--set` flag to dynamically add or override the `buildArgs` at runtime
+
+</summary>
+
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  build: |-
+    build_images --set buildArgs.JDK_VERSION=11 --set "buildArgs.SOME_ARG_NAME=some value"
+images:
+  auth:
+    image: ghcr.io/loft-sh/devspace-example-auth
+```
+
+</details>
+
+
+
+### `target` For Multi-Stage Builds
+Some Dockerfiles contain multiple `FROM` instructions that define build stages optionally using the `AS <stage-name>` suffix as shown below:
+```Dockerfile title=Dockerfile
+# highlight-next-line
+FROM golang:1.17-bullseye AS builder
+ADD . /go/src/app
+RUN go build -o /go/bin/app
+
+# highlight-next-line
+FROM gcr.io/distroless/base-debian11
+COPY --from=builder /go/bin/app /
+CMD ["/app"]
+```
+Without defining a build `target`, DevSpace (just like Docker and most other build engines) would build the entire image. However, for developerment, you may not want to use the fully built image because in this case it is a distroless container that only contains the final Go binary but no development tooling, not even `sh` to be able to open a terminal inside the container via `devspace enter`.
+
+If you want the image building process to only build the `builder` stage (line 1-4), then you have two options to pass a build `target`:
+
+<details>
+<summary>
+
+#### 1. Setting `target` in the `images` section
+
+</summary>
+
+```yaml title=devspace.yaml
+version: v2beta1
+images:
+  auth:
+    image: ghcr.io/loft-sh/devspace-example-auth
+    # highlight-next-line
+    target: builder
+```
+
+</details>
+
+<details>
+<summary>
+
+#### 2. Calling `build_images` with the `--set` flag to dynamically add or override the `target` at runtime
+
+</summary>
+
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  build: |-
+    build_images auth --set target=builder
+images:
+  auth:
+    image: ghcr.io/loft-sh/devspace-example-auth
+```
+
+</details>
+
+
+### Dockerfile Overwrites
+DevSpace provides several config options to make in-memory changes to the build process without the need to change your Dockerfile:
+
+<ConfigPartialOverwrites/>
+
+
+## Rebuild Strategy
+By default, DevSpace tries to skip building images as much as possible. Once any of your images is built once, DevSpace will only rebuild it if one of the conditions is true:
+- The `dockerfile` has changed
+- Any file within the build `context` folder has changed (while respecting `.dockerignore` rules)
+- The image configuration within the `devspace.yaml` has changed (including values set in the pipeline scripe, e.g. via `--set`)
+- The image was **not** been built before or the `.devspace/` folder has been deleted/manipulated
+
+You can explicitly override this behavior using the `rebuildStrategy` field:
+
+<ConfigPartialRebuildStrategy/>
+
+You can also set the `rebuildStrategy` during runtime using the `--set` flag:
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  build: |-
+    build_images auth --set rebuildStrategy=always
+```
+
+:::tip `.devspace/` Folder
+DevSpace stores the information about each previously built image inside the `.devspace/` folder within your project. Do **not** commit this folder via `git`. It should always be listed in `.gitignore`.
+:::
+
+
+## `--skip-build` Flag
+If you call `devspace [dev/deploy/build/run-pipeline]` using the `--skip-build` flag, DevSpace will skip any `build_images` instructions defined in your pipeline script.
+
+
+## Parallel vs Sequential Builds
+When calling `build_images --all` or `build_images [image1] [image2]`, DevSpace builds all specified images in parallel. 
+
+To execute image building sequentially, call `build_images` multiple times as shown below:
+```yaml title=devspace.yaml
+version: v2beta1
+pipelines:
+  build: |-
+    build_images auth
+    build_images api payments
+
+images:
+  api: ...          # see example above
+  payments: ...     # see example above
+  auth: ...         # see example above
+```

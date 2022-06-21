@@ -1,0 +1,4 @@
+
+1. DevSpace starts to periodically send `HTTP GET` requests to the URLs provideded via `dev.*.open[*].url`.
+2. As soon as the first HTTP response has a status code which is neither 502 (Bad Gateway) nor 503 (Service Unavailable), DevSpace assumes that the application is now started, stops sending any further requests and opens the provided URL in the browser.
+3. If the URL is still returning status code 502 or 503 after 4min, DevSpace will stop trying to open it. To not disturb the log streaming or the interactive terminal session, DevSpace will not show an error when hitting the 4min timeout.

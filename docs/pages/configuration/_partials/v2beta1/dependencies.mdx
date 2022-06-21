@@ -1,0 +1,34 @@
+
+import PartialDependenciesreference from "./dependencies_reference.mdx"
+
+
+<details className="config-field" data-expandable="true" open>
+<summary>
+
+## `dependencies` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;dependency_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dependencies}
+
+Dependencies are sub devspace projects that lie in a local folder or remote git repository that can be executed
+from within the pipeline. In contrast to imports, these projects pose as separate fully functional DevSpace projects
+that typically lie including source code in a different folder and can be used to compose a full microservice
+application that will be deployed by DevSpace. Each dependency name can only be used once and if you want to use
+the same project multiple times, make sure to use a different name for each of those instances.
+
+</summary>
+
+
+<details className="config-field" data-expandable="true"open>
+<summary>
+
+## `<dependency_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dependencies-name}
+
+Name is used internally
+
+</summary>
+
+<PartialDependenciesreference />
+
+
+</details>
+
+
+</details>

@@ -1,0 +1,92 @@
+---
+title: Build Images with BuildKit
+sidebar_label: buildKit
+---
+
+
+import ConfigPartial from '../../_partials/v2beta1/images/buildKit.mdx'
+import InClusterConfigPartial from '../../_partials/v2beta1/images/buildKit/inCluster.mdx'
+
+
+Using [BuildKit](https://github.com/moby/buildkit) as build tool allows you to build images either locally or inside your Kubernetes cluster without a Docker daemon. 
+
+:::info
+In order to use the build kit you'll either need to have [Docker](https://docs.docker.com/get-docker/) installed locally or alternatively the [buildx CLI](https://github.com/docker/buildx/releases). **If you only want to use the in-cluster build functionality, you won't need a running Docker daemon and just need the CLI tools instead.** 
+:::
+
+When the `buildKit` field is defined for an image, DevSpace will use `docker buildx build` for building. If in-cluster building is enabled, DevSpace will deploy a BuildKit deployment into the Kubernetes cluster that will function as target BuildKit daemon for `docker buildx build`. You can also share a single Kubernetes BuildKit daemon across multiple users to share a common build cache.  
+
+To set `buildKit` as default build tool, use the following configuration:
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    buildKit: {}
+```
+
+
+## Custom Build Command
+DevSpace provides two options to customize the BuildKit build command invocation:
+
+### `command`
+The option takes a string array as value. By default, DevSpace will use `docker buildx` as base command for interacting with BuildKit, if this option is set, you can tell DevSpace to use a different base command. For example:
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    buildKit: 
+      command: ["/path/to/my/buildx"]
+```
+**Explanation:**
+- `buildKit` tells DevSpace to use the BuildKit engine to build the image.
+- The command option will tell DevSpace to use this command instead of `docker buildx` and the actual build command will look like this: `/path/to/my/buildx build --tag john/appbackend:DRLzYNS --push --file Dockerfile --cache-to user/app:cache -`
+
+
+### `args`
+This option takes a string array as value. The arguments will be appended to the `docker buildx build` call DevSpace will run. For example:
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    buildKit: 
+      args: ["--cache-to", "user/app:cache"]
+```
+
+**Explanation:**
+- `buildKit` tells DevSpace to use the BuildKit engine to build the image.
+- The args option will append arguments to the `docker buildx build` command which will then look something like this: `docker buildx build --tag john/appbackend:DRLzYNS --push --file Dockerfile --cache-to user/app:cache -`
+
+
+## BuildKit Daemon
+DevSpace can build images with a local Docker daemon or with a BuildKit instance deployed to a Kubernetes cluster.
+
+### Local Daemon
+If in-cluster building is not explicitly enabled, DevSpace checks if a local Docker daemon is available for building images.
+
+#### Minikube Docker Daemon
+DevSpace preferably uses the Docker daemon running in the virtual machine that belongs to your local Kubernetes cluster instead of your regular Docker daemon. This has the advantage that images do not need to be pushed to a registry because Kubernetes can simply use the images available in the Docker daemon belonging to the kubelet of the local cluster. Using this method is only possible when your current kube-context points to a local Kubernetes cluster and is named `minikube`, `docker-desktop` or `docker-for-desktop`.
+
+
+### In-Cluster Deamon
+If the `inCluster` field is defined for an image, DevSpace will build the image directly in the Kubernetes cluster instead of using the local Docker daemon. DevSpace will start or reuse a BuildKit deployment in the Kubernetes cluster that acts as target BuildKit daemon. For example:
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    buildKit:
+      inCluster: {}
+```
+
+**Explanation:**
+- `buildKit` tells DevSpace to use the BuildKit engine to build the image.
+- `buildKit.inCluster` tells DevSpace to build the image inside the target Kubernetes cluster instead of using the local docker daemon.
+- By default, DevSpace will create a BuildKit daemon deployment inside the target namespace that will be used for this and all future builds.
+
+DevSpace provides a set of config fields to customize the deployment of an in-cluster BuildKit daemon:
+
+<InClusterConfigPartial/>
+
+
+## Config Reference
+
+<ConfigPartial/>

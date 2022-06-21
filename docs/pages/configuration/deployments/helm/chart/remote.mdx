@@ -1,0 +1,158 @@
+---
+title: Deploy Remote Charts
+sidebar_label: Remote Chart
+---
+
+import HelmRepoChartConfigPartial from '../../../_partials/v2beta1/deployments/helm/chart/group_repo.mdx'
+import GitChartConfigPartial from '../../../_partials/v2beta1/deployments/helm/chart/group_git.mdx'
+
+
+Just like Helm itself, DevSpace supports the deployment of Helm charts that need to be downloaded from a remote location.
+
+:::info Artifact Hub
+If you are looking for Helm charts for standard off-the-shelf software components such as databases, message queues, etc., you may want to search for prepackaged Helm charts on [Artifact Hub](https://artifacthub.io/) rather than creating and maintaining your own charts for everything.
+
+To deploy Helm charts from Artifact Hub, follow the instructions for [Charts from Helm Repositories](#from-helm-repository).
+:::
+
+
+## Remote Charts vs Dependencies
+If you have several other microservices that are required to work on the current project, you may want to consider if these microservices already have a `devspace.yaml` or should ideally have one at some point. DevSpace provides a feature called [`dependencies`](../../../dependencies/README.mdx) which allows you to define relationships between `devspace.yaml` files to allow users to start working on a service while DevSpace stands up and maintains dependent microservices if needed.
+
+Everything that belongs to the current project itself and is not directly developed by you (e.g. a mysql database, a redis cache, etc.) should be defined as a `deployment` in this project. However, any other related microservices that you own and develop separately should rather be defined a [`dependencies`](../../../dependencies/README.mdx) instead of as remote chart deployments.
+
+
+## Source
+
+### From Helm Repository
+To deploy a Helm chart from a Helm repository, specify at least `name` and `repo` for the respective Helm deployment in `devspace.yaml`.
+
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  database:
+    helm:
+      chart:
+        // highlight-start
+        name: mysql
+        repo: https://charts.bitnami.com/bitnami
+        version: 9.0.0
+        // highlight-end
+      values:
+        ...
+```
+
+
+<details>
+<summary>
+
+#### Config Reference For Helm Repository Charts
+
+</summary>
+
+<HelmRepoChartConfigPartial/>
+
+</details>
+
+<details>
+<summary>
+
+#### Authentication For Helm Repositories
+
+</summary>
+
+If you need to authenticate with the Helm repository, you can provide the `username` and `password` fields:
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  database:
+    helm:
+      chart:
+        name: mysql
+        repo: https://charts.bitnami.com/bitnami
+        version: 9.0.0
+        // highlight-start
+        username: john
+        password: ${HELM_REPO_PASSWORD}
+        // highlight-end
+      values:
+        ...
+```
+
+</details>
+
+:::caution Local Repo Names
+When deploying charts, make sure to specify the full URL to the Helm chart repository that contains the respective chart. Do **not** use the local shortcut name for your repository.
+
+If, for example, you would locally run this Helm install command:
+```bash
+helm install database bitnami/mysql --version 9.0.0
+```
+Transferring this to DevSpace could look like this:
+
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  database:
+    helm:
+      chart:
+        name: bitnami/mysql   # DO NOT USE THIS / This line is problematic!
+        version: 9.0.0
+      values:
+        ...
+```
+
+You can see the `bitnami/mysql` chart name in this install command. This chart name includes `bitnami/` as a prefix which looks on your local machine for the Helm repository you added as `bitnami`. Unfortunately, this is only available on your local machine and is hard to transfer to other team members.
+
+To make sure your `devspace.yaml` can be used by anyone, do not specify the `bitnami/` prefix and instead specify the full Helm repository URL using the `repo` field:
+
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  database:
+    helm:
+      chart:
+        name: mysql
+        repo: https://charts.bitnami.com/bitnami
+        version: 9.0.0
+      values:
+        ...
+```
+
+:::
+
+
+### From Tar Archive
+If your Helm chart has not been pushed to a Helm repository but can be downloaded as a tar archive from a web server, you can tell DevSpace to deploy using the URL of the tar archive.
+
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  api:
+    helm:
+      chart:
+        name: https://mycompany.tld/example-api-server.tar.gz
+      values:
+        ...
+```
+
+
+### From Git Repository
+If the chart you want to deploy is not (yet) pushed to a Helm repository or available as a tar archive, you can tell DevSpace to retrieve it from a git repository.
+
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  api:
+    helm:
+      chart:
+        git: https://github.com/loft-sh/example-api-server.git
+        subPath: ./chart/
+        tag: v1.2.3
+      values:
+        ...
+```
+
+The following config fields are available to specify git-based Helm deployments:
+
+<GitChartConfigPartial/>

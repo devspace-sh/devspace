@@ -1,0 +1,18 @@
+The function `xargs` allows a user to overwrite current flags and utilities.
+
+## Usage
+
+```
+xargs [utility [argument ...]]
+```
+
+## Arguments
+
+### Example
+
+```yaml
+pipelines:
+  dev:
+    run: |-
+      echo [image1] [image2] | xargs build_images
+```

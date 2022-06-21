@@ -1,0 +1,35 @@
+---
+title: Deploy Applications via Component Chart
+sidebar_label: Component Chart
+---
+
+import ConfigPartial from '../../../_partials/v2beta1/deployments/helm/componentChart/reference.mdx'
+
+
+DevSpace provides a built-in general purpose Helm chart that allows you to deploy applications without creating your own Helm chart. The idea of this chart is to be quite generic, so that it is suitable to deploy most applications with it by just customizing the values passed to the chart.
+
+```yaml title=devspace.yaml
+version: v2beta1
+deployments:
+  api:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+          - image: ghcr.io/loft-sh/devspace-example-api
+        service:
+          ports:
+            - port: 8080
+```
+
+:::info Values Validation
+Because the component chart is embedded into DevSpace itself, DevSpace will parse the `values` for a component-chart deployment and is able to run a config validation against the [component-chart's values specification](#values-reference).
+:::
+
+
+## Values Reference
+The component chart supports the following fields for its `values`:
+
+<ConfigPartial/>
