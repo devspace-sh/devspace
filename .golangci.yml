@@ -1,5 +1,8 @@
 run:
   timeout: 10m
+  skip-dirs:
+  - hack/
+  - docs/
 
 linters:
   disable-all:  true

@@ -60,10 +60,9 @@ func TestDeploy(t *testing.T) {
 		// 	},
 		// },
 		{
-			name:        "Deploy one deployment",
-			deployment:  "deploy2",
-			chart:       ".",
-			valuesFiles: []string{"."},
+			name:       "Deploy one deployment",
+			deployment: "deploy2",
+			chart:      ".",
 			values: map[string]interface{}{
 				"val": "fromVal",
 			},
@@ -72,7 +71,7 @@ func TestDeploy(t *testing.T) {
 				Deployments: []remotecache.DeploymentCache{
 					{
 						Name:                 "deploy2",
-						DeploymentConfigHash: "d4caa406182729245229e8cc01179a72f3cfe3f2fcb4685255b821d711235be4",
+						DeploymentConfigHash: "038007a9e5018dcf8ffbabad39c1fdc08251e583d7b19e74b765b815d5302444",
 						Helm: &remotecache.HelmCache{
 							Release:          "deploy2",
 							ReleaseNamespace: "testNamespace",
