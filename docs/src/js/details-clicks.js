@@ -92,16 +92,26 @@ const preserveExpansionStates = function (skipEventListener) {
     }
   });
 
-  if (location.host.match(/^localhost(:[0-9]+)?$/)) {
-    setTimeout(function () {
-      preserveExpansionStates();
-    }, 500)
-  }
+  setTimeout(function () {
+    preserveExpansionStates();
+  }, 300)
 }
 
 if (ExecutionEnvironment.canUseDOM) {
   preserveExpansionStates();
-  window.addEventListener("popstate", preserveExpansionStates);
+  /*
+  window.addEventListener("popstate", () => {
+    setTimeout(() => {
+      preserveExpansionStates();
+    }, 300)
+  });
+
+
+  window.addEventListener("hashchange", () => {
+    setTimeout(() => {
+      preserveExpansionStates();
+    }, 300)
+  });*/
   
   if (location.hash) {
     setTimeout(() => {
