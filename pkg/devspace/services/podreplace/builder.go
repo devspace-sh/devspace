@@ -35,15 +35,22 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 		return nil, errors.Wrap(err, "hash config")
 	}
 
+	metaObject := target.(metav1.Object)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: target.(metav1.Object).GetNamespace(),
+			Namespace: metaObject.GetNamespace(),
 			Annotations: map[string]string{
 				DevPodConfigHashAnnotation: configHash,
 			},
 			Labels: map[string]string{},
 		},
+	}
+	for k, v := range metaObject.GetAnnotations() {
+		deployment.Annotations[k] = v
+	}
+	for k, v := range metaObject.GetLabels() {
+		deployment.Labels[k] = v
 	}
 
 	podTemplate := &corev1.PodTemplateSpec{
