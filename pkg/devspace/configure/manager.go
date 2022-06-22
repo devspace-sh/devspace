@@ -2,6 +2,7 @@ package configure
 
 import (
 	"context"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
@@ -15,6 +16,7 @@ type Manager interface {
 	AddHelmDeployment(deploymentName string) error
 	AddComponentDeployment(deploymentName, image string, servicePort int) error
 	AddImage(imageName, image, projectNamespace, dockerfile string) error
+	IsRemoteDeployment(imageName string) bool
 }
 
 // Factory defines the factory methods needed by the configure manager to create new configuration
@@ -28,6 +30,7 @@ type manager struct {
 	config     *latest.Config
 	localCache localcache.Cache
 	factory    Factory
+	isRemote   map[string]bool
 }
 
 // NewManager creates a new instance of the interface Manager
@@ -37,5 +40,6 @@ func NewManager(factory Factory, config *latest.Config, localCache localcache.Ca
 		factory:    factory,
 		config:     config,
 		localCache: localCache,
+		isRemote:   map[string]bool{},
 	}
 }

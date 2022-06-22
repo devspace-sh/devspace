@@ -334,82 +334,99 @@ func (cmd *InitCmd) initDevspace(f factory.Factory, configLoader loader.ConfigLo
 		break
 	}
 
+	developProject := "I want to develop this project and my current working dir contains the source code"
+	deployProject := "I just want to deploy this project"
+	defaultProjectAction := deployProject
+	if !configureManager.IsRemoteDeployment(imageName) {
+		defaultProjectAction = developProject
+	}
+	developOrDeployProject, err := cmd.log.Question(&survey.QuestionOptions{
+		Question:     "Do you want to develop this project with DevSpace or just deploy it?  [Use arrows to move, type to filter]",
+		Options:      []string{developProject, deployProject},
+		DefaultValue: defaultProjectAction,
+	})
+	if err != nil {
+		return err
+	}
+
 	image := ""
-	for {
-		if !mustAddComponentChart {
-			manifests, err := cmd.render(f, config)
-			if err != nil {
-				return errors.Wrap(err, "error rendering deployment")
-			}
-
-			images, err := parseImages(manifests)
-			if err != nil {
-				return errors.Wrap(err, "error parsing images")
-			}
-
-			imageManual := "Manually enter the image I want to work on"
-			imageSkip := "Skip (do not add dev configuration for any images)"
-			imageAnswer := ""
-
-			if len(images) > 0 {
-				imageAnswer, err = cmd.log.Question(&survey.QuestionOptions{
-					Question:     "Which image do you want to develop with DevSpace?",
-					DefaultValue: images[0],
-					Options:      append(images, []string{imageManual, imageSkip}...),
-				})
+	if developOrDeployProject == developProject {
+		for {
+			if !mustAddComponentChart {
+				manifests, err := cmd.render(f, config)
 				if err != nil {
-					return err
+					return errors.Wrap(err, "error rendering deployment")
 				}
-			} else {
-				imageAnswer, err = cmd.log.Question(&survey.QuestionOptions{
-					Question: "Couldn’t find any images in your manifests/helm charts. Do you want to skip this step?",
-					Options:  []string{imageManual, imageSkip},
-				})
+
+				images, err := parseImages(manifests)
 				if err != nil {
-					return err
-				}
-			}
-
-			if imageAnswer == imageSkip {
-				break
-			} else if imageAnswer == imageManual {
-				imageQuestion := "What is the main container image of this project?"
-
-				if selectedDeploymentOption == DeployOptionHelm {
-					imageQuestion = "What is the main container image of this project which is deployed by this Helm chart? (e.g. ecr.io/project/image)"
+					return errors.Wrap(err, "error parsing images")
 				}
 
-				if selectedDeploymentOption == DeployOptionKubectl {
-					imageQuestion = "What is the main container image of this project which is deployed by these manifests? (e.g. ecr.io/project/image)"
-				}
+				imageManual := "Manually enter the image I want to work on"
+				imageSkip := "Skip (do not add dev configuration for any images)"
+				imageAnswer := ""
 
-				if selectedDeploymentOption == DeployOptionKustomize {
-					imageQuestion = "What is the main container image of this project which is deployed by this Kustomization? (e.g. ecr.io/project/image)"
-				}
-
-				image, err = cmd.log.Question(&survey.QuestionOptions{
-					Question:          imageQuestion,
-					ValidationMessage: "Please enter a valid container image from a Kubernetes pod (e.g. myregistry.tld/project/image)",
-					ValidationFunc: func(name string) error {
-						_, _, err := dockerfile.GetStrippedDockerImageName(strings.ToLower(name))
+				if len(images) > 0 {
+					imageAnswer, err = cmd.log.Question(&survey.QuestionOptions{
+						Question:     "Which image do you want to develop with DevSpace?",
+						DefaultValue: images[0],
+						Options:      append(images, []string{imageManual, imageSkip}...),
+					})
+					if err != nil {
 						return err
-					},
-				})
-				if err != nil {
-					return err
+					}
+				} else {
+					imageAnswer, err = cmd.log.Question(&survey.QuestionOptions{
+						Question: "Couldn’t find any images in your manifests/helm charts. Do you want to skip this step?",
+						Options:  []string{imageManual, imageSkip},
+					})
+					if err != nil {
+						return err
+					}
+				}
+
+				if imageAnswer == imageSkip {
+					break
+				} else if imageAnswer == imageManual {
+					imageQuestion := "What is the main container image of this project?"
+
+					if selectedDeploymentOption == DeployOptionHelm {
+						imageQuestion = "What is the main container image of this project which is deployed by this Helm chart? (e.g. ecr.io/project/image)"
+					}
+
+					if selectedDeploymentOption == DeployOptionKubectl {
+						imageQuestion = "What is the main container image of this project which is deployed by these manifests? (e.g. ecr.io/project/image)"
+					}
+
+					if selectedDeploymentOption == DeployOptionKustomize {
+						imageQuestion = "What is the main container image of this project which is deployed by this Kustomization? (e.g. ecr.io/project/image)"
+					}
+
+					image, err = cmd.log.Question(&survey.QuestionOptions{
+						Question:          imageQuestion,
+						ValidationMessage: "Please enter a valid container image from a Kubernetes pod (e.g. myregistry.tld/project/image)",
+						ValidationFunc: func(name string) error {
+							_, _, err := dockerfile.GetStrippedDockerImageName(strings.ToLower(name))
+							return err
+						},
+					})
+					if err != nil {
+						return err
+					}
+				} else {
+					image = imageAnswer
+				}
+			}
+
+			err = configureManager.AddImage(imageName, image, projectNamespace+"/"+projectName, cmd.Dockerfile)
+			if err != nil {
+				if err.Error() != "" {
+					cmd.log.Errorf("Error: %s", err.Error())
 				}
 			} else {
-				image = imageAnswer
+				break
 			}
-		}
-
-		err = configureManager.AddImage(imageName, image, projectNamespace+"/"+projectName, cmd.Dockerfile)
-		if err != nil {
-			if err.Error() != "" {
-				cmd.log.Errorf("Error: %s", err.Error())
-			}
-		} else {
-			break
 		}
 	}
 

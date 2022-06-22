@@ -81,6 +81,7 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 	if isKustomization {
 		m.config.Deployments[deploymentName].Kubectl.Kustomize = ptr.Bool(isKustomization)
 	}
+	m.isRemote[deploymentName] = false
 
 	return nil
 }
@@ -147,6 +148,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 			}
 
 			helmConfig.Chart.Name = localChartPathRel
+			m.isRemote[deploymentName] = false
 		} else if chartLocation == chartRepo || chartLocation == archiveURL {
 		ChartRepoLoop:
 			for {
@@ -249,6 +251,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 							m.localCache.SetVar(passwordVar, password)
 						}
 
+						m.isRemote[deploymentName] = true
 						break ChartRepoLoop
 					}
 				}
@@ -305,6 +308,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 					Events:  []string{"before:deploy"},
 				})
 
+				m.isRemote[deploymentName] = true
 				break
 			}
 		}
@@ -360,8 +364,13 @@ func (m *manager) AddComponentDeployment(deploymentName, image string, servicePo
 			Values: chartValues,
 		},
 	}
+	m.isRemote[deploymentName] = true
 
 	return nil
+}
+
+func (m *manager) IsRemoteDeployment(deploymentName string) bool {
+	return m.isRemote[deploymentName]
 }
 
 func chartRepoURL(url string) string {
