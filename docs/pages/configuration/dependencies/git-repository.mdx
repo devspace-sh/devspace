@@ -9,27 +9,21 @@ import ConfigPartialDependencyExecution from '../_partials/v2beta1/dependencies/
 
 ```yaml
 dependencies:
-- name: api-server
-  source:
+  api-server:
     git: https://github.com/my-api-server
     branch: stable
-  dev:
-    sync: true
-- name: auth-server
-  source:
+  auth-server:
     git: https://github.com/my-auth-server
     revision: c967392
-  profile: production
-- name: database-server
-  source:
+    pipeline: dev
+  database-server:
     git: https://github.com/my-database-server
     tag: v3.0.1
     subPath: /configuration
-  dev:
-    ports: true
 dev:
-  terminal:
+  my-dev:
     imageSelector: ghcr.io/org/project/image
+    terminal: {}
 ```
 
 :::info Authentication

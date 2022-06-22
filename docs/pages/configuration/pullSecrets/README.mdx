@@ -27,9 +27,10 @@ Image Pull Secrets are defined in the `pullSecrets` section of the `devspace.yam
 # If you don't want to specify the password and username directly in the config
 # you can use variables, .env file or save the credentials in the local docker store
 pullSecrets:
-- registry: my-registry.com:5000
-  username: ${REGISTRY_USER}
-  password: ${REGISTRY_PASSWORD}
+  my-pullsecret:
+    registry: my-registry.com:5000
+    username: ${REGISTRY_USER}
+    password: ${REGISTRY_PASSWORD}
 ```
 
 </TabItem>
@@ -40,7 +41,8 @@ pullSecrets:
 # to get these from the local docker store. Make sure you
 # are logged into the registry with `docker login my-registry.com:5000`
 pullSecrets:
-- registry: my-registry.com:5000
+  my-pullsecret:
+    registry: my-registry.com:5000
 ```
 
 </TabItem>
@@ -48,11 +50,12 @@ pullSecrets:
 
 ```yaml
 pullSecrets:
-- registry: my-registry.com:5000
-  secret: my-pull-secret-name
-  serviceAccounts:
-    - default
-    - my-other-service-account
+  my-pullsecret:
+    registry: my-registry.com:5000
+    secret: my-pull-secret-name
+    serviceAccounts:
+      - default
+      - my-other-service-account
 ```
 
 </TabItem>
