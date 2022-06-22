@@ -9,22 +9,17 @@ import ConfigPartialDependencyExecution from '../_partials/v2beta1/dependencies/
 
 ```yaml
 dependencies:
-- name: component-1
-  source:
+  component-1:
+    # Expects a devspace.yaml at ./different/component-1/devspace.yaml
     path: ./different/component-1
-    path: ./different/component-1
-- name: component-2
-  source:
-    path: ./different/component-2
-    path: ./different/component-2
+  component-2:
+    # Direct path to other-devspace.yaml
+    path: ./different/component-1/other-devspace.yaml
 deployments:
-- name: use-dependency-image
-- name: use-dependency-image
-  helm:
-    componentChart: true
-    values:
-      containers:
-        - image: ghcr.io/org/project/image
+  use-dependency-image:
+    helm:
+      values:
+        containers:
         - image: ghcr.io/org/project/image
 ```
 

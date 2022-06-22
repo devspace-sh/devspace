@@ -13,15 +13,10 @@ Custom commands are being shared in the `commands` section of `devspace.yaml`:
 images:
   default:
     image: john/backend
+
 commands:
-- name: debug-backend
-  command: "devspace dev --profile=debug-backend $@"
-profiles:
-- name: debug-backend
-  patches:
-  - op: replace
-    path: images.default.entrypoint
-    value: ["npm", "run", "debug"]
+  debug-backend: |-
+    devspace dev $@
 ```
 
 :::note
@@ -31,15 +26,13 @@ Custom commands can be used for more than just running `devspace` commands, e.g.
 The above example configuration would allow everyone to run the custom command `debug-backend` like this:
 ```bash
 devspace run debug-backend
-devspace run debug-backend --verbose-dependencies
-devspace run debug-backend -- --verbose-dependencies -s
+devspace run debug-backend -n my-namespace
 ```
 
 And `devspace run` would execute the following commands internally:
 ```bash
-devspace dev --profile=debug-backend
-devspace dev --profile=debug-backend --verbose-dependencies
-devspace dev --profile=debug-backend --verbose-dependencies -s
+devspace dev
+devspace dev -n my-namespace
 ```
 
 :::note `--` End of Options Separator

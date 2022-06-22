@@ -22,6 +22,8 @@ To tell DevSpace to inject the restart helper into the container, set `inject: t
 dev:
   app:
     imageSelector: ghcr.io/org/project/image
+    command: ["restart", "this", "command"]
+    args: ["with", "these", "args"]
     restartHelper:
       inject: true
 ```
