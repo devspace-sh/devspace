@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"io"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -148,6 +149,14 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 
 	// resolve pipeline commands
 	pipelineCommand, ok := PipelineCommands[command]
+	if ok {
+		return e.executePipelineCommand(ctx, command, func() error {
+			return pipelineCommand(devCtx, e.pipeline, args)
+		})
+	}
+
+	// resolve internal pipeline commands
+	pipelineCommand, ok = PipelineCommands[strings.TrimPrefix(command, "__")]
 	if ok {
 		return e.executePipelineCommand(ctx, command, func() error {
 			return pipelineCommand(devCtx, e.pipeline, args)
