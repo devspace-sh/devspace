@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -80,6 +81,7 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 	if isKustomization {
 		m.config.Deployments[deploymentName].Kubectl.Kustomize = ptr.Bool(isKustomization)
 	}
+	m.isRemote[deploymentName] = false
 
 	return nil
 }
@@ -146,21 +148,30 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 			}
 
 			helmConfig.Chart.Name = localChartPathRel
+			m.isRemote[deploymentName] = false
 		} else if chartLocation == chartRepo || chartLocation == archiveURL {
 		ChartRepoLoop:
 			for {
 				requestURL := ""
 
 				if chartLocation == chartRepo {
-					helmConfig.Chart.RepoURL, err = m.log.Question(&survey.QuestionOptions{
-						Question:               "Please specify the full URL of the chart repo (e.g. https://charts.org.tld/)",
-						ValidationRegexPattern: "^http(s)?://.*",
+					tempChartRepoURL, err := m.log.Question(&survey.QuestionOptions{
+						Question: "Please specify the full URL of the chart repo (e.g. https://charts.org.tld/)",
+						ValidationFunc: func(value string) error {
+							_, err := url.ParseRequestURI(chartRepoURL(value))
+							if err != nil {
+								return err
+							}
+							return nil
+						},
 					})
 					if err != nil {
 						return err
 					}
 
-					requestURL = helmConfig.Chart.RepoURL + "/index.yaml"
+					helmConfig.Chart.RepoURL = chartRepoURL(tempChartRepoURL)
+
+					requestURL = strings.TrimRight(helmConfig.Chart.RepoURL, "/") + "/index.yaml"
 
 					helmConfig.Chart.Name, err = m.log.Question(&survey.QuestionOptions{
 						Question:               "Please specify the name of the chart within your chart repository (e.g. payment-service)",
@@ -240,6 +251,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 							m.localCache.SetVar(passwordVar, password)
 						}
 
+						m.isRemote[deploymentName] = true
 						break ChartRepoLoop
 					}
 				}
@@ -296,6 +308,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 					Events:  []string{"before:deploy"},
 				})
 
+				m.isRemote[deploymentName] = true
 				break
 			}
 		}
@@ -351,6 +364,19 @@ func (m *manager) AddComponentDeployment(deploymentName, image string, servicePo
 			Values: chartValues,
 		},
 	}
+	m.isRemote[deploymentName] = true
 
 	return nil
+}
+
+func (m *manager) IsRemoteDeployment(deploymentName string) bool {
+	return m.isRemote[deploymentName]
+}
+
+func chartRepoURL(url string) string {
+	repoURL := url
+	if !(strings.HasPrefix(url, "https://") || strings.HasPrefix(url, "http://")) {
+		repoURL = "https://" + url
+	}
+	return repoURL
 }
