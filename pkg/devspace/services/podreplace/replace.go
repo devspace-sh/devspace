@@ -8,7 +8,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	patch2 "github.com/loft-sh/devspace/pkg/util/patch"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
 	"time"
@@ -70,7 +69,7 @@ func (p *replacer) ReplacePod(ctx devspacecontext.Context, devPod *latest.DevPod
 		// check if there is a replaced pod in the target namespace
 		ctx.Log().Debug("Try to find replaced deployment...")
 
-		// find the replaced replica set
+		// find the replaced deployment
 		deployment, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(devPodCache.Namespace).Get(ctx.Context(), devPodCache.Deployment, metav1.GetOptions{})
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
@@ -154,17 +153,14 @@ func updateNeeded(ctx devspacecontext.Context, deployment *appsv1.Deployment, de
 		ctx.Log().Warnf("Error scaling down target: %v", err)
 	}
 
-	// don't update if pod spec & config hash are the same
-	if apiequality.Semantic.DeepEqual(newDeployment.Spec.Template, deployment.Spec.Template) && configHash == deployment.Annotations[DevPodConfigHashAnnotation] {
-		// make sure target is downscaled
-		ctx.Log().Debugf("No changes required in replaced deployment %s", deployment.Name)
-		return false, nil
-	}
-
-	// update deployment´
+	// update deployment
 	originalDeployment := deployment.DeepCopy()
+	deployment.Spec.Replicas = ptr.Int32(1)
+	deployment.Spec.Selector = newDeployment.Spec.Selector
 	deployment.Spec.Template = newDeployment.Spec.Template
+	deployment.Annotations = newDeployment.Annotations
 	deployment.Annotations[DevPodConfigHashAnnotation] = configHash
+	deployment.Labels = newDeployment.Labels
 	patch := patch2.MergeFrom(originalDeployment)
 	patchBytes, err := patch.Data(deployment)
 	if err != nil {

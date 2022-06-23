@@ -3,7 +3,7 @@ vars:
   - name: IMAGE
     value: john/devbackend
 deployments:
-  - name: very-long-name-very-long-name-very-long-name
+  - name: replace-deployment
     helm:
       componentChart: true
       values:

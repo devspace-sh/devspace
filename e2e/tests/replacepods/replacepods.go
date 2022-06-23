@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -268,6 +269,37 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		})
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(pods.Items[0].Spec.Containers[0].Image, "alpine:3.14")
+
+		// now scale down the devspace deployment and upscale the replaced deployment
+		_, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).UpdateScale(context.TODO(), "replace-deployment-devspace", &autoscalingv1.Scale{
+			ObjectMeta: metav1.ObjectMeta{Name: "replace-deployment-devspace", Namespace: ns},
+			Spec:       autoscalingv1.ScaleSpec{Replicas: 0},
+		}, metav1.UpdateOptions{})
+		framework.ExpectNoError(err)
+		_, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).UpdateScale(context.TODO(), "replace-deployment", &autoscalingv1.Scale{
+			ObjectMeta: metav1.ObjectMeta{Name: "replace-deployment", Namespace: ns},
+			Spec:       autoscalingv1.ScaleSpec{Replicas: 1},
+		}, metav1.UpdateOptions{})
+		framework.ExpectNoError(err)
+
+		// rerun the devspace command
+		devCmd = &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "dev",
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// make sure the deployments are correctly scaled
+		deployment, err := kubeClient.Client().KubeClient().AppsV1().Deployments(ns).Get(context.TODO(), "replace-deployment-devspace", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(*deployment.Spec.Replicas, int32(1))
+		deployment, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).Get(context.TODO(), "replace-deployment", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(*deployment.Spec.Replicas, int32(0))
 
 		// now purge the deployment and make sure the replica set is deleted as well
 		purgeCmd := &cmd.RunPipelineCmd{
