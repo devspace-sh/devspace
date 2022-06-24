@@ -64,18 +64,21 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 	case *appsv1.ReplicaSet:
 		deployment.Annotations[TargetNameAnnotation] = t.Name
 		deployment.Annotations[TargetKindAnnotation] = "ReplicaSet"
+		deployment.Spec.Selector = t.Spec.Selector
 		podTemplate.Labels = t.Spec.Template.Labels
 		podTemplate.Annotations = t.Spec.Template.Annotations
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
 	case *appsv1.Deployment:
 		deployment.Annotations[TargetNameAnnotation] = t.Name
 		deployment.Annotations[TargetKindAnnotation] = "Deployment"
+		deployment.Spec.Selector = t.Spec.Selector
 		podTemplate.Labels = t.Spec.Template.Labels
 		podTemplate.Annotations = t.Spec.Template.Annotations
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
 	case *appsv1.StatefulSet:
 		deployment.Annotations[TargetNameAnnotation] = t.Name
 		deployment.Annotations[TargetKindAnnotation] = "StatefulSet"
+		deployment.Spec.Selector = t.Spec.Selector
 		podTemplate.Labels = t.Spec.Template.Labels
 		podTemplate.Annotations = t.Spec.Template.Annotations
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
@@ -148,12 +151,15 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 		podTemplate.Annotations[selector.MatchedContainerAnnotation] = strings.Join(containers, ";")
 	}
 
-	deployment.Spec = appsv1.DeploymentSpec{
-		Selector: &metav1.LabelSelector{
-			MatchLabels: podTemplate.ObjectMeta.Labels,
-		},
-		Template: *podTemplate,
+	deployment.Spec.Template = *podTemplate
+	if deployment.Spec.Selector == nil {
+		deployment.Spec.Selector = &metav1.LabelSelector{}
 	}
+	if deployment.Spec.Selector.MatchLabels == nil {
+		deployment.Spec.Selector.MatchLabels = podTemplate.Labels
+		deployment.Spec.Selector.MatchExpressions = nil
+	}
+	deployment.Spec.Selector.MatchLabels[selector.ReplacedLabel] = "true"
 
 	// make sure labels etc are there
 	if ctx.Log().GetLevel() == logrus.DebugLevel {
