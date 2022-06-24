@@ -73,10 +73,10 @@ func startSSH(ctx devspacecontext.Context, name, arch string, sshConfig *latest.
 	// get port
 	port := sshConfig.LocalPort
 	if port == 0 {
-		sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
-		hosts, err := ParseDevSpaceHosts(sshConfigPath)
+		sshDevSpaceConfigPath := filepath.Join(homeDir, ".ssh", "devspace_config")
+		hosts, err := ParseDevSpaceHosts(sshDevSpaceConfigPath)
 		if err != nil {
-			ctx.Log().Debugf("error parsing %s: %v", sshConfigPath, err)
+			ctx.Log().Debugf("error parsing %s: %v", sshDevSpaceConfigPath, err)
 		} else {
 			for _, h := range hosts {
 				if h.Host == sshHost {
