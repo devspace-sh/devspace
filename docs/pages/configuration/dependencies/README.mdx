@@ -26,25 +26,20 @@ Dependencies for DevSpace projects are defined within the `dependencies` section
 
 ```yaml
 dependencies:
-- name: api-server
-  source:
+  api-server:
     git: https://github.com/my-api-server
     branch: stable
-  dev:
-    ports: true
-- name: auth-server
-  source:
+    pipeline: dev
+  auth-server:
     git: https://github.com/my-auth-server
     revision: c967392
-  profile: production
-- name: database-server
-  source:
+    profile: production
+  database-server:
     git: https://github.com/my-database-server
     tag: v3.0.1
     subPath: /configuration
-  vars:
-    - name: ROOT_PASSWORD
-      value: ${ROOT_PASSWORD}
+    vars:
+      ROOT_PASSWORD: ${ROOT_PASSWORD}
 ```
 
 </TabItem>
@@ -52,11 +47,9 @@ dependencies:
 
 ```yaml
 dependencies:
-- name: component-1
-  source:
+  component-1:
     path: ./component-1
-- name: component-2
-  source:
+  component-2:
     path: ./component-2
 ```
 
@@ -74,26 +67,23 @@ DevSpace is able to work with dependencies from the following sources:
 Dependencies will be executed in the order that they are specified under `dependencies` and always before image building and deployments defined in the top-level `devspace.yaml`. `dev` configuration that should be reused from a dependency will be executed alongside regular `dev` configuration specified in the top-level `devspace.yaml` after the DevSpace deployment pipeline ran through. Example:
 ```yaml
 dependencies:
-- name: dep1
-  source:
+  dep1:
     path: dep1
-  dev:
-    sync: true
-- name: dep2
-  source:
+    pipeline: dev
+  dep2:
     path: dep2
-  dev:
-    ports: true
+    pipeline: dev
 images:
   image1:
     image: myimage/image
 deployments:
-- name: deployment1
-  helm:
-    ...
+  deployment1:
+    helm:
+      ...
 dev:
-  ports: ...
-  sync: ...
+  my-dev:
+    ports: ...
+    sync: ...
 ```
 
 ### Explanation
@@ -111,14 +101,15 @@ In the above `devspace.yaml`, execution order would be as followed:
 You can reference dependencies images via `my-dependency.image` in the `./devspace.yaml`:
 ```yaml
 dependencies:
-- name: dep1
-  source:
+  dep1:
     path: dep1
+
 dev:
-  # Will open a terminal to the pod with the
-  # image from dep1
-  terminal:
+  my-dev:
     imageSelector: ${runtime.dependencies.dep1.images.image1}
+    # Will open a terminal to the pod with the
+    # image from dep1
+    terminal: {}
 ```
 
 With `dep1/devspace.yaml`:
@@ -127,9 +118,8 @@ images:
   image1:
     image: myusername/devspace
 deployments:
-  - name: quickstart
+  quickstart:
     helm:
-      componentChart: true
       values:
         containers:
           - image: myusername/devspace
@@ -140,13 +130,11 @@ deployments:
 It is also possible to reference a dependency's image with runtime variables in a deployment:
 ```yaml
 dependencies:
-- name: dep1
-  source:
+  dep1:
     path: dep1
 deployments:
-  - name: quickstart
+  quickstart:
     helm:
-      componentChart: true
       values:
         containers:
           - image: ${runtime.dependencies.dep1.image1.image}:${runtime.dependencies.dep1.image1.tag} # -> replaced with 'myusername/devspace:xxxx'
