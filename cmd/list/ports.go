@@ -2,11 +2,11 @@ package list
 
 import (
 	"context"
-	"errors"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 

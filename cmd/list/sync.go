@@ -1,8 +1,12 @@
 package list
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -33,9 +37,9 @@ Lists the sync configuration
 
 // RunListSync runs the list sync command logic
 func (cmd *syncCmd) RunListSync(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
-	/*logger := f.GetLog()
+	logger := f.GetLog()
 	// Set config root
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configLoader, _ := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
@@ -44,58 +48,51 @@ func (cmd *syncCmd) RunListSync(f factory.Factory, cobraCmd *cobra.Command, args
 		return errors.New(message.ConfigNotFound)
 	}
 
-	configInterface, err := configLoader.Load(cmd.ToConfigOptions(logger), logger)
+	configInterface, err := configLoader.Load(context.TODO(), nil, cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}
 
 	config := configInterface.Config()
-	if config.Dev.Sync == nil || len(config.Dev.Sync) == 0 {
-		logger.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
-		return nil
+	syncPaths := make([][]string, 0)
+
+	for _, dev := range config.Dev {
+		if dev.Sync == nil || len(dev.Sync) == 0 {
+			logger.Info("No sync paths are configured.")
+			return nil
+		}
+		selector := ""
+		for k, v := range dev.LabelSelector {
+			if len(selector) > 0 {
+				selector += ", "
+			}
+			selector += k + "=" + v
+		}
+		// Transform values into string arrays
+		for _, value := range dev.Sync {
+			excludedPaths := ""
+			if value.ExcludePaths != nil {
+				for _, v := range value.ExcludePaths {
+					if len(excludedPaths) > 0 {
+						excludedPaths += ", "
+					}
+					excludedPaths += v
+				}
+			}
+			syncPaths = append(syncPaths, []string{
+				selector,
+				value.Path,
+				excludedPaths,
+			})
+		}
 	}
 
 	headerColumnNames := []string{
 		"Label Selector",
-		"Local Path",
-		"Container Path",
+		"Path (Local:Container)",
 		"Excluded Paths",
 	}
 
-	syncPaths := make([][]string, 0, len(config.Dev.Sync))
-
-	// Transform values into string arrays
-	for _, value := range config.Dev.Sync {
-		selector := ""
-
-		for k, v := range value.LabelSelector {
-			if len(selector) > 0 {
-				selector += ", "
-			}
-
-			selector += k + "=" + v
-		}
-		excludedPaths := ""
-
-		if value.ExcludePaths != nil {
-			for _, v := range value.ExcludePaths {
-				if len(excludedPaths) > 0 {
-					excludedPaths += ", "
-				}
-
-				excludedPaths += v
-			}
-		}
-
-		syncPaths = append(syncPaths, []string{
-			selector,
-			value.LocalSubPath,
-			value.ContainerPath,
-			excludedPaths,
-		})
-	}
-
 	log.PrintTable(logger, headerColumnNames, syncPaths)
-	return nil*/
 	return nil
 }
