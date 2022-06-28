@@ -154,7 +154,7 @@ func validateDependencies(config *latest.Config) error {
 
 func validateCommands(config *latest.Config) error {
 	for key, command := range config.Commands {
-		if encoding.IsUnsafeName(command.Name) {
+		if encoding.IsUnsafeCommandName(command.Name) {
 			return fmt.Errorf("commands.%s has to match the following regex: %v", command.Name, encoding.UnsafeNameRegEx.String())
 		}
 		if command.Command == "" {

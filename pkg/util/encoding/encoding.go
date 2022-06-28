@@ -26,6 +26,7 @@ func SafeConcatNameMax(name []string, max int) string {
 
 var convertRegEx1 = regexp.MustCompile(`[\@/\.\:\s]+`)
 var convertRegEx2 = regexp.MustCompile(`[^a-z0-9\-]+`)
+var convertRegEx3 = regexp.MustCompile(`[^a-z0-9\-_]+`)
 
 func Convert(ID string) string {
 	ID = strings.ToLower(ID)
@@ -34,6 +35,14 @@ func Convert(ID string) string {
 	return SafeConcatName(ID)
 }
 
+func ConvertCommands(ID string) string {
+	ID = strings.ToLower(ID)
+	ID = convertRegEx1.ReplaceAllString(ID, "-")
+	ID = convertRegEx3.ReplaceAllString(ID, "")
+	return SafeConcatName(ID)
+}
+
+var UnsafeCommandNameRegEx = regexp.MustCompile(`^(([a-z0-9][a-z0-9\-_]*[a-z0-9])|([a-z0-9]))$`)
 var UnsafeNameRegEx = regexp.MustCompile(`^(([a-z0-9][a-z0-9\-]*[a-z0-9])|([a-z0-9]))$`)
 var UnsafeUpperNameRegEx = regexp.MustCompile(`^(([A-Za-z0-9][A-Za-z0-9\-_]*[A-Za-z0-9])|([A-Za-z0-9]))$`)
 
@@ -43,4 +52,8 @@ func IsUnsafeUpperName(unsafeName string) bool {
 
 func IsUnsafeName(unsafeName string) bool {
 	return !UnsafeNameRegEx.MatchString(unsafeName)
+}
+
+func IsUnsafeCommandName(unsafeCommandName string) bool {
+	return !UnsafeCommandNameRegEx.MatchString(unsafeCommandName)
 }

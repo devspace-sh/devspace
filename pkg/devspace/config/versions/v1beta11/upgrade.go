@@ -516,7 +516,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	// commands
 	nextConfig.Commands = map[string]*next.CommandConfig{}
 	for _, command := range c.Commands {
-		commandName := encoding.Convert(command.Name)
+		commandName := encoding.ConvertCommands(command.Name)
 		nextConfig.Commands[commandName] = &next.CommandConfig{
 			Name:        commandName,
 			Command:     command.Command,
