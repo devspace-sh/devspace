@@ -1259,7 +1259,7 @@ type DependencyConfig struct {
 // SourceConfig defines an artifact source
 type SourceConfig struct {
 	// Path is the local path where DevSpace can find the artifact.
-	// This option is mutually exclusive with the path option.
+	// This option is mutually exclusive with the git option.
 	Path string `yaml:"path,omitempty" json:"path,omitempty" jsonschema_extras:"group=path,group_name=Source: Local Filesystem"`
 
 	// Git is the remote repository to download the artifact from. You can either use
