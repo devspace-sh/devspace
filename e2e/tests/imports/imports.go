@@ -48,6 +48,7 @@ var _ = DevSpaceDescribe("imports", func() {
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
+				Profiles:  []string{"my-profile"},
 			},
 			Pipeline: "deploy",
 		}
@@ -69,6 +70,7 @@ var _ = DevSpaceDescribe("imports", func() {
 		framework.ExpectLocalFileContentsWithoutSpaces("import3.txt", "import3")
 		framework.ExpectLocalFileContentsWithoutSpaces("import4.txt", "import4")
 		framework.ExpectLocalFileContentsWithoutSpaces("import5.txt", "import5")
+		framework.ExpectLocalFileContentsWithoutSpaces("profile_import.txt", "PROFILE_TEST")
 		framework.ExpectLocalFileContentsWithoutSpaces("vars.txt", ns+"-"+ns+"-base-import1-import2-import3")
 		framework.ExpectLocalFileContentsWithoutSpaces("top.txt", "top")
 

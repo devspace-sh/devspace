@@ -25,6 +25,8 @@ var ImportSections = []string{
 	"functions",
 	"pullSecrets",
 	"dependencies",
+	"profiles",
+	"hooks",
 }
 
 func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath string, rawData map[string]interface{}, log log.Logger) (map[string]interface{}, error) {
@@ -94,6 +96,19 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		for _, section := range ImportSections {
 			sectionMap, ok := importData[section].(map[string]interface{})
 			if !ok {
+				// no map, is it a slice?
+				sectionSlice, ok := importData[section].([]interface{})
+				if !ok {
+					continue
+				}
+
+				// make sure the section exists
+				if mergedMap[section] == nil {
+					mergedMap[section] = []interface{}{}
+				}
+				for _, value := range sectionSlice {
+					mergedMap[section] = append(mergedMap[section].([]interface{}), value)
+				}
 				continue
 			}
 
