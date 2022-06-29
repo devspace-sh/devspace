@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -179,9 +180,11 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error)
 		if shouldRedeploy || forceDeploy {
 			args := d.getCmdArgs("apply", "--force")
 			args = append(args, d.DeploymentConfig.Kubectl.ApplyArgs...)
-			err = command.Command(ctx.Context(), ctx.WorkingDir(), writer, writer, strings.NewReader(replacedManifest), d.CmdPath, args...)
+
+			stdErrBuffer := &bytes.Buffer{}
+			err = command.Command(ctx.Context(), ctx.WorkingDir(), writer, io.MultiWriter(writer, stdErrBuffer), strings.NewReader(replacedManifest), d.CmdPath, args...)
 			if err != nil {
-				return false, errors.Errorf("%v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", err, manifest)
+				return false, errors.Errorf("%v %v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", stdErrBuffer.String(), err, manifest)
 			}
 
 			wasDeployed = true

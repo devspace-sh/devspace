@@ -1,0 +1,8 @@
+version: v2beta1
+name: profile-import
+
+profiles:
+  - name: my-profile
+    merge:
+      vars:
+        PROFILE_TEST: "PROFILE_TEST"

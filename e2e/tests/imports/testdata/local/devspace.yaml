@@ -3,6 +3,7 @@ name: base
 
 imports:
   - path: import1.yaml
+  - path: profile_import.yaml
   - enabled: $(is_equal ${BASE} "base")
     path: import2.yaml
   - enabled: $(is_equal ${IMPORT1} "import1")
@@ -33,4 +34,5 @@ pipelines:
       run_pipelines import4 > import4.txt
       run_pipelines import5 > import5.txt
 
+      echo ${PROFILE_TEST} > profile_import.txt 
       echo ${DEVSPACE_NAMESPACE}-${devspace.namespace}-${BASE}-${IMPORT1}-${IMPORT2}-${IMPORT3} > vars.txt
