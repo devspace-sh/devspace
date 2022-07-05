@@ -49,12 +49,10 @@ dev:
     # highlight-start
     containers:
       api:
-        container: api
         devImage: ghcr.io/org/project/image
         reversePort:
         - port: 3306
-      cache:
-        container: redis
+      redis:
         env:
           DEBUG: true
     # highlight-end
