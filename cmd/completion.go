@@ -18,12 +18,14 @@ const (
 		$ brew install bash-completion
 		$ source $(brew --prefix)/etc/bash_completion
 		$ devspace completion bash > ~/.devspace-completion  # for bash users
+		$ devspace completion fish > ~/.devspace-completion  # for fish users
 		$ devspace completion zsh > ~/.devspace-completion   # for zsh users
 		$ source ~/.devspace-completion
 	Ubuntu:
 		$ apt-get install bash-completion
 		$ source /etc/bash-completion
 		$ source <(devspace completion bash) # for bash users
+		$ devspace completion fish | source # for fish users
 		$ source <(devspace completion zsh)  # for zsh users
 
 	Additionally, you may want to output the completion to a file and source in your .bashrc
@@ -42,7 +44,7 @@ func NewCompletionCmd() *cobra.Command {
 			}
 			return cobra.OnlyValidArgs(cmd, args)
 		},
-		ValidArgs: []string{"bash", "zsh"},
+		ValidArgs: []string{"bash", "fish", "zsh"},
 		Short:     "Outputs shell completion for the given shell (bash or zsh)",
 		Long:      longDescription,
 		RunE:      completion,
@@ -53,6 +55,8 @@ func completion(cmd *cobra.Command, args []string) error {
 	switch args[0] {
 	case "bash":
 		return rootCmd(cmd).GenBashCompletion(os.Stdout)
+	case "fish":
+		return rootCmd(cmd).GenFishCompletion(os.Stdout, true)
 	case "zsh":
 		err := rootCmd(cmd).GenZshCompletion(os.Stdout)
 		if err != nil {
