@@ -209,10 +209,10 @@ func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.
 		return err
 	}
 	//load image if it is a kind-context
-	if skipPush && kubeClient != nil && kubectl.IsKindContext(kubeClient.CurrentContext()) {
+	if skipPush && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != "" {
 		if len(options.Tags) > 0 {
 			for _, tag := range options.Tags {
-				command := []string{"kind", "load", "docker-image", tag}
+				command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(kubeClient.CurrentContext()), tag}
 				completeArgs := []string{}
 				completeArgs = append(completeArgs, command[1:]...)
 				err = command2.CommandWithEnv(ctx, dir, writer, writer, nil, minikubeEnv, command[0], completeArgs...)

@@ -184,9 +184,9 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	} else {
 		ctx.Log().Infof("Skip image push for %s", b.helper.ImageName)
 		//load image if it is a kind-context
-		if ctx.KubeClient() != nil && kubectl.IsKindContext(ctx.KubeClient().CurrentContext()) {
+		if ctx.KubeClient() != nil && kubectl.GetKindContext(ctx.KubeClient().CurrentContext()) != "" {
 			for _, tag := range buildOptions.Tags {
-				command := []string{"kind", "load", "docker-image", tag}
+				command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(ctx.KubeClient().CurrentContext()), tag}
 				completeArgs := []string{}
 				completeArgs = append(completeArgs, command[1:]...)
 				// Determine output writer
