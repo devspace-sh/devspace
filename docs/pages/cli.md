@@ -3,14 +3,18 @@ title: "devspace --help"
 sidebar_label: devspace
 ---
 
+## devspace
+
+Welcome to the DevSpace!
+
 ### Synopsis
-```
+
 DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
 	
 		devspace init
-```
 
-### Global Flags
+### Options
+
 ```
       --debug                        Prints the stack trace if an error occurs
       --disable-profile-activation   If true will ignore all profile activations
@@ -25,3 +29,11 @@ DevSpace accelerates developing, deploying and debugging applications with Docke
   -s, --switch-context               Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings                  Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+
+```
+
+```
+
+
+## Flags
+## Global & Inherited Flags

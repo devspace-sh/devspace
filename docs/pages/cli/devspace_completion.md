@@ -21,12 +21,14 @@ Outputs shell completion for the given shell (bash or zsh)
 		$ brew install bash-completion
 		$ source $(brew --prefix)/etc/bash_completion
 		$ devspace completion bash > ~/.devspace-completion  # for bash users
+		$ devspace completion fish > ~/.devspace-completion  # for fish users
 		$ devspace completion zsh > ~/.devspace-completion   # for zsh users
 		$ source ~/.devspace-completion
 	Ubuntu:
 		$ apt-get install bash-completion
 		$ source /etc/bash-completion
 		$ source <(devspace completion bash) # for bash users
+		$ devspace completion fish | source # for fish users
 		$ source <(devspace completion zsh)  # for zsh users
 
 	Additionally, you may want to output the completion to a file and source in your .bashrc
