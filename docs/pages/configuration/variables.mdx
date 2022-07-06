@@ -132,8 +132,16 @@ vars:
 </Tabs>
 
 
-### From `.env` File
-DevSpace also reads environment variables from the `.env` file inside your project. The syntax of the `.env` file is the [same as for docker-compose](https://docs.docker.com/compose/env-file/):
+### `$DEVSPACE_ENV_FILE` for `.env` File definition
+DevSpace can also read environment variables from an environment file such as `.env` inside your project. Point DevSpace to your env file via the `DEVSPACE_ENV_FILE` environment variable.
+This can also be used inside a `devspace.yaml` under the vars section:
+
+```yaml
+vars:
+  DEVSPACE_ENV_FILE: ".env"
+```
+
+The syntax of the `.env` file is the [same as for docker-compose](https://docs.docker.com/compose/env-file/):
 
 - Each line should have the format `VAR_NAME=VAR_VALUE`.
 - **There is *no* special handling of quotation marks. This means that they are part of the `VAR_VALUE`.**
