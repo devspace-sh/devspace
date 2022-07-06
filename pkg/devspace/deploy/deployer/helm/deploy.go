@@ -27,10 +27,16 @@ import (
 
 // Deploy deploys the given deployment with helm
 func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bool, error) {
-	var (
+	var releaseName string
+	if d.DeploymentConfig.Helm.ReleaseName != "" {
+		releaseName = d.DeploymentConfig.Helm.ReleaseName
+	} else {
 		releaseName = d.DeploymentConfig.Name
-		chartPath   = d.DeploymentConfig.Helm.Chart.Name
-		hash        = ""
+	}
+
+	var (
+		chartPath = d.DeploymentConfig.Helm.Chart.Name
+		hash      = ""
 	)
 
 	releaseNamespace := ctx.KubeClient().Namespace()
@@ -152,9 +158,12 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bo
 }
 
 func (d *DeployConfig) internalDeploy(ctx devspacecontext.Context, overwriteValues map[string]interface{}, out io.Writer) (*types.Release, error) {
-	var (
+	var releaseName string
+	if d.DeploymentConfig.Helm.ReleaseName != "" {
+		releaseName = d.DeploymentConfig.Helm.ReleaseName
+	} else {
 		releaseName = d.DeploymentConfig.Name
-	)
+	}
 	releaseNamespace := ctx.KubeClient().Namespace()
 	if d.DeploymentConfig.Namespace != "" {
 		releaseNamespace = d.DeploymentConfig.Namespace

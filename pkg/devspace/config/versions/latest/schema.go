@@ -780,6 +780,8 @@ type RollingUpdateConfig struct {
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
+	// ReleaseName of the helm configuration
+	ReleaseName string `yaml:"releaseName,omitempty" json:"releaseName,omitempty"`
 	// Chart holds the chart configuration and where DevSpace can find the chart
 	Chart *ChartConfig `yaml:"chart,omitempty" json:"chart,omitempty" jsonschema:"required"`
 	// Values are additional values that should get passed to deploying this chart
