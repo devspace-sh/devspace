@@ -343,7 +343,7 @@ func initialize(ctx context.Context, f factory.Factory, options *CommandOptions,
 	}
 
 	// resolve dependencies
-	dependencies, err := f.NewDependencyManager(devCtx, options.ConfigOptions).ResolveAll(devCtx, dependency.ResolveOptions{})
+	dependencies, err := f.NewDependencyManager(devCtx, options.ConfigOptions).ResolveAll(devCtx, dependency.ResolveOptions{SkipDependencies: options.DependencyOptions.Exclude})
 	if err != nil {
 		return nil, errors.Wrap(err, "deploy dependencies")
 	}
