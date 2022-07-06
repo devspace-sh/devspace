@@ -101,7 +101,10 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 		},
 		Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
 	
-		devspace init`,
+		devspace init
+		# Develop an existing application
+		devspace dev
+		DEVSPACE_CONFIG=other-config.yaml devspace dev`,
 	}
 }
 

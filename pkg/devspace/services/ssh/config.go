@@ -151,6 +151,7 @@ func includeDevSpaceConfig(path string) (string, error) {
 
 	// add new section
 	newLines = append(newLines, startMarker)
+	newLines = append(newLines, "Match all")
 	newLines = append(newLines, "Include devspace_config")
 	newLines = append(newLines, "# DevSpace End")
 	return strings.Join(newLines, "\n"), nil
@@ -193,6 +194,7 @@ func addHost(path, host, port string) (string, error) {
 	newLines = append(newLines, startMarker)
 	newLines = append(newLines, "Host "+host)
 	newLines = append(newLines, "  HostName localhost")
+	newLines = append(newLines, "  LogLevel error")
 	newLines = append(newLines, "  Port "+port)
 	newLines = append(newLines, "  IdentityFile "+DevSpaceSSHPrivateKeyFile)
 	newLines = append(newLines, "  StrictHostKeyChecking no")

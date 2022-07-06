@@ -144,6 +144,11 @@ DevSpace also reads environment variables from the `.env` file inside your proje
 - Variables defined in your `.env` file take precende over the default values defined for config variables (configured in the `vars` section of `devspace.yaml`).
 :::
 
+## `$DEVSPACE_CONFIG` For Config Path
+You can tell DevSpace to load a different config via the `DEVSPACE_CONFIG` environment variable. You can specify this before actually executing DevSpace via:
+```bash
+DEVSPACE_CONFIG=my-other-devspace.yaml devspace dev
+```
 
 ## `$DEVSPACE_FLAGS` For Default Flags
 A common use case for the `.env` file is to set default flags for the `devspace` commands such as `devspace dev` or `devspace deploy`. You can define the following environment variables to set default flags:
