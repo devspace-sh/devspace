@@ -80,6 +80,9 @@ func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args
 				fmt.Sprintf("%v", value),
 			})
 		}
+		sort.Slice(varRow, func(i, j int) bool {
+			return varRow[i][0] < varRow[j][0]
+		})
 
 		// No variable found
 		if len(varRow) == 0 {

@@ -19,7 +19,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var AlwaysResolvePredefinedVars = []string{"DEVSPACE_NAME", "DEVSPACE_TMPDIR", "DEVSPACE_VERSION", "DEVSPACE_RANDOM", "DEVSPACE_PROFILE", "DEVSPACE_USER_HOME", "DEVSPACE_TIMESTAMP", "devspace.context", "DEVSPACE_CONTEXT", "devspace.namespace", "DEVSPACE_NAMESPACE"}
+var AlwaysResolvePredefinedVars = []string{"DEVSPACE_NAME", "DEVSPACE_EXECUTABLE", "DEVSPACE_KUBECTL_EXECUTABLE", "DEVSPACE_TMPDIR", "DEVSPACE_VERSION", "DEVSPACE_RANDOM", "DEVSPACE_PROFILE", "DEVSPACE_USER_HOME", "DEVSPACE_TIMESTAMP", "devspace.context", "DEVSPACE_CONTEXT", "devspace.namespace", "DEVSPACE_NAMESPACE"}
 
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
 func NewResolver(localCache localcache.Cache, predefinedVariableOptions *PredefinedVariableOptions, flags []string, log log.Logger) (Resolver, error) {
@@ -339,7 +339,7 @@ func (r *resolver) resolve(ctx context.Context, name string, definition *latest.
 	}
 
 	// is predefined variable?
-	variable, err := NewPredefinedVariable(name, r.options)
+	variable, err := NewPredefinedVariable(name, r.options, r.log)
 	if err == nil {
 		value, err := variable.Load(ctx, definition)
 		if err != nil {
@@ -507,7 +507,7 @@ func (r *resolver) resolveDefinitionString(ctx context.Context, str string, defi
 		v, ok := r.memoryCache[varName]
 		if !ok {
 			// check if its a predefined variable
-			variable, err := NewPredefinedVariable(varName, r.options)
+			variable, err := NewPredefinedVariable(varName, r.options, r.log)
 			if err != nil {
 				if r.vars[varName] == nil {
 					return "${" + varName + "}", nil
