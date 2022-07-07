@@ -41,6 +41,13 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 		}
 		return name, nil
 	},
+	"DEVSPACE_EXECUTABLE": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+		ex, err := os.Executable()
+		if err != nil {
+			return nil, err
+		}
+		return ex, nil
+	},
 	"DEVSPACE_TMPDIR": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		tempFolder, ok := values.TempFolderFrom(ctx)
 		if !ok {
