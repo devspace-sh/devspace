@@ -32,7 +32,10 @@ devspace init
 
 
 info Detecting programming language...
+```
 
+DevSpace's initialization wizard will walk you through the setup of the project
+```
 ? Select the programming language of this project  [Use arrows to move, type to filter]
   c# (dotnet)
 > go
@@ -42,8 +45,9 @@ info Detecting programming language...
   php
   python
 ```
+Choose the language of your quickstart project. This will determine the correct [devImage](https://devspace.sh/docs/configuration/dev/modifications/dev-image)
 
-DevSpace will ask you a couple of questions about this project, e.g. which programming language the application is written in, how to deploy the project, etc.
+
 
 After running `devspace init`, you will see 3 changes in your project:
 1. New file `devspace.yaml` (tells DevSpace how this project should be build, deployed, and developed)
