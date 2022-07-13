@@ -17,7 +17,7 @@ Let's say we have a `devspace.yaml` in `project-a` with the following content:
 ```yaml title="File: github.com/project-a/devspace.yaml"
 version: v2beta1
 imports:
-- git: github.com/project-b/devspace.yaml
+- git: github.com/project-b.git
   tag: v1.2.0
 - ...
 functions:
@@ -61,7 +61,7 @@ Let's assume the following `devspace.yaml` inside `project-a`:
 ```yaml title="File: github.com/project-a/devspace.yaml"
 version: v2beta1
 imports:
-- git: github.com/project-b/devspace.yaml
+- git: github.com/project-b.git
 functions:
   function_x: |-
     echo "This is a function_x from project-a"
