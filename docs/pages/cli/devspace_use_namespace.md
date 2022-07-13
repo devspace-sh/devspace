@@ -27,7 +27,8 @@ devspace use namespace my-namespace
 
 ## Flags
 
-```
+```      
+      --create  Create the namespace if it doesn't exist
   -h, --help    help for namespace
       --reset   Resets the default namespace of the current kube-context
 ```
@@ -48,4 +49,3 @@ devspace use namespace my-namespace
   -s, --switch-context               Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings                  Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
-
