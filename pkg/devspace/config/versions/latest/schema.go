@@ -329,7 +329,7 @@ type DockerConfig struct {
 	// context is used.
 	PreferMinikube *bool `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty" jsonschema_description:"PreferMinikube allows you to turn off using the minikube docker daemon if the minikube context is used."`
 	// UseCLI specifies if DevSpace should use the docker cli for building
-	UseCLI bool `yaml:"useCli,omitempty" json:"useCli,omitempty" jsonschema_description:"// UseCLI specifies if DevSpace should use the docker cli for building."`
+	UseCLI bool `yaml:"useCli,omitempty" json:"useCli,omitempty" jsonschema_description:"UseCLI specifies if DevSpace should use the docker cli for building."`
 	// Args are additional arguments to pass to the docker cli
 	Args []string `yaml:"args,omitempty" json:"args,omitempty" jsonschema_description:"Args are additional arguments to pass to the docker cli."`
 

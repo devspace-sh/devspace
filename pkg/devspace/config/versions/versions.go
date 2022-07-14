@@ -116,6 +116,16 @@ func ParseVariables(data map[string]interface{}, log log.Logger) (map[string]*la
 		return nil, errors.Wrap(err, "parse variables")
 	}
 
+	if strippedData["version"].(string) == "v2beta1" && strippedData["vars"] != nil {
+		for _, element := range strippedData["vars"].(map[string]interface{}) {
+			switch x := element.(type) {
+			case map[string]interface{}:
+				if x["alwaysResolve"] == nil {
+					x["alwaysResolve"] = true
+				}
+			}
+		}
+	}
 	return config.Vars, nil
 }
 
