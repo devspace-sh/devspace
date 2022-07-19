@@ -83,7 +83,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				ValidationPattern: v.ValidationPattern,
 				ValidationMessage: v.ValidationMessage,
 				NoCache:           v.NoCache,
-				AlwaysResolve:     v.AlwaysResolve,
+				AlwaysResolve:     &v.AlwaysResolve,
 				Value:             v.Value,
 				Default:           v.Default,
 				Source:            next.VariableSource(v.Source),

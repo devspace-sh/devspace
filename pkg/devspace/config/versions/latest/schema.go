@@ -1492,8 +1492,8 @@ type Variable struct {
 	// system.
 	Commands []VariableCommand `yaml:"commands,omitempty" json:"commands,omitempty" jsonschema_extras:"group=execution"`
 
-	// AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere
-	AlwaysResolve bool `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
+	// AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere. Defaults to true.
+	AlwaysResolve *bool `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
 
 	// Source defines where the variable should be taken from
 	Source VariableSource `yaml:"source,omitempty" json:"source,omitempty" jsonschema:"enum=all,enum=env,enum=input,enum=command,enum=none"`
