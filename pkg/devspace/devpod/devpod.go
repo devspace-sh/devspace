@@ -528,7 +528,7 @@ func needPodReplace(devPodConfig *latest.DevPod) bool {
 
 	needReplace := false
 	loader.EachDevContainer(devPodConfig, func(devContainer *latest.DevContainer) bool {
-		if needPodReplaceContainer(&devPodConfig.DevContainer) {
+		if needPodReplaceContainer(devContainer) {
 			needReplace = true
 			return false
 		}
