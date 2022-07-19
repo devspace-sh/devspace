@@ -78,6 +78,45 @@ var _ = DevSpaceDescribe("build", func() {
 		}
 		framework.ExpectEqual(found, true, "image not found in cache")
 	})
+	ginkgo.It("should build dockerfile with docker and skip-dependency", func() {
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker-skip-dependency")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// create build command
+		buildCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
+			SkipDependency: []string{
+				"fake-dep",
+			},
+			Pipeline: "build",
+		}
+		err = buildCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// create devspace docker client to access docker APIs
+		devspaceDockerClient, err := docker.NewClient(context.TODO(), log)
+		framework.ExpectNoError(err)
+
+		dockerClient := devspaceDockerClient.DockerAPIClient()
+		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		framework.ExpectNoError(err)
+
+		found := false
+	Outer:
+		for _, image := range imageList {
+			for _, tag := range image.RepoTags {
+				if tag == "my-docker-username/helloworld:latest" {
+					found = true
+					break Outer
+				}
+			}
+		}
+		framework.ExpectEqual(found, true, "image not found in cache")
+	})
 
 	ginkgo.It("should build dockerfile with docker and load in kind cluster", func() {
 		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker")

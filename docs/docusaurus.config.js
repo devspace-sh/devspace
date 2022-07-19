@@ -59,6 +59,7 @@ module.exports = {
       indexName: "devspace-cli",
       placeholder: "Search...",
       algoliaOptions: {},
+      contextualSearch: false,
     },
     footer: {
       style: 'light',
