@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +42,7 @@ func TestShellCat(t *testing.T) {
 
 	for _, testCase := range testCases {
 		stdout := &bytes.Buffer{}
-		err := ExecuteSimpleShellCommand(context.Background(), ".", stdout, nil, nil, nil, testCase.command)
+		err := ExecuteSimpleShellCommand(context.Background(), ".", expand.ListEnviron(os.Environ()...), stdout, nil, nil, testCase.command)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -59,7 +60,7 @@ func TestShellCatError(t *testing.T) {
 
 	for _, testCase := range testCases {
 		stderr := &bytes.Buffer{}
-		err := ExecuteSimpleShellCommand(context.Background(), ".", nil, stderr, nil, nil, testCase.command)
+		err := ExecuteSimpleShellCommand(context.Background(), ".", expand.ListEnviron(os.Environ()...), stderr, stderr, nil, testCase.command)
 		if err != nil {
 			if stderr.String() != "" {
 				assert.Equal(t, stderr.String(), testCase.expectedOutput)
@@ -98,7 +99,7 @@ func TestShellCatEnforce(t *testing.T) {
 
 	for _, testCase := range testCases {
 		stdout := &bytes.Buffer{}
-		err := ExecuteSimpleShellCommand(context.Background(), ".", stdout, nil, nil, nil, testCase.command)
+		err := ExecuteSimpleShellCommand(context.Background(), ".", expand.ListEnviron(os.Environ()...), stdout, nil, nil, testCase.command)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -109,12 +110,12 @@ func TestShellCatEnforce(t *testing.T) {
 func TestKubectlDownload(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := ExecuteSimpleShellCommand(context.Background(), ".", stdout, stderr, nil, nil, "kubectl")
+	err := ExecuteSimpleShellCommand(context.Background(), ".", expand.ListEnviron(os.Environ()...), stdout, stderr, nil, "kubectl")
 	if err != nil {
 		t.Fatal(err)
 	}
 	stdout1 := &bytes.Buffer{}
-	err = ExecuteSimpleShellCommand(context.Background(), ".", stdout1, stderr, nil, nil, "kubectl -h")
+	err = ExecuteSimpleShellCommand(context.Background(), ".", expand.ListEnviron(os.Environ()...), stdout1, stderr, nil, "kubectl -h")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,12 +124,12 @@ func TestKubectlDownload(t *testing.T) {
 func TestHelmDownload(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := ExecuteSimpleShellCommand(context.Background(), ".", stdout, stderr, nil, nil, "helm")
+	err := ExecuteSimpleShellCommand(context.Background(), ".", expand.ListEnviron(os.Environ()...), stdout, stderr, nil, "helm")
 	if err != nil {
 		t.Fatal(err)
 	}
 	stdout1 := &bytes.Buffer{}
-	err = ExecuteSimpleShellCommand(context.Background(), ".", stdout1, stderr, nil, nil, "helm version")
+	err = ExecuteSimpleShellCommand(context.Background(), ".", expand.ListEnviron(os.Environ()...), stdout1, stderr, nil, "helm version")
 	if err != nil {
 		t.Fatal(err)
 	}

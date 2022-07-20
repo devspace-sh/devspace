@@ -4,53 +4,61 @@ import (
 	"fmt"
 	enginetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"mvdan.cc/sh/v3/expand"
-	"os"
 	"strings"
-	"sync"
 )
 
 type Provider interface {
 	expand.Environ
-	Set(envVars map[string]string)
 }
 
-func NewVariableEnvProvider(envVars map[string]string) Provider {
-	p := &provider{}
-	p.Set(envVars)
-	return p
+func NewVariableEnvProvider(base expand.Environ, envVars map[string]string) Provider {
+	additionalVars := map[string]string{}
+	for k, v := range envVars {
+		additionalVars[strings.ReplaceAll(k, enginetypes.DotReplacement, ".")] = v
+	}
+
+	return &provider{
+		base:           base,
+		additionalVars: envVars,
+	}
 }
 
 type provider struct {
-	m sync.Mutex
-
-	listProvider expand.Environ
-}
-
-func (p *provider) Set(envVars map[string]string) {
-	p.m.Lock()
-	defer p.m.Unlock()
-
-	env := os.Environ()
-	for k, v := range envVars {
-		key := strings.ReplaceAll(k, enginetypes.DotReplacement, ".")
-		env = append(env, key+"="+v)
-	}
-	p.listProvider = expand.ListEnviron(env...)
+	base           expand.Environ
+	additionalVars map[string]string
 }
 
 func (p *provider) Get(name string) expand.Variable {
-	p.m.Lock()
-	defer p.m.Unlock()
-
 	name = strings.ReplaceAll(name, enginetypes.DotReplacement, ".")
-	return p.listProvider.Get(name)
+	value, ok := p.additionalVars[name]
+	if ok {
+		return expand.Variable{
+			Exported: true,
+			Kind:     expand.String,
+			Str:      value,
+		}
+	}
+
+	return p.base.Get(name)
 }
 
 func (p *provider) Each(visitor func(name string, vr expand.Variable) bool) {
-	p.m.Lock()
-	defer p.m.Unlock()
+	for k, v := range p.additionalVars {
+		visitor(k, expand.Variable{
+			Exported: true,
+			Kind:     expand.String,
+			Str:      v,
+		})
+	}
 
-	p.listProvider.Each(visitor)
+	p.base.Each(func(name string, vr expand.Variable) bool {
+		_, ok := p.additionalVars[name]
+		if !ok {
+			return visitor(name, vr)
+		}
+
+		return true
+	})
 }
 
 func ConvertMap(iMap map[string]interface{}) map[string]string {

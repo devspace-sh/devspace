@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mvdan.cc/sh/v3/expand"
 	"net/http"
 	"net/url"
 	"os"
@@ -287,7 +288,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				m.log.WriteString(logrus.InfoLevel, "\n")
 				m.log.Infof("Cloning external repo `%s` containing to retrieve Helm chart", gitRepo)
 
-				err = engine.ExecuteSimpleShellCommand(context.TODO(), "", os.Stdout, os.Stderr, nil, nil, gitCommand)
+				err = engine.ExecuteSimpleShellCommand(context.TODO(), "", expand.ListEnviron(os.Environ()...), os.Stdout, os.Stderr, nil, gitCommand)
 				if err != nil {
 					m.log.WriteString(logrus.InfoLevel, "\n")
 					m.log.Errorf("Unable to clone repository `%s` (branch: %s)", gitRepo, gitBranch)

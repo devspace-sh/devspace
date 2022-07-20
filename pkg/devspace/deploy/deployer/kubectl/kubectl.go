@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mvdan.cc/sh/v3/expand"
+	"os"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
@@ -182,7 +184,7 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error)
 			args = append(args, d.DeploymentConfig.Kubectl.ApplyArgs...)
 
 			stdErrBuffer := &bytes.Buffer{}
-			err = command.Command(ctx.Context(), ctx.WorkingDir(), writer, io.MultiWriter(writer, stdErrBuffer), strings.NewReader(replacedManifest), d.CmdPath, args...)
+			err = command.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writer, io.MultiWriter(writer, stdErrBuffer), strings.NewReader(replacedManifest), d.CmdPath, args...)
 			if err != nil {
 				return false, errors.Errorf("%v %v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", stdErrBuffer.String(), err, manifest)
 			}
@@ -276,7 +278,7 @@ func (d *DeployConfig) buildManifests(ctx devspacecontext.Context, manifest stri
 	}
 
 	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize && d.isKustomizeInstalled(ctx.Context(), ctx.WorkingDir(), kustomizePath) {
-		return NewKustomizeBuilder(kustomizePath, d.DeploymentConfig, ctx.Log()).Build(ctx.Context(), ctx.WorkingDir(), manifest)
+		return NewKustomizeBuilder(kustomizePath, d.DeploymentConfig, ctx.Log()).Build(ctx.Context(), ctx.Environ(), ctx.WorkingDir(), manifest)
 	}
 
 	raw, err := ctx.KubeClient().KubeConfigLoader().LoadConfig().RawConfig()
@@ -289,10 +291,10 @@ func (d *DeployConfig) buildManifests(ctx devspacecontext.Context, manifest stri
 	}
 
 	// Build with kubectl
-	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, *copied).Build(ctx.Context(), ctx.WorkingDir(), manifest)
+	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, *copied).Build(ctx.Context(), ctx.Environ(), ctx.WorkingDir(), manifest)
 }
 
 func (d *DeployConfig) isKustomizeInstalled(ctx context.Context, dir, path string) bool {
-	err := command.Command(ctx, dir, nil, nil, nil, path, "version")
+	err := command.Command(ctx, dir, expand.ListEnviron(os.Environ()...), nil, nil, nil, path, "version")
 	return err == nil
 }

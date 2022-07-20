@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/util/command"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"strings"
 
@@ -26,7 +27,7 @@ func NewGitCLIRepository(ctx context.Context, localPath string) (*GitCLIReposito
 }
 
 func isGitCommandAvailable(ctx context.Context) bool {
-	_, err := command.Output(ctx, "", "git", "version")
+	_, err := command.Output(ctx, "", expand.ListEnviron(os.Environ()...), "git", "version")
 	return err == nil
 }
 
@@ -63,14 +64,14 @@ func (gr *GitCLIRepository) Clone(ctx context.Context, options CloneOptions) err
 		}
 
 		args = append(args, options.Args...)
-		out, err := command.CombinedOutput(ctx, gr.LocalPath, "git", args...)
+		out, err := command.CombinedOutput(ctx, gr.LocalPath, expand.ListEnviron(os.Environ()...), "git", args...)
 		if err != nil {
 			return errors.Errorf("Error running 'git %s': %v -> %s", strings.Join(args, " "), err, string(out))
 		}
 
 		// checkout the commit if necessary
 		if options.Commit != "" {
-			out, err := command.CombinedOutput(ctx, gr.LocalPath, "git", "-C", gr.LocalPath, "checkout", options.Commit)
+			out, err := command.CombinedOutput(ctx, gr.LocalPath, expand.ListEnviron(os.Environ()...), "git", "-C", gr.LocalPath, "checkout", options.Commit)
 			if err != nil {
 				return errors.Errorf("Error running 'git checkout %s': %v -> %s", options.Commit, err, string(out))
 			}
@@ -81,7 +82,7 @@ func (gr *GitCLIRepository) Clone(ctx context.Context, options CloneOptions) err
 
 	// make sure the repo is up-to-date
 	if options.Commit == "" {
-		out, err := command.CombinedOutput(ctx, gr.LocalPath, "git", "-C", gr.LocalPath, "pull")
+		out, err := command.CombinedOutput(ctx, gr.LocalPath, expand.ListEnviron(os.Environ()...), "git", "-C", gr.LocalPath, "pull")
 		if err != nil {
 			return errors.Errorf("Error running 'git pull %s': %v -> %s", options.URL, err, string(out))
 		}

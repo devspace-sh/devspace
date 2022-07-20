@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
+	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/interp"
 	"os"
 	"os/exec"
@@ -93,7 +95,7 @@ func ResolveExpressions(ctx context.Context, value, dir string, variables map[st
 
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
-		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, nil, vars, match[1], os.Args[1:]...)
+		err := engine.ExecuteSimpleShellCommand(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), vars), stdout, stderr, nil, match[1], os.Args[1:]...)
 		if err != nil {
 			if len(strings.TrimSpace(stdout.String())) == 0 && len(strings.TrimSpace(stderr.String())) == 0 {
 				if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {

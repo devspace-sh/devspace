@@ -3,7 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"io"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"strings"
 
@@ -257,7 +259,7 @@ func executeShellCommand(ctx context.Context, shellCommand string, variables map
 	}
 
 	// execute the command in a shell
-	err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, args...)
+	err := engine.ExecuteSimpleShellCommand(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), extraEnv), stdout, stderr, stdin, shellCommand, args...)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok {
 			return &exit.ReturnCodeError{
@@ -292,7 +294,7 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 		}
 
 		// execute the command in a shell
-		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, args...)
+		err := engine.ExecuteSimpleShellCommand(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), extraEnv), stdout, stderr, stdin, shellCommand, args...)
 		if err != nil {
 			if status, ok := interp.IsExitStatus(err); ok {
 				return &exit.ReturnCodeError{
@@ -307,7 +309,7 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 	}
 
 	shellArgs = append(shellArgs, args...)
-	return command.CommandWithEnv(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, shellArgs...)
+	return command.Command(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), extraEnv), stdout, stderr, stdin, shellCommand, shellArgs...)
 }
 
 // RunCommandCmd holds the cmd flags of a run command

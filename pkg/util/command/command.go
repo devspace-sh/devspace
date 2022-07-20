@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"os/exec"
 	"runtime"
@@ -26,11 +27,22 @@ func newStreamCommand(command string, args []string) *streamCommand {
 	}
 }
 
+func ListVars(environ expand.Environ) map[string]string {
+	variables := map[string]string{}
+	environ.Each(func(name string, vr expand.Variable) bool {
+		if vr.Kind == expand.String && vr.Str != "" {
+			variables[name] = vr.Str
+		}
+		return true
+	})
+	return variables
+}
+
 // RunWithEnv runs a stream command
-func (s *streamCommand) RunWithEnv(ctx context.Context, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, extraEnvVars map[string]string) error {
+func (s *streamCommand) RunWithEnv(ctx context.Context, dir string, environ expand.Environ, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
 	s.cmd.Dir = dir
-	env := os.Environ()
-	for k, v := range extraEnvVars {
+	env := []string{}
+	for k, v := range ListVars(environ) {
 		env = append(env, k+"="+v)
 	}
 
@@ -89,7 +101,7 @@ func (s *streamCommand) RunWithEnv(ctx context.Context, dir string, stdout io.Wr
 
 // Run runs a stream command
 func (s *streamCommand) Run(ctx context.Context, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
-	return s.RunWithEnv(ctx, dir, stdout, stderr, stdin, nil)
+	return s.RunWithEnv(ctx, dir, expand.ListEnviron(os.Environ()...), stdout, stderr, stdin)
 }
 
 func ShouldExecuteOnOS(os string) bool {
@@ -112,8 +124,8 @@ func ShouldExecuteOnOS(os string) bool {
 	return true
 }
 
-func CommandWithEnv(ctx context.Context, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, extraEnvVars map[string]string, cmd string, args ...string) error {
-	err := newStreamCommand(cmd, args).RunWithEnv(ctx, dir, stdout, stderr, stdin, extraEnvVars)
+func Command(ctx context.Context, dir string, environ expand.Environ, stdout io.Writer, stderr io.Writer, stdin io.Reader, cmd string, args ...string) error {
+	err := newStreamCommand(cmd, args).RunWithEnv(ctx, dir, environ, stdout, stderr, stdin)
 	if err != nil {
 		if errr, ok := err.(*exec.ExitError); ok {
 			return fmt.Errorf("error executing '%s %s': %s", cmd, strings.Join(args, " "), string(errr.Stderr))
@@ -125,29 +137,15 @@ func CommandWithEnv(ctx context.Context, dir string, stdout io.Writer, stderr io
 	return nil
 }
 
-func Command(ctx context.Context, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, cmd string, args ...string) error {
-	return CommandWithEnv(ctx, dir, stdout, stderr, stdin, nil, cmd, args...)
-}
-
-func CombinedOutput(ctx context.Context, dir string, cmd string, args ...string) ([]byte, error) {
+func CombinedOutput(ctx context.Context, dir string, environ expand.Environ, cmd string, args ...string) ([]byte, error) {
 	stdout := &bytes.Buffer{}
-	err := CommandWithEnv(ctx, dir, stdout, stdout, nil, nil, cmd, args...)
+	err := Command(ctx, dir, environ, stdout, stdout, nil, cmd, args...)
 	return stdout.Bytes(), err
 }
 
-func CombinedOutputWithEnv(ctx context.Context, dir string, extraEnvVars map[string]string, cmd string, args ...string) ([]byte, error) {
+func Output(ctx context.Context, dir string, environ expand.Environ, cmd string, args ...string) ([]byte, error) {
 	stdout := &bytes.Buffer{}
-	err := CommandWithEnv(ctx, dir, stdout, stdout, nil, extraEnvVars, cmd, args...)
-	return stdout.Bytes(), err
-}
-
-func Output(ctx context.Context, dir string, cmd string, args ...string) ([]byte, error) {
-	return OutputWithEnv(ctx, dir, nil, cmd, args...)
-}
-
-func OutputWithEnv(ctx context.Context, dir string, extraEnvVars map[string]string, cmd string, args ...string) ([]byte, error) {
-	stdout := &bytes.Buffer{}
-	err := CommandWithEnv(ctx, dir, stdout, nil, nil, extraEnvVars, cmd, args...)
+	err := Command(ctx, dir, environ, stdout, nil, nil, cmd, args...)
 	return stdout.Bytes(), err
 }
 

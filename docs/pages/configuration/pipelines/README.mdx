@@ -4,9 +4,12 @@ sidebar_label: pipelines
 ---
 
 import ConfigPartialPipeline from '../_partials/v2beta1/pipelines.mdx'
+import PipelineFunctionRef from '../_partials/functions/reference_pipeline.mdx'
+import GlobalFunctionRef from '../_partials/functions/reference_global.mdx'
 
 Pipelines allow you to fully customize the execution logic in DevSpace, i.e. they define what happens when a users run commands such as `devspace dev`, `devspace build`, `devspace deploy` or `devspace run-pipeline my-custom-pipeline`
 
+Pipelines are defined in POSIX shell syntax and a DevSpace pipeline reads as a regular POSIX script. However, DevSpace implements certain special commands that can be used inside the POSIX script to tell DevSpace when to build, deploy or start developing. For a complete function reference, please take a look below.
 
 ## Using Pipelines
 
@@ -15,6 +18,7 @@ An example `pipelines` section could look like this in `devspace.yaml`:
 ```yaml title=devspace.yaml
 version: v2beta1
 pipelines:
+  # Override the default pipeline for 'devspace dev'
   dev: |-
     run_dependency_pipelines --all    # 1. Deploy any projects this project needs (see "dependencies")
     create_deployments --all          # 2. Deploy Helm charts and manifests specfied as "deployments"
@@ -53,6 +57,7 @@ DevSpace provides default pipeline scripts for the following top-level commands:
 - [`devspace dev`](#dev)
 - [`devspace deploy`](#deploy)
 - [`devspace build`](#build)
+- [`devspace purge`](#purge)
 
 <details>
 <summary>
@@ -64,9 +69,11 @@ DevSpace provides default pipeline scripts for the following top-level commands:
 The `dev` pipeline is executed by running `devspace dev` and has the following default workflow:
 
 ```bash
-run_dependency_pipelines --all      # 1. Deploy any projects this project needs (see "dependencies")
-create_deployments --all            # 2. Deploy Helm charts and manifests specfied as "deployments"
-start_dev --all                     # 3. Start all dev modes
+run_dependencies --all
+ensure_pull_secrets --all
+build_images --all
+create_deployments --all
+start_dev --all
 ```
 
 </details>
@@ -81,9 +88,10 @@ start_dev --all                     # 3. Start all dev modes
 The `deploy` pipeline is executed by running `devspace deploy` and has the following default workflow:
 
 ```bash
-run_dependency_pipelines --all      # 1. Deploy any projects this project needs (see "dependencies")
-build_images --all                  # 2. Build, tag (git commit hash) and push all images (see "images")
-create_deployments --all            # 3. Deploy Helm charts and manifests specfied as "deployments"
+run_dependencies --all
+ensure_pull_secrets --all
+build_images --all
+create_deployments --all
 ```
 
 </details>
@@ -99,7 +107,26 @@ create_deployments --all            # 3. Deploy Helm charts and manifests specfi
 The `build` pipeline is executed by running `devspace build` and has the following default workflow:
 
 ```bash
-build_images --all      # Build, tag (git commit hash) and push all images (see "images")
+run_dependencies --all --pipeline build
+build_images --all
+```
+
+</details>
+
+
+<details>
+<summary>
+
+### `purge`
+
+</summary>
+
+The `purge` pipeline is executed by running `devspace purge` and has the following default workflow:
+
+```bash
+stop_dev --all
+purge_deployments --all
+run_dependencies --all --pipeline purge
 ```
 
 </details>
@@ -133,6 +160,23 @@ pipelines:
 
       start_dev app --set terminal.enabled=$TERMINAL_ENABLED
 ```
+
+
+## Built-In Functions
+DevSpace provides a set of built-in functions. There are two types of functions:
+1. [Pipeline-Only Functions](#pipeline-only-functions)
+2. [Global Functions](#global-functions)
+
+### Pipeline-Only Functions
+Pipeline-only functions can only be used inside the scripts within the `pipelines` section of `devspace.yaml`.
+
+<PipelineFunctionRef/>
+
+
+### Global Functions
+Global functions can be used anywhere in `devspace.yaml`, either in config fields that expect a bash script such as within `functions` or using [`$(command)` vars](../variables.mdx#from-commands) in any other config field.
+
+<GlobalFunctionRef/>
 
 
 ## Config Reference

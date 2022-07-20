@@ -164,12 +164,12 @@ func (b *Builder) Build(ctx devspacecontext.Context) error {
 	ctx.Log().Infof("Build %s:%s with custom command", b.imageConf.Image, b.imageTags[0])
 	ctx.Log().Debugf("Build %s:%s with custom command '%s %s' in working dir %s", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "), ctx.WorkingDir)
 	if len(args) == 0 {
-		err = engine.ExecuteSimpleShellCommand(ctx.Context(), ctx.WorkingDir(), writer, writer, nil, nil, commandPath, args...)
+		err = engine.ExecuteSimpleShellCommand(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writer, writer, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}
 	} else {
-		err = command.Command(ctx.Context(), ctx.WorkingDir(), writer, writer, nil, commandPath, args...)
+		err = command.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writer, writer, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}

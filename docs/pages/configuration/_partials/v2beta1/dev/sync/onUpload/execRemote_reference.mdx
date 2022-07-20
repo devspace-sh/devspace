@@ -17,8 +17,7 @@ import PartialOnBatchreference from "./execRemote/onBatch_reference.mdx"
 
 ###### `onFileChange` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-sync-onUpload-execRemote-onFileChange}
 
-OnFileChange is invoked after every file change. DevSpace will wait for the command to successfully finish
-and then will continue to upload files & create folders
+OnFileChange is invoked after every file change. DevSpace will wait for the command to successfully finish and then will continue to upload files & create folders.
 
 </summary>
 
@@ -34,8 +33,7 @@ and then will continue to upload files & create folders
 
 ###### `onDirCreate` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-sync-onUpload-execRemote-onDirCreate}
 
-OnDirCreate is invoked after every directory that is created. DevSpace will wait for the command to successfully finish
-and then will continue to upload files & create folders
+OnDirCreate is invoked after every directory that is created. DevSpace will wait for the command to successfully finish and then will continue to upload files & create folders.
 
 </summary>
 
@@ -51,9 +49,7 @@ and then will continue to upload files & create folders
 
 ###### `onBatch` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-sync-onUpload-execRemote-onBatch}
 
-OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish
-and then will continue execution. This is useful for commands
-that shouldn't be executed after every single change that may take a little bit longer like recompiling etc.
+OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish and then will continue execution. This is useful for commands that shouldn't be executed after every single change that may take a little bit longer like recompiling etc.
 
 </summary>
 

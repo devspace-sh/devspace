@@ -3,9 +3,11 @@ package kubectl
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"io/ioutil"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"os/exec"
 	"regexp"
@@ -23,7 +25,7 @@ import (
 
 // Builder is the manifest builder interface
 type Builder interface {
-	Build(ctx context.Context, dir, manifest string) ([]*unstructured.Unstructured, error)
+	Build(ctx context.Context, environ expand.Environ, dir, manifest string) ([]*unstructured.Unstructured, error)
 }
 
 type kustomizeBuilder struct {
@@ -40,13 +42,13 @@ func NewKustomizeBuilder(path string, config *latest.DeploymentConfig, log log.L
 	}
 }
 
-func (k *kustomizeBuilder) Build(ctx context.Context, dir, manifest string) ([]*unstructured.Unstructured, error) {
+func (k *kustomizeBuilder) Build(ctx context.Context, environ expand.Environ, dir, manifest string) ([]*unstructured.Unstructured, error) {
 	args := []string{"build", manifest}
 	args = append(args, k.config.Kubectl.KustomizeArgs...)
 
 	// Execute command
 	k.log.Infof("Render manifests with 'kustomize %s'", strings.Join(args, " "))
-	output, err := command.Output(ctx, dir, k.path, args...)
+	output, err := command.Output(ctx, dir, environ, k.path, args...)
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
@@ -76,9 +78,9 @@ func NewKubectlBuilder(path string, config *latest.DeploymentConfig, kubeConfig 
 
 // this function is called in Build function
 // to decide the --dry-run value
-var useOldDryRun = func(ctx context.Context, dir, path string) (bool, error) {
+var useOldDryRun = func(ctx context.Context, environ expand.Environ, dir, path string) (bool, error) {
 	// compare kubectl version for --dry-run flag value
-	out, err := command.Output(ctx, dir, path, "version", "--client", "--short")
+	out, err := command.Output(ctx, dir, environ, path, "version", "--client", "--short")
 	if err != nil {
 		return false, err
 	}
@@ -100,7 +102,7 @@ var useOldDryRun = func(ctx context.Context, dir, path string) (bool, error) {
 	return false, nil
 }
 
-func (k *kubectlBuilder) Build(ctx context.Context, dir, manifest string) ([]*unstructured.Unstructured, error) {
+func (k *kubectlBuilder) Build(ctx context.Context, environ expand.Environ, dir, manifest string) ([]*unstructured.Unstructured, error) {
 	tempFile, err := ioutil.TempFile("", "")
 	if err != nil {
 		return nil, err
@@ -121,7 +123,7 @@ func (k *kubectlBuilder) Build(ctx context.Context, dir, manifest string) ([]*un
 	args := []string{"create"}
 
 	// decides which --dry-run value is to be used
-	uodr, err := useOldDryRun(ctx, dir, k.path)
+	uodr, err := useOldDryRun(ctx, environ, dir, k.path)
 	if err != nil {
 		return nil, err
 	}
@@ -142,9 +144,9 @@ func (k *kubectlBuilder) Build(ctx context.Context, dir, manifest string) ([]*un
 	args = append(args, k.config.Kubectl.CreateArgs...)
 
 	// Execute command
-	output, err := command.OutputWithEnv(ctx, dir, map[string]string{
+	output, err := command.Output(ctx, dir, env.NewVariableEnvProvider(environ, map[string]string{
 		"KUBECONFIG": tempFile.Name(),
-	}, k.path, args...)
+	}), k.path, args...)
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {

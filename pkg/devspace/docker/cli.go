@@ -2,8 +2,10 @@ package docker
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"io"
+	"mvdan.cc/sh/v3/expand"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -12,7 +14,7 @@ import (
 )
 
 // ImageBuildCLI builds an image with the docker cli
-func (c *client) ImageBuildCLI(ctx context.Context, workingDir string, useBuildKit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error {
+func (c *client) ImageBuildCLI(ctx context.Context, workingDir string, environ expand.Environ, useBuildKit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error {
 	args := []string{"build"}
 	if options.BuildArgs != nil {
 		for k, v := range options.BuildArgs {
@@ -38,7 +40,6 @@ func (c *client) ImageBuildCLI(ctx context.Context, workingDir string, useBuildK
 	}
 
 	args = append(args, additionalArgs...)
-
 	args = append(args, "-")
 
 	log.Infof("Execute docker cli command with: docker %s", strings.Join(args, " "))
@@ -53,5 +54,6 @@ func (c *client) ImageBuildCLI(ctx context.Context, workingDir string, useBuildK
 		}
 	}
 
-	return command.CommandWithEnv(ctx, workingDir, writer, writer, context, extraEnv, "docker", args...)
+	environ = env.NewVariableEnvProvider(environ, extraEnv)
+	return command.Command(ctx, workingDir, environ, writer, writer, context, "docker", args...)
 }

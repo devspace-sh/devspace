@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"mvdan.cc/sh/v3/expand"
+	"os"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -52,9 +54,9 @@ func execCommand(ctx context.Context, varName string, definition *latest.Variabl
 	stdErrWriter := &bytes.Buffer{}
 	var err error
 	if args == nil {
-		err = engine.ExecuteSimpleShellCommand(ctx, dir, writer, stdErrWriter, nil, nil, cmd)
+		err = engine.ExecuteSimpleShellCommand(ctx, dir, expand.ListEnviron(os.Environ()...), writer, stdErrWriter, nil, cmd)
 	} else {
-		err = command.Command(ctx, dir, writer, stdErrWriter, nil, cmd, args...)
+		err = command.Command(ctx, dir, expand.ListEnviron(os.Environ()...), writer, stdErrWriter, nil, cmd, args...)
 	}
 	if err != nil {
 		errMsg := "fill variable " + varName + " with command '" + cmd + "': " + err.Error()

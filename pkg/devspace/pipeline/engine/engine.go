@@ -19,19 +19,13 @@ var replaceVariablesRegEx = regexp.MustCompile(`\$\{[a-zA-Z_.]+?\}`)
 func ExecuteSimpleShellCommand(
 	ctx context.Context,
 	dir string,
+	environ expand.Environ,
 	stdout io.Writer,
 	stderr io.Writer,
 	stdin io.Reader,
-	extraEnvVars map[string]string,
 	command string,
 	args ...string,
 ) error {
-	env := os.Environ()
-	for k, v := range extraEnvVars {
-		env = append(env, k+"="+v)
-	}
-
-	environ := expand.ListEnviron(env...)
 	_, err := ExecutePipelineShellCommand(ctx, command, args, dir, false, stdout, stderr, stdin, environ, basichandler.NewBasicExecHandler())
 	return err
 }

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path"
 	"path/filepath"
@@ -372,9 +373,9 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 			out = &bytes.Buffer{}
 		)
 		if exec.Args == nil {
-			err = engine.ExecuteSimpleShellCommand(u.sync.ctx, u.sync.LocalPath, out, out, nil, nil, execCommand)
+			err = engine.ExecuteSimpleShellCommand(u.sync.ctx, u.sync.LocalPath, expand.ListEnviron(os.Environ()...), out, out, nil, execCommand)
 		} else {
-			err = command.CommandWithEnv(u.sync.ctx, u.sync.LocalPath, out, out, nil, nil, execCommand, exec.Args...)
+			err = command.Command(u.sync.ctx, u.sync.LocalPath, expand.ListEnviron(os.Environ()...), out, out, nil, execCommand, exec.Args...)
 		}
 		if err != nil {
 			if exec.FailOnError {

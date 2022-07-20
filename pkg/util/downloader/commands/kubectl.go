@@ -3,7 +3,9 @@ package commands
 import (
 	"context"
 	"io/ioutil"
+	"mvdan.cc/sh/v3/expand"
 	"net/http"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -61,7 +63,7 @@ func (k *kubectlCommand) DownloadURL() string {
 }
 
 func (k *kubectlCommand) IsValid(ctx context.Context, path string) (bool, error) {
-	out, err := command.Output(ctx, "", path, "version", "--client")
+	out, err := command.Output(ctx, "", expand.ListEnviron(os.Environ()...), path, "version", "--client")
 	if err != nil {
 		return false, nil
 	}

@@ -8,6 +8,7 @@ import (
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"io"
 	"os"
 	"regexp"
@@ -75,11 +76,11 @@ func (l *localCommandHook) Execute(ctx devspacecontext.Context, hook *latest.Hoo
 	}()
 
 	if hook.Args == nil {
-		return engine.ExecuteSimpleShellCommand(ctx.Context(), ctx.WorkingDir(), io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand)
+		return engine.ExecuteSimpleShellCommand(ctx.Context(), ctx.WorkingDir(), env.NewVariableEnvProvider(ctx.Environ(), extraEnv), io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, hookCommand)
 	}
 
 	// else we execute it directly
-	return command.CommandWithEnv(ctx.Context(), ctx.WorkingDir(), io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand, hookArgs...)
+	return command.Command(ctx.Context(), ctx.WorkingDir(), env.NewVariableEnvProvider(ctx.Environ(), extraEnv), io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, hookCommand, hookArgs...)
 }
 
 func ResolveCommand(ctx context.Context, command string, args []string, dir string, config config.Config, dependencies []types.Dependency) (string, []string, error) {

@@ -4,7 +4,9 @@ import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"io"
+	"mvdan.cc/sh/v3/expand"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -26,7 +28,7 @@ type Client interface {
 	NegotiateAPIVersion(ctx context.Context)
 
 	ImageBuild(ctx context.Context, context io.Reader, options dockertypes.ImageBuildOptions) (dockertypes.ImageBuildResponse, error)
-	ImageBuildCLI(ctx context.Context, workingDir string, useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error
+	ImageBuildCLI(ctx context.Context, workingDir string, environ expand.Environ, useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error
 
 	ImagePush(ctx context.Context, ref string, options dockertypes.ImagePushOptions) (io.ReadCloser, error)
 
@@ -152,8 +154,7 @@ func newDockerClientFromMinikube(ctx context.Context, currentKubeContext string)
 }
 
 func GetMinikubeEnvironment(ctx context.Context) (map[string]string, error) {
-	out, err := command.Output(ctx, "", "minikube", "docker-env", "--shell", "none")
-
+	out, err := command.Output(ctx, "", expand.ListEnviron(os.Environ()...), "minikube", "docker-env", "--shell", "none")
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			out = ee.Stderr

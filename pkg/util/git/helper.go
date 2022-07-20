@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/util/command"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"strings"
 
@@ -31,7 +32,7 @@ func GetHash(ctx context.Context, localPath string) (string, error) {
 	if err != nil {
 		// last resort, try with cli
 		if isGitCommandAvailable(ctx) {
-			out, err := command.CombinedOutput(ctx, localPath, "git", "rev-parse", "HEAD")
+			out, err := command.CombinedOutput(ctx, localPath, expand.ListEnviron(os.Environ()...), "git", "rev-parse", "HEAD")
 			if err != nil {
 				return "", errors.Errorf("Error running 'git rev-parse HEAD': %v -> %s", err, string(out))
 			}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -858,7 +859,7 @@ func appendToIgnoreFile(ignoreFile, content string) error {
 func getProjectName() (string, string, error) {
 	projectName := ""
 	projectNamespace := ""
-	gitRemote, err := command.Output(context.TODO(), "", "git", "config", "--get", "remote.origin.url")
+	gitRemote, err := command.Output(context.TODO(), "", expand.ListEnviron(os.Environ()...), "git", "config", "--get", "remote.origin.url")
 	if err == nil {
 		sep := "/"
 		projectParts := strings.Split(string(regexp.MustCompile(`^.*?://[^/]+?/([^.]+)(\.git)?`).ReplaceAll(gitRemote, []byte("$1"))), sep)

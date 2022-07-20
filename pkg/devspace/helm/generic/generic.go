@@ -77,7 +77,8 @@ func (c *client) Exec(ctx devspacecontext.Context, args []string) ([]byte, error
 	if args[0] != "list" {
 		c.log.Debugf("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
 	}
-	result, err := command.Output(ctx.Context(), ctx.WorkingDir(), c.helmPath, args...)
+
+	result, err := command.Output(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), c.helmPath, args...)
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", string(result), err)
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path"
 	"regexp"
@@ -197,7 +198,7 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 
 				if regexp.MustCompile(`^(.+\.)?gcr.io$`).Match([]byte(registryHostname)) {
 					projectNamespace = "project"
-					project, err := command.Output(context.TODO(), "", "gcloud", "config", "get-value", "project")
+					project, err := command.Output(context.TODO(), "", expand.ListEnviron(os.Environ()...), "gcloud", "config", "get-value", "project")
 					if err == nil {
 						projectNamespace = strings.TrimSpace(string(project))
 					}
@@ -283,7 +284,7 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 		m.log.WriteString(logrus.WarnLevel, "\n")
 
 		// Check if docker is running
-		_, runErr := command.Output(context.TODO(), "", "docker", "version")
+		_, runErr := command.Output(context.TODO(), "", expand.ListEnviron(os.Environ()...), "docker", "version")
 
 		// If Docker is available, ask if we should retry registry login
 		if runErr == nil && registryUsername != "" {
