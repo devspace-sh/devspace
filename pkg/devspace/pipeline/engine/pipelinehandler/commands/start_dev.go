@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/pkg/errors"
 	"strings"
 )
@@ -20,7 +21,8 @@ type StartDevOptions struct {
 	From      []string `long:"from" description:"Reuse an existing configuration"`
 	FromFile  []string `long:"from-file" description:"Reuse an existing configuration from a file"`
 
-	All bool `long:"all" description:"Start all dev configurations"`
+	All    bool     `long:"all" description:"Start all dev configurations"`
+	Except []string `long:"except" description:"If used with --all, will exclude the following dev configs"`
 }
 
 func StartDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
@@ -41,11 +43,20 @@ func StartDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []strin
 	}
 
 	if options.All {
+		args = []string{}
 		for devConfig := range ctx.Config().Config().Dev {
+			if stringutil.Contains(options.Except, devConfig) {
+				continue
+			}
+
+			args = append(args, devConfig)
 			ctx, err = applySetValues(ctx, "dev", devConfig, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}
+		}
+		if len(args) == 0 {
+			return nil
 		}
 	} else if len(args) > 0 {
 		for _, devConfig := range args {

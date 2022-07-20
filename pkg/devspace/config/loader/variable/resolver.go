@@ -144,7 +144,7 @@ func (r *resolver) findVariablesInclude(haystack interface{}, include []*regexp.
 
 	// add always resolve variables
 	for _, v := range r.vars {
-		if v.AlwaysResolve {
+		if v.AlwaysResolve == nil || *v.AlwaysResolve {
 			varsUsed[v.Name] = true
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/pkg/errors"
 	"strings"
 )
@@ -18,7 +19,8 @@ type EnsurePullSecretsOptions struct {
 	From      []string `long:"from" description:"Reuse an existing configuration"`
 	FromFile  []string `long:"from-file" description:"Reuse an existing configuration from a file"`
 
-	All bool `long:"all" description:"Ensure all pull secrets"`
+	All    bool     `long:"all" description:"Ensure all pull secrets"`
+	Except []string `long:"except" description:"If used with --all, will exclude the following pull secrets"`
 }
 
 func EnsurePullSecrets(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
@@ -37,16 +39,24 @@ func EnsurePullSecrets(ctx devspacecontext.Context, pipeline types.Pipeline, arg
 	}
 
 	if options.All {
-		pullSecrets := ctx.Config().Config().PullSecrets
-		if len(pullSecrets) == 0 {
+		if len(ctx.Config().Config().PullSecrets) == 0 {
 			return nil
 		}
 
-		for pullSecret := range pullSecrets {
+		args = []string{}
+		for pullSecret := range ctx.Config().Config().PullSecrets {
+			if stringutil.Contains(options.Except, pullSecret) {
+				continue
+			}
+
+			args = append(args, pullSecret)
 			ctx, err = applySetValues(ctx, "pullSecrets", pullSecret, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}
+		}
+		if len(args) == 0 {
+			return nil
 		}
 	} else if len(args) > 0 {
 		for _, pullSecret := range args {

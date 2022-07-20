@@ -74,7 +74,8 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	// convert vars
 	if len(c.Vars) > 0 {
 		nextConfig.Vars = map[string]*next.Variable{}
-		for _, v := range c.Vars {
+		for _, variable := range c.Vars {
+			v := variable
 			nextConfig.Vars[v.Name] = &next.Variable{
 				Name:              v.Name,
 				Question:          v.Question,
@@ -83,7 +84,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				ValidationPattern: v.ValidationPattern,
 				ValidationMessage: v.ValidationMessage,
 				NoCache:           v.NoCache,
-				AlwaysResolve:     v.AlwaysResolve,
+				AlwaysResolve:     &v.AlwaysResolve,
 				Value:             v.Value,
 				Default:           v.Default,
 				Source:            next.VariableSource(v.Source),
@@ -104,7 +105,10 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	if nextConfig.Vars == nil {
 		nextConfig.Vars = map[string]*next.Variable{}
 	}
-	nextConfig.Vars["DEVSPACE_ENV_FILE"] = &next.Variable{Value: ".env"}
+	nextConfig.Vars["DEVSPACE_ENV_FILE"] = &next.Variable{
+		Value:         ".env",
+		AlwaysResolve: ptr.Bool(false),
+	}
 
 	deployPipeline := ""
 	buildPipeline := ""
