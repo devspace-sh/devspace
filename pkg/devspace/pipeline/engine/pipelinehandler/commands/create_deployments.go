@@ -9,6 +9,7 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/loft-sh/devspace/pkg/util/strvals"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
@@ -26,7 +27,8 @@ type CreateDeploymentsOptions struct {
 	From      []string `long:"from" description:"Reuse an existing configuration"`
 	FromFile  []string `long:"from-file" description:"Reuse an existing configuration from a file"`
 
-	All bool `long:"all" description:"Deploy all deployments"`
+	All    bool     `long:"all" description:"Deploy all deployments"`
+	Except []string `long:"except" description:"If used with --all, will exclude the following deployments"`
 }
 
 const ErrMsg = "Please make sure you have an existing valid kube config. You might want to check one of the following things:\n\n* Make sure you can use 'kubectl get namespaces' locally\n* If you are using Loft, you might want to run 'devspace create space' or 'loft create space'\n"
@@ -49,12 +51,20 @@ func CreateDeployments(ctx devspacecontext.Context, pipeline types.Pipeline, arg
 	}
 
 	if options.All {
-		deployments := ctx.Config().Config().Deployments
-		for deployment := range deployments {
+		args = []string{}
+		for deployment := range ctx.Config().Config().Deployments {
+			if stringutil.Contains(options.Except, deployment) {
+				continue
+			}
+
+			args = append(args, deployment)
 			ctx, err = applySetValues(ctx, "deployments", deployment, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}
+		}
+		if len(args) == 0 {
+			return nil
 		}
 	} else if len(args) > 0 {
 		for _, deployment := range args {
