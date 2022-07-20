@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -104,7 +106,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	buildKitConfig := b.helper.ImageConf.BuildKit
 
 	// create the builder
-	builder, err := ensureBuilder(ctx.Context(), ctx.WorkingDir(), ctx.KubeClient(), buildKitConfig, ctx.Log())
+	builder, err := ensureBuilder(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), ctx.KubeClient(), buildKitConfig, ctx.Log())
 	if err != nil {
 		return err
 	}
@@ -129,10 +131,10 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 	// Should we build with cli?
 	skipPush := b.skipPush || b.helper.ImageConf.SkipPush
-	return buildWithCLI(ctx.Context(), ctx.WorkingDir(), body, writer, ctx.KubeClient(), builder, buildKitConfig, *buildOptions, useMinikubeDocker, skipPush, ctx.Log())
+	return buildWithCLI(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), body, writer, ctx.KubeClient(), builder, buildKitConfig, *buildOptions, useMinikubeDocker, skipPush, ctx.Log())
 }
 
-func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker, skipPush bool, log logpkg.Logger) error {
+func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker, skipPush bool, log logpkg.Logger) error {
 	command := []string{"docker", "buildx"}
 	if len(imageConf.Command) > 0 {
 		command = imageConf.Command
@@ -204,7 +206,7 @@ func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.
 			return fmt.Errorf("error retrieving minikube environment with 'minikube docker-env --shell none'. Try setting the option preferMinikube to false: %v", err)
 		}
 	}
-	err = command2.CommandWithEnv(ctx, dir, writer, writer, context, minikubeEnv, command[0], completeArgs...)
+	err = command2.Command(ctx, dir, env.NewVariableEnvProvider(environ, minikubeEnv), writer, writer, context, command[0], completeArgs...)
 	if err != nil {
 		return err
 	}
@@ -215,7 +217,7 @@ func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.
 				command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(kubeClient.CurrentContext()), tag}
 				completeArgs := []string{}
 				completeArgs = append(completeArgs, command[1:]...)
-				err = command2.CommandWithEnv(ctx, dir, writer, writer, nil, minikubeEnv, command[0], completeArgs...)
+				err = command2.Command(ctx, dir, env.NewVariableEnvProvider(environ, minikubeEnv), writer, writer, nil, command[0], completeArgs...)
 				if err != nil {
 					log.Info(errors.Errorf("error during image load to kind cluster: %v", err))
 				}
@@ -243,7 +245,7 @@ type Node struct {
 	DriverOpts map[string]string
 }
 
-func ensureBuilder(ctx context.Context, workingDir string, kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, log logpkg.Logger) (string, error) {
+func ensureBuilder(ctx context.Context, workingDir string, environ expand.Environ, kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, log logpkg.Logger) (string, error) {
 	if imageConf.InCluster == nil {
 		return "", nil
 	} else if kubeClient == nil {
@@ -346,9 +348,9 @@ func ensureBuilder(ctx context.Context, workingDir string, kubeClient kubectl.Cl
 		rmArgs = append(rmArgs, "rm", name)
 
 		// execute the command
-		out, err := command2.CombinedOutputWithEnv(ctx, workingDir, map[string]string{
+		out, err := command2.CombinedOutput(ctx, workingDir, env.NewVariableEnvProvider(environ, map[string]string{
 			"KUBECONFIG": tempFile,
-		}, command[0], rmArgs...)
+		}), command[0], rmArgs...)
 		if err != nil {
 			log.Warnf("error deleting BuildKit builder: %s => %v", string(out), err)
 		}
@@ -360,9 +362,9 @@ func ensureBuilder(ctx context.Context, workingDir string, kubeClient kubectl.Cl
 	// This is necessary because docker would otherwise save the used kube config
 	// which we don't want because we will override it with our own temp kube config
 	// during building.
-	out, err := command2.CombinedOutputWithEnv(ctx, workingDir, map[string]string{
+	out, err := command2.CombinedOutput(ctx, workingDir, env.NewVariableEnvProvider(environ, map[string]string{
 		"KUBECONFIG": "",
-	}, command[0], completeArgs...)
+	}), command[0], completeArgs...)
 	if err != nil {
 		if !strings.Contains(string(out), "existing instance") {
 			return "", fmt.Errorf("error creating BuildKit builder: %s => %v", string(out), err)

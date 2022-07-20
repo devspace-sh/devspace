@@ -131,7 +131,7 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 
 func (e *execHandler) handlePipelineCommands(ctx context.Context, command string, args []string) (bool, error) {
 	hc := interp.HandlerCtx(ctx)
-	devCtx := e.ctx.WithContext(ctx).WithWorkingDir(hc.Dir)
+	devCtx := e.ctx.WithContext(ctx).WithWorkingDir(hc.Dir).WithEnviron(hc.Env)
 	if e.stdout != nil && e.stderr != nil && e.stdout == hc.Stdout && e.stderr == hc.Stderr {
 		devCtx = devCtx.WithLogger(e.ctx.Log())
 	} else {

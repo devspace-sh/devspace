@@ -6,15 +6,15 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enabled can be used to enable attaching to a container"
+          "description": "Enabled can be used to enable attaching to a container."
         },
         "disableReplace": {
           "type": "boolean",
-          "description": "DisableReplace prevents DevSpace from actually replacing the pod with modifications so that\nthe pod starts up correctly."
+          "description": "DisableReplace prevents DevSpace from actually replacing the pod with modifications so that the pod starts up correctly."
         },
         "disableTTY": {
           "type": "boolean",
-          "description": "DisableTTY is used to tell DevSpace to not use a TTY connection for attaching"
+          "description": "DisableTTY is used to tell DevSpace to not use a TTY connection for attaching."
         }
       },
       "type": "object"
@@ -23,11 +23,11 @@
       "properties": {
         "download": {
           "type": "integer",
-          "description": "Download is the download limit in kilo bytes per second"
+          "description": "Download is the download limit in kilo bytes per second."
         },
         "upload": {
           "type": "integer",
-          "description": "Upload is the upload limit in kilo bytes per second"
+          "description": "Upload is the upload limit in kilo bytes per second."
         }
       },
       "type": "object",
@@ -37,25 +37,25 @@
       "properties": {
         "inCluster": {
           "$ref": "#/$defs/BuildKitInClusterConfig",
-          "description": "InCluster if specified, DevSpace will use BuildKit to build the image within the cluster"
+          "description": "InCluster if specified, DevSpace will use BuildKit to build the image within the cluster."
         },
         "preferMinikube": {
           "type": "boolean",
-          "description": "PreferMinikube if false, will not try to use the minikube docker daemon to build the image"
+          "description": "PreferMinikube if false, will not try to use the minikube docker daemon to build the image."
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args are additional arguments to call docker buildx build with"
+          "description": "Args are additional arguments to call docker buildx build with."
         },
         "command": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Command to override the base command to create a builder and build images. Defaults to [\"docker\", \"buildx\"]"
+          "description": "Command to override the base command to create a builder and build images. Defaults to [\"docker\", \"buildx\"]."
         }
       },
       "type": "object",
@@ -65,11 +65,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name is the name of the builder to use. If omitted, DevSpace will try to create\nor reuse a builder in the form devspace-$NAMESPACE"
+          "description": "Name is the name of the builder to use. If omitted, DevSpace will try to create or reuse a builder in the form devspace-$NAMESPACE."
         },
         "namespace": {
           "type": "string",
-          "description": "Namespace where to create the builder deployment in. Defaults to the current\nactive namespace."
+          "description": "Namespace where to create the builder deployment in. Defaults to the current active namespace."
         },
         "rootless": {
           "type": "boolean",
@@ -77,23 +77,23 @@
         },
         "image": {
           "type": "string",
-          "description": "Image is the docker image to use for the BuildKit deployment"
+          "description": "Image is the docker image to use for the BuildKit deployment."
         },
         "nodeSelector": {
           "type": "string",
-          "description": "NodeSelector is the node selector to use for the BuildKit deployment"
+          "description": "NodeSelector is the node selector to use for the BuildKit deployment."
         },
         "noCreate": {
           "type": "boolean",
-          "description": "NoCreate. By default, DevSpace will try to create a new builder if it cannot be found.\nIf this is true, DevSpace will fail if the specified builder cannot be found."
+          "description": "NoCreate. By default, DevSpace will try to create a new builder if it cannot be found. If this is true, DevSpace will fail if the specified builder cannot be found."
         },
         "noRecreate": {
           "type": "boolean",
-          "description": "NoRecreate. By default, DevSpace will try to recreate the builder if the builder configuration\nin the devspace.yaml differs from the actual builder configuration. If this is\ntrue, DevSpace will not try to do that."
+          "description": "NoRecreate. By default, DevSpace will try to recreate the builder if the builder configuration in the devspace.yaml differs from the actual builder configuration. If this is true, DevSpace will not try to do that."
         },
         "noLoad": {
           "type": "boolean",
-          "description": "NoLoad if enabled, DevSpace will not try to load the built image into the local docker\ndaemon if skip push is defined"
+          "description": "NoLoad if enabled, DevSpace will not try to load the built image into the local docker daemon if skip push is defined."
         },
         "createArgs": {
           "items": {
@@ -110,54 +110,60 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name is the name of the helm chart to deploy. Can also be a local path"
+          "description": "Name is the name of the helm chart to deploy. Can also be a local path.",
+          "group": "repo",
+          "group_name": "Source: Helm Repository"
         },
         "version": {
           "type": "string",
-          "description": "Version is the version of the helm chart to deploy"
+          "description": "Version is the version of the helm chart to deploy.",
+          "group": "repo"
         },
         "repo": {
           "type": "string",
-          "description": "RepoURL is the url of the repo to deploy the chart from"
+          "description": "RepoURL is the url of the repo to deploy the chart from.",
+          "group": "repo"
         },
         "username": {
           "type": "string",
-          "description": "Username is the username to authenticate to the chart repo"
+          "description": "Username is the username to authenticate to the chart repo.",
+          "group": "repo"
         },
         "password": {
           "type": "string",
-          "description": "Password is the password to authenticate to the chart repo"
+          "description": "Password is the password to authenticate to the chart repo.",
+          "group": "repo"
         },
         "path": {
           "type": "string",
-          "description": "Path is the local path where DevSpace can find the artifact.\nThis option is mutually exclusive with the path option.",
+          "description": "Path is the local path where DevSpace can find the artifact. This option is mutually exclusive with the git option.",
           "group": "path",
           "group_name": "Source: Local Filesystem"
         },
         "git": {
           "type": "string",
-          "description": "Git is the remote repository to download the artifact from. You can either use\nhttps projects or ssh projects here, but need to make sure git can pull the project.\nThis option is mutually exclusive with the path option.",
+          "description": "Git is the remote repository to download the artifact from. You can either use https projects or ssh projects here, but need to make sure git can pull the project. This option is mutually exclusive with the path option.",
           "group": "git",
           "group_name": "Source: Git Repository"
         },
         "subPath": {
           "type": "string",
-          "description": "SubPath is a path within the git repository where the artifact lies in",
+          "description": "SubPath is a path within the git repository where the artifact lies in.",
           "group": "git"
         },
         "branch": {
           "type": "string",
-          "description": "Branch is the git branch to pull",
+          "description": "Branch is the git branch to pull.",
           "group": "git"
         },
         "tag": {
           "type": "string",
-          "description": "Tag is the tag to pull",
+          "description": "Tag is the tag to pull.",
           "group": "git"
         },
         "revision": {
           "type": "string",
-          "description": "Revision is the git revision to pull",
+          "description": "Revision is the git revision to pull.",
           "group": "git"
         },
         "cloneArgs": {
@@ -165,17 +171,17 @@
             "type": "string"
           },
           "type": "array",
-          "description": "CloneArgs are additional arguments that should be supplied to the git CLI",
+          "description": "CloneArgs are additional arguments that should be supplied to the git CLI.",
           "group": "git"
         },
         "disableShallow": {
           "type": "boolean",
-          "description": "DisableShallow can be used to turn off shallow clones as these are the default used\nby devspace",
+          "description": "DisableShallow can be used to turn off shallow clones as these are the default used by devspace.",
           "group": "git"
         },
         "disablePull": {
           "type": "boolean",
-          "description": "DisablePull will disable pulling every time DevSpace is reevaluating this source",
+          "description": "DisablePull will disable pulling every time DevSpace is reevaluating this source.",
           "group": "git"
         }
       },
@@ -186,34 +192,38 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name is the name of a command that is used via `devspace run NAME`"
+          "description": "Name is the name of a command that is used via 'devspace run NAME'."
+        },
+        "section": {
+          "type": "string",
+          "description": "Section can be used to group similar commands together in 'devspace list commands'."
         },
         "command": {
           "type": "string",
-          "description": "Command is the command that should be executed. For example: 'echo 123'"
+          "description": "Command is the command that should be executed. For example: 'echo 123'."
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args are optional and if defined, command is not executed within a shell\nand rather directly."
+          "description": "Args are optional and if defined, command is not executed within a shell and rather directly."
         },
         "appendArgs": {
           "type": "boolean",
-          "description": "AppendArgs will append arguments passed to the DevSpace command automatically to\nthe specified command."
+          "description": "AppendArgs will append arguments passed to the DevSpace command automatically to the specified command."
         },
         "description": {
           "type": "string",
-          "description": "Description describes what the command is doing and can be seen in `devspace list commands`"
+          "description": "Description describes what the command is doing and can be seen in 'devspace list commands'."
         },
         "internal": {
           "type": "boolean",
-          "description": "Internal commands are not show in list and are usable through run_command"
+          "description": "Internal commands are not show in list and are usable through run_command."
         },
         "after": {
           "type": "string",
-          "description": "After is executed after the command was run. It is executed also when\nthe command was interrupted which will set the env variable COMMAND_INTERRUPT\nto true as well as when the command errored which will set the error string to\nCOMMAND_ERROR."
+          "description": "After is executed after the command was run. It is executed also when the command was interrupted which will set the env variable COMMAND_INTERRUPT to true as well as when the command errored which will set the error string to COMMAND_ERROR."
         }
       },
       "type": "object",
@@ -226,14 +236,14 @@
       "properties": {
         "command": {
           "type": "string",
-          "description": "Command to execute to build the image. You can use ${runtime.images.my-image.image} and ${runtime.image.my-image.tag}\nto reference the image and tag that should get built."
+          "description": "Command to execute to build the image. You can use ${runtime.images.my-image.image} and ${runtime.image.my-image.tag} to reference the image and tag that should get built."
         },
         "onChange": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "OnChange will determine when the command should be rerun"
+          "description": "OnChange will determine when the command should be rerun."
         }
       },
       "type": "object",
@@ -243,38 +253,38 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name is used internally"
+          "description": "Name is used internally."
         },
         "path": {
           "type": "string",
-          "description": "Path is the local path where DevSpace can find the artifact.\nThis option is mutually exclusive with the path option.",
+          "description": "Path is the local path where DevSpace can find the artifact. This option is mutually exclusive with the git option.",
           "group": "path",
           "group_name": "Source: Local Filesystem"
         },
         "git": {
           "type": "string",
-          "description": "Git is the remote repository to download the artifact from. You can either use\nhttps projects or ssh projects here, but need to make sure git can pull the project.\nThis option is mutually exclusive with the path option.",
+          "description": "Git is the remote repository to download the artifact from. You can either use https projects or ssh projects here, but need to make sure git can pull the project. This option is mutually exclusive with the path option.",
           "group": "git",
           "group_name": "Source: Git Repository"
         },
         "subPath": {
           "type": "string",
-          "description": "SubPath is a path within the git repository where the artifact lies in",
+          "description": "SubPath is a path within the git repository where the artifact lies in.",
           "group": "git"
         },
         "branch": {
           "type": "string",
-          "description": "Branch is the git branch to pull",
+          "description": "Branch is the git branch to pull.",
           "group": "git"
         },
         "tag": {
           "type": "string",
-          "description": "Tag is the tag to pull",
+          "description": "Tag is the tag to pull.",
           "group": "git"
         },
         "revision": {
           "type": "string",
-          "description": "Revision is the git revision to pull",
+          "description": "Revision is the git revision to pull.",
           "group": "git"
         },
         "cloneArgs": {
@@ -282,22 +292,22 @@
             "type": "string"
           },
           "type": "array",
-          "description": "CloneArgs are additional arguments that should be supplied to the git CLI",
+          "description": "CloneArgs are additional arguments that should be supplied to the git CLI.",
           "group": "git"
         },
         "disableShallow": {
           "type": "boolean",
-          "description": "DisableShallow can be used to turn off shallow clones as these are the default used\nby devspace",
+          "description": "DisableShallow can be used to turn off shallow clones as these are the default used by devspace.",
           "group": "git"
         },
         "disablePull": {
           "type": "boolean",
-          "description": "DisablePull will disable pulling every time DevSpace is reevaluating this source",
+          "description": "DisablePull will disable pulling every time DevSpace is reevaluating this source.",
           "group": "git"
         },
         "pipeline": {
           "type": "string",
-          "description": "Pipeline is the pipeline to deploy by default. Defaults to 'deploy'",
+          "description": "Pipeline is the pipeline to deploy by default. Defaults to 'deploy'.",
           "default": "deploy",
           "group": "execution",
           "group_name": "Execution"
@@ -309,22 +319,22 @@
             }
           },
           "type": "object",
-          "description": "Vars are variables that should be passed to the dependency",
+          "description": "Vars are variables that should be passed to the dependency.",
           "group": "execution"
         },
         "overwriteVars": {
           "type": "boolean",
-          "description": "OverwriteVars specifies if DevSpace should pass the parent variables to the dependency",
+          "description": "OverwriteVars specifies if DevSpace should pass the parent variables to the dependency.",
           "group": "execution"
         },
         "ignoreDependencies": {
           "type": "boolean",
-          "description": "IgnoreDependencies defines if dependencies of the dependency should be excluded",
+          "description": "IgnoreDependencies defines if dependencies of the dependency should be excluded.",
           "group": "execution"
         },
         "namespace": {
           "type": "string",
-          "description": "Namespace specifies the namespace this dependency should be deployed to",
+          "description": "Namespace specifies the namespace this dependency should be deployed to.",
           "group": "execution"
         }
       },
@@ -338,23 +348,23 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name of the deployment"
+          "description": "Name of the deployment."
         },
         "helm": {
           "$ref": "#/$defs/HelmConfig",
-          "description": "Helm tells DevSpace to deploy this deployment via helm"
+          "description": "Helm tells DevSpace to deploy this deployment via helm."
         },
         "kubectl": {
           "$ref": "#/$defs/KubectlConfig",
-          "description": "Kubectl tells DevSpace to deploy this deployment via kubectl or kustomize"
+          "description": "Kubectl tells DevSpace to deploy this deployment via kubectl or kustomize."
         },
         "updateImageTags": {
           "type": "boolean",
-          "description": "UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the\nimages section with their most recent built tag."
+          "description": "UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the images section with their most recent built tag."
         },
         "namespace": {
           "type": "string",
-          "description": "Namespace where to deploy this deployment"
+          "description": "Namespace where to deploy this deployment."
         }
       },
       "type": "object",
@@ -370,108 +380,108 @@
         },
         "arch": {
           "type": "string",
-          "description": "Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64, but\ndevspace tries to find out the architecture by itself by looking at the node this container runs on.",
+          "description": " Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64, but devspace tries to find out the architecture by itself by looking at the node this container runs on.",
           "group": "selector"
         },
         "devImage": {
           "type": "string",
-          "description": "DevImage is the image to use for this container and will replace the existing image\nif necessary.",
-          "group": "overwrites",
-          "group_name": "Overwrites"
+          "description": "DevImage is the image to use for this container and will replace the existing image if necessary.",
+          "group": "modifications",
+          "group_name": "Modifications"
         },
         "command": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Command can be used to override the entrypoint of the container",
-          "group": "overwrites"
+          "description": "Command can be used to override the entrypoint of the container.",
+          "group": "modifications"
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args can be used to override the args of the container",
-          "group": "overwrites"
+          "description": "Args can be used to override the args of the container.",
+          "group": "modifications"
         },
         "workingDir": {
           "type": "string",
-          "description": "WorkingDir can be used to override the working dir of the container",
-          "group": "overwrites"
+          "description": "WorkingDir can be used to override the working dir of the container.",
+          "group": "modifications"
         },
         "env": {
           "items": {
             "$ref": "#/$defs/EnvVar"
           },
           "type": "array",
-          "description": "Env can be used to add environment variables to the container. DevSpace will\nnot replace existing environment variables if an environment variable is defined here.",
-          "group": "overwrites"
+          "description": "Env can be used to add environment variables to the container. DevSpace will not replace existing environment variables if an environment variable is defined here.",
+          "group": "modifications"
         },
         "resources": {
           "$ref": "#/$defs/PodResources",
-          "description": "Resources can be used to override the resource definitions of the container",
-          "group": "overwrites"
+          "description": "Resources can be used to override the resource definitions of the container.",
+          "group": "modifications"
         },
         "reversePorts": {
           "items": {
             "$ref": "#/$defs/PortMapping"
           },
           "type": "array",
-          "description": "ReversePorts are port mappings to make local ports available inside the container",
+          "description": "ReversePorts are port mappings to make local ports available inside the container.",
           "group": "ports",
-          "group_name": "Ports \u0026 Localhost Access"
+          "group_name": "Port Forwarding"
         },
         "sync": {
           "items": {
             "$ref": "#/$defs/SyncConfig"
           },
           "type": "array",
-          "description": "Sync allows you to sync certain local paths with paths inside the container",
-          "group": "files",
-          "group_name": "Files \u0026 Sync"
+          "description": "Sync allows you to sync certain local paths with paths inside the container.",
+          "group": "sync",
+          "group_name": "File Sync"
         },
         "persistPaths": {
           "items": {
             "$ref": "#/$defs/PersistentPath"
           },
           "type": "array",
-          "description": "SSH allows you to create an SSH tunnel to this container",
-          "group": "files"
+          "description": "SSH allows you to create an SSH tunnel to this container.",
+          "group": "modifications"
         },
         "terminal": {
           "$ref": "#/$defs/Terminal",
-          "description": "Terminal allows you to tell DevSpace to open a terminal with screen support to this container",
-          "group": "devWorkflow",
-          "group_name": "Dev Workflow"
+          "description": "Terminal allows you to tell DevSpace to open a terminal with screen support to this container.",
+          "group": "workflows",
+          "group_name": "Foreground Dev Workflows"
         },
         "logs": {
           "$ref": "#/$defs/Logs",
-          "description": "Logs allows you to tell DevSpace to stream logs from this container to the console",
-          "group": "devWorkflow"
+          "description": "Logs allows you to tell DevSpace to stream logs from this container to the console.",
+          "group": "workflows"
         },
         "attach": {
           "$ref": "#/$defs/Attach",
-          "description": "Attach allows you to tell DevSpace to attach to this container",
-          "group": "devWorkflow"
+          "description": "Attach allows you to tell DevSpace to attach to this container.",
+          "group": "workflows"
         },
         "ssh": {
           "$ref": "#/$defs/SSH",
-          "description": "PersistPaths allows you to persist certain paths within this container with a persistent volume claim",
-          "group": "devWorkflow"
+          "description": "PersistPaths allows you to persist certain paths within this container with a persistent volume claim.",
+          "group": "workflows_background"
         },
         "proxyCommands": {
           "items": {
             "$ref": "#/$defs/ProxyCommand"
           },
           "type": "array",
-          "description": "ProxyCommands allow you to proxy certain local commands to the container",
-          "group": "devWorkflow"
+          "description": "ProxyCommands allow you to proxy certain local commands to the container.",
+          "group": "workflows_background"
         },
         "restartHelper": {
           "$ref": "#/$defs/RestartHelper",
-          "description": "RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of\nthe container and restarting it and is injected via an annotation in the replaced pod.",
-          "group": "devWorkflow"
+          "description": "RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of the container and restarting it and is injected via an annotation in the replaced pod.",
+          "group": "workflows_background"
         }
       },
       "type": "object",
@@ -481,11 +491,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name of the dev configuration"
+          "description": "Name of the dev configuration."
         },
         "imageSelector": {
           "type": "string",
-          "description": "ImageSelector to select a pod",
+          "description": "ImageSelector to select a pod.",
           "group": "selector"
         },
         "labelSelector": {
@@ -495,12 +505,12 @@
             }
           },
           "type": "object",
-          "description": "LabelSelector to select a pod",
+          "description": "LabelSelector to select a pod.",
           "group": "selector"
         },
         "namespace": {
           "type": "string",
-          "description": "Namespace where to select the pod",
+          "description": "Namespace where to select the pod.",
           "group": "selector"
         },
         "container": {
@@ -511,137 +521,138 @@
         },
         "arch": {
           "type": "string",
-          "description": "Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64, but\ndevspace tries to find out the architecture by itself by looking at the node this container runs on.",
+          "description": " Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64, but devspace tries to find out the architecture by itself by looking at the node this container runs on.",
           "group": "selector"
         },
         "devImage": {
           "type": "string",
-          "description": "DevImage is the image to use for this container and will replace the existing image\nif necessary.",
-          "group": "overwrites",
-          "group_name": "Overwrites"
+          "description": "DevImage is the image to use for this container and will replace the existing image if necessary.",
+          "group": "modifications",
+          "group_name": "Modifications"
         },
         "command": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Command can be used to override the entrypoint of the container",
-          "group": "overwrites"
+          "description": "Command can be used to override the entrypoint of the container.",
+          "group": "modifications"
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args can be used to override the args of the container",
-          "group": "overwrites"
+          "description": "Args can be used to override the args of the container.",
+          "group": "modifications"
         },
         "workingDir": {
           "type": "string",
-          "description": "WorkingDir can be used to override the working dir of the container",
-          "group": "overwrites"
+          "description": "WorkingDir can be used to override the working dir of the container.",
+          "group": "modifications"
         },
         "env": {
           "items": {
             "$ref": "#/$defs/EnvVar"
           },
           "type": "array",
-          "description": "Env can be used to add environment variables to the container. DevSpace will\nnot replace existing environment variables if an environment variable is defined here.",
-          "group": "overwrites"
+          "description": "Env can be used to add environment variables to the container. DevSpace will not replace existing environment variables if an environment variable is defined here.",
+          "group": "modifications"
         },
         "resources": {
           "$ref": "#/$defs/PodResources",
-          "description": "Resources can be used to override the resource definitions of the container",
-          "group": "overwrites"
+          "description": "Resources can be used to override the resource definitions of the container.",
+          "group": "modifications"
         },
         "reversePorts": {
           "items": {
             "$ref": "#/$defs/PortMapping"
           },
           "type": "array",
-          "description": "ReversePorts are port mappings to make local ports available inside the container",
+          "description": "ReversePorts are port mappings to make local ports available inside the container.",
           "group": "ports",
-          "group_name": "Ports \u0026 Localhost Access"
+          "group_name": "Port Forwarding"
         },
         "sync": {
           "items": {
             "$ref": "#/$defs/SyncConfig"
           },
           "type": "array",
-          "description": "Sync allows you to sync certain local paths with paths inside the container",
-          "group": "files",
-          "group_name": "Files \u0026 Sync"
+          "description": "Sync allows you to sync certain local paths with paths inside the container.",
+          "group": "sync",
+          "group_name": "File Sync"
         },
         "persistPaths": {
           "items": {
             "$ref": "#/$defs/PersistentPath"
           },
           "type": "array",
-          "description": "SSH allows you to create an SSH tunnel to this container",
-          "group": "files"
+          "description": "SSH allows you to create an SSH tunnel to this container.",
+          "group": "modifications"
         },
         "terminal": {
           "$ref": "#/$defs/Terminal",
-          "description": "Terminal allows you to tell DevSpace to open a terminal with screen support to this container",
-          "group": "devWorkflow",
-          "group_name": "Dev Workflow"
+          "description": "Terminal allows you to tell DevSpace to open a terminal with screen support to this container.",
+          "group": "workflows",
+          "group_name": "Foreground Dev Workflows"
         },
         "logs": {
           "$ref": "#/$defs/Logs",
-          "description": "Logs allows you to tell DevSpace to stream logs from this container to the console",
-          "group": "devWorkflow"
+          "description": "Logs allows you to tell DevSpace to stream logs from this container to the console.",
+          "group": "workflows"
         },
         "attach": {
           "$ref": "#/$defs/Attach",
-          "description": "Attach allows you to tell DevSpace to attach to this container",
-          "group": "devWorkflow"
+          "description": "Attach allows you to tell DevSpace to attach to this container.",
+          "group": "workflows"
         },
         "ssh": {
           "$ref": "#/$defs/SSH",
-          "description": "PersistPaths allows you to persist certain paths within this container with a persistent volume claim",
-          "group": "devWorkflow"
+          "description": "PersistPaths allows you to persist certain paths within this container with a persistent volume claim.",
+          "group": "workflows_background"
         },
         "proxyCommands": {
           "items": {
             "$ref": "#/$defs/ProxyCommand"
           },
           "type": "array",
-          "description": "ProxyCommands allow you to proxy certain local commands to the container",
-          "group": "devWorkflow"
+          "description": "ProxyCommands allow you to proxy certain local commands to the container.",
+          "group": "workflows_background"
         },
         "restartHelper": {
           "$ref": "#/$defs/RestartHelper",
-          "description": "RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of\nthe container and restarting it and is injected via an annotation in the replaced pod.",
-          "group": "devWorkflow"
+          "description": "RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of the container and restarting it and is injected via an annotation in the replaced pod.",
+          "group": "workflows_background"
         },
         "ports": {
           "items": {
             "$ref": "#/$defs/PortMapping"
           },
           "type": "array",
-          "description": "Ports defines port mappings from the remote pod that should be forwarded to your local\ncomputer",
-          "group": "ports"
-        },
-        "open": {
-          "items": {
-            "$ref": "#/$defs/OpenConfig"
-          },
-          "type": "array",
-          "description": "Open defines urls that should be opened as soon as they are reachable",
+          "description": "Ports defines port mappings from the remote pod that should be forwarded to your local computer.",
           "group": "ports"
         },
         "persistenceOptions": {
           "$ref": "#/$defs/PersistenceOptions",
-          "description": "PersistenceOptions are additional options for persisting paths within this pod",
-          "group": "files"
+          "description": "PersistenceOptions are additional options for persisting paths within this pod.",
+          "group": "modifications"
         },
         "patches": {
           "items": {
             "$ref": "#/$defs/PatchConfig"
           },
           "type": "array",
-          "description": "Patches are additional changes to the pod spec that should be applied",
-          "group": "overwrites"
+          "description": "Patches are additional changes to the pod spec that should be applied.",
+          "group": "modifications"
+        },
+        "open": {
+          "items": {
+            "$ref": "#/$defs/OpenConfig"
+          },
+          "type": "array",
+          "description": "Open defines urls that should be opened as soon as they are reachable.",
+          "group": "workflows_background",
+          "group_name": "Background Dev Workflows"
         },
         "containers": {
           "patternProperties": {
@@ -650,6 +661,7 @@
             }
           },
           "type": "object",
+          "description": "DevContainer holds options for dev services that should get started within a certain container of the selected pod.",
           "group": "selector"
         }
       },
@@ -660,22 +672,22 @@
       "properties": {
         "disableFallback": {
           "type": "boolean",
-          "description": "DisableFallback allows you to turn off kaniko building if docker isn't installed"
+          "description": "DisableFallback allows you to turn off kaniko building if docker isn't installed."
         },
         "preferMinikube": {
           "type": "boolean",
-          "description": "PreferMinikube allows you to turn off using the minikube docker daemon if the minikube\ncontext is used."
+          "description": "PreferMinikube allows you to turn off using the minikube docker daemon if the minikube context is used."
         },
         "useCli": {
           "type": "boolean",
-          "description": "UseCLI specifies if DevSpace should use the docker cli for building"
+          "description": "// UseCLI specifies if DevSpace should use the docker cli for building."
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args are additional arguments to pass to the docker cli"
+          "description": "Args are additional arguments to pass to the docker cli."
         }
       },
       "type": "object",
@@ -685,11 +697,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name of the environment variable"
+          "description": "Name of the environment variable."
         },
         "value": {
           "type": "string",
-          "description": "Value of the environment variable"
+          "description": "Value of the environment variable."
         }
       },
       "type": "object",
@@ -700,38 +712,42 @@
     },
     "HelmConfig": {
       "properties": {
+        "releaseName": {
+          "type": "string",
+          "description": "ReleaseName of the helm configuration."
+        },
         "chart": {
           "$ref": "#/$defs/ChartConfig",
-          "description": "Chart holds the chart configuration and where DevSpace can find the chart"
+          "description": "Chart holds the chart configuration and where DevSpace can find the chart."
         },
         "values": {
           "type": "object",
-          "description": "Values are additional values that should get passed to deploying this chart"
+          "description": "Values are additional values that should get passed to deploying this chart."
         },
         "valuesFiles": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "ValuesFiles are additional files that hold values for deploying this chart"
+          "description": "ValuesFiles are additional files that hold values for deploying this chart."
         },
         "displayOutput": {
           "type": "boolean",
-          "description": "DisplayOutput allows you to display the helm output to the console"
+          "description": "DisplayOutput allows you to display the helm output to the console."
         },
         "upgradeArgs": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "UpgradeArgs are additional arguments to pass to `helm upgrade`"
+          "description": "UpgradeArgs are additional arguments to pass to 'helm upgrade'."
         },
         "templateArgs": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "TemplateArgs are additional arguments to pass to `helm template`"
+          "description": "TemplateArgs are additional arguments to pass to 'helm template'."
         }
       },
       "type": "object",
@@ -741,43 +757,37 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name of the image, will be filled automatically"
+          "description": "Name of the image, will be filled automatically."
         },
         "image": {
           "type": "string",
-          "description": "Image is the complete image name including registry and repository\nfor example myregistry.com/mynamespace/myimage"
+          "description": "Image is the complete image name including registry and repository for example myregistry.com/mynamespace/myimage."
         },
         "tags": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Tags is an array that specifies all tags that should be build during\nthe build process. If this is empty, devspace will generate a random tag"
+          "description": "Tags is an array that specifies all tags that should be build during the build process. If this is empty, devspace will generate a random tag."
         },
         "dockerfile": {
           "type": "string",
-          "description": "Dockerfile specifies a path (relative or absolute) to the dockerfile. Defaults\nto ./Dockerfile",
-          "default": "./Dockerfile"
+          "description": "Dockerfile specifies a path (relative or absolute) to the dockerfile. Defaults to ./Dockerfile.",
+          "default": "./Dockerfile",
+          "group": "buildConfig"
         },
         "context": {
           "type": "string",
-          "description": "Context is the context path to build with. Defaults to the current working directory",
-          "default": "./"
-        },
-        "skipPush": {
-          "type": "boolean",
-          "description": "SkipPush will not push the image to a registry if enabled. Only works if docker or buildkit is chosen\nas build method"
-        },
-        "createPullSecret": {
-          "type": "boolean",
-          "description": "CreatePullSecret specifies if a pull secret should be created for this image in the\ntarget namespace. Defaults to true"
+          "description": "Context is the context path to build with. Defaults to the current working directory.",
+          "default": "./",
+          "group": "buildConfig"
         },
         "entrypoint": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Entrypoint specifies an entrypoint that will be appended to the dockerfile during\nimage build in memory. Example: [\"sleep\", \"99999\"]",
+          "description": "Entrypoint specifies an entrypoint that will be appended to the dockerfile during image build in memory. Example: [\"sleep\", \"99999\"].",
           "group": "overwrites",
           "group_name": "In-Memory Overwrites"
         },
@@ -786,7 +796,7 @@
             "type": "string"
           },
           "type": "array",
-          "description": "Cmd specifies the arguments for the entrypoint that will be appended\nduring build in memory to the dockerfile",
+          "description": "Cmd specifies the arguments for the entrypoint that will be appended during build in memory to the dockerfile.",
           "group": "overwrites"
         },
         "appendDockerfileInstructions": {
@@ -794,7 +804,7 @@
             "type": "string"
           },
           "type": "array",
-          "description": "AppendDockerfileInstructions are instructions that will be appended to the Dockerfile that is build\nat the current build target and are appended before the entrypoint and cmd instructions",
+          "description": "AppendDockerfileInstructions are instructions that will be appended to the Dockerfile that is build at the current build target and are appended before the entrypoint and cmd instructions.",
           "group": "overwrites"
         },
         "buildArgs": {
@@ -804,18 +814,18 @@
             }
           },
           "type": "object",
-          "description": "BuildArgs are the build args that are to the build",
+          "description": "BuildArgs are the build args that are to the build.",
           "group": "buildConfig",
           "group_name": "Build Configuration"
         },
         "target": {
           "type": "string",
-          "description": "Target is the target that should get used during the build. Only works if the dockerfile supports this",
+          "description": "Target is the target that should get used during the build. Only works if the dockerfile supports this.",
           "group": "buildConfig"
         },
         "network": {
           "type": "string",
-          "description": "Network is the network that should get used to build the image",
+          "description": "Network is the network that should get used to build the image.",
           "group": "buildConfig"
         },
         "rebuildStrategy": {
@@ -825,28 +835,39 @@
             "always",
             "ignoreContextChanges"
           ],
-          "description": "RebuildStrategy is used to determine when DevSpace should rebuild an image. By default, devspace will\nrebuild an image if one of the following conditions is true:\n- The dockerfile has changed\n- The configuration within the devspace.yaml for the image has changed\n- A file within the docker context (excluding .dockerignore rules) has changed\nThis option is ignored for custom builds.",
+          "description": "RebuildStrategy is used to determine when DevSpace should rebuild an image.",
           "group": "buildConfig"
+        },
+        "skipPush": {
+          "type": "boolean",
+          "description": "SkipPush will not push the image to a registry if enabled. Only works if docker or buildkit is chosen as build method.",
+          "group": "pushPull",
+          "group_name": "Push \u0026 Pull"
+        },
+        "createPullSecret": {
+          "type": "boolean",
+          "description": "CreatePullSecret specifies if a pull secret should be created for this image in the target namespace. Defaults to true.",
+          "group": "pushPull"
         },
         "buildKit": {
           "$ref": "#/$defs/BuildKitConfig",
-          "description": "BuildKit if buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit",
+          "description": "BuildKit if buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit.",
           "group": "engines",
           "group_name": "Build Engines"
         },
         "docker": {
           "$ref": "#/$defs/DockerConfig",
-          "description": "Docker if docker is specified, DevSpace will build the image using the local docker daemon",
+          "description": "Docker if docker is specified, DevSpace will build the image using the local docker daemon.",
           "group": "engines"
         },
         "kaniko": {
           "$ref": "#/$defs/KanikoConfig",
-          "description": "Kaniko if kaniko is specified, DevSpace will build the image in-cluster with kaniko",
+          "description": "Kaniko if kaniko is specified, DevSpace will build the image in-cluster with kaniko.",
           "group": "engines"
         },
         "custom": {
           "$ref": "#/$defs/CustomConfig",
-          "description": "Custom if custom is specified, DevSpace will build the image with the help of\na custom script.",
+          "description": "Custom if custom is specified, DevSpace will build the image with the help of a custom script.",
           "group": "engines"
         }
       },
@@ -861,38 +882,38 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enabled specifies if the given import should be enabled"
+          "description": "Enabled specifies if the given import should be enabled."
         },
         "path": {
           "type": "string",
-          "description": "Path is the local path where DevSpace can find the artifact.\nThis option is mutually exclusive with the path option.",
+          "description": "Path is the local path where DevSpace can find the artifact. This option is mutually exclusive with the git option.",
           "group": "path",
           "group_name": "Source: Local Filesystem"
         },
         "git": {
           "type": "string",
-          "description": "Git is the remote repository to download the artifact from. You can either use\nhttps projects or ssh projects here, but need to make sure git can pull the project.\nThis option is mutually exclusive with the path option.",
+          "description": "Git is the remote repository to download the artifact from. You can either use https projects or ssh projects here, but need to make sure git can pull the project. This option is mutually exclusive with the path option.",
           "group": "git",
           "group_name": "Source: Git Repository"
         },
         "subPath": {
           "type": "string",
-          "description": "SubPath is a path within the git repository where the artifact lies in",
+          "description": "SubPath is a path within the git repository where the artifact lies in.",
           "group": "git"
         },
         "branch": {
           "type": "string",
-          "description": "Branch is the git branch to pull",
+          "description": "Branch is the git branch to pull.",
           "group": "git"
         },
         "tag": {
           "type": "string",
-          "description": "Tag is the tag to pull",
+          "description": "Tag is the tag to pull.",
           "group": "git"
         },
         "revision": {
           "type": "string",
-          "description": "Revision is the git revision to pull",
+          "description": "Revision is the git revision to pull.",
           "group": "git"
         },
         "cloneArgs": {
@@ -900,17 +921,17 @@
             "type": "string"
           },
           "type": "array",
-          "description": "CloneArgs are additional arguments that should be supplied to the git CLI",
+          "description": "CloneArgs are additional arguments that should be supplied to the git CLI.",
           "group": "git"
         },
         "disableShallow": {
           "type": "boolean",
-          "description": "DisableShallow can be used to turn off shallow clones as these are the default used\nby devspace",
+          "description": "DisableShallow can be used to turn off shallow clones as these are the default used by devspace.",
           "group": "git"
         },
         "disablePull": {
           "type": "boolean",
-          "description": "DisablePull will disable pulling every time DevSpace is reevaluating this source",
+          "description": "DisablePull will disable pulling every time DevSpace is reevaluating this source.",
           "group": "git"
         }
       },
@@ -921,23 +942,23 @@
       "properties": {
         "secret": {
           "$ref": "#/$defs/KanikoAdditionalMountSecret",
-          "description": "The secret that should be mounted"
+          "description": "The secret that should be mounted."
         },
         "configMap": {
           "$ref": "#/$defs/KanikoAdditionalMountConfigMap",
-          "description": "The configMap that should be mounted"
+          "description": "The configMap that should be mounted."
         },
         "readOnly": {
           "type": "boolean",
-          "description": "Mounted read-only if true, read-write otherwise (false or unspecified).\nDefaults to false.\n+optional"
+          "description": "Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false."
         },
         "mountPath": {
           "type": "string",
-          "description": "Path within the container at which the volume should be mounted.  Must\nnot contain ':'."
+          "description": "Path within the container at which the volume should be mounted. Must not contain ':'."
         },
         "subPath": {
           "type": "string",
-          "description": "Path within the volume from which the container's volume should be mounted.\nDefaults to \"\" (volume's root).\n+optional"
+          "description": "Path within the volume from which the container's volume should be mounted. Defaults to \"\" (volume's root)."
         }
       },
       "type": "object",
@@ -947,18 +968,18 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name of the configmap\n+optional"
+          "description": "Name of the configmap."
         },
         "items": {
           "items": {
             "$ref": "#/$defs/KanikoAdditionalMountKeyToPath"
           },
           "type": "array",
-          "description": "If unspecified, each key-value pair in the Data field of the referenced\nConfigMap will be projected into the volume as a file whose name is the\nkey and content is the value. If specified, the listed keys will be\nprojected into the specified paths, and unlisted keys will not be\npresent. If a key is specified which is not present in the ConfigMap,\nthe volume setup will error unless it is marked optional. Paths must be\nrelative and may not contain the '..' path or start with '..'.\n+optional"
+          "description": "If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value."
         },
         "defaultMode": {
           "type": "integer",
-          "description": "Optional: mode bits to use on created files by default. Must be a\nvalue between 0 and 0777. Defaults to 0644.\nDirectories within the path are not affected by this setting.\nThis might be in conflict with other options that affect the file\nmode, like fsGroup, and the result can be other mode bits set.\n+optional"
+          "description": "mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set."
         }
       },
       "type": "object"
@@ -971,11 +992,11 @@
         },
         "path": {
           "type": "string",
-          "description": "The relative path of the file to map the key to.\nMay not be an absolute path.\nMay not contain the path element '..'.\nMay not start with the string '..'."
+          "description": "The relative path of the file to map the key to."
         },
         "mode": {
           "type": "integer",
-          "description": "Optional: mode bits to use on this file, must be a value between 0\nand 0777. If not specified, the volume defaultMode will be used.\nThis might be in conflict with other options that affect the file\nmode, like fsGroup, and the result can be other mode bits set.\n+optional"
+          "description": "mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used."
         }
       },
       "type": "object",
@@ -988,18 +1009,18 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name of the secret in the pod's namespace to use.\nMore info: https://kubernetes.io/docs/concepts/storage/volumes#secret\n+optional"
+          "description": "Name of the secret in the pod's namespace to use."
         },
         "items": {
           "items": {
             "$ref": "#/$defs/KanikoAdditionalMountKeyToPath"
           },
           "type": "array",
-          "description": "If unspecified, each key-value pair in the Data field of the referenced\nSecret will be projected into the volume as a file whose name is the\nkey and content is the value. If specified, the listed keys will be\nprojected into the specified paths, and unlisted keys will not be\npresent. If a key is specified which is not present in the Secret,\nthe volume setup will error unless it is marked optional. Paths must be\nrelative and may not contain the '..' path or start with '..'.\n+optional"
+          "description": "If unspecified, each key-value pair in the Data field of the referenced Secret will be projected into the volume as a file whose name is the key and content is the value."
         },
         "defaultMode": {
           "type": "integer",
-          "description": "Optional: mode bits to use on created files by default. Must be a\nvalue between 0 and 0777. Defaults to 0644.\nDirectories within the path are not affected by this setting.\nThis might be in conflict with other options that affect the file\nmode, like fsGroup, and the result can be other mode bits set.\n+optional"
+          "description": "mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644."
         }
       },
       "type": "object",
@@ -1011,49 +1032,49 @@
       "properties": {
         "cache": {
           "type": "boolean",
-          "description": "Cache tells DevSpace if a cache repository should be used. defaults to false"
+          "description": "Cache tells DevSpace if a cache repository should be used. defaults to false."
         },
         "snapshotMode": {
           "type": "string",
-          "description": "SnapshotMode tells DevSpace which snapshot mode kaniko should use. defaults to time"
+          "description": "SnapshotMode tells DevSpace which snapshot mode kaniko should use. defaults to time."
         },
         "image": {
           "type": "string",
-          "description": "Image is the image name of the kaniko pod to use"
+          "description": "Image is the image name of the kaniko pod to use."
         },
         "initImage": {
           "type": "string",
-          "description": "InitImage to override the init image of the kaniko pod"
+          "description": "InitImage to override the init image of the kaniko pod."
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args for additional arguments that should be passed to kaniko"
+          "description": "Args for additional arguments that should be passed to kaniko."
         },
         "command": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Command to replace the starting command for the kaniko container"
+          "description": "Command to replace the starting command for the kaniko container."
         },
         "namespace": {
           "type": "string",
-          "description": "Namespace is the namespace where the kaniko pod should be run"
+          "description": "Namespace is the namespace where the kaniko pod should be run."
         },
         "insecure": {
           "type": "boolean",
-          "description": "Insecure allows pushing to insecure registries"
+          "description": "Insecure allows pushing to insecure registries."
         },
         "pullSecret": {
           "type": "string",
-          "description": "PullSecret is the pull secret to mount by default"
+          "description": "PullSecret is the pull secret to mount by default."
         },
         "skipPullSecretMount": {
           "type": "boolean",
-          "description": "SkipPullSecretMount will skip mounting the pull secret"
+          "description": "SkipPullSecretMount will skip mounting the pull secret."
         },
         "nodeSelector": {
           "patternProperties": {
@@ -1062,18 +1083,18 @@
             }
           },
           "type": "object",
-          "description": "NodeSelector is the node selector to use for the kaniko pod"
+          "description": "NodeSelector is the node selector to use for the kaniko pod."
         },
         "tolerations": {
           "items": {
             "$ref": "#/$defs/Toleration"
           },
           "type": "array",
-          "description": "Tolerations is a tolerations list to use for the kaniko pod"
+          "description": "Tolerations is a tolerations list to use for the kaniko pod."
         },
         "serviceAccount": {
           "type": "string",
-          "description": "ServiceAccount the service account to use for the kaniko pod"
+          "description": "ServiceAccount the service account to use for the kaniko pod."
         },
         "annotations": {
           "patternProperties": {
@@ -1082,7 +1103,7 @@
             }
           },
           "type": "object",
-          "description": "Annotations are extra annotations that will be added to the build pod"
+          "description": "Annotations are extra annotations that will be added to the build pod."
         },
         "labels": {
           "patternProperties": {
@@ -1091,7 +1112,7 @@
             }
           },
           "type": "object",
-          "description": "Labels are extra labels that will be added to the build pod"
+          "description": "Labels are extra labels that will be added to the build pod."
         },
         "initEnv": {
           "patternProperties": {
@@ -1100,7 +1121,7 @@
             }
           },
           "type": "object",
-          "description": "InitEnv are extra environment variables that will be added to the build init container"
+          "description": "InitEnv are extra environment variables that will be added to the build init container."
         },
         "env": {
           "patternProperties": {
@@ -1109,7 +1130,7 @@
             }
           },
           "type": "object",
-          "description": "Env are extra environment variables that will be added to the build kaniko container\nWill populate the env.value field."
+          "description": "Env are extra environment variables that will be added to the build kaniko container will populate the env.value field."
         },
         "envFrom": {
           "patternProperties": {
@@ -1118,18 +1139,18 @@
             }
           },
           "type": "object",
-          "description": "EnvFrom are extra environment variables from configmap or secret that will be added to the build kaniko container\nWill populate the env.valueFrom field."
+          "description": "EnvFrom are extra environment variables from configmap or secret that will be added to the build kaniko container will populate the env.valueFrom field."
         },
         "additionalMounts": {
           "items": {
             "$ref": "#/$defs/KanikoAdditionalMount"
           },
           "type": "array",
-          "description": "AdditionalMounts are additional mounts that will be added to the build pod"
+          "description": "AdditionalMounts are additional mounts that will be added to the build pod."
         },
         "resources": {
           "$ref": "#/$defs/PodResources",
-          "description": "Resources are the resources that should be set on the kaniko pod"
+          "description": "Resources are the resources that should be set on the kaniko pod."
         }
       },
       "type": "object",
@@ -1142,40 +1163,44 @@
             "type": "string"
           },
           "type": "array",
-          "description": "Manifests is a list of files or folders that will be deployed by DevSpace using kubectl\nor kustomize"
+          "description": "Manifests is a list of files or folders that will be deployed by DevSpace using kubectl or kustomize."
         },
         "applyArgs": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "ApplyArgs are extra arguments for `kubectl apply`"
+          "description": "ApplyArgs are extra arguments for 'kubectl apply'."
         },
         "createArgs": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "CreateArgs are extra arguments for `kubectl create` which will be run before `kubectl apply`"
+          "description": "CreateArgs are extra arguments for 'kubectl create' which will be run before 'kubectl apply'."
         },
         "kubectlBinaryPath": {
           "type": "string",
-          "description": "KubectlBinaryPath is the optional path where to finde the kubectl binary"
+          "description": "KubectlBinaryPath is the optional path where to find the kubectl binary."
         },
         "kustomize": {
           "type": "boolean",
-          "description": "Kustomize can be used to enable kustomize instead of kubectl"
+          "description": "Kustomize can be used to enable kustomize instead of kubectl.",
+          "group": "kustomize",
+          "group_name": "Kustomize"
         },
         "kustomizeArgs": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "KustomizeArgs are extra arguments for `kustomize build` which will be run before `kubectl apply`"
+          "description": "KustomizeArgs are extra arguments for 'kustomize build' which will be run before 'kubectl apply'.",
+          "group": "kustomize"
         },
         "kustomizeBinaryPath": {
           "type": "string",
-          "description": "KustomizeBinaryPath is the optional path where to find the kustomize binary"
+          "description": "KustomizeBinaryPath is the optional path where to find the kustomize binary.",
+          "group": "kustomize"
         }
       },
       "type": "object",
@@ -1185,11 +1210,11 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enabled can be used to enable printing container logs"
+          "description": "Enabled can be used to enable printing container logs."
         },
         "lastLines": {
           "type": "integer",
-          "description": "LastLines is the amount of lines to print of the running container initially"
+          "description": "LastLines is the amount of lines to print of the running container initially."
         }
       },
       "type": "object"
@@ -1198,7 +1223,7 @@
       "properties": {
         "url": {
           "type": "string",
-          "description": "URL is the url to open in the browser after it is available"
+          "description": "URL is the url to open in the browser after it is available."
         }
       },
       "type": "object",
@@ -1208,11 +1233,11 @@
       "properties": {
         "op": {
           "type": "string",
-          "description": "Operation is the path operation to do. Can be either replace, add or remove"
+          "description": "Operation is the path operation to do. Can be either replace, add or remove."
         },
         "path": {
           "type": "string",
-          "description": "Path is the config path to apply the patch to"
+          "description": "Path is the config path to apply the patch to."
         },
         "value": {
           "description": "Value is the value to use for this patch."
@@ -1229,26 +1254,26 @@
       "properties": {
         "size": {
           "type": "string",
-          "description": "Size is the size of the created persistent volume in Kubernetes size notation like 5Gi"
+          "description": "Size is the size of the created persistent volume in Kubernetes size notation like 5Gi."
         },
         "storageClassName": {
           "type": "string",
-          "description": "StorageClassName is the storage type DevSpace should use for this persistent volume"
+          "description": "StorageClassName is the storage type DevSpace should use for this persistent volume."
         },
         "accessModes": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "AccessModes are the access modes DevSpace should use for the persistent volume"
+          "description": "AccessModes are the access modes DevSpace should use for the persistent volume."
         },
         "readOnly": {
           "type": "boolean",
-          "description": "ReadOnly specifies if the volume should be read only"
+          "description": "ReadOnly specifies if the volume should be read only."
         },
         "name": {
           "type": "string",
-          "description": "Name is the name of the PVC that should be created. If a PVC with that name\nalready exists, DevSpace will use that PVC instead of creating one."
+          "description": "Name is the name of the PVC that should be created. If a PVC with that name already exists, DevSpace will use that PVC instead of creating one."
         }
       },
       "type": "object",
@@ -1258,23 +1283,23 @@
       "properties": {
         "path": {
           "type": "string",
-          "description": "Path is the container path that should get persisted. By default, DevSpace will create an init container\nthat will copy over the contents of this folder from the existing image."
+          "description": "Path is the container path that should get persisted. By default, DevSpace will create an init container that will copy over the contents of this folder from the existing image."
         },
         "volumePath": {
           "type": "string",
-          "description": "VolumePath is the sub path on the volume that is mounted as persistent volume for this path"
+          "description": "VolumePath is the sub path on the volume that is mounted as persistent volume for this path."
         },
         "readOnly": {
           "type": "boolean",
-          "description": "ReadOnly will make the persistent path read only to the user"
+          "description": "ReadOnly will make the persistent path read only to the user."
         },
         "skipPopulate": {
           "type": "boolean",
-          "description": "SkipPopulate will not create an init container to copy over the existing contents if true"
+          "description": "SkipPopulate will not create an init container to copy over the existing contents if true."
         },
         "initContainer": {
           "$ref": "#/$defs/PersistentPathInitContainer",
-          "description": "InitContainer holds additional options for the persistent path init container"
+          "description": "InitContainer holds additional options for the persistent path init container."
         }
       },
       "type": "object",
@@ -1284,7 +1309,7 @@
       "properties": {
         "resources": {
           "$ref": "#/$defs/PodResources",
-          "description": "Resources are the resources used by the persistent path init container"
+          "description": "Resources are the resources used by the persistent path init container."
         }
       },
       "type": "object",
@@ -1301,22 +1326,22 @@
             "purge",
             ".*"
           ],
-          "description": "Name of the pipeline, will be filled automatically"
+          "description": "Name of the pipeline, will be filled automatically."
         },
         "run": {
           "type": "string",
-          "description": "Run is the actual shell command that should be executed during this pipeline"
+          "description": "Run is the actual shell command that should be executed during this pipeline."
         },
         "flags": {
           "items": {
             "$ref": "#/$defs/PipelineFlag"
           },
           "type": "array",
-          "description": "Flags are extra flags that can be used for running the pipeline via\ndevspace run-pipeline."
+          "description": "Flags are extra flags that can be used for running the pipeline via devspace run-pipeline."
         },
         "continueOnError": {
           "type": "boolean",
-          "description": "ContinueOnError will not fail the whole job and pipeline if\na call within the step fails."
+          "description": "ContinueOnError will not fail the whole job and pipeline if a call within the step fails."
         }
       },
       "type": "object",
@@ -1326,11 +1351,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name is the name of the flag"
+          "description": "Name is the name of the flag."
         },
         "short": {
           "type": "string",
-          "description": "Short is optional and is the shorthand name for this flag. E.g. 'g' converts to '-g'"
+          "description": "Short is optional and is the shorthand name for this flag. E.g. 'g' converts to '-g'."
         },
         "type": {
           "type": "string",
@@ -1340,14 +1365,14 @@
             "string",
             "stringArray"
           ],
-          "description": "Type is the type of the flag. Defaults to `bool`"
+          "description": "Type is the type of the flag. Defaults to 'bool'."
         },
         "default": {
-          "description": "Default is the default value for this flag"
+          "description": "Default is the default value for this flag."
         },
         "description": {
           "type": "string",
-          "description": "Description is the description as shown in `devspace run-pipeline my-pipe -h`"
+          "description": "Description is the description as shown in 'devspace run-pipeline my-pipe -h'."
         }
       },
       "type": "object",
@@ -1362,7 +1387,7 @@
             }
           },
           "type": "object",
-          "description": "Requests are the requests part of the resources"
+          "description": "Requests are the requests part of the resources."
         },
         "limits": {
           "patternProperties": {
@@ -1371,7 +1396,7 @@
             }
           },
           "type": "object",
-          "description": "Limits are the limits part of the resources"
+          "description": "Limits are the limits part of the resources."
         }
       },
       "type": "object",
@@ -1381,11 +1406,11 @@
       "properties": {
         "port": {
           "type": "string",
-          "description": "Port is a port mapping that maps the localPort:remotePort. So if\nyou port forward the remote port will be available at the local port.\nIf you do reverse port forwarding, the local port will be available\nat the remote port in the container. If only port is specified, local and\nremote port are the same."
+          "description": "Port is a port mapping that maps the localPort:remotePort."
         },
         "bindAddress": {
           "type": "string",
-          "description": "BindAddress is the address DevSpace should listen on. Optional and defaults\nto localhost."
+          "description": "BindAddress is the address DevSpace should listen on. Optional and defaults to localhost."
         }
       },
       "type": "object",
@@ -1398,19 +1423,19 @@
       "properties": {
         "gitCredentials": {
           "type": "boolean",
-          "description": "GitCredentials configures a git credentials helper inside the container that proxies local git credentials"
+          "description": "GitCredentials configures a git credentials helper inside the container that proxies local git credentials."
         },
         "command": {
           "type": "string",
-          "description": "Command is the name of the command that should be available in the remote container. DevSpace\nwill create a small script for that inside the container that redirect command execution to\nthe local computer."
+          "description": "Command is the name of the command that should be available in the remote container. DevSpace will create a small script for that inside the container that redirect command execution to the local computer."
         },
         "localCommand": {
           "type": "string",
-          "description": "LocalCommand can be used to run a different command than specified via the command option. By\ndefault, this will be assumed to be the same as command."
+          "description": "LocalCommand can be used to run a different command than specified via the command option. By default, this will be assumed to be the same as command."
         },
         "skipContainerEnv": {
           "type": "boolean",
-          "description": "SkipContainerEnv will not forward the container environment variables to the local command"
+          "description": "SkipContainerEnv will not forward the container environment variables to the local command."
         },
         "env": {
           "patternProperties": {
@@ -1419,7 +1444,7 @@
             }
           },
           "type": "object",
-          "description": "Env are extra environment variables to set for the command"
+          "description": "Env are extra environment variables to set for the command."
         }
       },
       "type": "object"
@@ -1428,34 +1453,34 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name is the pull secret name to deploy"
+          "description": "Name is the pull secret name to deploy."
         },
         "registry": {
           "type": "string",
-          "description": "The registry to create the image pull secret for.\nEmpty string == docker hub\ne.g. gcr.io"
+          "description": "The registry to create the image pull secret for."
         },
         "username": {
           "type": "string",
-          "description": "The username of the registry. If this is empty, devspace will try\nto receive the auth data from the local docker"
+          "description": "The username of the registry. If this is empty, devspace will try to receive the auth data from the local docker."
         },
         "password": {
           "type": "string",
-          "description": "The password to use for the registry. If this is empty, devspace will\ntry to receive the auth data from the local docker"
+          "description": "The password to use for the registry. If this is empty, devspace will try to receive the auth data from the local docker."
         },
         "email": {
           "type": "string",
-          "description": "The optional email to use"
+          "description": "The optional email to use."
         },
         "secret": {
           "type": "string",
-          "description": "The secret to create"
+          "description": "The secret to create."
         },
         "serviceAccounts": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "The service account to add the secret to"
+          "description": "The service account to add the secret to."
         }
       },
       "type": "object",
@@ -1465,22 +1490,22 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name is the name of the command that should be installed"
+          "description": "Name is the name of the command that should be installed."
         },
         "versionArgs": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "VersionArgs are the arguments to retrieve the version of the command"
+          "description": "VersionArgs are the arguments to retrieve the version of the command."
         },
         "versionRegEx": {
           "type": "string",
-          "description": "VersionRegEx is the regex that is used to parse the version"
+          "description": "VersionRegEx is the regex that is used to parse the version."
         },
         "version": {
           "type": "string",
-          "description": "Version constraint of the command that should be installed"
+          "description": "Version constraint of the command that should be installed."
         }
       },
       "type": "object",
@@ -1492,21 +1517,21 @@
       "properties": {
         "devspace": {
           "type": "string",
-          "description": "DevSpace specifies the DevSpace version constraint that is needed to use this config"
+          "description": "DevSpace specifies the DevSpace version constraint that is needed to use this config."
         },
         "commands": {
           "items": {
             "$ref": "#/$defs/RequireCommand"
           },
           "type": "array",
-          "description": "Commands specifies an array of commands that need to be installed locally to use this config"
+          "description": "Commands specifies an array of commands that need to be installed locally to use this config."
         },
         "plugins": {
           "items": {
             "$ref": "#/$defs/RequirePlugin"
           },
           "type": "array",
-          "description": "Plugins specifies an array of plugins that need to be installed locally"
+          "description": "Plugins specifies an array of plugins that need to be installed locally."
         }
       },
       "type": "object"
@@ -1515,11 +1540,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name of the plugin that should be installed"
+          "description": "Name of the plugin that should be installed."
         },
         "version": {
           "type": "string",
-          "description": "Version constraint of the plugin that should be installed"
+          "description": "Version constraint of the plugin that should be installed."
         }
       },
       "type": "object",
@@ -1532,11 +1557,11 @@
       "properties": {
         "path": {
           "type": "string",
-          "description": "Path defines the path to the restart helper that might be used if certain config\noptions are enabled"
+          "description": "Path defines the path to the restart helper that might be used if certain config options are enabled."
         },
         "inject": {
           "type": "boolean",
-          "description": "Inject signals DevSpace to inject the restart helper"
+          "description": "Inject signals DevSpace to inject the restart helper."
         }
       },
       "type": "object"
@@ -1545,19 +1570,19 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enabled can be used to enable the ssh server within the container. By default,\nDevSpace will generate the required keys and create an entry in your ~/.ssh/config\nfor this container that can be used via `ssh dev-config-name.dev-project-name.devspace`"
+          "description": "Enabled can be used to enable the ssh server within the container. By default,\tDevSpace will generate the required keys and create an entry in your ~/.ssh/config for this container that can be used via 'ssh dev-config-name.dev-project-name.devspace'."
         },
         "localHostname": {
           "type": "string",
-          "description": "LocalHostname is the local ssh host to write to the ~/.ssh/config"
+          "description": "LocalHostname is the local ssh host to write to the ~/.ssh/config."
         },
         "localPort": {
           "type": "integer",
-          "description": "LocalPort is the local port to forward from, if empty will be random"
+          "description": "LocalPort is the local port to forward from, if empty will be random."
         },
         "remoteAddress": {
           "type": "string",
-          "description": "RemoteAddress is the address to listen to inside the container"
+          "description": "RemoteAddress is the address to listen to inside the container."
         }
       },
       "type": "object"
@@ -1566,14 +1591,14 @@
       "properties": {
         "command": {
           "type": "string",
-          "description": "Command is the command that should get executed"
+          "description": "Command is the command that should get executed."
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args are arguments that should get appended to the command"
+          "description": "Args are arguments that should get appended to the command."
         }
       },
       "type": "object",
@@ -1581,86 +1606,103 @@
     },
     "SyncConfig": {
       "properties": {
-        "printLogs": {
-          "type": "boolean",
-          "description": "PrintLogs defines if sync logs should be displayed on the terminal"
-        },
-        "startContainer": {
-          "type": "boolean",
-          "description": "StartContainer will start the container after initial sync is done. This will\ninject a devspacehelper into the pod and you need to define dev.*.command for\nthis to work."
-        },
         "path": {
           "type": "string",
-          "description": "Path is the path to sync. This can be defined in the form localPath:remotePath. You can also use '.'\nto specify either the local or remote working directory. This is valid for example: .:."
+          "description": "Path is the path to sync. This can be defined in the form localPath:remotePath. You can also use '.' to specify either the local or remote working directory. This is valid for example: .:."
         },
         "excludePaths": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "ExcludePaths is an array of file patterns in gitignore format to exclude."
+          "description": "ExcludePaths is an array of file patterns in gitignore format to exclude.",
+          "group": "exclude",
+          "group_name": "Exclude Paths From File Sync"
         },
         "excludeFile": {
           "type": "string",
-          "description": "ExcludeFile loads the file patterns to exclude from a file."
+          "description": "ExcludeFile loads the file patterns to exclude from a file.",
+          "group": "exclude"
         },
         "downloadExcludePaths": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "DownloadExcludePaths is an array of file patterns in gitignore format to exclude from downloading"
+          "description": "DownloadExcludePaths is an array of file patterns in gitignore format to exclude from downloading.",
+          "group": "exclude"
         },
         "downloadExcludeFile": {
           "type": "string",
-          "description": "DownloadExcludeFile loads the file patterns to exclude from downloading from a file."
+          "description": "DownloadExcludeFile loads the file patterns to exclude from downloading from a file.",
+          "group": "exclude"
         },
         "uploadExcludePaths": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "UploadExcludePaths is an array of file patterns in gitignore format to exclude from uploading"
+          "description": "UploadExcludePaths is an array of file patterns in gitignore format to exclude from uploading.",
+          "group": "exclude"
         },
         "uploadExcludeFile": {
           "type": "string",
-          "description": "UploadExcludeFile loads the file patterns to exclude from uploading from a file."
+          "description": "UploadExcludeFile loads the file patterns to exclude from uploading from a file.",
+          "group": "exclude"
         },
-        "initialSync": {
-          "type": "string",
-          "description": "InitialSync defines the initial sync strategy to use when this sync starts. Defaults to mirrorLocal"
-        },
-        "initialSyncCompareBy": {
-          "type": "string",
-          "description": "InitialSyncCompareBy defines if the sync should only compare by the given type. Either mtime or size are possible"
-        },
-        "disableDownload": {
+        "startContainer": {
           "type": "boolean",
-          "description": "DisableDownload will disable downloading completely"
-        },
-        "disableUpload": {
-          "type": "boolean",
-          "description": "DisableUpload will disable uploading completely"
-        },
-        "noWatch": {
-          "type": "boolean",
-          "description": "NoWatch will terminate the sync after the initial sync is done"
-        },
-        "polling": {
-          "type": "boolean",
-          "description": "Polling will tell the remote container to use polling instead of inotify"
-        },
-        "waitInitialSync": {
-          "type": "boolean",
-          "description": "WaitInitialSync can be used to tell DevSpace to not wait until the initial sync is done"
-        },
-        "bandwidthLimits": {
-          "$ref": "#/$defs/BandwidthLimits",
-          "description": "BandwidthLimits can be used to limit the amount of bytes that are transferred by DevSpace with this\nsync configuration"
+          "description": "StartContainer will start the container after initial sync is done. This will inject a devspacehelper into the pod and you need to define dev.*.command for this to work.",
+          "group": "actions",
+          "group_name": "Sync-Triggered Actions"
         },
         "onUpload": {
           "$ref": "#/$defs/SyncOnUpload",
-          "description": "OnUpload can be used to execute certain commands on uploading either in the container or locally as\nwell as restart the container after a file changed has happened."
+          "description": "OnUpload can be used to execute certain commands on uploading either in the container or locally as well as restart the container after a file changed has happened.",
+          "group": "actions"
+        },
+        "initialSync": {
+          "type": "string",
+          "description": "InitialSync defines the initial sync strategy to use when this sync starts. Defaults to mirrorLocal.",
+          "group": "initial_sync",
+          "group_name": "Initial Sync"
+        },
+        "waitInitialSync": {
+          "type": "boolean",
+          "description": "WaitInitialSync can be used to tell DevSpace to not wait until the initial sync is done.",
+          "group": "initial_sync"
+        },
+        "initialSyncCompareBy": {
+          "type": "string",
+          "description": "InitialSyncCompareBy defines if the sync should only compare by the given type. Either mtime or size are possible.",
+          "group": "initial_sync"
+        },
+        "disableDownload": {
+          "type": "boolean",
+          "description": "DisableDownload will disable downloading completely.",
+          "group": "one_direction",
+          "group_name": "One-Directional Sync"
+        },
+        "disableUpload": {
+          "type": "boolean",
+          "description": "DisableUpload will disable uploading completely.",
+          "group": "one_direction"
+        },
+        "bandwidthLimits": {
+          "$ref": "#/$defs/BandwidthLimits",
+          "description": "BandwidthLimits can be used to limit the amount of bytes that are transferred by DevSpace with this sync configuration."
+        },
+        "polling": {
+          "type": "boolean",
+          "description": "Polling will tell the remote container to use polling instead of inotify."
+        },
+        "noWatch": {
+          "type": "boolean",
+          "description": "NoWatch will terminate the sync after the initial sync is done."
+        },
+        "printLogs": {
+          "type": "boolean",
+          "description": "PrintLogs defines if sync logs should be displayed on the terminal."
         }
       },
       "type": "object",
@@ -1670,33 +1712,33 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name is the name to show for this exec in the logs"
+          "description": "Name is the name to show for this exec in the logs."
         },
         "command": {
           "type": "string",
-          "description": "Command is the command to execute. If no args are specified this is executed\nwithin a shell."
+          "description": "Command is the command to execute. If no args are specified this is executed within a shell."
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args are arguments to pass to the command"
+          "description": "Args are arguments to pass to the command."
         },
         "failOnError": {
           "type": "boolean",
-          "description": "FailOnError specifies if the sync should fail if the command fails"
+          "description": "FailOnError specifies if the sync should fail if the command fails."
         },
         "local": {
           "type": "boolean",
-          "description": "Local specifies if the command should be executed locally instead of within the\ncontainer"
+          "description": "Local specifies if the command should be executed locally instead of within the container."
         },
         "onChange": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "OnChange is an array of file patterns that trigger this command execution"
+          "description": "OnChange is an array of file patterns that trigger this command execution."
         }
       },
       "type": "object"
@@ -1705,26 +1747,26 @@
       "properties": {
         "command": {
           "type": "string",
-          "description": "Command is the command that should get executed"
+          "description": "Command is the command that should get executed."
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args are arguments that should get appended to the command"
+          "description": "Args are arguments that should get appended to the command."
         },
         "onFileChange": {
           "$ref": "#/$defs/SyncCommand",
-          "description": "OnFileChange is invoked after every file change. DevSpace will wait for the command to successfully finish\nand then will continue to upload files \u0026 create folders"
+          "description": "OnFileChange is invoked after every file change. DevSpace will wait for the command to successfully finish and then will continue to upload files \u0026 create folders."
         },
         "onDirCreate": {
           "$ref": "#/$defs/SyncCommand",
-          "description": "OnDirCreate is invoked after every directory that is created. DevSpace will wait for the command to successfully finish\nand then will continue to upload files \u0026 create folders"
+          "description": "OnDirCreate is invoked after every directory that is created. DevSpace will wait for the command to successfully finish and then will continue to upload files \u0026 create folders."
         },
         "onBatch": {
           "$ref": "#/$defs/SyncCommand",
-          "description": "OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish\nand then will continue execution. This is useful for commands\nthat shouldn't be executed after every single change that may take a little bit longer like recompiling etc."
+          "description": "OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish and then will continue execution. This is useful for commands that shouldn't be executed after every single change that may take a little bit longer like recompiling etc."
         }
       },
       "type": "object",
@@ -1734,18 +1776,18 @@
       "properties": {
         "restartContainer": {
           "type": "boolean",
-          "description": "If true restart container will try to restart the container after a change has been made. Make sure that\nimages.*.injectRestartHelper is enabled for the container that should be restarted or the devspace-restart-helper\nscript is present in the container root folder."
+          "description": "If true restart container will try to restart the container after a change has been made. Make sure that images.*.injectRestartHelper is enabled for the container that should be restarted or the devspace-restart-helper script is present in the container root folder."
         },
         "exec": {
           "items": {
             "$ref": "#/$defs/SyncExec"
           },
           "type": "array",
-          "description": "Exec will execute the given commands in order after a sync operation"
+          "description": "Exec will execute the given commands in order after a sync operation."
         },
         "execRemote": {
           "$ref": "#/$defs/SyncExecCommand",
-          "description": "Defines what commands should be executed on the container side if a change is uploaded and applied in the target\ncontainer"
+          "description": "Defines what commands should be executed on the container side if a change is uploaded and applied in the target container."
         }
       },
       "type": "object",
@@ -1755,7 +1797,7 @@
       "properties": {
         "command": {
           "type": "string",
-          "description": "Command is the command that should be executed on terminal start.\nThis command is executed within a shell."
+          "description": "Command is the command that should be executed on terminal start. This command is executed within a shell."
         },
         "workDir": {
           "type": "string",
@@ -1763,15 +1805,15 @@
         },
         "enabled": {
           "type": "boolean",
-          "description": "If enabled is true, DevSpace will use the terminal. Can be also\nused to disable the terminal if set to false. DevSpace makes sure\nthat within a pipeline only one dev configuration can open a terminal\nat a time and subsequent dev terminals will fail."
+          "description": " If enabled is true, DevSpace will use the terminal. It can be also used to disable the terminal if set to false. DevSpace makes sure that within a pipeline only one dev configuration can open a terminal at a time and subsequent dev terminals will fail."
         },
         "disableReplace": {
           "type": "boolean",
-          "description": "DisableReplace tells DevSpace to not replace the pod or adjust its settings\nto make sure the pod is sleeping when opening a terminal"
+          "description": "DisableReplace tells DevSpace to not replace the pod or adjust its settings to make sure the pod is sleeping when opening a terminal."
         },
         "disableScreen": {
           "type": "boolean",
-          "description": "DisableScreen will disable screen which is used by DevSpace by default to preserve\nsessions if connections interrupt or the session is lost."
+          "description": "DisableScreen will disable screen which is used by DevSpace by default to preserve sessions if connections interrupt or the session is lost."
         }
       },
       "type": "object",
@@ -1808,7 +1850,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name is the name of the variable"
+          "description": "Name is the name of the variable."
         },
         "value": {
           "oneOf": [
@@ -1822,11 +1864,15 @@
               "type": "boolean"
             }
           ],
-          "description": "Value is a shortcut for using source: none and default: my-value"
+          "description": "Value is a shortcut for using source: none and default: my-value.",
+          "group": "static",
+          "group_name": "Static Value"
         },
         "question": {
           "type": "string",
-          "description": "Question can be used to define a custom question if the variable was not yet used"
+          "description": "Question can be used to define a custom question if the variable was not yet used.",
+          "group": "question",
+          "group_name": "Value From Input (Question)"
         },
         "default": {
           "oneOf": [
@@ -1840,52 +1886,62 @@
               "type": "boolean"
             }
           ],
-          "description": "Default is the default value the variable should have if not set by the user"
+          "description": "Default is the default value the variable should have if not set by the user.",
+          "group": "question"
         },
         "options": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Options are options that can be selected when the variable question is asked"
+          "description": "Options are options that can be selected when the variable question is asked.",
+          "group": "question"
         },
         "password": {
           "type": "boolean",
-          "description": "Password signals that this variable should not be visible if entered"
+          "description": "Password signals that this variable should not be visible if entered.",
+          "group": "question"
         },
         "validationPattern": {
           "type": "string",
-          "description": "ValidationPattern can be used to verify the user input"
+          "description": "ValidationPattern can be used to verify the user input.",
+          "group": "question"
         },
         "validationMessage": {
           "type": "string",
-          "description": "ValidationMessage can be used to tell the user the format of the variable value"
+          "description": "ValidationMessage can be used to tell the user the format of the variable value.",
+          "group": "question"
+        },
+        "noCache": {
+          "type": "boolean",
+          "description": "NoCache can be used to prompt the user on every run for this variable.",
+          "group": "question"
         },
         "command": {
           "type": "string",
-          "description": "Command is the command how to retrieve the variable. If args is omitted, command is parsed as a shell\ncommand."
+          "description": "Command is the command how to retrieve the variable. If args is omitted, command is parsed as a shell command.",
+          "group": "execution",
+          "group_name": "Value From Command"
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args are optional args that will be used for the command"
+          "description": "Args are optional args that will be used for the command.",
+          "group": "execution"
         },
         "commands": {
           "items": {
             "$ref": "#/$defs/VariableCommand"
           },
           "type": "array",
-          "description": "Commands are additional commands that can be used to run a different command on a different operating\nsystem."
-        },
-        "noCache": {
-          "type": "boolean",
-          "description": "NoCache can be used to prompt the user on every run for this variable"
+          "description": "Commands are additional commands that can be used to run a different command on a different operating system.",
+          "group": "execution"
         },
         "alwaysResolve": {
           "type": "boolean",
-          "description": "AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere"
+          "description": "AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere."
         },
         "source": {
           "type": "string",
@@ -1896,7 +1952,7 @@
             "command",
             "none"
           ],
-          "description": "Source defines where the variable should be taken from"
+          "description": "Source defines where the variable should be taken from."
         }
       },
       "type": "object",
@@ -1909,18 +1965,18 @@
       "properties": {
         "os": {
           "type": "string",
-          "description": "OperatingSystem is optional and defines the operating system this\ncommand should be executed on"
+          "description": "OperatingSystem is optional and defines the operating system this command should be executed on."
         },
         "command": {
           "type": "string",
-          "description": "Command is the command to use to retrieve the value for this variable. If no\nargs are specified the command is run within a pseudo shell."
+          "description": "Command is the command to use to retrieve the value for this variable. If no args are specified the command is run within a pseudo shell."
         },
         "args": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Args are optional arguments for the command"
+          "description": "Args are optional arguments for the command."
         }
       },
       "type": "object"
@@ -1929,18 +1985,18 @@
   "properties": {
     "version": {
       "type": "string",
-      "description": "Version holds the config version. DevSpace will always convert older configs to the current latest\nconfig version, which makes it possible to use the newest DevSpace version also with older config\nversions."
+      "description": "Version holds the config version. DevSpace will always convert older configs to the current latest config version, which makes it possible to use the newest DevSpace version also with older config versions."
     },
     "name": {
       "type": "string",
-      "description": "Name specifies the name of the DevSpace project and uniquely identifies a project.\nDevSpace will not allow multiple active projects with the same name in the same Kubernetes namespace."
+      "description": "Name specifies the name of the DevSpace project and uniquely identifies a project."
     },
     "imports": {
       "items": {
         "$ref": "#/$defs/Import"
       },
       "type": "array",
-      "description": "Imports merges specified config files into this one. This is very useful to split up your DevSpace configuration\ninto multiple files and reuse those through git, a remote url or common local path."
+      "description": "Imports merges specified config files into this one. This is very useful to split up your DevSpace configuration into multiple files and reuse those through git, a remote url or common local path."
     },
     "functions": {
       "patternProperties": {
@@ -1949,7 +2005,7 @@
         }
       },
       "type": "object",
-      "description": "Functions are POSIX functions that can be used within pipelines. Those functions can also be imported by\nimports."
+      "description": "Functions are POSIX functions that can be used within pipelines. Those functions can also be imported by imports."
     },
     "pipelines": {
       "patternProperties": {
@@ -1958,7 +2014,7 @@
         }
       },
       "type": "object",
-      "description": "Pipelines are the work blocks that DevSpace should execute when devspace dev, devspace build, devspace deploy or devspace purge\nis called. Pipelines are defined through a special POSIX script that allows you to use special commands\nsuch as create_deployments, start_dev, build_images etc. to signal DevSpace you want to execute\na specific functionality. The pipelines dev, build, deploy and purge are special and will override\nthe default functionality of the respective command if defined. All other pipelines can be either run\nvia the devspace run-pipeline command or used within another pipeline through run_pipelines."
+      "description": " Pipelines are the work blocks that DevSpace should execute when devspace dev, devspace build, devspace deploy or devspace purge is called."
     },
     "images": {
       "patternProperties": {
@@ -1967,7 +2023,7 @@
         }
       },
       "type": "object",
-      "description": "Images holds configuration of how DevSpace should build images. By default, DevSpace will build all defined images.\nIf you are using a custom pipeline, you can dynamically define which image is built at which time during the\nexecution."
+      "description": "Images holds configuration of how DevSpace should build images. By default, DevSpace will build all defined images."
     },
     "deployments": {
       "patternProperties": {
@@ -1976,7 +2032,7 @@
         }
       },
       "type": "object",
-      "description": "Deployments holds configuration of how DevSpace should deploy resources to Kubernetes. By default, DevSpace will deploy all defined deployments.\nIf you are using a custom pipeline, you can dynamically define which deployment is deployed at which time during the\nexecution."
+      "description": "Deployments holds configuration of how DevSpace should deploy resources to Kubernetes. By default, DevSpace will deploy all defined deployments."
     },
     "dev": {
       "patternProperties": {
@@ -1985,7 +2041,7 @@
         }
       },
       "type": "object",
-      "description": "Dev holds development configuration. Each dev configuration targets a single pod and enables certain dev services on that pod\nor even rewrites it if certain changes are requested, such as adding an environment variable or changing the entrypoint.\nDev allows you to:\n- sync local folders to the Kubernetes pod\n- port forward remote ports to your local computer\n- forward local ports into the Kubernetes pod\n- configure an ssh tunnel to the Kubernetes pod\n- proxy local commands to the container\n- restart the container on file changes"
+      "description": "Dev holds development configuration. Each dev configuration targets a single pod and enables certain dev services on that pod or even rewrites it if certain changes are requested, such as adding an environment variable or changing the entrypoint."
     },
     "vars": {
       "patternProperties": {
@@ -1994,16 +2050,7 @@
         }
       },
       "type": "object",
-      "description": "Vars are config variables that can be used inside other config sections to replace certain values dynamically"
-    },
-    "pullSecrets": {
-      "patternProperties": {
-        ".*": {
-          "$ref": "#/$defs/PullSecretConfig"
-        }
-      },
-      "type": "object",
-      "description": "PullSecrets are image pull secrets that will be created by devspace in the target namespace\nduring devspace dev or devspace deploy. DevSpace will merge all defined pull secrets into a single\none or the one specified."
+      "description": "Vars are config variables that can be used inside other config sections to replace certain values dynamically."
     },
     "commands": {
       "patternProperties": {
@@ -2012,7 +2059,7 @@
         }
       },
       "type": "object",
-      "description": "Commands are custom commands that can be executed via 'devspace run COMMAND'. These commands are run within a pseudo bash\nthat also allows executing special commands such as run_watch or is_equal."
+      "description": "Commands are custom commands that can be executed via 'devspace run COMMAND'. These commands are run within a pseudo bash that also allows executing special commands such as run_watch or is_equal."
     },
     "dependencies": {
       "patternProperties": {
@@ -2021,11 +2068,20 @@
         }
       },
       "type": "object",
-      "description": "Dependencies are sub devspace projects that lie in a local folder or remote git repository that can be executed\nfrom within the pipeline. In contrast to imports, these projects pose as separate fully functional DevSpace projects\nthat typically lie including source code in a different folder and can be used to compose a full microservice\napplication that will be deployed by DevSpace. Each dependency name can only be used once and if you want to use\nthe same project multiple times, make sure to use a different name for each of those instances."
+      "description": "Dependencies are sub devspace projects that lie in a local folder or remote git repository that can be executed from within the pipeline."
+    },
+    "pullSecrets": {
+      "patternProperties": {
+        ".*": {
+          "$ref": "#/$defs/PullSecretConfig"
+        }
+      },
+      "type": "object",
+      "description": "PullSecrets are image pull secrets that will be created by devspace in the target namespace during devspace dev or devspace deploy. DevSpace will merge all defined pull secrets into a single one or the one specified."
     },
     "require": {
       "$ref": "#/$defs/RequireConfig",
-      "description": "Require defines what DevSpace, plugins and command versions are required to use this config and if a condition is not\nfulfilled, DevSpace will fail."
+      "description": "Require defines what DevSpace, plugins and command versions are required to use this config and if a condition is not fulfilled, DevSpace will fail."
     }
   },
   "type": "object",

@@ -197,7 +197,7 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx devspacecontext.Context, docke
 	// if docker is not present then skip the image availability check
 	// and return (true, nil) to skip image rebuild
 	// if docker is present then do the image availability check
-	err := command.Command(ctx.Context(), ctx.WorkingDir(), nil, nil, nil, "docker", "buildx")
+	err := command.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), nil, nil, nil, "docker", "buildx")
 	if err != nil {
 		return true, nil
 	}

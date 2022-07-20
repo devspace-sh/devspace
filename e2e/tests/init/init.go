@@ -2,7 +2,6 @@ package init
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -59,7 +58,6 @@ var _ = DevSpaceDescribe("init", func() {
 				return "Skip / I don't know", nil
 			}
 
-			fmt.Println(params.DefaultValue)
 			return params.DefaultValue, nil
 		})
 

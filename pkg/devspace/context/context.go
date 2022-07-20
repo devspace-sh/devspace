@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/pkg/errors"
+	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path"
 	"path/filepath"
@@ -31,7 +32,7 @@ func NewContext(ctx context2.Context, variables map[string]interface{}, log log.
 		context:    ctx,
 		workingDir: workingDir,
 		runID:      strings.ToLower(randutil.GenerateRandomString(12)),
-		environ:    env.NewVariableEnvProvider(env.ConvertMap(variables)),
+		environ:    env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), env.ConvertMap(variables)),
 		log:        log,
 	}
 }
@@ -62,7 +63,7 @@ type Context interface {
 	RunID() string
 
 	// Environ is the environment for command execution
-	Environ() env.Provider
+	Environ() expand.Environ
 
 	// Log is the currently used logger
 	Log() log.Logger
@@ -89,7 +90,7 @@ type Context interface {
 	WithConfig(conf config.Config) Context
 	WithDependencies(dependencies []types.Dependency) Context
 	WithContext(ctx context2.Context) Context
-	WithEnviron(environ env.Provider) Context
+	WithEnviron(environ expand.Environ) Context
 	WithLogger(logger log.Logger) Context
 	AsDependency(dependency types.Dependency) Context
 }
@@ -118,13 +119,13 @@ type context struct {
 	kubeClient kubectl.Client
 
 	// environ is the environment provider used for executing a command
-	environ env.Provider
+	environ expand.Environ
 
 	// log is the currently used logger
 	log log.Logger
 }
 
-func (c *context) Environ() env.Provider {
+func (c *context) Environ() expand.Environ {
 	return c.environ
 }
 
@@ -166,7 +167,7 @@ func (c *context) IsDone() bool {
 	return false
 }
 
-func (c *context) WithEnviron(environ env.Provider) Context {
+func (c *context) WithEnviron(environ expand.Environ) Context {
 	if c == nil {
 		return nil
 	}
@@ -275,6 +276,6 @@ func (c *context) AsDependency(dependency types.Dependency) Context {
 	n.kubeClient = dependency.KubeClient()
 	n.config = dependency.Config()
 	n.dependencies = dependency.Children()
-	n.environ = env.NewVariableEnvProvider(env.ConvertMap(n.config.Variables()))
+	n.environ = env.NewVariableEnvProvider(c.environ, env.ConvertMap(n.config.Variables()))
 	return &n
 }

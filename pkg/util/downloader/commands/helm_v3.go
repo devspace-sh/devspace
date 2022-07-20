@@ -8,6 +8,8 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
+	"mvdan.cc/sh/v3/expand"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -52,7 +54,7 @@ func (h *helmv3) DownloadURL() string {
 }
 
 func (h *helmv3) IsValid(ctx context.Context, path string) (bool, error) {
-	out, err := command.Output(ctx, "", path, "version")
+	out, err := command.Output(ctx, "", expand.ListEnviron(os.Environ()...), path, "version")
 	if err != nil {
 		return false, nil
 	}
