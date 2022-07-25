@@ -108,6 +108,12 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 
 	// Set config root
 	configOptions := cmd.ToConfigOptions()
+	configOptions.Vars = append([]string{
+		"devspace.namespace=" + cmd.Namespace,
+		"DEVSPACE_NAMESPACE=" + cmd.Namespace,
+		"devspace.context=" + cmd.KubeContext,
+		"DEVSPACE_CONTEXT=" + cmd.KubeContext,
+	}, configOptions.Vars...)
 	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
 	if err != nil {
 		return err
