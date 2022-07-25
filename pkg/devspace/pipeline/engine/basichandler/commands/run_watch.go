@@ -21,7 +21,9 @@ import (
 type RunWatchOptions struct {
 	FailOnError bool `long:"fail-on-error" description:"If true the command will fail on an error while running the sub command"`
 
-	Paths []string `long:"path" short:"p" description:"The paths to watch. Can be patterns in the form of ./**/my-file.txt"`
+	SkipInitial bool     `long:"skip-initial" description:"If true will not execute the command immediately."`
+	Silent      bool     `long:"silent" description:"If true will not print any warning about restarting the command."`
+	Paths       []string `long:"path" short:"p" description:"The paths to watch. Can be patterns in the form of ./**/my-file.txt"`
 }
 
 func RunWatch(ctx context.Context, args []string, handler types2.ExecHandler, log log.Logger) error {
@@ -37,15 +39,21 @@ func RunWatch(ctx context.Context, args []string, handler types2.ExecHandler, lo
 		return fmt.Errorf("usage: run_watch --path MY_PATH -- my_command")
 	}
 
-	w := &watcher{}
-	return w.Watch(ctx, options.Paths, options.FailOnError, func(ctx context.Context) error {
+	w := &watcher{
+		options: *options,
+	}
+	return w.Watch(ctx, func(ctx context.Context) error {
 		return handler.ExecHandler(ctx, args)
 	}, log)
 }
 
-type watcher struct{}
+type watcher struct {
+	options RunWatchOptions
+}
 
-func (w *watcher) Watch(ctx context.Context, patterns []string, failOnError bool, action func(ctx context.Context) error, log log.Logger) error {
+func (w *watcher) Watch(ctx context.Context, action func(ctx context.Context) error, log log.Logger) error {
+	patterns := w.options.Paths
+
 	// prepare patterns
 	for i, p := range patterns {
 		patterns[i] = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(p), "./"), "/")
@@ -53,7 +61,7 @@ func (w *watcher) Watch(ctx context.Context, patterns []string, failOnError bool
 
 	// get folders from patterns
 	pathsToWatch := map[string]bool{}
-	for _, p := range patterns {
+	for i, p := range patterns {
 		patternsSplitted := strings.Split(filepath.ToSlash(p), "/")
 		lastIndex := len(patternsSplitted) - 1
 		for i, s := range patternsSplitted {
@@ -66,6 +74,8 @@ func (w *watcher) Watch(ctx context.Context, patterns []string, failOnError bool
 		targetPath := strings.Join(patternsSplitted[:lastIndex], "/")
 		if targetPath == "" {
 			targetPath = "."
+		} else {
+			patterns[i] = strings.TrimPrefix(patterns[i], targetPath+"/")
 		}
 
 		absolutePath, err := filepath.Abs(filepath.FromSlash(targetPath))
@@ -131,12 +141,18 @@ func (w *watcher) Watch(ctx context.Context, patterns []string, failOnError bool
 	}
 
 	// start command
-	return w.handleCommand(ctx, patterns, failOnError, action, globalChannel, log)
+	return w.handleCommand(ctx, patterns, action, globalChannel)
 }
 
-func (w *watcher) handleCommand(ctx context.Context, patterns []string, failOnError bool, action func(ctx context.Context) error, events chan string, log log.Logger) error {
+func (w *watcher) handleCommand(ctx context.Context, patterns []string, action func(ctx context.Context) error, events chan string) error {
 	hc := interp.HandlerCtx(ctx)
-	t := w.startCommand(ctx, action)
+	var t *tomb.Tomb
+	if !w.options.SkipInitial {
+		t = w.startCommand(ctx, action)
+	} else {
+		t = &tomb.Tomb{}
+		t.Go(func() error { return nil })
+	}
 	numEvents := 0
 	lastChange := ""
 	for {
@@ -158,7 +174,9 @@ func (w *watcher) handleCommand(ctx context.Context, patterns []string, failOnEr
 		case <-time.After(time.Second * 2):
 			if numEvents > 0 {
 				// kill application and wait for exit
-				_, _ = hc.Stderr.Write([]byte(fmt.Sprintf("\n%s Restarting command because '%s' has changed...\n\n", ansi.Color("warn", "red+b"), lastChange)))
+				if !w.options.Silent {
+					_, _ = hc.Stderr.Write([]byte(fmt.Sprintf("\n%s Restarting command because '%s' has changed...\n\n", ansi.Color("warn", "red+b"), lastChange)))
+				}
 				t.Kill(nil)
 				select {
 				case <-ctx.Done():
@@ -174,7 +192,7 @@ func (w *watcher) handleCommand(ctx context.Context, patterns []string, failOnEr
 		}
 
 		// check if terminated
-		if failOnError && t.Terminated() && t.Err() != nil {
+		if w.options.FailOnError && t.Terminated() && t.Err() != nil {
 			return t.Err()
 		}
 	}
