@@ -21,9 +21,11 @@ import (
 type RunWatchOptions struct {
 	FailOnError bool `long:"fail-on-error" description:"If true the command will fail on an error while running the sub command"`
 
-	SkipInitial bool     `long:"skip-initial" description:"If true will not execute the command immediately."`
-	Silent      bool     `long:"silent" description:"If true will not print any warning about restarting the command."`
-	Paths       []string `long:"path" short:"p" description:"The paths to watch. Can be patterns in the form of ./**/my-file.txt"`
+	SkipInitial   bool     `long:"skip-initial" description:"If true will not execute the command immediately."`
+	Silent        bool     `long:"silent" description:"If true will not print any warning about restarting the command."`
+	SkipAndSilent bool     `long:"skip-and-silent" short:"s" description:"If enabled will not print when the command is restarted and not execute the command initially."`
+	Exclude       []string `long:"exclude" short:"e" description:"The paths to ignore. Can be patterns in the form of ./**/my-file.txt"`
+	Paths         []string `long:"path" short:"p" description:"The paths to watch. Can be patterns in the form of ./**/my-file.txt"`
 }
 
 func RunWatch(ctx context.Context, args []string, handler types2.ExecHandler, log log.Logger) error {
@@ -53,6 +55,10 @@ type watcher struct {
 
 func (w *watcher) Watch(ctx context.Context, action func(ctx context.Context) error, log log.Logger) error {
 	patterns := w.options.Paths
+	if w.options.SkipAndSilent {
+		w.options.Silent = true
+		w.options.SkipInitial = true
+	}
 
 	// prepare patterns
 	for i, p := range patterns {
@@ -163,15 +169,29 @@ func (w *watcher) handleCommand(ctx context.Context, patterns []string, action f
 			return nil
 		case e := <-events:
 			// check if match
+			hasMatched := false
 			for _, p := range patterns {
-				hasMatched, _ := doublestar.Match(p, e)
+				hasMatched, _ = doublestar.Match(p, e)
 				if hasMatched {
-					numEvents++
-					lastChange = e
 					break
 				}
 			}
-		case <-time.After(time.Second * 2):
+
+			if hasMatched {
+				excluded := false
+				for _, excludePath := range w.options.Exclude {
+					excluded, _ = doublestar.Match(excludePath, e)
+					if excluded {
+						break
+					}
+				}
+
+				if !excluded {
+					numEvents++
+					lastChange = e
+				}
+			}
+		case <-time.After(time.Millisecond * 1200):
 			if numEvents > 0 {
 				// kill application and wait for exit
 				if !w.options.Silent {
