@@ -154,6 +154,17 @@ module.exports = {
             'configuration/dependencies/local-folder',
           ],
         },
+        {
+          type: 'category',
+          label: 'profiles',
+          link: { type: 'doc', id: 'configuration/profiles/README' },
+          items: [
+            'configuration/profiles/activation',
+            'configuration/profiles/patches',
+            'configuration/profiles/merge',
+            'configuration/profiles/replace',
+          ],
+        },
         'configuration/pullSecrets/README',
         'configuration/require/README',
         'configuration/variables',
