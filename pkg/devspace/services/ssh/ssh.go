@@ -73,7 +73,10 @@ func startSSH(ctx devspacecontext.Context, name, arch string, sshConfig *latest.
 	// get port
 	port := sshConfig.LocalPort
 	if port == 0 {
-		sshDevSpaceConfigPath := filepath.Join(homeDir, ".ssh", "devspace_config")
+		sshDevSpaceConfigPath := filepath.Join(homeDir, ".ssh", "config")
+		if sshConfig.UseInclude {
+			sshDevSpaceConfigPath = filepath.Join(homeDir, ".ssh", "devspace_config")
+		}
 		hosts, err := ParseDevSpaceHosts(sshDevSpaceConfigPath)
 		if err != nil {
 			ctx.Log().Debugf("error parsing %s: %v", sshDevSpaceConfigPath, err)
@@ -92,7 +95,7 @@ func startSSH(ctx devspacecontext.Context, name, arch string, sshConfig *latest.
 			}
 
 			// update ssh config
-			err = configureSSHConfig(sshHost, strconv.Itoa(port), ctx.Log())
+			err = configureSSHConfig(sshHost, strconv.Itoa(port), sshConfig.UseInclude, ctx.Log())
 			if err != nil {
 				return errors.Wrap(err, "update ssh config")
 			}
@@ -104,7 +107,7 @@ func startSSH(ctx devspacecontext.Context, name, arch string, sshConfig *latest.
 		}
 
 		// update ssh config
-		err = configureSSHConfig(sshHost, strconv.Itoa(port), ctx.Log())
+		err = configureSSHConfig(sshHost, strconv.Itoa(port), sshConfig.UseInclude, ctx.Log())
 		if err != nil {
 			return errors.Wrap(err, "update ssh config")
 		}

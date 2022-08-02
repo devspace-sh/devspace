@@ -956,6 +956,9 @@ type SSH struct {
 
 	// RemoteAddress is the address to listen to inside the container
 	RemoteAddress string `yaml:"remoteAddress,omitempty" json:"remoteAddress,omitempty" jsonschema_description:"RemoteAddress is the address to listen to inside the container."`
+
+	// UseInclude tells DevSpace to use a different file for ssh config
+	UseInclude bool `yaml:"useInclude,omitempty" json:"useInclude,omitempty"`
 }
 
 type EnvVar struct {

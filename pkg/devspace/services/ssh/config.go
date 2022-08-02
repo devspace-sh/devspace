@@ -21,7 +21,43 @@ var (
 	MarkerEndPrefix   = "# DevSpace End "
 )
 
-func configureSSHConfig(host, port string, log log.Logger) error {
+func configureSSHConfig(host, port string, useInclude bool, log log.Logger) error {
+	if useInclude {
+		return configureSSHConfigSeparateFile(host, port, log)
+	}
+
+	return configureSSHConfigSameFile(host, port, log)
+}
+
+func configureSSHConfigSameFile(host, port string, log log.Logger) error {
+	configLock.Lock()
+	defer configLock.Unlock()
+
+	homeDir, err := homedir.Dir()
+	if err != nil {
+		return errors.Wrap(err, "get home dir")
+	}
+
+	sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
+	newFile, err := addHost(sshConfigPath, host, port)
+	if err != nil {
+		return errors.Wrap(err, "parse ssh config")
+	}
+
+	err = os.MkdirAll(filepath.Dir(sshConfigPath), 0755)
+	if err != nil {
+		log.Debugf("error creating ssh directory: %v", err)
+	}
+
+	err = ioutil.WriteFile(sshConfigPath, []byte(newFile), 0600)
+	if err != nil {
+		return errors.Wrap(err, "write ssh config")
+	}
+
+	return nil
+}
+
+func configureSSHConfigSeparateFile(host, port string, log log.Logger) error {
 	configLock.Lock()
 	defer configLock.Unlock()
 
