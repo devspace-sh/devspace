@@ -32,7 +32,10 @@ devspace init
 
 
 info Detecting programming language...
+```
 
+DevSpace's initialization wizard will walk you through the setup of the project
+```
 ? Select the programming language of this project  [Use arrows to move, type to filter]
   c# (dotnet)
 > go
@@ -42,8 +45,60 @@ info Detecting programming language...
   php
   python
 ```
+Choose the language of your quickstart project. This will determine the correct [devImage](/configuration/dev/modifications/dev-image).
 
-DevSpace will ask you a couple of questions about this project, e.g. which programming language the application is written in, how to deploy the project, etc.
+```
+? How do you want to deploy this project?  [Use arrows to move, type to filter]
+> helm
+  kubectl
+  kustomize
+```
+Now, you can pick your preferred way to deploy the project. For now, choose [`helm`](/configuration/deployments/helm/), you can always mix and match later.
+
+```
+? Is this a DevSpace Quickstart project?  [Use arrows to move, type to filter]
+> Yes
+  No
+```
+DevSpace can detect when you're using a quickstart project.
+
+```
+? Do you want to develop this project with DevSpace or just deploy it?  [Use arrows to move, type to filter]  [Use arrows to move, type to filter]
+> I want to develop this project and my current working dir contains the source code
+  I just want to deploy this project
+```
+When initializing DevSpace, you can ask it to monitor the source code for changes, or to only set up what's needed for deploying your application.  
+Since we want to see how DevSpace handles the entire development cycle, choose the first option here.
+
+```
+? How should DevSpace build the container image for this project?  [Use arrows to move, type to filter]
+> Use this existing Dockerfile: ./Dockerfile
+  Use a different Dockerfile (e.g. ./backend/Dockerfile)
+  Use alternative build tool (e.g. jib, bazel)
+  Skip / I don't know
+```
+DevSpace expects to receive instructions, how to containerize the source code. For the quickstart projects, a Dockerfile is provided in the root folder.
+
+```
+? If you were to push any images, which container registry would you want to push to?  [Use arrows to move, type to filter]
+> Skip Registry
+  Use hub.docker.com
+  Use GitHub image registry
+  Use other registry
+```
+For local development and quick feedback cycles, we recommend to skip pushing images to any registry.
+
+```
+done Project successfully initialized
+info Configuration saved in devspace.yaml - you can make adjustments as needed
+
+You can now run:
+1. devspace use namespace - to pick which Kubernetes namespace to work in
+2. devspace dev - to start developing your project in Kubernetes
+
+Run `devspace -h` or `devspace [command] -h` to see a list of available commands and flags
+```
+Congratulations! You have succesfully initialized your first DevSpace project! 🎉
 
 After running `devspace init`, you will see 3 changes in your project:
 1. New file `devspace.yaml` (tells DevSpace how this project should be build, deployed, and developed)
