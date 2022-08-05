@@ -2,7 +2,6 @@ package patch
 
 import (
 	"fmt"
-
 	"github.com/vmware-labs/yaml-jsonpath/pkg/yamlpath"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -35,38 +34,66 @@ func (op *Operation) Perform(doc *yaml.Node) error {
 		return err
 	}
 
-	if len(matches) == 0 {
-		if op.Op == opAdd {
-			matches, err = getParents(doc, op.Path)
-			if err != nil {
-				return fmt.Errorf("could not add using path: %s", op.Path)
-			}
+	if len(matches) == 0 && op.Op != opAdd {
+		return fmt.Errorf("%s operation does not apply: doc is missing path: %s", op.Op, op.Path)
+	}
 
-			parentPath := op.Path.getParentPath()
-			propertName := op.Path.getChildName()
-			if op.Value != nil {
-				propertyValue := op.Value.Content[0]
-				op.Value = createMappingNode(propertName, propertyValue)
+	var f func(parent *yaml.Node, match *yaml.Node)
+
+	switch op.Op {
+	case opAdd:
+		f = op.add
+
+		var pathMatches bool
+
+		if len(matches) > 0 {
+			pathMatches = true
+
+			if matches[0].Kind == yaml.MappingNode || matches[0].Kind == yaml.SequenceNode {
+				break
 			}
-			op.Path = OpPath(parentPath)
-		} else {
-			return fmt.Errorf("%s operation does not apply: doc is missing path: %s", op.Op, op.Path)
 		}
+
+		originalMatches := matches
+
+		matches, err = getParents(doc, op.Path)
+		if err != nil {
+			return fmt.Errorf("could not add using path: %s", op.Path)
+		}
+
+		if len(matches) > 0 && pathMatches {
+			if matches[0].Kind == yaml.SequenceNode {
+				matches = originalMatches
+				break
+			} else {
+				// we are trying to overwrite an existing key in a map, don't do that!
+				return fmt.Errorf(
+					"attempting add operation for non array/object path '%s' which already exists",
+					op.Path,
+				)
+			}
+		}
+
+		parentPath := op.Path.getParentPath()
+		propertyName := op.Path.getChildName()
+		if op.Value != nil {
+			propertyValue := op.Value.Content[0]
+			op.Value = createMappingNode(propertyName, propertyValue)
+		}
+		op.Path = OpPath(parentPath)
+
+	case opRemove:
+		f = op.remove
+	case opReplace:
+		f = op.replace
+	default:
+		return fmt.Errorf("unexpected op: %s", op.Op)
 	}
 
 	for _, match := range matches {
 		parent := find(doc, containsChild(match))
 
-		switch op.Op {
-		case opAdd:
-			op.add(parent, match)
-		case opRemove:
-			op.remove(parent, match)
-		case opReplace:
-			op.replace(parent, match)
-		default:
-			return fmt.Errorf("unexpected op: %s", op.Op)
-		}
+		f(parent, match)
 	}
 
 	return nil
