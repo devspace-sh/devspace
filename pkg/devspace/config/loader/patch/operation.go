@@ -38,17 +38,14 @@ func (op *Operation) Perform(doc *yaml.Node) error {
 		return fmt.Errorf("%s operation does not apply: doc is missing path: %s", op.Op, op.Path)
 	}
 
-	var f func(parent *yaml.Node, match *yaml.Node)
+	// function that will actually perform the patch operation
+	var opFunc func(parent *yaml.Node, match *yaml.Node)
 
 	switch op.Op {
 	case opAdd:
-		f = op.add
-
-		var pathMatches bool
+		opFunc = op.add
 
 		if len(matches) > 0 {
-			pathMatches = true
-
 			if matches[0].Kind == yaml.MappingNode || matches[0].Kind == yaml.SequenceNode {
 				break
 			}
@@ -61,17 +58,17 @@ func (op *Operation) Perform(doc *yaml.Node) error {
 			return fmt.Errorf("could not add using path: %s", op.Path)
 		}
 
-		if len(matches) > 0 && pathMatches {
+		if len(matches) > 0 && len(originalMatches) > 0 {
 			if matches[0].Kind == yaml.SequenceNode {
 				matches = originalMatches
 				break
-			} else {
-				// we are trying to overwrite an existing key in a map, don't do that!
-				return fmt.Errorf(
-					"attempting add operation for non array/object path '%s' which already exists",
-					op.Path,
-				)
 			}
+
+			// we are trying to overwrite an existing key in a map, don't do that!
+			return fmt.Errorf(
+				"attempting add operation for non array/object path '%s' which already exists",
+				op.Path,
+			)
 		}
 
 		parentPath := op.Path.getParentPath()
@@ -83,9 +80,9 @@ func (op *Operation) Perform(doc *yaml.Node) error {
 		op.Path = OpPath(parentPath)
 
 	case opRemove:
-		f = op.remove
+		opFunc = op.remove
 	case opReplace:
-		f = op.replace
+		opFunc = op.replace
 	default:
 		return fmt.Errorf("unexpected op: %s", op.Op)
 	}
@@ -93,7 +90,7 @@ func (op *Operation) Perform(doc *yaml.Node) error {
 	for _, match := range matches {
 		parent := find(doc, containsChild(match))
 
-		f(parent, match)
+		opFunc(parent, match)
 	}
 
 	return nil
