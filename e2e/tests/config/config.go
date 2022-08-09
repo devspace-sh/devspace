@@ -244,6 +244,51 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(latestConfig.Deployments["test2"].Name, "test2")
 	})
 
+	ginkgo.It("should not be able to add in patch if key already exists", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/patch-add-dont-overwrite-existing-key")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "devspace.yaml",
+				Profiles:   []string{"deploy"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f)
+		framework.ExpectError(err)
+	})
+
+	ginkgo.It("should be able to add in patch if key does not already exists", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/patch-add-dont-overwrite-existing-key")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "devspace.yaml",
+				Profiles:   []string{"patch-ok"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(string(latestConfig.Images["importme"].RebuildStrategy), "ignoreContextChanges")
+	})
+
 	ginkgo.It("should load profile cached and uncached", func() {
 		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile")
 		framework.ExpectNoError(err)
