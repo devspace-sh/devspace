@@ -6,7 +6,7 @@ profiles:                             # struct[]  | Array of config profiles
     source:                           #           | Optional source where to find the profile
       git: https://github.com/my-repo # string    | HTTP(S) URL of the git repository to retrieve the profile from
       subPath: repo/sub/path          # string    | Path within the git repo where devspace.yaml can be found
-      branch: master                  # string    | Git branch to checkout
+      branch: main                  # string    | Git branch to checkout
       tag: v1.2.3                     # string    | Git tag to checkout
       revision: ac66e49               # string    | Git revision (commit has) to checkout
       disableShallow: false           # bool      | Allows to disable shallow git clones using "--depth 1"

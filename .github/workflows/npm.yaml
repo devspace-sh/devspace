@@ -3,7 +3,7 @@ name: Test NPM Installer
 on:
   pull_request:
     branches:
-      - master
+      - main
     paths:
       - "dist/npm/**"
       - ".github/workflows/npm.yaml"

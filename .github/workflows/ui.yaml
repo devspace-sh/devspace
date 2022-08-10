@@ -3,7 +3,7 @@ name: Test UI
 on:
   pull_request:
     branches:
-      - master
+      - main
     paths:
       - "ui/**"
       - "hack/build-ui.bash"

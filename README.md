@@ -2,7 +2,7 @@
 
 ### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Documentation](https://devspace.sh/cli/docs/introduction)** • **[Blog](https://loft.sh/blog)** • **[Twitter](https://twitter.com/devspace)**
 
-![Build Status Passing](https://img.shields.io/github/workflow/status/loft-sh/devspace/Test%20&%20Release%20CLI%20Version/master?style=for-the-badge)
+![Build Status Passing](https://img.shields.io/github/workflow/status/loft-sh/devspace/Test%20&%20Release%20CLI%20Version/main?style=for-the-badge)
 ![Latest Release](https://img.shields.io/github/v/release/loft-sh/devspace?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
 ![License: Apache-2.0](https://img.shields.io/github/license/loft-sh/devspace?style=for-the-badge&color=%23007ec6)
 ![Total Downloads (GitHub Releases)](https://img.shields.io/github/downloads/loft-sh/devspace/total?style=for-the-badge&label=Total%20Downloads&color=%23007ec6)

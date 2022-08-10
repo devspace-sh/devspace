@@ -76,7 +76,7 @@ module.exports = {
           routeBasePath: '/',
           sidebarPath: require.resolve('./sidebars.js'),
           showLastUpdateTime: true,
-          editUrl: 'https://github.com/loft-sh/devspace/edit/master/docs/',
+          editUrl: 'https://github.com/loft-sh/devspace/edit/main/docs/',
           lastVersion: "current",
           versions: {
               current: {

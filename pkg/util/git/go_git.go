@@ -59,7 +59,7 @@ func (gr *GoGitRepository) Update(merge bool) error {
 			return err
 		}
 
-		// Make sure master is checked out
+		// Make sure main is checked out
 		err = repoWorktree.Checkout(&git.CheckoutOptions{
 			Branch: plumbing.ReferenceName("refs/heads/main"),
 			Create: false,
