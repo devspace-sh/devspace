@@ -8,7 +8,7 @@
 ![Total Downloads (GitHub Releases)](https://img.shields.io/github/downloads/loft-sh/devspace/total?style=for-the-badge&label=Total%20Downloads&color=%23007ec6)
 ![NPM Installs per Month](https://img.shields.io/npm/dm/devspace?label=NPM%20Installs&style=for-the-badge&color=%23007ec6)
 
-[![Join us on Slack!](docs/static/img/slack.svg)](https://slack.k8s.io/#devspace)
+[![Join us on Slack!](docs/static/img/slack.svg)](https://slack.loft.sh/)
 
 ### Client-Only Developer Tool for Cloud-Native Development with Kubernetes
 - **Build, test and debug applications directly inside Kubernetes**
@@ -123,7 +123,7 @@ DevSpace runs as a single binary CLI tool directly on your computer and ideally,
 
 Help us make DevSpace the best tool for developing, deploying and debugging Kubernetes apps.
 
-[![Join us on Slack!](docs/static/img/slack.svg)](https://slack.k8s.io/#devspace)
+[![Join us on Slack!](docs/static/img/slack.svg)](https://slack.loft.sh/)
 
 ### Reporting Issues
 
