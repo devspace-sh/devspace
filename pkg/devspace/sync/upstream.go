@@ -824,6 +824,9 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 			newChanges = append(newChanges, f)
 			alreadyUsed[f.Name] = true
 			continue
+		} else if f.Size == 0 {
+			alreadyUsed[f.Name] = true
+			continue
 		}
 
 		alreadyUsed[f.Name] = true
