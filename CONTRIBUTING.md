@@ -18,7 +18,7 @@ This project is mainly written in Golang. To contribute code,
 3. Fork the project
 4. Clone the project: `git clone https://github.com/[YOUR_USERNAME]/devspace && cd devspace`
 5. Run `go clean -modcache`
-6. Run `go mod vendor` to install the dependencies
+6. Run `go mod vendor` to update the dependencies
 7. Build the project, e.g. via `go build -o devspace.exe`
 8. Make changes
 9.  Run unit tests: `./hack/coverage.bash`
