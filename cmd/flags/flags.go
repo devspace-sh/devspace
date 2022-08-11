@@ -7,20 +7,19 @@ import (
 
 // GlobalFlags is the flags that contains the global flags
 type GlobalFlags struct {
-	Silent bool
-	NoWarn bool
-	Debug  bool
-
+	Silent                   bool
+	NoWarn                   bool
+	Debug                    bool
+	DisableProfileActivation bool
+	SwitchContext            bool
+	InactivityTimeout        int
+	KubeConfig               string
 	OverrideName             string
 	Namespace                string
 	KubeContext              string
-	Profiles                 []string
-	DisableProfileActivation bool
-	SwitchContext            bool
 	ConfigPath               string
+	Profiles                 []string
 	Vars                     []string
-
-	InactivityTimeout int
 
 	Flags *flag.FlagSet
 }
@@ -55,6 +54,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")
 	flags.StringSliceVar(&globalFlags.Vars, "var", []string{}, "Variables to override during execution (e.g. --var=MYVAR=MYVALUE)")
+	flags.StringVar(&globalFlags.KubeConfig, "kubeconfig", "", "The kubeconfig path to use")
 
 	flags.IntVar(&globalFlags.InactivityTimeout, "inactivity-timeout", 0, "Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems")
 	flags.AddFlag(&flag.Flag{

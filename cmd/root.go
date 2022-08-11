@@ -62,6 +62,13 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 				log.SetLevel(logrus.DebugLevel)
 			}
 
+			if globalFlags.KubeConfig != "" {
+				err := os.Setenv("KUBECONFIG", globalFlags.KubeConfig)
+				if err != nil {
+					log.Errorf("Unable to set KUBECONFIG variable: %v", err)
+				}
+			}
+
 			// parse the .env file
 			envFile := env.GlobalGetEnv("DEVSPACE_ENV_FILE")
 			if envFile != "" {

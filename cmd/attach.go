@@ -87,7 +87,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 			return err
 		}
 
-		// If the current kube context or namespace is different than old,
+		// If the current kube context or namespace is different from old,
 		// show warnings and reset kube client if necessary
 		client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, log)
 		if err != nil {

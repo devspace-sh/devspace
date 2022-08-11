@@ -126,7 +126,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 		}
 	}
 
-	// If the current kube context or namespace is different than old,
+	// If the current kube context or namespace is different from old,
 	// show warnings and reset kube client if necessary
 	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, cmd.log)
 	if err != nil {
