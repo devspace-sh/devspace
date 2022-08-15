@@ -301,7 +301,10 @@ func ParseSyncPath(path string) (localPath string, remotePath string, err error)
 
 	splitted := strings.Split(path, ":")
 	if len(splitted) > 2 {
-		return "", "", fmt.Errorf("error in sync path %s: should have format local:remote", path)
+		newSplitted := []string{}
+		newSplitted = append(newSplitted, strings.Join(splitted[0:len(splitted)-1], ":"))
+		newSplitted = append(newSplitted, splitted[len(splitted)-1])
+		splitted = newSplitted
 	}
 
 	if len(splitted) == 1 {
