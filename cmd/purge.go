@@ -26,7 +26,6 @@ Deletes the deployed kubernetes resources:
 
 devspace purge
 #######################################################`,
-		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd, args, f, "purgeCommand")
 		},

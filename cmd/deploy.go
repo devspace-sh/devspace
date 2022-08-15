@@ -28,7 +28,6 @@ devspace deploy
 devspace deploy -n some-namespace
 devspace deploy --kube-context=deploy-context
 #######################################################`,
-		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd, args, f, "deployCommand")
 		},
