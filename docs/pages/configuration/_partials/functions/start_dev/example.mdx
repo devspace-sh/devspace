@@ -1,20 +1,17 @@
 #### Example:
 
 ```yaml
-images:
-  myImage:
-    dockerfile: ./Dockerfile
 
 pipelines:
   dev: |-
      echo "Welcome to your custom dev pipeline!"
 
-     # Exchange Dockerfile here (use --set-string if you want to force the field to be a string e.g. when setting labels to "true")
-     start_dev myImage --set dockerfile=./Dockerfile.dev --set-string key1=value1
+     # Exchange dev profile here (use --set-string if you want to force the field to be a string e.g. when setting labels to "true")
+     start_dev myDevConfig --set myConfigField=value --set-string key1=value1
     
      # Use --from to create a new config based on an existing config
-     start_dev myOtherImage --from myImage --set context=../
+     start_dev myOtherDevConfig --from myDevConfig
 
      # Use --from-file when you want to load the config for the image from a file
-     start_dev myFileImage --from-file image.yaml
+     start_dev myDevConfig --from-file myDevConfigMap.yaml
 ```
