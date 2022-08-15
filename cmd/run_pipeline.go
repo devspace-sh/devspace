@@ -210,18 +210,11 @@ func (cmd *RunPipelineCmd) RunDefault(f factory.Factory) error {
 
 // Run executes the command logic
 func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory.Factory, hookName string) error {
-	dashArgs := []string{}
-	if cobraCmd != nil && cobraCmd.ArgsLenAtDash() > -1 {
-		dashArgs = args[cobraCmd.ArgsLenAtDash():]
-		args = args[:cobraCmd.ArgsLenAtDash()]
-	}
-
-	if len(args) > 1 {
-		return fmt.Errorf("please specify only 1 pipeline to execute (got %v). E.g. devspace run-pipeline my-pipe -- other args", args)
-	} else if len(args) == 0 && cmd.Pipeline == "" {
+	if len(args) == 0 && cmd.Pipeline == "" {
 		return fmt.Errorf("please specify a pipeline through --pipeline or argument")
-	} else if len(args) == 1 && cmd.Pipeline == "" {
+	} else if len(args) > 0 && cmd.Pipeline == "" {
 		cmd.Pipeline = args[0]
+		args = args[1:]
 	}
 
 	if cmd.Log == nil {
@@ -259,7 +252,7 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 	}
 
 	return runWithHooks(ctx, hookName, func() error {
-		return runPipeline(ctx, dashArgs, options)
+		return runPipeline(ctx, args, options)
 	})
 }
 
