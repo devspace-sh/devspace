@@ -136,6 +136,9 @@ type Pipeline struct {
 	// Name of the pipeline, will be filled automatically
 	Name string `yaml:"name,omitempty" json:"name,omitempty" jsonschema:"enum=dev,enum=deploy,enum=build,enum=purge,enum=.*" jsonschema_description:"Name of the pipeline, will be filled automatically."`
 
+	// DefaultNamespace of the pipeline, if no other namespace is configured
+	DefaultNamespace string `yaml:"defaultNamespace,omitempty" json:"defaultNamespace,omitempty"`
+
 	// Run is the actual shell command that should be executed during this pipeline
 	Run string `yaml:"run,omitempty" json:"run,omitempty" jsonschema:"required" jsonschema_description:"Run is the actual shell command that should be executed during this pipeline."`
 
@@ -1234,7 +1237,7 @@ type Terminal struct {
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
 	// Name is used internally
-	Name string `yaml:"name" json:"name" jsonschema_description:"Name is used internally."`
+	Name string `yaml:"name,omitempty" json:"name,omitempty" jsonschema_description:"Name is used internally."`
 
 	// Source holds the dependency project
 	Source *SourceConfig `yaml:",inline" json:",inline" jsonschema_description:"Source holds the dependency project."`
