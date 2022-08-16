@@ -446,8 +446,7 @@
             "$ref": "#/$defs/PersistentPath"
           },
           "type": "array",
-          "description": "SSH allows you to create an SSH tunnel to this container.",
-          "group": "modifications"
+          "description": "PersistPaths allows you to persist certain paths within this container with a persistent volume claim"
         },
         "terminal": {
           "$ref": "#/$defs/Terminal",
@@ -467,8 +466,7 @@
         },
         "ssh": {
           "$ref": "#/$defs/SSH",
-          "description": "PersistPaths allows you to persist certain paths within this container with a persistent volume claim.",
-          "group": "workflows_background"
+          "description": "SSH allows you to create an SSH tunnel to this container"
         },
         "proxyCommands": {
           "items": {
@@ -587,8 +585,7 @@
             "$ref": "#/$defs/PersistentPath"
           },
           "type": "array",
-          "description": "SSH allows you to create an SSH tunnel to this container.",
-          "group": "modifications"
+          "description": "PersistPaths allows you to persist certain paths within this container with a persistent volume claim"
         },
         "terminal": {
           "$ref": "#/$defs/Terminal",
@@ -608,8 +605,7 @@
         },
         "ssh": {
           "$ref": "#/$defs/SSH",
-          "description": "PersistPaths allows you to persist certain paths within this container with a persistent volume claim.",
-          "group": "workflows_background"
+          "description": "SSH allows you to create an SSH tunnel to this container"
         },
         "proxyCommands": {
           "items": {
@@ -1583,6 +1579,10 @@
         "remoteAddress": {
           "type": "string",
           "description": "RemoteAddress is the address to listen to inside the container."
+        },
+        "useInclude": {
+          "type": "boolean",
+          "description": "UseInclude tells DevSpace to use a different file for ssh config"
         }
       },
       "type": "object"
