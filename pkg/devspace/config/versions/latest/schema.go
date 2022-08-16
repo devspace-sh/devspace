@@ -896,8 +896,8 @@ type DevContainer struct {
 
 	// Sync allows you to sync certain local paths with paths inside the container
 	Sync []*SyncConfig `yaml:"sync,omitempty" json:"sync,omitempty" jsonschema_extras:"group=sync,group_name=File Sync" jsonschema_description:"Sync allows you to sync certain local paths with paths inside the container."`
-	// SSH allows you to create an SSH tunnel to this container
-	PersistPaths []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty" jsonschema_extras:"group=modifications" jsonschema_description:"SSH allows you to create an SSH tunnel to this container."`
+	// PersistPaths allows you to persist certain paths within this container with a persistent volume claim
+	PersistPaths []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
 
 	// Terminal allows you to tell DevSpace to open a terminal with screen support to this container
 	Terminal *Terminal `yaml:"terminal,omitempty" json:"terminal,omitempty" jsonschema_extras:"group=workflows,group_name=Foreground Dev Workflows" jsonschema_description:"Terminal allows you to tell DevSpace to open a terminal with screen support to this container."`
@@ -905,8 +905,8 @@ type DevContainer struct {
 	Logs *Logs `yaml:"logs,omitempty" json:"logs,omitempty" jsonschema_extras:"group=workflows" jsonschema_description:"Logs allows you to tell DevSpace to stream logs from this container to the console."`
 	// Attach allows you to tell DevSpace to attach to this container
 	Attach *Attach `yaml:"attach,omitempty" json:"attach,omitempty" jsonschema_extras:"group=workflows" jsonschema_description:"Attach allows you to tell DevSpace to attach to this container."`
-	// PersistPaths allows you to persist certain paths within this container with a persistent volume claim
-	SSH *SSH `yaml:"ssh,omitempty" json:"ssh,omitempty" jsonschema_extras:"group=workflows_background" jsonschema_description:"PersistPaths allows you to persist certain paths within this container with a persistent volume claim."`
+	// SSH allows you to create an SSH tunnel to this container
+	SSH *SSH `yaml:"ssh,omitempty" json:"ssh,omitempty"`
 	// ProxyCommands allow you to proxy certain local commands to the container
 	ProxyCommands []*ProxyCommand `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty" jsonschema_extras:"group=workflows_background" jsonschema_description:"ProxyCommands allow you to proxy certain local commands to the container."`
 	// RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
