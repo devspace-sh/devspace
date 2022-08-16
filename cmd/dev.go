@@ -14,6 +14,11 @@ func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *Raw
 		SkipPushLocalKubernetes: true,
 		Pipeline:                "dev",
 	}
+
+	var pipeline *latest.Pipeline
+	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
+		pipeline = rawConfig.Config.Pipelines["dev"]
+	}
 	devCmd := &cobra.Command{
 		Use:   "dev",
 		Short: "Starts the development mode",
@@ -26,11 +31,6 @@ Starts your project in development mode
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd, args, f, "devCommand")
 		},
-	}
-
-	var pipeline *latest.Pipeline
-	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
-		pipeline = rawConfig.Config.Pipelines["dev"]
 	}
 	cmd.AddPipelineFlags(f, devCmd, pipeline)
 	return devCmd

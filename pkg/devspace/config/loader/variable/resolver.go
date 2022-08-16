@@ -244,7 +244,7 @@ func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{
 	for _, path := range includedPaths {
 		path = strings.ReplaceAll(path, "*", "[^/]+")
 		path = strings.ReplaceAll(path, "**", ".+")
-		path = "^" + path
+		path = "^" + path + "$"
 		expr, err := regexp.Compile(path)
 		if err != nil {
 			return nil, err
@@ -274,7 +274,7 @@ func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{
 	for _, path := range excludedPaths {
 		path = strings.ReplaceAll(path, "*", "[^/]+")
 		path = strings.ReplaceAll(path, "**", ".+")
-		path = "^" + path
+		path = "^" + path + "$"
 		expr, err := regexp.Compile(path)
 		if err != nil {
 			return nil, err

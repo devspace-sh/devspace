@@ -196,10 +196,6 @@ func NewSpecificPipelineCmd(f factory.Factory, globalFlags *flags.GlobalFlags, p
 Executes pipeline ` + pipeline.Name + `
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			if pipeline.DefaultNamespace != "" && globalFlags.Namespace == "" {
-				globalFlags.Namespace = pipeline.DefaultNamespace
-			}
-
 			return cmd.Run(cobraCmd, args, f, "runPipelineCommand")
 		},
 	}
@@ -430,6 +426,12 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	var configPipeline *latest.Pipeline
 	if ctx.Config().Config().Pipelines != nil && ctx.Config().Config().Pipelines[options.Pipeline] != nil {
 		configPipeline = ctx.Config().Config().Pipelines[options.Pipeline]
+		if configPipeline.Run == "" {
+			defaultPipeline, _ := types.GetDefaultPipeline(options.Pipeline)
+			if defaultPipeline != nil {
+				configPipeline.Run = defaultPipeline.Run
+			}
+		}
 	} else {
 		var err error
 		configPipeline, err = types.GetDefaultPipeline(options.Pipeline)
