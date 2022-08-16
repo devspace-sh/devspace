@@ -2,6 +2,7 @@ package devpod
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -315,7 +316,11 @@ func tryOpen(ctx context.Context, url string, log logpkg.Logger) error {
 		return err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
