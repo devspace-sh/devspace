@@ -19,6 +19,10 @@ func NewRenderCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *
 		RenderWriter:            os.Stdout,
 	}
 
+	var pipeline *latest.Pipeline
+	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
+		pipeline = rawConfig.Config.Pipelines["deploy"]
+	}
 	renderCmd := &cobra.Command{
 		Use:   "render",
 		Short: "Builds all defined images and shows the yamls that would be deployed",
@@ -34,11 +38,6 @@ deployment.
 			f.GetLog().Warnf("This command is deprecated, please use 'devspace deploy --render' instead")
 			return cmd.Run(cobraCmd, args, f, "renderCommand")
 		},
-	}
-
-	var pipeline *latest.Pipeline
-	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
-		pipeline = rawConfig.Config.Pipelines["deploy"]
 	}
 	cmd.AddPipelineFlags(f, renderCmd, pipeline)
 	return renderCmd

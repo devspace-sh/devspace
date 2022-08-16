@@ -21,7 +21,7 @@ import (
 
 // Options describe how the deployments should be deployed
 type Options struct {
-	SkipDeploy  bool `long:"skip" description:"If enabled, will skip deploying"`
+	SkipDeploy  bool `long:"skip-deploy" description:"If enabled, will skip deploying"`
 	ForceDeploy bool `long:"force-redeploy" description:"Forces redeployment"`
 	Sequential  bool `long:"sequential" description:"Sequentially deploys the deployments"`
 

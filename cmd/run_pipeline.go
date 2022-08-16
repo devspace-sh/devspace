@@ -426,6 +426,12 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	var configPipeline *latest.Pipeline
 	if ctx.Config().Config().Pipelines != nil && ctx.Config().Config().Pipelines[options.Pipeline] != nil {
 		configPipeline = ctx.Config().Config().Pipelines[options.Pipeline]
+		if configPipeline.Run == "" {
+			defaultPipeline, _ := types.GetDefaultPipeline(options.Pipeline)
+			if defaultPipeline != nil {
+				configPipeline.Run = defaultPipeline.Run
+			}
+		}
 	} else {
 		var err error
 		configPipeline, err = types.GetDefaultPipeline(options.Pipeline)

@@ -4,6 +4,7 @@ import (
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
@@ -146,6 +147,10 @@ func (b *BuildHelper) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bo
 	if !mustRebuild && ctx.KubeClient() != nil && ctx.Config().LocalCache().GetLastContext() != nil && ctx.Config().LocalCache().GetLastContext().Context != ctx.KubeClient().CurrentContext() && kubectl.IsLocalKubernetes(ctx.Config().LocalCache().GetLastContext().Context) {
 		mustRebuild = true
 		ctx.Log().Infof("Rebuild image %s because previous build was local kubernetes", imageCache.ImageName)
+		ctx.Config().LocalCache().SetLastContext(&localcache.LastContextConfig{
+			Namespace: ctx.KubeClient().Namespace(),
+			Context:   ctx.KubeClient().CurrentContext(),
+		})
 	}
 
 	// Check if should consider context path changes for rebuilding

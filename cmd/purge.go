@@ -15,6 +15,11 @@ func NewPurgeCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *R
 		Pipeline:                "purge",
 		SkipPushLocalKubernetes: true,
 	}
+
+	var pipeline *latest.Pipeline
+	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
+		pipeline = rawConfig.Config.Pipelines["purge"]
+	}
 	purgeCmd := &cobra.Command{
 		Use:   "purge",
 		Short: "Deletes deployed resources",
@@ -29,11 +34,6 @@ devspace purge
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd, args, f, "purgeCommand")
 		},
-	}
-
-	var pipeline *latest.Pipeline
-	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
-		pipeline = rawConfig.Config.Pipelines["purge"]
 	}
 	cmd.AddPipelineFlags(f, purgeCmd, pipeline)
 	return purgeCmd

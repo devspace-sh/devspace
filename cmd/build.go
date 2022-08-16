@@ -14,6 +14,11 @@ func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *R
 		Pipeline:    "build",
 		ForceBuild:  true,
 	}
+
+	var pipeline *latest.Pipeline
+	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
+		pipeline = rawConfig.Config.Pipelines["build"]
+	}
 	buildCmd := &cobra.Command{
 		Use:   "build",
 		Short: "Builds all defined images and pushes them",
@@ -26,11 +31,6 @@ Builds all defined images and pushes them
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd, args, f, "buildCommand")
 		},
-	}
-
-	var pipeline *latest.Pipeline
-	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
-		pipeline = rawConfig.Config.Pipelines["build"]
 	}
 	cmd.AddPipelineFlags(f, buildCmd, pipeline)
 	return buildCmd

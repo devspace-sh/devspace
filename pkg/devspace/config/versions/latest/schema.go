@@ -1234,7 +1234,7 @@ type Terminal struct {
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
 	// Name is used internally
-	Name string `yaml:"name" json:"name" jsonschema_description:"Name is used internally."`
+	Name string `yaml:"name,omitempty" json:"name,omitempty" jsonschema_description:"Name is used internally."`
 
 	// Source holds the dependency project
 	Source *SourceConfig `yaml:",inline" json:",inline" jsonschema_description:"Source holds the dependency project."`
