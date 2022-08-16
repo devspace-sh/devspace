@@ -869,8 +869,7 @@
       },
       "type": "object",
       "required": [
-        "image",
-        "dockerfile"
+        "image"
       ],
       "description": "Image defines the image specification"
     },

@@ -179,7 +179,7 @@ func (p *Pipeline) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	pipelineString := ""
 	err := unmarshal(&pipelineString)
 	if err != nil {
-		m := map[string]interface{}{}
+		var m interface{}
 		err := unmarshal(m)
 		if err != nil {
 			return err
@@ -245,7 +245,7 @@ type Image struct {
 
 	// Dockerfile specifies a path (relative or absolute) to the dockerfile. Defaults
 	// to ./Dockerfile
-	Dockerfile string `yaml:"dockerfile" json:"dockerfile" jsonschema:"default=./Dockerfile" jsonschema_extras:"group=buildConfig" jsonschema_description:"Dockerfile specifies a path (relative or absolute) to the dockerfile. Defaults to ./Dockerfile."`
+	Dockerfile string `yaml:"dockerfile,omitempty" json:"dockerfile,omitempty" jsonschema:"default=./Dockerfile" jsonschema_extras:"group=buildConfig" jsonschema_description:"Dockerfile specifies a path (relative or absolute) to the dockerfile. Defaults to ./Dockerfile."`
 
 	// Context is the context path to build with. Defaults to the current working directory
 	Context string `yaml:"context,omitempty" json:"context,omitempty" jsonschema:"default=./" jsonschema_extras:"group=buildConfig" jsonschema_description:"Context is the context path to build with. Defaults to the current working directory."`
@@ -1439,7 +1439,7 @@ func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	commandString := ""
 	err := unmarshal(&commandString)
 	if err != nil {
-		m := map[string]interface{}{}
+		var m interface{}
 		err := unmarshal(m)
 		if err != nil {
 			return err
@@ -1509,7 +1509,7 @@ func (v *Variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	varString := ""
 	err := unmarshal(&varString)
 	if err != nil {
-		m := map[string]interface{}{}
+		var m interface{}
 		err := unmarshal(m)
 		if err != nil {
 			return err
