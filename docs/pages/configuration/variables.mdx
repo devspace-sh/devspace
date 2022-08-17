@@ -164,7 +164,7 @@ A common use case for the `.env` file is to set default flags for the `devspace`
 - `DEVSPACE_[COMMAND]_FLAGS` to add default flags for single commands (e.g. `DEVSPACE_DEV_FLAGS=-s --verbose-dependencies`)
 
 ```bash title="File: .env"
-DEVSPACE_FLAGS=-s -p dev
+DEVSPACE_FLAGS=-s -n default-namespace
 DEVSPACE_DEV_FLAGS=-s --verbose-dependencies
 ```
 
@@ -172,7 +172,11 @@ DEVSPACE_DEV_FLAGS=-s --verbose-dependencies
 Specifying flags for a command will overwrite the default flags, e.g. if `DEVSPACE_FLAGS=-s -p dev` is configured and you run `devspace dev -p production`, the following command would be executed: `devspace dev -s -p production`
 :::
 
-
+You can also use these default flags without a specialized `.env` file in a regular `devspace.yaml`:
+```
+vars:
+  DEVSPACE_FLAGS: '-n my-default-namespace'
+```
 
 ## Useful Commands
 
