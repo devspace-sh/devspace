@@ -13,21 +13,22 @@ Pipelines allow you to fully customize the execution logic in DevSpace, i.e. the
 
 Pipelines are defined in POSIX shell syntax and a DevSpace pipeline reads as a regular POSIX script. However, DevSpace implements certain special commands that can be used inside the POSIX script to tell DevSpace when to build, deploy or start developing. For a complete function reference, please take a look below.
 
+<br />
 
-Some example pipelines:
 <Tabs
-  defaultValue="configoverride"
+  defaultValue="executionorder"
   values={[
-    { label: 'Dynamic Config', value: 'configoverride' },
     { label: 'Execution Order', value: 'executionorder' },
+    { label: 'Dynamic Config', value: 'configoverride' },
     { label: 'Rerun Pipeline', value: 'rerun' },
     { label: 'Deploy / Sync / Open', value: 'deploywaitsync', },
-    { label: 'Dockerfile Flag', value: 'dockerfile', },
+    { label: 'Custom Dockerfile Flag', value: 'dockerfile', },
   ]
 }>
 <TabItem value="configoverride">
 
 ```yaml
+# Simple deployment that deploys an nginx pod
 deployments:
   test:
     helm:
@@ -115,7 +116,7 @@ pipelines:
     # Start two pipelines in parallel
     run_pipelines watch-secret default-deploy
 
-  watch-secret:
+  watch-secret: |-
     # Rerun the pipeline as soon as the secret.yaml changes
     run_watch -p secret.yaml -- kubectl apply -n ${DEVSPACE_NAMESPACE} -f secret.yaml
 
