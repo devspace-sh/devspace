@@ -41,6 +41,56 @@ func genSchema(schema *jsonschema.Schema, schemaFile string) {
 	if isOpenAPISpec {
 		prefix = "      "
 	}
+
+	// vars
+	vars, ok := schema.Properties.Get("vars")
+	if ok {
+		vars.(*jsonschema.Schema).OneOf = modifyOneOf(vars)
+		vars.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	// pipelines
+	pipelines, ok := schema.Properties.Get("pipelines")
+	if ok {
+		pipelines.(*jsonschema.Schema).OneOf = modifyOneOf(pipelines)
+		pipelines.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	// commands
+	commands, ok := schema.Properties.Get("commands")
+	if ok {
+		commands.(*jsonschema.Schema).OneOf = modifyOneOf(commands)
+		commands.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	// images
+	images, ok := schema.Properties.Get("images")
+	if ok {
+		images.(*jsonschema.Schema).OneOf = modifyOneOf(images)
+		images.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	//deployments
+	deployments, ok := schema.Properties.Get("deployments")
+	if ok {
+		deployments.(*jsonschema.Schema).OneOf = modifyOneOf(deployments)
+		deployments.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	//dependencies
+	dependencies, ok := schema.Properties.Get("dependencies")
+	if ok {
+		dependencies.(*jsonschema.Schema).OneOf = modifyOneOf(dependencies)
+		dependencies.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	//pullSecrets
+	pullSecrets, ok := schema.Properties.Get("pullSecrets")
+	if ok {
+		pullSecrets.(*jsonschema.Schema).OneOf = modifyOneOf(pullSecrets)
+		pullSecrets.(*jsonschema.Schema).PatternProperties = nil
+	}
+
 	schemaJSON, err := json.MarshalIndent(schema, prefix, "  ")
 	if err != nil {
 		panic(err)
@@ -73,5 +123,20 @@ func genSchema(schema *jsonschema.Schema, schemaFile string) {
 	err = ioutil.WriteFile(schemaFile, []byte(schemaString), os.ModePerm)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func modifyOneOf(field interface{}) []*jsonschema.Schema {
+	return []*jsonschema.Schema{
+		{
+			Type: "object",
+			AdditionalProperties: &jsonschema.Schema{
+				Type: "string",
+			},
+		},
+		{
+			Type:              "object",
+			PatternProperties: field.(*jsonschema.Schema).PatternProperties,
+		},
 	}
 }

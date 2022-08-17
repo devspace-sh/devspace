@@ -1234,7 +1234,7 @@ type Terminal struct {
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
 	// Name is used internally
-	Name string `yaml:"name" json:"name"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// Source holds the dependency project
 	Source *SourceConfig `yaml:",inline" json:",inline"`
@@ -1460,7 +1460,7 @@ func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // Variable describes the var definition
 type Variable struct {
 	// Name is the name of the variable
-	Name string `yaml:"name" json:"name"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// Value is a shortcut for using source: none and default: my-value
 	Value interface{} `yaml:"value,omitempty" json:"value,omitempty" jsonschema:"oneof_type=string;integer;boolean" jsonschema_extras:"group=static,group_name=Static Value"`
@@ -1497,8 +1497,8 @@ type Variable struct {
 	// system.
 	Commands []VariableCommand `yaml:"commands,omitempty" json:"commands,omitempty" jsonschema_extras:"group=execution"`
 
-	// AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere
-	AlwaysResolve bool `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
+	// AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere. Defaults to true.
+	AlwaysResolve *bool `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
 
 	// Source defines where the variable should be taken from
 	Source VariableSource `yaml:"source,omitempty" json:"source,omitempty" jsonschema:"enum=all,enum=env,enum=input,enum=command,enum=none"`

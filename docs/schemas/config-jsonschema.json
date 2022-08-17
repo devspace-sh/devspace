@@ -339,9 +339,6 @@
         }
       },
       "type": "object",
-      "required": [
-        "name"
-      ],
       "description": "DependencyConfig defines the devspace dependency"
     },
     "DeploymentConfig": {
@@ -1954,9 +1951,6 @@
         }
       },
       "type": "object",
-      "required": [
-        "name"
-      ],
       "description": "Variable describes the var definition"
     },
     "VariableCommand": {
@@ -2006,11 +2000,22 @@
       "description": "Functions are POSIX functions that can be used within pipelines. Those functions can also be imported by\nimports."
     },
     "pipelines": {
-      "patternProperties": {
-        ".*": {
-          "$ref": "#/$defs/Pipeline"
+      "oneOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "patternProperties": {
+            ".*": {
+              "$ref": "#/$defs/Pipeline"
+            }
+          },
+          "type": "object"
         }
-      },
+      ],
       "type": "object",
       "description": "Pipelines are the work blocks that DevSpace should execute when devspace dev, devspace build, devspace deploy or devspace purge\nis called. Pipelines are defined through a special POSIX script that allows you to use special commands\nsuch as create_deployments, start_dev, build_images etc. to signal DevSpace you want to execute\na specific functionality. The pipelines dev, build, deploy and purge are special and will override\nthe default functionality of the respective command if defined. All other pipelines can be either run\nvia the devspace run-pipeline command or used within another pipeline through run_pipelines."
     },
@@ -2042,20 +2047,42 @@
       "description": "Dev holds development configuration. Each dev configuration targets a single pod and enables certain dev services on that pod\nor even rewrites it if certain changes are requested, such as adding an environment variable or changing the entrypoint.\nDev allows you to:\n- sync local folders to the Kubernetes pod\n- port forward remote ports to your local computer\n- forward local ports into the Kubernetes pod\n- configure an ssh tunnel to the Kubernetes pod\n- proxy local commands to the container\n- restart the container on file changes"
     },
     "vars": {
-      "patternProperties": {
-        ".*": {
-          "$ref": "#/$defs/Variable"
+      "oneOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "patternProperties": {
+            ".*": {
+              "$ref": "#/$defs/Variable"
+            }
+          },
+          "type": "object"
         }
-      },
+      ],
       "type": "object",
       "description": "Vars are config variables that can be used inside other config sections to replace certain values dynamically"
     },
     "commands": {
-      "patternProperties": {
-        ".*": {
-          "$ref": "#/$defs/CommandConfig"
+      "oneOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "patternProperties": {
+            ".*": {
+              "$ref": "#/$defs/CommandConfig"
+            }
+          },
+          "type": "object"
         }
-      },
+      ],
       "type": "object",
       "description": "Commands are custom commands that can be executed via 'devspace run COMMAND'. These commands are run within a pseudo bash\nthat also allows executing special commands such as run_watch or is_equal."
     },
