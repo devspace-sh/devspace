@@ -1,0 +1,20 @@
+#### Example:
+
+```yaml
+images:
+  myImage:
+    dockerfile: ./Dockerfile
+
+pipelines:
+  pull_secrets: |-
+     echo "Welcome to your custom pull_secrets pipeline!"
+
+     # Exchange pull secrets here (use --set-string if you want to force the field to be a string e.g. when setting labels to "true")
+     ensure_pull_secrets myPullSecret --set dockerfile=./Dockerfile.dev --set-string key1=value1
+    
+     # Use --from to create a new config based on an existing config
+     ensure_pull_secrets myPullSecret --from myImage
+
+     # Use --from-file when you want to load the config for the image from a file
+     ensure_pull_secrets myPullSecret --from-file image.yaml
+```

@@ -1,0 +1,16 @@
+#### Example:
+
+```yaml
+pipelines:
+  create: |-
+     echo "Welcome to your custom create pipeline!"
+
+     # Exchange deployment here (use --set-string if you want to force the field to be a string e.g. when setting labels to "true")
+     create_deployments myDeployment --set myDeployment.myImageField=myImage --set-string key1=value1
+    
+     # Use --from to create a new config based on an existing config
+     create_deployments myDeployment --from myDeployment2:myImage
+
+     # Use --from-file when you want to load the config for the image from a file
+     create_deployments myFileImage --from-file myDeployment.yaml
+```
