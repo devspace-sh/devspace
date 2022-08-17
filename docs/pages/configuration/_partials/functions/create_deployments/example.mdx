@@ -5,7 +5,7 @@ pipelines:
   create: |-
      echo "Welcome to your custom create pipeline!"
 
-     # Exchange deployment image here (use --set-string if you want to force the field to be a string e.g. when setting labels to "true")
+     # Exchange deployment here (use --set-string if you want to force the field to be a string e.g. when setting labels to "true")
      create_deployments myDeployment --set myDeployment.myImageField=myImage --set-string key1=value1
     
      # Use --from to create a new config based on an existing config
