@@ -172,13 +172,19 @@ func updateNeeded(ctx devspacecontext.Context, deployment *appsv1.Deployment, de
 
 	ctx.Log().Debugf("Update replaced deployment with patch:\n %s", string(patchBytes))
 
-	_, err = ctx.KubeClient().KubeClient().AppsV1().Deployments(deployment.Namespace).Patch(ctx.Context(), deployment.Name, patch.Type(), patchBytes, metav1.PatchOptions{})
+	deployment, err = ctx.KubeClient().KubeClient().AppsV1().Deployments(deployment.Namespace).Patch(ctx.Context(), deployment.Name, patch.Type(), patchBytes, metav1.PatchOptions{})
 	if err != nil {
 		if kerrors.IsInvalid(err) {
 			ctx.Log().Debugf("Recreate deployment because it is invalid: %v", err)
 			return true, deleteDeployment(ctx, deployment)
 		}
 
+		return false, err
+	}
+
+	// update persistent paths
+	err = updatePVC(ctx, deployment, devPod)
+	if err != nil {
 		return false, err
 	}
 
@@ -220,6 +226,12 @@ func (p *replacer) replace(ctx devspacecontext.Context, deploymentName string, t
 
 		return errors.Wrap(err, "create deployment")
 	}
+
+	return updatePVC(ctx, deployment, devPod)
+}
+
+func updatePVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPod *latest.DevPod) error {
+	var err error
 
 	// create a pvc if needed
 	hasPersistPath := false
@@ -312,8 +324,8 @@ func createPVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPo
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {
-		if kerrors.IsAlreadyExists(err) && devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Name != "" {
-			ctx.Log().Infof("PVC %s already exists for replaced pod %s", name, deployment.Name)
+		if kerrors.IsAlreadyExists(err) {
+			ctx.Log().Debugf("PVC %s already exists for replaced pod %s", name, deployment.Name)
 			return nil
 		}
 
