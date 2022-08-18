@@ -12,8 +12,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
-const jsonschemaFile = "docs/schemas/config-jsonschema.json"
-const openapiSchemaFile = "docs/schemas/config-openapi.json"
+const jsonschemaFile = "devspace-schema.json"
+const openapiSchemaFile = "devspace-openapi.json"
 
 // Run executes the command logic
 func main() {
@@ -41,6 +41,55 @@ func genSchema(schema *jsonschema.Schema, schemaFile string) {
 	if isOpenAPISpec {
 		prefix = "      "
 	}
+
+	// vars
+	vars, ok := schema.Properties.Get("vars")
+	if ok {
+		vars.(*jsonschema.Schema).AnyOf = modifyAnyOf(vars)
+		vars.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	// pipelines
+	pipelines, ok := schema.Properties.Get("pipelines")
+	if ok {
+		pipelines.(*jsonschema.Schema).AnyOf = modifyAnyOf(pipelines)
+		pipelines.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	// commands
+	commands, ok := schema.Properties.Get("commands")
+	if ok {
+		commands.(*jsonschema.Schema).AnyOf = modifyAnyOf(commands)
+		commands.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	// images
+	images, ok := schema.Properties.Get("images")
+	if ok {
+		images.(*jsonschema.Schema).AnyOf = modifyAnyOf(images)
+		images.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	//deployments
+	deployments, ok := schema.Properties.Get("deployments")
+	if ok {
+		deployments.(*jsonschema.Schema).AnyOf = modifyAnyOf(deployments)
+		deployments.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	//dependencies
+	dependencies, ok := schema.Properties.Get("dependencies")
+	if ok {
+		dependencies.(*jsonschema.Schema).AnyOf = modifyAnyOf(dependencies)
+		dependencies.(*jsonschema.Schema).PatternProperties = nil
+	}
+	//pullSecrets
+	pullSecrets, ok := schema.Properties.Get("pullSecrets")
+	if ok {
+		pullSecrets.(*jsonschema.Schema).AnyOf = modifyAnyOf(pullSecrets)
+		pullSecrets.(*jsonschema.Schema).PatternProperties = nil
+	}
+
 	schemaJSON, err := json.MarshalIndent(schema, prefix, "  ")
 	if err != nil {
 		panic(err)
@@ -73,5 +122,17 @@ func genSchema(schema *jsonschema.Schema, schemaFile string) {
 	err = ioutil.WriteFile(schemaFile, []byte(schemaString), os.ModePerm)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func modifyAnyOf(field interface{}) []*jsonschema.Schema {
+	return []*jsonschema.Schema{
+		{
+			Type: "object",
+		},
+		{
+			Type:              "object",
+			PatternProperties: field.(*jsonschema.Schema).PatternProperties,
+		},
 	}
 }
