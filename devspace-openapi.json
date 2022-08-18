@@ -1944,7 +1944,7 @@
               },
               "alwaysResolve": {
                 "type": "boolean",
-                "description": "AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere"
+                "description": "AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere. Defaults to true."
               },
               "source": {
                 "type": "string",
@@ -2008,11 +2008,8 @@
             "description": "Functions are POSIX functions that can be used within pipelines. Those functions can also be imported by\nimports."
           },
           "pipelines": {
-            "oneOf": [
+            "anyOf": [
               {
-                "additionalProperties": {
-                  "type": "string"
-                },
                 "type": "object"
               },
               {
@@ -2023,20 +2020,26 @@
             "description": "Pipelines are the work blocks that DevSpace should execute when devspace dev, devspace build, devspace deploy or devspace purge\nis called. Pipelines are defined through a special POSIX script that allows you to use special commands\nsuch as create_deployments, start_dev, build_images etc. to signal DevSpace you want to execute\na specific functionality. The pipelines dev, build, deploy and purge are special and will override\nthe default functionality of the respective command if defined. All other pipelines can be either run\nvia the devspace run-pipeline command or used within another pipeline through run_pipelines."
           },
           "images": {
-            "patternProperties": {
-              ".*": {
-                "$ref": "#/definitions/Config/$defs/Image"
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "object"
               }
-            },
+            ],
             "type": "object",
             "description": "Images holds configuration of how DevSpace should build images. By default, DevSpace will build all defined images.\nIf you are using a custom pipeline, you can dynamically define which image is built at which time during the\nexecution."
           },
           "deployments": {
-            "patternProperties": {
-              ".*": {
-                "$ref": "#/definitions/Config/$defs/DeploymentConfig"
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "object"
               }
-            },
+            ],
             "type": "object",
             "description": "Deployments holds configuration of how DevSpace should deploy resources to Kubernetes. By default, DevSpace will deploy all defined deployments.\nIf you are using a custom pipeline, you can dynamically define which deployment is deployed at which time during the\nexecution."
           },
@@ -2050,11 +2053,8 @@
             "description": "Dev holds development configuration. Each dev configuration targets a single pod and enables certain dev services on that pod\nor even rewrites it if certain changes are requested, such as adding an environment variable or changing the entrypoint.\nDev allows you to:\n- sync local folders to the Kubernetes pod\n- port forward remote ports to your local computer\n- forward local ports into the Kubernetes pod\n- configure an ssh tunnel to the Kubernetes pod\n- proxy local commands to the container\n- restart the container on file changes"
           },
           "vars": {
-            "oneOf": [
+            "anyOf": [
               {
-                "additionalProperties": {
-                  "type": "string"
-                },
                 "type": "object"
               },
               {
@@ -2065,11 +2065,8 @@
             "description": "Vars are config variables that can be used inside other config sections to replace certain values dynamically"
           },
           "commands": {
-            "oneOf": [
+            "anyOf": [
               {
-                "additionalProperties": {
-                  "type": "string"
-                },
                 "type": "object"
               },
               {
@@ -2080,20 +2077,26 @@
             "description": "Commands are custom commands that can be executed via 'devspace run COMMAND'. These commands are run within a pseudo bash\nthat also allows executing special commands such as run_watch or is_equal."
           },
           "dependencies": {
-            "patternProperties": {
-              ".*": {
-                "$ref": "#/definitions/Config/$defs/DependencyConfig"
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "object"
               }
-            },
+            ],
             "type": "object",
             "description": "Dependencies are sub devspace projects that lie in a local folder or remote git repository that can be executed\nfrom within the pipeline. In contrast to imports, these projects pose as separate fully functional DevSpace projects\nthat typically lie including source code in a different folder and can be used to compose a full microservice\napplication that will be deployed by DevSpace. Each dependency name can only be used once and if you want to use\nthe same project multiple times, make sure to use a different name for each of those instances."
           },
           "pullSecrets": {
-            "patternProperties": {
-              ".*": {
-                "$ref": "#/definitions/Config/$defs/PullSecretConfig"
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "object"
               }
-            },
+            ],
             "type": "object",
             "description": "PullSecrets are image pull secrets that will be created by devspace in the target namespace\nduring devspace dev or devspace deploy. DevSpace will merge all defined pull secrets into a single\none or the one specified."
           },

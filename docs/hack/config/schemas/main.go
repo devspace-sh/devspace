@@ -12,8 +12,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
-const jsonschemaFile = "docs/schemas/config-jsonschema.json"
-const openapiSchemaFile = "docs/schemas/config-openapi.json"
+const jsonschemaFile = "devspace-schema.json"
+const openapiSchemaFile = "devspace-openapi.json"
 
 // Run executes the command logic
 func main() {
@@ -45,49 +45,48 @@ func genSchema(schema *jsonschema.Schema, schemaFile string) {
 	// vars
 	vars, ok := schema.Properties.Get("vars")
 	if ok {
-		vars.(*jsonschema.Schema).OneOf = modifyOneOf(vars)
+		vars.(*jsonschema.Schema).AnyOf = modifyAnyOf(vars)
 		vars.(*jsonschema.Schema).PatternProperties = nil
 	}
 
 	// pipelines
 	pipelines, ok := schema.Properties.Get("pipelines")
 	if ok {
-		pipelines.(*jsonschema.Schema).OneOf = modifyOneOf(pipelines)
+		pipelines.(*jsonschema.Schema).AnyOf = modifyAnyOf(pipelines)
 		pipelines.(*jsonschema.Schema).PatternProperties = nil
 	}
 
 	// commands
 	commands, ok := schema.Properties.Get("commands")
 	if ok {
-		commands.(*jsonschema.Schema).OneOf = modifyOneOf(commands)
+		commands.(*jsonschema.Schema).AnyOf = modifyAnyOf(commands)
 		commands.(*jsonschema.Schema).PatternProperties = nil
 	}
 
 	// images
 	images, ok := schema.Properties.Get("images")
 	if ok {
-		images.(*jsonschema.Schema).OneOf = modifyOneOf(images)
+		images.(*jsonschema.Schema).AnyOf = modifyAnyOf(images)
 		images.(*jsonschema.Schema).PatternProperties = nil
 	}
 
 	//deployments
 	deployments, ok := schema.Properties.Get("deployments")
 	if ok {
-		deployments.(*jsonschema.Schema).OneOf = modifyOneOf(deployments)
+		deployments.(*jsonschema.Schema).AnyOf = modifyAnyOf(deployments)
 		deployments.(*jsonschema.Schema).PatternProperties = nil
 	}
 
 	//dependencies
 	dependencies, ok := schema.Properties.Get("dependencies")
 	if ok {
-		dependencies.(*jsonschema.Schema).OneOf = modifyOneOf(dependencies)
+		dependencies.(*jsonschema.Schema).AnyOf = modifyAnyOf(dependencies)
 		dependencies.(*jsonschema.Schema).PatternProperties = nil
 	}
-
 	//pullSecrets
 	pullSecrets, ok := schema.Properties.Get("pullSecrets")
 	if ok {
-		pullSecrets.(*jsonschema.Schema).OneOf = modifyOneOf(pullSecrets)
+		pullSecrets.(*jsonschema.Schema).AnyOf = modifyAnyOf(pullSecrets)
 		pullSecrets.(*jsonschema.Schema).PatternProperties = nil
 	}
 
@@ -126,13 +125,10 @@ func genSchema(schema *jsonschema.Schema, schemaFile string) {
 	}
 }
 
-func modifyOneOf(field interface{}) []*jsonschema.Schema {
+func modifyAnyOf(field interface{}) []*jsonschema.Schema {
 	return []*jsonschema.Schema{
 		{
 			Type: "object",
-			AdditionalProperties: &jsonschema.Schema{
-				Type: "string",
-			},
 		},
 		{
 			Type:              "object",
