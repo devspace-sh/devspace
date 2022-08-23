@@ -265,7 +265,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Path is the local path where DevSpace can find the artifact.\nThis option is mutually exclusive with the git option.",
+                "description": "Path is either the local path or the URL where DevSpace can find the artifact.\nThis option is mutually exclusive with the git option.",
                 "group": "path",
                 "group_name": "Source: Local Filesystem"
               },
@@ -885,7 +885,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Path is the local path where DevSpace can find the artifact.\nThis option is mutually exclusive with the git option.",
+                "description": "Path is either the local path or the URL where DevSpace can find the artifact.\nThis option is mutually exclusive with the git option.",
                 "group": "path",
                 "group_name": "Source: Local Filesystem"
               },
