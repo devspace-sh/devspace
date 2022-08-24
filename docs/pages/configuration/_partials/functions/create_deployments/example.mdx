@@ -1,16 +1,35 @@
 #### Example:
 
 ```yaml
+deployments:
+  test:
+    helm:
+      values:
+        containers:
+        - image: nginx
+
 pipelines:
-  create: |-
-     echo "Welcome to your custom create pipeline!"
+  deploy: |-
 
-     # Exchange deployment here (use --set-string if you want to force the field to be a string e.g. when setting labels to "true")
-     create_deployments myDeployment --set myDeployment.myImageField=myImage --set-string key1=value1
-    
-     # Use --from to create a new config based on an existing config
-     create_deployments myDeployment --from myDeployment2:myImage
+    # Exchange the image in our deployment with --set
+    create_deployments test --set "helm.values.containers[0].image=bitnami/nginx"
 
-     # Use --from-file when you want to load the config for the image from a file
-     create_deployments myFileImage --from-file myDeployment.yaml
-```
+    # Create a new deployment based on another deployment with --from
+    # This will copy over the values from the test deployment
+    create_deployments nginx --from test 
+
+    # Create a new deployment from a file. 
+    # ${DEVSPACE_TMPDIR} is always cleaned up after each run
+    echo """
+    helm:
+      values:
+        containers:
+        - image: nginx
+    """ > ${DEVSPACE_TMPDIR}/my-deployment.yaml
+
+    # Create a new deployment based on config info from my-deployment.yaml
+    create_deployments nginx-from-file --from-file ${DEVSPACE_TMPDIR}/my-deployment.yaml
+
+    # Force the container name to be a string
+    create_deployments nginx-string-annotation --from test \
+                                               --set-string "helm.values.containers[0].name=true"
