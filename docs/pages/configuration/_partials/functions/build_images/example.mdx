@@ -3,18 +3,30 @@
 ```yaml
 images:
   myImage:
-    dockerfile: ./Dockerfile
+    image: registry.path.to.image
+    context: ./
 
 pipelines:
   build: |-
-     echo "Welcome to your custom build pipeline!"
+    echo "Welcome to your custom build pipeline!"
 
-     # Exchange Dockerfile here (use --set-string if you want to force the field to be a string e.g. when setting labels to "true")
-     build_images myImage --set dockerfile=./Dockerfile.dev --set-string key1=value1
+    # Exchange image config values here
+    build_images myImage --set "dockerfile=./Dockerfile"
+
+    # Use --set-string to force a field to be a string
+    build_images myImage --set-string "myImage.image=true"
     
-     # Use --from to create a new config based on an existing config
-     build_images myOtherImage --from myImage --set context=../
+    # Use --from to create a new config based on an existing config
+    build_images myOtherImage --from myImage
 
-     # Use --from-file when you want to load the config for the image from a file
-     build_images myFileImage --from-file image.yaml
+    # Creating a sample images config yaml
+    echo """
+    newImage:
+      image: registry.path.to.image
+      dockerfile: ./new/Dockerfile
+      context: ./new
+    """ > ${DEVSPACE_TMPDIR}/new-image.yaml
+
+    # Use --from-file when you want to load the config for the image from a file
+    build_images imageFromFile --from-file new-image.yaml
 ```

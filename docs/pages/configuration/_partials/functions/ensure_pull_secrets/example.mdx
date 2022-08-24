@@ -11,18 +11,18 @@ pullSecrets:
 
 pipelines:
   pull_secrets: |-
-     echo "Welcome to your custom pull secrets pipeline!"
+    echo "Welcome to your custom pull secrets pipeline!"
 
-     # Exchange pull secret config with --set
-     # Change the pull secret name with "new-pullsecret-name"
-     ensure_pull_secrets my-pullsecret --set "my-pullsecret.secret=new-pullsecret-name"
+    # Exchange pull secret config with --set
+    # Change the pull secret name with "new-pullsecret-name"
+    ensure_pull_secrets my-pullsecret --set "my-pullsecret.secret=new-pullsecret-name"
     
     # Use --from to create a new config based on an existing config
     # Use --set-string to force a field to be a string
     # Ensure the registry field is a string
-     ensure_pull_secrets new-pullSecret --from my-pullsecret --set-string "my-pullsecret.registry=true"
+    ensure_pull_secrets new-pullSecret --from my-pullsecret --set-string "my-pullsecret.registry=true"
 
-    # Creating a sample yaml file with pullsecret config info
+    # Creating a sample yaml file with pull secret config info
     echo """
     registry: my-registry.com:5000
     secret: my-pull-secret-name
@@ -31,7 +31,7 @@ pipelines:
       - my-other-service-account
     """ > ${DEVSPACE_TMPDIR}/my-pullsecret-config.yaml
 
-     # Use --from-file when you want to load the config for the image from a file
-     # Create myPullSecret with config info from the newly created my-pullsecret-config.yaml
-     ensure_pull_secrets myPullSecret --from-file my-pullsecret-config.yaml
+    # Use --from-file when you want to load the config for the image from a file
+    # Create myPullSecret with config info from the newly created my-pullsecret-config.yaml
+    ensure_pull_secrets myPullSecret --from-file my-pullsecret-config.yaml
 ```

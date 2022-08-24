@@ -9,15 +9,15 @@ dev:
 
 pipelines:
   test: |-
-     echo "Welcome to your custom pipeline!"
+    echo "Welcome to your custom pipeline!"
 
-     # Exchange default dev config here
-     # Run test-dev config above and set the port to 3000
-     start_dev test-dev --set "ports.imageName.forward[0]=3000"
+    # Exchange default dev config here
+    # Run test-dev config above and set the port to 3000
+    start_dev test-dev --set "ports.imageName.forward[0]=3000"
     
-     # Use --from to create a new config based on an existing config
-     # Create a new dev config from test-dev above, and ensure the imageName is a string
-     start_dev newDevConfig --from test-dev --set-string "ports.imageName=true"
+    # Use --from to create a new config based on an existing config
+    # Create a new dev config from test-dev above, and ensure the imageName is a string
+    start_dev newDevConfig --from test-dev --set-string "ports.imageName=true"
 
     # Creating a sample yaml file with dev config info
     echo """
@@ -27,7 +27,7 @@ pipelines:
       - port: 8080
     """ > ${DEVSPACE_TMPDIR}/my-dev-config.yaml
 
-     # Use --from-file when you want to load the config for the image from a file
-     # Create a new dev config from the newly created my-dev-config.yaml
-     start_dev newDevConfig --from-file ${DEVSPACE_TMPDIR}/my-dev-config.yaml
+    # Use --from-file when you want to load the config for the image from a file
+    # Create a new dev config from the newly created my-dev-config.yaml
+    start_dev newDevConfig --from-file ${DEVSPACE_TMPDIR}/my-dev-config.yaml
 ```
