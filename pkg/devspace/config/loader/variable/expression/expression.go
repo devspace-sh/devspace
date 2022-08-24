@@ -21,6 +21,8 @@ import (
 // ExpressionMatchRegex is the regex to check if a value matches the devspace var format
 var ExpressionMatchRegex = regexp.MustCompile(`(?ms)^\$\#?\!?\((.+)\)$`)
 
+const DEVSPACE_SKIP_PRELOAD_ENV = "DEVSPACE_SKIP_PRELOAD"
+
 func expressionMatchFn(key, value string) bool {
 	return ExpressionMatchRegex.MatchString(value)
 }
@@ -95,7 +97,11 @@ func ResolveExpressions(ctx context.Context, value, dir string, variables map[st
 
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
-		err := engine.ExecuteSimpleShellCommand(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), vars), stdout, stderr, nil, match[1], os.Args[1:]...)
+
+		envVars := []string{}
+		envVars = append(envVars, DEVSPACE_SKIP_PRELOAD_ENV+"=true")
+		envVars = append(envVars, os.Environ()...)
+		err := engine.ExecuteSimpleShellCommand(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(envVars...), vars), stdout, stderr, nil, match[1], os.Args[1:]...)
 		if err != nil {
 			if len(strings.TrimSpace(stdout.String())) == 0 && len(strings.TrimSpace(stderr.String())) == 0 {
 				if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {

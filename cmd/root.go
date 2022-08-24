@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/env"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -185,11 +186,18 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 	}
 
 	// try to parse the raw config
-	rawConfig, err := parseConfig(f)
-	if err != nil {
-		f.GetLog().Debugf("error parsing raw config: %v", err)
-	} else {
-		env.GlobalGetEnv = rawConfig.GetEnv
+	var rawConfig *RawConfig
+
+	// This check is necessary to avoid process loops where a variable inside
+	// the devspace.yaml would execute another devspace command which would again
+	// load the config and execute DevSpace config parsing etc.
+	if os.Getenv(expression.DEVSPACE_SKIP_PRELOAD_ENV) == "" {
+		rawConfig, err = parseConfig(f)
+		if err != nil {
+			f.GetLog().Debugf("error parsing raw config: %v", err)
+		} else {
+			env.GlobalGetEnv = rawConfig.GetEnv
+		}
 	}
 
 	// build the root cmd
@@ -323,7 +331,9 @@ func parseConfig(f factory.Factory) (*RawConfig, error) {
 	r := &RawConfig{
 		resolved: map[string]string{},
 	}
-	_, err = configLoader.LoadWithParser(timeoutCtx, nil, nil, r, &loader.ConfigOptions{Dry: true}, log.Discard)
+	_, err = configLoader.LoadWithParser(timeoutCtx, nil, nil, r, &loader.ConfigOptions{
+		Dry: true,
+	}, log.Discard)
 	if r.Resolver != nil {
 		return r, nil
 	}

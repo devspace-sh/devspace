@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/sirupsen/logrus"
 	"os"
 	"strconv"
 
@@ -36,6 +37,11 @@ func (u *undefinedVariable) Load(ctx context.Context, _ *latest.Variable) (inter
 	// Is in generated config?
 	if v, ok := u.localCache.GetVar(u.name); ok {
 		return convertStringValue(v), nil
+	}
+
+	// is logger silent
+	if u.log == log.Discard || u.log.GetLevel() < logrus.InfoLevel {
+		return "", nil
 	}
 
 	// Ask for variable
