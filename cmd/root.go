@@ -4,16 +4,18 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/env"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/message"
 	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/env"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
 
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
@@ -142,6 +144,7 @@ func Execute() {
 
 	// execute command
 	err := rootCmd.Execute()
+	f.GetLog().Info(err)
 
 	// after hooks
 	pluginErr = hook.ExecuteHooks(nil, map[string]interface{}{"error": err}, "root.afterExecute", "command:after:execute")
@@ -323,7 +326,13 @@ func parseConfig(f factory.Factory) (*RawConfig, error) {
 	r := &RawConfig{
 		resolved: map[string]string{},
 	}
-	_, err = configLoader.LoadWithParser(timeoutCtx, nil, nil, r, &loader.ConfigOptions{Dry: true}, log.Discard)
+
+	vars, err := resolveVariablesWithEmptyValues(configLoader)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = configLoader.LoadWithParser(timeoutCtx, nil, nil, r, &loader.ConfigOptions{Dry: true, Vars: vars}, log.Discard)
 	if r.Resolver != nil {
 		return r, nil
 	}
@@ -393,4 +402,22 @@ func (r *RawConfig) GetEnv(name string) string {
 	}
 
 	return ""
+}
+
+func resolveVariablesWithEmptyValues(configLoader loader.ConfigLoader) ([]string, error) {
+	rawConfig, err := configLoader.LoadRaw()
+	if err != nil {
+		return nil, err
+	}
+
+	vars, err := versions.ParseVariables(rawConfig, log.Discard)
+	if err != nil {
+		return nil, err
+	}
+
+	defaultVars := []string{}
+	for name := range vars {
+		defaultVars = append(defaultVars, fmt.Sprintf("%s=%s", name, ""))
+	}
+	return defaultVars, nil
 }
