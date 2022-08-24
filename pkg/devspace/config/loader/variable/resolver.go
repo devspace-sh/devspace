@@ -55,9 +55,10 @@ func MergeVarsWithFlags(vars map[string]interface{}, flags []string) error {
 type resolver struct {
 	vars        map[string]*latest.Variable
 	memoryCache map[string]interface{}
-	localCache  localcache.Cache
-	options     *PredefinedVariableOptions
-	log         log.Logger
+
+	localCache localcache.Cache
+	options    *PredefinedVariableOptions
+	log        log.Logger
 }
 
 func varMatchFn(key, value string) bool {

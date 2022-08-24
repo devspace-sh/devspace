@@ -3,10 +3,12 @@ package v3
 import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -71,11 +73,22 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 		if helmConfig.Chart.Version != "" {
 			args = append(args, "--version", helmConfig.Chart.Version)
 		}
-		if helmConfig.Chart.Username != "" {
-			args = append(args, "--username", helmConfig.Chart.Username)
-		}
-		if helmConfig.Chart.Password != "" {
-			args = append(args, "--password", helmConfig.Chart.Password)
+
+		// log into OCI registry if specified
+		if strings.HasPrefix(chartName, "oci://") {
+			if helmConfig.Chart.Username != "" && helmConfig.Chart.Password != "" {
+				_, err := c.genericHelm.Exec(ctx, []string{"registry", "login", "--username", helmConfig.Chart.Username, "--password", helmConfig.Chart.Password})
+				if err != nil {
+					return nil, errors.Wrap(err, "login oci registry")
+				}
+			}
+		} else {
+			if helmConfig.Chart.Username != "" {
+				args = append(args, "--username", helmConfig.Chart.Username)
+			}
+			if helmConfig.Chart.Password != "" {
+				args = append(args, "--password", helmConfig.Chart.Password)
+			}
 		}
 	}
 

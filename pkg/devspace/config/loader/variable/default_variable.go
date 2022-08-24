@@ -3,6 +3,7 @@ package variable
 import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/sirupsen/logrus"
 	"os"
 	"strconv"
 
@@ -23,6 +24,7 @@ func NewDefaultVariable(name string, workingDirectory string, localCache localca
 type defaultVariable struct {
 	name             string
 	workingDirectory string
+	dry              bool
 	localCache       localcache.Cache
 	log              log.Logger
 }
@@ -47,12 +49,22 @@ func (d *defaultVariable) Load(ctx context.Context, definition *latest.Variable)
 		}
 	}
 
-	// Now ask the question
-	value, err := askQuestion(definition, d.log)
-	if err != nil {
-		return nil, err
+	// is logger silent
+	if d.log == log.Discard || d.log.GetLevel() < logrus.InfoLevel {
+		if definition.Default != nil {
+			return definition.Default, nil
+		}
+
+		return valueByType(value, definition.Default)
+	} else {
+		var err error
+		value, err = askQuestion(definition, d.log)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	// Now ask the question
 	if !definition.NoCache {
 		d.localCache.SetVar(d.name, value)
 	}
