@@ -1,15 +1,16 @@
 package v3
 
 import (
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"net/url"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -28,6 +29,14 @@ func NewClient(log log.Logger) (types.Client, error) {
 	c := &client{}
 	c.genericHelm = generic.NewGenericClient(commands.NewHelmV3Command(), log)
 	return c, nil
+}
+
+func (c *client) DownloadChart(ctx devspacecontext.Context, helmConfig *latest.HelmConfig) (string, error) {
+	chartName, err := dependencyutil.DownloadDependency(ctx.Context(), ctx.WorkingDir(), helmConfig.Chart.Source, ctx.Log())
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(chartName), nil
 }
 
 // InstallChart installs the given chart via helm v3
@@ -56,12 +65,11 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 	// Chart settings
 	chartName := ""
 	if helmConfig.Chart.Source != nil {
-		chartName, err = dependencyutil.DownloadDependency(ctx.Context(), ctx.WorkingDir(), helmConfig.Chart.Source, ctx.Log())
+		chartName, err = c.DownloadChart(ctx, helmConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		chartName = filepath.Dir(chartName)
 		args = append(args, chartName)
 	} else {
 		var chartRepo string
@@ -157,12 +165,11 @@ func (c *client) Template(ctx devspacecontext.Context, releaseName, releaseNames
 	// Chart settings
 	chartName := ""
 	if helmConfig.Chart.Source != nil {
-		chartName, err = dependencyutil.DownloadDependency(ctx.Context(), ctx.WorkingDir(), helmConfig.Chart.Source, ctx.Log())
+		chartName, err = c.DownloadChart(ctx, helmConfig)
 		if err != nil {
 			return "", err
 		}
 
-		chartName = filepath.Dir(chartName)
 		args = append(args, chartName)
 	} else {
 		var chartRepo string

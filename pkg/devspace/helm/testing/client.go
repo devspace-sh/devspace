@@ -15,6 +15,10 @@ type Client struct {
 	Releases []*types.Release
 }
 
+func (f *Client) DownloadChart(ctx devspacecontext.Context, helmConfig *latest.HelmConfig) (string, error) {
+	return "", nil
+}
+
 // UpdateRepos implements interface
 func (f *Client) UpdateRepos() error {
 	return nil
