@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"net/url"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -77,7 +78,14 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 		// log into OCI registry if specified
 		if strings.HasPrefix(chartName, "oci://") {
 			if helmConfig.Chart.Username != "" && helmConfig.Chart.Password != "" {
-				_, err := c.genericHelm.Exec(ctx, []string{"registry", "login", "--username", helmConfig.Chart.Username, "--password", helmConfig.Chart.Password})
+				chartNameUrl, err := url.Parse(chartName)
+				if err != nil {
+					return nil, errors.Wrap(err, "chartName malformed for oci registry")
+				}
+
+				ctx.Log().Infof("registry hostname: %v", chartNameUrl.Hostname())
+
+				_, err = c.genericHelm.Exec(ctx, []string{"registry", "login", chartNameUrl.Hostname(), "--username", helmConfig.Chart.Username, "--password", helmConfig.Chart.Password})
 				if err != nil {
 					return nil, errors.Wrap(err, "login oci registry")
 				}
