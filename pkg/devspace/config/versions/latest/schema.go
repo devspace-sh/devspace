@@ -799,15 +799,15 @@ type HelmConfig struct {
 
 // ChartConfig defines the helm chart options
 type ChartConfig struct {
-	// Name is the name of the helm chart to deploy. Can also be a local path
+	// Name is the name of the helm chart to deploy. Can also be a local path or an oci url
 	Name string `yaml:"name,omitempty" json:"name,omitempty" jsonschema:"required" jsonschema_extras:"group=repo,group_name=Source: Helm Repository"`
 	// Version is the version of the helm chart to deploy
 	Version string `yaml:"version,omitempty" json:"version,omitempty" jsonschema_extras:"group=repo"`
 	// RepoURL is the url of the repo to deploy the chart from
 	RepoURL string `yaml:"repo,omitempty" json:"repo,omitempty" jsonschema_extras:"group=repo"`
-	// Username is the username to authenticate to the chart repo
+	// Username is the username to authenticate to the chart repo. When using an OCI chart, used for registry auth
 	Username string `yaml:"username,omitempty" json:"username,omitempty" jsonschema_extras:"group=repo"`
-	// Password is the password to authenticate to the chart repo
+	// Password is the password to authenticate to the chart repo, When using an OCI chart, used for registry auth
 	Password string `yaml:"password,omitempty" json:"password,omitempty" jsonschema_extras:"group=repo"`
 	// Source can be used to reference an helm chart from a distant location
 	// such as a git repository
