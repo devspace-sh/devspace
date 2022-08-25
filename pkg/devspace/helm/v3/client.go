@@ -83,8 +83,6 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 					return nil, errors.Wrap(err, "chartName malformed for oci registry")
 				}
 
-				ctx.Log().Infof("registry hostname: %v", chartNameUrl.Hostname())
-
 				_, err = c.genericHelm.Exec(ctx, []string{"registry", "login", chartNameUrl.Hostname(), "--username", helmConfig.Chart.Username, "--password", helmConfig.Chart.Password})
 				if err != nil {
 					return nil, errors.Wrap(err, "login oci registry")
