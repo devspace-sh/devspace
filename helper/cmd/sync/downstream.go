@@ -13,7 +13,8 @@ type DownstreamCmd struct {
 
 	Throttle int64
 
-	Polling bool
+	Polling        bool
+	RecursiveWatch bool
 }
 
 // NewDownstreamCmd creates a new downstream command
@@ -29,6 +30,7 @@ func NewDownstreamCmd() *cobra.Command {
 	downstreamCmd.Flags().StringSliceVar(&cmd.Exclude, "exclude", []string{}, "The exclude paths for downstream watching")
 	downstreamCmd.Flags().Int64Var(&cmd.Throttle, "throttle", 5, "The amount of milliseconds to throttle change detection per 100 files")
 	downstreamCmd.Flags().BoolVar(&cmd.Polling, "polling", false, "If true, DevSpace will use polling instead of inotify")
+	downstreamCmd.Flags().BoolVar(&cmd.RecursiveWatch, "recursive-watch", true, "If false, DevSpace will not watch recursively")
 	return downstreamCmd
 }
 
@@ -43,9 +45,10 @@ func (cmd *DownstreamCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		RemotePath:   absolutePath,
 		ExcludePaths: cmd.Exclude,
 
-		Throttle:    cmd.Throttle,
-		Polling:     cmd.Polling,
-		ExitOnClose: true,
-		Ping:        true,
+		Throttle:         cmd.Throttle,
+		Polling:          cmd.Polling,
+		ExitOnClose:      true,
+		NoRecursiveWatch: !cmd.RecursiveWatch,
+		Ping:             true,
 	})
 }
