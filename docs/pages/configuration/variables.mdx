@@ -47,8 +47,15 @@ If you want to overwrite a static variable, you can use the `--var MY_VAR=new-va
 
 
 ### From Env Vars
-To load variables from the user's environment variables, you can just use them in the config as `${VAR_NAME}` without the need to explictly define them.
+To load variables from the user's environment variables, you can just use them in the config as `${VAR_NAME}` without the need to explicitly define them.
 
+In order to specify a default value for an environment variable that is not defined, you can use:
+```yaml
+vars:
+  MY_ENV_VAR:
+    source: env
+    default: my-default
+```
 
 ### From Command
 You can load the values from commands from custom commands via [config expressions](./expressions.mdx) or using the long form by specifying the `command` field:
