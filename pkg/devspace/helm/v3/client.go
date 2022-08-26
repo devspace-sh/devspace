@@ -166,11 +166,12 @@ func (c *client) Template(ctx devspacecontext.Context, releaseName, releaseNames
 	// Chart settings
 	chartName := ""
 	if helmConfig.Chart.Source != nil {
-		chartName, err = c.DownloadChart(ctx, helmConfig)
+		chartName, err = dependencyutil.GetDependencyPath(ctx.WorkingDir(), helmConfig.Chart.Source)
 		if err != nil {
 			return "", err
 		}
 
+		chartName = filepath.Dir(chartName)
 		args = append(args, chartName)
 	} else {
 		var chartRepo string
