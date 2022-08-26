@@ -7,26 +7,74 @@ import (
 )
 
 func adjustConfig(config *latest.Config) error {
-	for name, v := range config.Vars {
-		v.Name = name
-	}
-	for name, command := range config.Commands {
-		command.Name = name
-	}
-	for name, pullSecret := range config.PullSecrets {
-		pullSecret.Name = name
-	}
-	for name, devPod := range config.Dev {
-		devPod.Name = name
-		for c, v := range devPod.Containers {
-			v.Container = c
+	if config.Vars != nil {
+		newObjs := map[string]*latest.Variable{}
+		for name, v := range config.Vars {
+			if v == nil {
+				continue
+			}
+			v.Name = name
+			newObjs[name] = v
 		}
+		config.Vars = newObjs
 	}
-	for name, pipeline := range config.Pipelines {
-		pipeline.Name = name
+	if config.Commands != nil {
+		newObjs := map[string]*latest.CommandConfig{}
+		for name, command := range config.Commands {
+			if command == nil {
+				continue
+			}
+			command.Name = name
+			newObjs[name] = command
+		}
+		config.Commands = newObjs
 	}
-	for name, dep := range config.Dependencies {
-		dep.Name = name
+	if config.PullSecrets != nil {
+		newObjs := map[string]*latest.PullSecretConfig{}
+		for name, pullSecret := range config.PullSecrets {
+			if pullSecret == nil {
+				continue
+			}
+			pullSecret.Name = name
+			newObjs[name] = pullSecret
+		}
+		config.PullSecrets = newObjs
+	}
+	if config.Dev != nil {
+		newObjs := map[string]*latest.DevPod{}
+		for name, devPod := range config.Dev {
+			if devPod == nil {
+				continue
+			}
+			devPod.Name = name
+			for c, v := range devPod.Containers {
+				v.Container = c
+			}
+			newObjs[name] = devPod
+		}
+		config.Dev = newObjs
+	}
+	if config.Pipelines != nil {
+		newObjs := map[string]*latest.Pipeline{}
+		for name, pipeline := range config.Pipelines {
+			if pipeline == nil {
+				continue
+			}
+			pipeline.Name = name
+			newObjs[name] = pipeline
+		}
+		config.Pipelines = newObjs
+	}
+	if config.Dependencies != nil {
+		newObjs := map[string]*latest.DependencyConfig{}
+		for name, dep := range config.Dependencies {
+			if dep == nil {
+				continue
+			}
+			dep.Name = name
+			newObjs[name] = dep
+		}
+		config.Dependencies = newObjs
 	}
 	if config.Images != nil {
 		newObjs := map[string]*latest.Image{}
