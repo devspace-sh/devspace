@@ -59,7 +59,10 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bo
 		chartPath = ctx.ResolvePath(chartPath)
 
 		// Check if the chart directory has changed
-		hash, err = hashpkg.Directory(chartPath)
+		hash, err = hashpkg.DirectoryExcludes(chartPath, []string{
+			".git/",
+			".devspace/",
+		}, true)
 		if err != nil {
 			return false, errors.Errorf("Error hashing chart directory: %v", err)
 		}

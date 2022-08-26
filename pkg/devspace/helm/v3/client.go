@@ -65,11 +65,12 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 	// Chart settings
 	chartName := ""
 	if helmConfig.Chart.Source != nil {
-		chartName, err = c.DownloadChart(ctx, helmConfig)
+		chartName, err = dependencyutil.GetDependencyPath(ctx.WorkingDir(), helmConfig.Chart.Source)
 		if err != nil {
 			return nil, err
 		}
 
+		chartName = filepath.Dir(chartName)
 		args = append(args, chartName)
 	} else {
 		var chartRepo string

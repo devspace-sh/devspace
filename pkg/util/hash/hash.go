@@ -73,7 +73,6 @@ func Directory(path string) (string, error) {
 
 		return nil
 	})
-
 	if err != nil {
 		return "", err
 	}

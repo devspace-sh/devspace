@@ -36,6 +36,34 @@ func init() {
 // downloadMutex makes sure we only download a single dependency at a time
 var downloadMutex = sync.Mutex{}
 
+func GetDependencyPath(workingDirectory string, source *latest.SourceConfig) (configPath string, err error) {
+	ID, err := GetDependencyID(source)
+	if err != nil {
+		return "", err
+	}
+
+	// Resolve source
+	var localPath string
+	if source.Git != "" {
+		localPath = filepath.Join(DependencyFolderPath, ID)
+	} else if source.Path != "" {
+		if isURL(source.Path) {
+			localPath = filepath.Join(DependencyFolderPath, ID)
+		} else {
+			if filepath.IsAbs(source.Path) {
+				localPath = source.Path
+			} else {
+				localPath, err = filepath.Abs(filepath.Join(workingDirectory, filepath.FromSlash(source.Path)))
+				if err != nil {
+					return "", errors.Wrap(err, "filepath absolute")
+				}
+			}
+		}
+	}
+
+	return getDependencyConfigPath(localPath, source)
+}
+
 func DownloadDependency(ctx context.Context, workingDirectory string, source *latest.SourceConfig, log log.Logger) (configPath string, err error) {
 	downloadMutex.Lock()
 	defer downloadMutex.Unlock()
