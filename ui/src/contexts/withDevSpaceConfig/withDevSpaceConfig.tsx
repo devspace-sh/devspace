@@ -44,12 +44,11 @@ interface Config {
 }
 
 interface RawConfig {
-  commands: Command[];
+  commands: { [key: string]: Command };
 }
 
 export interface Command {
   command: string;
-  name: string;
 }
 
 interface ImageConfig {

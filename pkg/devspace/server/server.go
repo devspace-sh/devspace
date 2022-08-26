@@ -203,7 +203,7 @@ func (h *handler) version(w http.ResponseWriter, r *http.Request) {
 type returnConfig struct {
 	Config     *latest.Config         `yaml:"config"`
 	RawConfig  map[string]interface{} `yaml:"rawConfig"`
-	LocalCache localcache.Cache       `yaml:"generatedConfig"`
+	LocalCache localCache             `yaml:"generatedConfig"`
 
 	AnalyticsEnabled bool              `yaml:"analyticsEnabled"`
 	Profile          string            `yaml:"profile"`
@@ -211,6 +211,11 @@ type returnConfig struct {
 	KubeContext      string            `yaml:"kubeContext"`
 	KubeNamespace    string            `yaml:"kubeNamespace"`
 	KubeContexts     map[string]string `yaml:"kubeContexts"`
+}
+
+type localCache struct {
+	Vars        map[string]interface{}        `yaml:"vars,omitempty"`
+	LastContext *localcache.LastContextConfig `yaml:"lastContext,omitempty"`
 }
 
 func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
@@ -224,7 +229,10 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	if h.ctx.Config() != nil {
 		retConfig.RawConfig = h.ctx.Config().Raw()
 		retConfig.Config = h.ctx.Config().Config()
-		retConfig.LocalCache = h.ctx.Config().LocalCache()
+		retConfig.LocalCache = localCache{
+			Vars:        h.ctx.Config().Variables(),
+			LastContext: h.ctx.Config().LocalCache().GetLastContext(),
+		}
 	}
 	if h.ctx.KubeClient() != nil {
 		retConfig.KubeNamespace = h.ctx.KubeClient().Namespace()

@@ -11,14 +11,14 @@ import { ApiHostname } from 'lib/rest';
 import SimpleCodeLine from 'components/basic/CodeSnippet/SimpleCodeLine/SimpleCodeLine';
 
 interface Props extends DevSpaceConfigContext {
-  commandsList: Command[];
+  commandsList: { [key: string]: Command };
   selected: string;
   running: string[];
   onSelect: (commandName: string) => void;
 }
 
 interface State {
-  openCommandIdx: number;
+  openCommandKey: string;
 }
 
 export const getURLByName = (name: string) => {
@@ -31,50 +31,48 @@ export const getURLByName = (name: string) => {
 
 class CommandsList extends React.PureComponent<Props, State> {
   state: State = {
-    openCommandIdx: -1,
+    openCommandKey: "",
   };
 
   renderCommands = () => {
-    return this.props.devSpaceConfig.rawConfig.commands.map((cmd, idx) => {
-      return (
-        <PortletSimple key={idx}>
-          {{
-            top: {
-              left: cmd.name,
-              right: (
+    return Object.entries(this.props.devSpaceConfig.rawConfig.commands).map(([key, cmd]) => {
+      return <PortletSimple key={key}>
+        {{
+          top: {
+            left: key,
+            right: (
                 <React.Fragment>
                   <IconButton
-                    filter={false}
-                    icon={LeftAlignIcon}
-                    tooltipText="Show Command"
-                    onClick={() => {
-                      this.onShowCommandClick(idx);
-                    }}
+                      filter={false}
+                      icon={LeftAlignIcon}
+                      tooltipText="Show Command"
+                      onClick={() => {
+                        this.onShowCommandClick(key);
+                      }}
                   />
                   <IconButton
-                    filter={false}
-                    icon={this.props.running.find((url) => url === getURLByName(cmd.name)) ? PauseIcon : PlayIcon}
-                    onClick={() => this.props.onSelect(cmd.name)}
+                      filter={false}
+                      icon={this.props.running.find((url) => url === getURLByName(key)) ? PauseIcon : PlayIcon}
+                      onClick={() => this.props.onSelect(key)}
                   />
                 </React.Fragment>
-              ),
-            },
-            content:
-              idx === this.state.openCommandIdx ? (
-                <div className={styles['show-command']}>
-                  <CodeSnippet className={styles.codesnippet}>
-                    <SimpleCodeLine>{cmd.command}</SimpleCodeLine>
-                  </CodeSnippet>
-                </div>
+            ),
+          },
+          content:
+              key === this.state.openCommandKey ? (
+                  <div className={styles['show-command']}>
+                    <CodeSnippet className={styles.codesnippet}>
+                      <SimpleCodeLine>{cmd.command}</SimpleCodeLine>
+                    </CodeSnippet>
+                  </div>
               ) : null,
-          }}
-        </PortletSimple>
-      );
-    });
+        }}
+      </PortletSimple>
+    })
   };
 
-  onShowCommandClick = (idx: number) => {
-    this.setState({ openCommandIdx: this.state.openCommandIdx === idx ? -1 : idx });
+  onShowCommandClick = (key: string) => {
+    this.setState({ openCommandKey: this.state.openCommandKey === key ? "" : key });
   };
 
   render() {
