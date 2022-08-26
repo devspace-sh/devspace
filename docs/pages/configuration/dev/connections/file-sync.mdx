@@ -31,6 +31,9 @@ dev:
     - path: ./:/app
       excludePaths:
       - node_modules/
+    # Map the local my-file.txt from the user home directory into the container
+    - path: "${DEVSPACE_USER_HOME}/my-file.txt:/user/my-file.txt"
+      file: true # Signal DevSpace this is a single file
     # highlight-end
 ```
 

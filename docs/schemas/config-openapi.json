@@ -118,7 +118,7 @@
             "properties": {
               "name": {
                 "type": "string",
-                "description": "Name is the name of the helm chart to deploy. Can also be a local path",
+                "description": "Name is the name of the helm chart to deploy. Can also be a local path or an oci url",
                 "group": "repo",
                 "group_name": "Source: Helm Repository"
               },
@@ -134,12 +134,12 @@
               },
               "username": {
                 "type": "string",
-                "description": "Username is the username to authenticate to the chart repo",
+                "description": "Username is the username to authenticate to the chart repo. When using an OCI chart, used for registry auth",
                 "group": "repo"
               },
               "password": {
                 "type": "string",
-                "description": "Password is the password to authenticate to the chart repo",
+                "description": "Password is the password to authenticate to the chart repo, When using an OCI chart, used for registry auth",
                 "group": "repo"
               },
               "path": {
@@ -265,7 +265,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Path is either the local path or the URL where DevSpace can find the artifact.\nThis option is mutually exclusive with the git option.",
+                "description": "Path is the local path where DevSpace can find the artifact.\nThis option is mutually exclusive with the git option.",
                 "group": "path",
                 "group_name": "Source: Local Filesystem"
               },
@@ -885,7 +885,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Path is either the local path or the URL where DevSpace can find the artifact.\nThis option is mutually exclusive with the git option.",
+                "description": "Path is the local path where DevSpace can find the artifact.\nThis option is mutually exclusive with the git option.",
                 "group": "path",
                 "group_name": "Source: Local Filesystem"
               },
@@ -1585,7 +1585,7 @@
               },
               "useInclude": {
                 "type": "boolean",
-                "description": "UseInclude tells DevSpace to use a different file for ssh config"
+                "description": "UseInclude tells DevSpace to use a the file ~/.ssh/devspace_config for its ssh entries. DevSpace\nwill also create an import for its own entries inside ~/.ssh/config, this is a cleaner way,\nbut unfortunately not all SSH clients support this."
               }
             },
             "type": "object"
@@ -1702,6 +1702,10 @@
               "noWatch": {
                 "type": "boolean",
                 "description": "NoWatch will terminate the sync after the initial sync is done"
+              },
+              "file": {
+                "type": "boolean",
+                "description": "File signals DevSpace that this is a single file that should get synced instead of a whole directory"
               },
               "printLogs": {
                 "type": "boolean",

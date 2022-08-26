@@ -362,11 +362,20 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 			return nil, err
 		}
 
-		err = os.MkdirAll(localPath, os.ModePerm)
-		if err != nil {
-			return nil, err
+		if !syncConfig.File {
+			err = os.MkdirAll(localPath, os.ModePerm)
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else if !stat.IsDir() {
+		syncConfig.File = true
+	} else if stat.IsDir() && syncConfig.File {
+		return nil, fmt.Errorf("cannot sync %s because its a directory and expected a single file", localPath)
+	}
+
+	// check if its a file that should get synced
+	if syncConfig.File {
 		if path.Base(filepath.ToSlash(localPath)) != path.Base(containerPath) {
 			return nil, fmt.Errorf("if you want to sync a single file, make sure the filename matches on the local and container path. E.g.: local-path/my-file.txt:remote-path/my-file.txt")
 		}
