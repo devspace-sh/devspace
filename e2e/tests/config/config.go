@@ -1794,6 +1794,8 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
+		_ = os.Setenv("FROM_ENV", "FROM_ENV")
+
 		// set the question answer func here
 		f.SetAnswerFunc(func(params *survey.QuestionOptions) (string, error) {
 			return "test", nil
@@ -1804,7 +1806,8 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// check if variables were loaded correctly
-		framework.ExpectEqual(len(config.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(len(config.Variables()), 4+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(config.Variables()["FROM_ENV"], "FROM_ENV")
 		framework.ExpectEqual(len(config.LocalCache().ListVars()), 1)
 		test1, _ := config.LocalCache().GetVar("TEST_1")
 		framework.ExpectEqual(test1, "test")
