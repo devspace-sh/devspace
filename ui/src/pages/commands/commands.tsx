@@ -85,7 +85,7 @@ class Commands extends React.PureComponent<Props, State> {
       <PageLayout className={styles['commands-component']} heading={<CommandsLinkTabSelector />}>
         {!this.props.devSpaceConfig.rawConfig ||
         !this.props.devSpaceConfig.rawConfig.commands ||
-        this.props.devSpaceConfig.rawConfig.commands.length === 0 ? (
+        Object.entries(this.props.devSpaceConfig.rawConfig.commands).length === 0 ? (
           <div className={styles['no-config']}>
             <div>
               No commands available. Take a look at&nbsp;
