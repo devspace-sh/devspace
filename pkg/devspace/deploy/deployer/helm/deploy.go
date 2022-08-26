@@ -2,10 +2,11 @@ package helm
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
@@ -44,13 +45,24 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bo
 		releaseNamespace = d.DeploymentConfig.Namespace
 	}
 
+	if d.DeploymentConfig.Helm.Chart.Source != nil {
+		downloadPath, err := d.Helm.DownloadChart(ctx, d.DeploymentConfig.Helm)
+		if err != nil {
+			return false, errors.Wrap(err, "download chart")
+		}
+		chartPath = downloadPath
+	}
+
 	// Hash the chart directory if there is any
 	_, err := os.Stat(ctx.ResolvePath(chartPath))
 	if err == nil {
 		chartPath = ctx.ResolvePath(chartPath)
 
 		// Check if the chart directory has changed
-		hash, err = hashpkg.Directory(chartPath)
+		hash, err = hashpkg.DirectoryExcludes(chartPath, []string{
+			".git/",
+			".devspace/",
+		}, true)
 		if err != nil {
 			return false, errors.Errorf("Error hashing chart directory: %v", err)
 		}
