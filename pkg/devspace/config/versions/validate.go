@@ -91,6 +91,34 @@ func Validate(config *latest.Config) error {
 		return err
 	}
 
+	err = validateFunctions(config.Functions)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func isReservedFunctionName(name string) bool {
+	switch name {
+	case "true", ":", "false", "exit", "set", "shift", "unset",
+		"echo", "printf", "break", "continue", "pwd", "cd",
+		"wait", "builtin", "trap", "type", "source", ".", "command",
+		"dirs", "pushd", "popd", "umask", "alias", "unalias",
+		"fg", "bg", "getopts", "eval", "test", "devspace", "[", "exec",
+		"return", "read", "shopt":
+		return true
+	}
+	return false
+}
+
+func validateFunctions(functions map[string]string) error {
+	for name := range functions {
+		if isReservedFunctionName(name) {
+			return fmt.Errorf("you cannot use '%s' as a function name as its an internally used special function. Please choose another name", name)
+		}
+	}
+
 	return nil
 }
 
