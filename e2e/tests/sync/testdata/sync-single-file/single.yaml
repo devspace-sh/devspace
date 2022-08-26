@@ -1,0 +1,16 @@
+version: v2beta1
+vars:
+  IMAGE: alpine
+deployments:
+  test:
+    helm:
+      values:
+        containers:
+        - image: ${IMAGE}
+          command: ["sleep"]
+          args: ["999999999999"]
+dev:
+  sync:
+    imageSelector: ${IMAGE}
+    sync:
+    - path: other-folder/test.txt:/watch/test.txt

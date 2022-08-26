@@ -25,7 +25,8 @@ import PartialRequirereference from "./require_reference.mdx"
 
 ## `imports` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#imports}
 
-Imports merges specified config files into this one. This is very useful to split up your DevSpace configuration into multiple files and reuse those through git, a remote url or common local path.
+Imports merges specified config files into this one. This is very useful to split up your DevSpace configuration
+into multiple files and reuse those through git, a remote url or common local path.
 
 </summary>
 
@@ -44,7 +45,12 @@ Imports merges specified config files into this one. This is very useful to spli
 
 ## `pipelines` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;pipeline_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#pipelines}
 
- Pipelines are the work blocks that DevSpace should execute when devspace dev, devspace build, devspace deploy or devspace purge is called.
+Pipelines are the work blocks that DevSpace should execute when devspace dev, devspace build, devspace deploy or devspace purge
+is called. Pipelines are defined through a special POSIX script that allows you to use special commands
+such as create_deployments, start_dev, build_images etc. to signal DevSpace you want to execute
+a specific functionality. The pipelines dev, build, deploy and purge are special and will override
+the default functionality of the respective command if defined. All other pipelines can be either run
+via the devspace run-pipeline command or used within another pipeline through run_pipelines.
 
 </summary>
 
@@ -54,7 +60,7 @@ Imports merges specified config files into this one. This is very useful to spli
 
 ## `<pipeline_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"><span>dev<br/>deploy<br/>build<br/>purge<br/>.*</span></span> {#pipelines-name}
 
-Name of the pipeline, will be filled automatically.
+Name of the pipeline, will be filled automatically
 
 </summary>
 
@@ -74,6 +80,8 @@ Name of the pipeline, will be filled automatically.
 ## `images` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;image_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images}
 
 Images holds configuration of how DevSpace should build images. By default, DevSpace will build all defined images.
+If you are using a custom pipeline, you can dynamically define which image is built at which time during the
+execution.
 
 </summary>
 
@@ -83,7 +91,7 @@ Images holds configuration of how DevSpace should build images. By default, DevS
 
 ## `<image_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#images-name}
 
-Name of the image, will be filled automatically.
+Name of the image, will be filled automatically
 
 </summary>
 
@@ -103,6 +111,8 @@ Name of the image, will be filled automatically.
 ## `deployments` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;deployment_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#deployments}
 
 Deployments holds configuration of how DevSpace should deploy resources to Kubernetes. By default, DevSpace will deploy all defined deployments.
+If you are using a custom pipeline, you can dynamically define which deployment is deployed at which time during the
+execution.
 
 </summary>
 
@@ -112,7 +122,7 @@ Deployments holds configuration of how DevSpace should deploy resources to Kuber
 
 ## `<deployment_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#deployments-name}
 
-Name of the deployment.
+Name of the deployment
 
 </summary>
 
@@ -131,7 +141,15 @@ Name of the deployment.
 
 ## `dev` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;dev_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev}
 
-Dev holds development configuration. Each dev configuration targets a single pod and enables certain dev services on that pod or even rewrites it if certain changes are requested, such as adding an environment variable or changing the entrypoint.
+Dev holds development configuration. Each dev configuration targets a single pod and enables certain dev services on that pod
+or even rewrites it if certain changes are requested, such as adding an environment variable or changing the entrypoint.
+Dev allows you to:
+- sync local folders to the Kubernetes pod
+- port forward remote ports to your local computer
+- forward local ports into the Kubernetes pod
+- configure an ssh tunnel to the Kubernetes pod
+- proxy local commands to the container
+- restart the container on file changes
 
 </summary>
 
@@ -141,7 +159,7 @@ Dev holds development configuration. Each dev configuration targets a single pod
 
 ## `<dev_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-name}
 
-Name of the dev configuration.
+Name of the dev configuration
 
 </summary>
 
@@ -160,7 +178,7 @@ Name of the dev configuration.
 
 ## `vars` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;var_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#vars}
 
-Vars are config variables that can be used inside other config sections to replace certain values dynamically.
+Vars are config variables that can be used inside other config sections to replace certain values dynamically
 
 </summary>
 
@@ -170,7 +188,7 @@ Vars are config variables that can be used inside other config sections to repla
 
 ## `<var_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#vars-name}
 
-Name is the name of the variable.
+Name is the name of the variable
 
 </summary>
 
@@ -189,7 +207,8 @@ Name is the name of the variable.
 
 ## `commands` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;command_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#commands}
 
-Commands are custom commands that can be executed via 'devspace run COMMAND'. These commands are run within a pseudo bash that also allows executing special commands such as run_watch or is_equal.
+Commands are custom commands that can be executed via 'devspace run COMMAND'. These commands are run within a pseudo bash
+that also allows executing special commands such as run_watch or is_equal.
 
 </summary>
 
@@ -199,7 +218,7 @@ Commands are custom commands that can be executed via 'devspace run COMMAND'. Th
 
 ## `<command_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#commands-name}
 
-Name is the name of a command that is used via 'devspace run NAME'.
+Name is the name of a command that is used via `devspace run NAME`
 
 </summary>
 
@@ -218,7 +237,11 @@ Name is the name of a command that is used via 'devspace run NAME'.
 
 ## `dependencies` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;dependency_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dependencies}
 
-Dependencies are sub devspace projects that lie in a local folder or remote git repository that can be executed from within the pipeline.
+Dependencies are sub devspace projects that lie in a local folder or remote git repository that can be executed
+from within the pipeline. In contrast to imports, these projects pose as separate fully functional DevSpace projects
+that typically lie including source code in a different folder and can be used to compose a full microservice
+application that will be deployed by DevSpace. Each dependency name can only be used once and if you want to use
+the same project multiple times, make sure to use a different name for each of those instances.
 
 </summary>
 
@@ -228,7 +251,7 @@ Dependencies are sub devspace projects that lie in a local folder or remote git 
 
 ## `<dependency_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dependencies-name}
 
-Name is used internally.
+Name is used internally
 
 </summary>
 
@@ -247,7 +270,9 @@ Name is used internally.
 
 ## `pullSecrets` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">&lt;pullSecret_name&gt;:object</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#pullSecrets}
 
-PullSecrets are image pull secrets that will be created by devspace in the target namespace during devspace dev or devspace deploy. DevSpace will merge all defined pull secrets into a single one or the one specified.
+PullSecrets are image pull secrets that will be created by devspace in the target namespace
+during devspace dev or devspace deploy. DevSpace will merge all defined pull secrets into a single
+one or the one specified.
 
 </summary>
 
@@ -257,7 +282,7 @@ PullSecrets are image pull secrets that will be created by devspace in the targe
 
 ## `<pullSecret_name>` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#pullSecrets-name}
 
-Name is the pull secret name to deploy.
+Name is the pull secret name to deploy
 
 </summary>
 
@@ -276,7 +301,8 @@ Name is the pull secret name to deploy.
 
 ## `require` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#require}
 
-Require defines what DevSpace, plugins and command versions are required to use this config and if a condition is not fulfilled, DevSpace will fail.
+Require defines what DevSpace, plugins and command versions are required to use this config and if a condition is not
+fulfilled, DevSpace will fail.
 
 </summary>
 

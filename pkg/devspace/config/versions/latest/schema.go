@@ -957,7 +957,9 @@ type SSH struct {
 	// RemoteAddress is the address to listen to inside the container
 	RemoteAddress string `yaml:"remoteAddress,omitempty" json:"remoteAddress,omitempty"`
 
-	// UseInclude tells DevSpace to use a different file for ssh config
+	// UseInclude tells DevSpace to use a the file ~/.ssh/devspace_config for its ssh entries. DevSpace
+	// will also create an import for its own entries inside ~/.ssh/config, this is a cleaner way,
+	// but unfortunately not all SSH clients support this.
 	UseInclude bool `yaml:"useInclude,omitempty" json:"useInclude,omitempty"`
 }
 
@@ -1097,6 +1099,9 @@ type SyncConfig struct {
 
 	// NoWatch will terminate the sync after the initial sync is done
 	NoWatch bool `yaml:"noWatch,omitempty" json:"noWatch,omitempty"`
+
+	// File signals DevSpace that this is a single file that should get synced instead of a whole directory
+	File bool `yaml:"file,omitempty" json:"file,omitempty"`
 
 	// PrintLogs defines if sync logs should be displayed on the terminal
 	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty"`

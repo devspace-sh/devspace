@@ -497,6 +497,10 @@ func (d *devPod) startServices(ctx devspacecontext.Context, devPod *latest.DevPo
 		return portforwarding.StartPortForwarding(ctx, devPod, selector, parent)
 	})
 
+	// wait for both to finish
+	<-syncDone
+	<-portForwardingDone
+
 	// Start SSH
 	sshDone := parent.NotifyGo(func() error {
 		// add ssh prefix
@@ -511,9 +515,7 @@ func (d *devPod) startServices(ctx devspacecontext.Context, devPod *latest.DevPo
 		return proxycommands.StartProxyCommands(ctx, devPod, selector, parent)
 	})
 
-	// wait for both to finish
-	<-syncDone
-	<-portForwardingDone
+	// wait for ssh and reverse commands
 	<-sshDone
 	<-reverseCommandsDone
 

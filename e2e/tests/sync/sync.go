@@ -695,4 +695,84 @@ var _ = DevSpaceDescribe("sync", func() {
 		// wait for the command to finish
 		waitGroup.Wait()
 	})
+
+	ginkgo.It("should sync single file to a container", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-single-file")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "single.yaml",
+			},
+			Pipeline: "deploy",
+		}
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		cancelCtx, stop := context.WithCancel(context.Background())
+		defer stop()
+
+		// sync command
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "single.yaml",
+			},
+			Wait: true,
+			Ctx:  cancelCtx,
+		}
+
+		// start the command
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+			err = syncCmd.Run(f)
+			framework.ExpectNoError(err)
+		}()
+
+		// check that uploadExcludePaths folder was not synced
+		framework.ExpectRemoteFileContents("alpine", ns, "/watch/test.txt", "Hello World")
+		framework.ExpectRemoteFileNotFound("alpine", ns, "/watch/single.yaml")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "other-folder", "test.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "other-folder", "test123.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteFileContents("alpine", ns, "/watch/test.txt", payload)
+		framework.ExpectRemoteFileNotFound("alpine", ns, "/watch/test123.txt")
+
+		// check that file is not created but updated
+		_, err = kubeClient.ExecByImageSelector("alpine", ns, []string{
+			"sh", "-c", "echo -n 'Hello World' > /watch/test.test",
+		})
+		framework.ExpectNoError(err)
+		_, err = kubeClient.ExecByImageSelector("alpine", ns, []string{
+			"sh", "-c", "echo -n 'Hello DevSpace' > /watch/test.txt",
+		})
+		framework.ExpectNoError(err)
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "other-folder", "test.txt"), "Hello DevSpace")
+		framework.ExpectLocalFileNotFound(filepath.Join(tempDir, "other-folder", "test.test"))
+
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
+	})
 })

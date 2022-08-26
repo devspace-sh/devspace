@@ -173,6 +173,14 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'IDE Integration',
+      link: { type: 'doc', id: 'ide-integration/visual-studio-code' },
+      items: [
+        'ide-integration/visual-studio-code',
+      ],
+    },
+    {
+      type: 'category',
       label: 'devspace --help',
       className: 'code-style',
       link: { type: 'doc', id: 'cli' },

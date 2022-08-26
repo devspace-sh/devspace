@@ -25,7 +25,8 @@ const waitForMoreChangesTimeout = time.Minute
 
 // Options holds the sync options
 type Options struct {
-	Polling bool
+	Polling          bool
+	NoRecursiveWatch bool
 
 	Exec []latest.SyncExec
 
@@ -85,7 +86,7 @@ type Sync struct {
 	readyChan chan bool
 }
 
-// NewSync creates a new sync for the given
+// NewSync creates a new sync for the given local path
 func NewSync(ctx context.Context, localPath string, options Options) (*Sync, error) {
 	cancelCtx, cancel := context.WithCancel(ctx)
 
@@ -233,7 +234,11 @@ func (s *Sync) startUpstream() {
 	s.tree = notify.NewTree()
 
 	// Set up a watchpoint listening for events within a directory tree rooted at specified directory
-	err := s.tree.Watch(s.LocalPath+"/...", s.upstream.events, func(path string) bool {
+	watchPath := s.LocalPath + "/..."
+	if s.Options.NoRecursiveWatch {
+		watchPath = s.LocalPath
+	}
+	err := s.tree.Watch(watchPath, s.upstream.events, func(path string) bool {
 		if s.ignoreMatcher == nil || s.ignoreMatcher.RequireFullScan() {
 			return false
 		}

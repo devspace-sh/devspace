@@ -9,6 +9,7 @@ import (
 	"github.com/mgutz/ansi"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -329,24 +330,6 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 	// make sure we resolve it correctly
 	localPath = ctx.ResolvePath(localPath)
 
-	// check if local path exists
-	_, err = os.Stat(localPath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, err
-		}
-
-		err = os.MkdirAll(localPath, os.ModePerm)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	err = inject.InjectDevSpaceHelper(ctx.Context(), ctx.KubeClient(), pod, container, arch, customLog)
-	if err != nil {
-		return nil, err
-	}
-
 	upstreamDisabled := syncConfig.DisableUpload
 	downstreamDisabled := syncConfig.DisableDownload
 	compareBy := latest.InitialSyncCompareByMTime
@@ -368,6 +351,45 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 		},
 	}
 
+	if len(syncConfig.ExcludePaths) > 0 {
+		options.ExcludePaths = syncConfig.ExcludePaths
+	}
+
+	// check if local path exists
+	stat, err := os.Stat(localPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+
+		if !syncConfig.File {
+			err = os.MkdirAll(localPath, os.ModePerm)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else if !stat.IsDir() {
+		syncConfig.File = true
+	} else if stat.IsDir() && syncConfig.File {
+		return nil, fmt.Errorf("cannot sync %s because its a directory and expected a single file", localPath)
+	}
+
+	// check if its a file that should get synced
+	if syncConfig.File {
+		if path.Base(filepath.ToSlash(localPath)) != path.Base(containerPath) {
+			return nil, fmt.Errorf("if you want to sync a single file, make sure the filename matches on the local and container path. E.g.: local-path/my-file.txt:remote-path/my-file.txt")
+		}
+
+		fileName := path.Base(localPath)
+		localPath = path.Dir(localPath)
+		containerPath = path.Dir(containerPath)
+		options.ExcludePaths = []string{
+			"**",
+			"!/" + fileName,
+		}
+		options.NoRecursiveWatch = true
+	}
+
 	// Initialize log
 	if options.Log == nil {
 		options.Log = logpkg.GetFileLogger("sync")
@@ -378,8 +400,10 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 		options.Exec = syncConfig.OnUpload.Exec
 	}
 
-	if len(syncConfig.ExcludePaths) > 0 {
-		options.ExcludePaths = syncConfig.ExcludePaths
+	// inject devspace helper
+	err = inject.InjectDevSpaceHelper(ctx.Context(), ctx.KubeClient(), pod, container, arch, customLog)
+	if err != nil {
+		return nil, err
 	}
 
 	if syncConfig.ExcludeFile != "" {
@@ -493,6 +517,9 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 	}
 	for _, exclude := range options.ExcludePaths {
 		downstreamArgs = append(downstreamArgs, "--exclude", exclude)
+	}
+	if options.NoRecursiveWatch {
+		downstreamArgs = append(downstreamArgs, "--recursive-watch=false")
 	}
 	downstreamArgs = append(downstreamArgs, containerPath)
 
