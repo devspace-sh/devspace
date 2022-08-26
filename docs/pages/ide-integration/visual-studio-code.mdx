@@ -33,7 +33,7 @@ cd devspace-vscode-example
 devspace dev -n my-namespace
 ```
 
-## Clone the example Project
+## 1. Clone the example Project
 
 We have prepared a small example Golang project that shows how you can use DevSpace and Visual Studio Code together. To checkout the example project run:
 
@@ -67,7 +67,7 @@ func main() {
 ```
 It's a simple web server that runs on port 9000 and returns a `Hello World!` message.
 
-## Configure DevSpace
+## 2. Configure DevSpace
 
 Let's take a look at the `devspace.yaml`:
 ```yaml
@@ -127,7 +127,7 @@ Let's break down the file into what DevSpace will do:
 5. Next, DevSpace will create a small git credentials helper script inside the container to make your local git credentials available inside the container as well as allow usage of the local `devspace` command inside the container
 6. And lastly, DevSpace will open Visual Studio Code inside the container
 
-## Start DevSpace
+## 3. Start DevSpace
 
 Now let's start DevSpace with the following command:
 ```
