@@ -4,17 +4,18 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/env"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
-	"io/ioutil"
-	"os"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
@@ -191,7 +192,7 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 	// This check is necessary to avoid process loops where a variable inside
 	// the devspace.yaml would execute another devspace command which would again
 	// load the config and execute DevSpace config parsing etc.
-	if os.Getenv(expression.DEVSPACE_SKIP_PRELOAD_ENV) == "" {
+	if os.Getenv(expression.DevSpaceSkipPreloadEnv) == "" {
 		rawConfig, err = parseConfig(f)
 		if err != nil {
 			f.GetLog().Debugf("error parsing raw config: %v", err)
