@@ -3,11 +3,12 @@ package variable
 import (
 	"bytes"
 	"context"
+	"os"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"mvdan.cc/sh/v3/expand"
-	"os"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/command"
@@ -55,7 +56,7 @@ func execCommand(ctx context.Context, varName string, definition *latest.Variabl
 	stdErrWriter := &bytes.Buffer{}
 	var err error
 	envVars := []string{}
-	envVars = append(envVars, expression.DEVSPACE_SKIP_PRELOAD_ENV+"=true")
+	envVars = append(envVars, expression.DevSpaceSkipPreloadEnv+"=true")
 	envVars = append(envVars, os.Environ()...)
 	if args == nil {
 		err = engine.ExecuteSimpleShellCommand(ctx, dir, expand.ListEnviron(envVars...), writer, stdErrWriter, nil, cmd)

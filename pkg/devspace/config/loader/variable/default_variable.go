@@ -2,10 +2,11 @@ package variable
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
-	"github.com/sirupsen/logrus"
 	"os"
 	"strconv"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -24,7 +25,6 @@ func NewDefaultVariable(name string, workingDirectory string, localCache localca
 type defaultVariable struct {
 	name             string
 	workingDirectory string
-	dry              bool
 	localCache       localcache.Cache
 	log              log.Logger
 }
