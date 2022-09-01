@@ -1,0 +1,5 @@
+version: v2beta1
+name: import1
+
+vars:
+  IMPORT1: import1

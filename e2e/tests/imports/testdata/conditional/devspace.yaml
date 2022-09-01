@@ -1,0 +1,15 @@
+version: v2beta1
+name: base
+
+imports:
+  - path: ./${IMPORT1_PATH}
+
+vars:
+  IMPORT1_PATH:
+    source: env
+    default: import1.yaml
+
+pipelines:
+  deploy:
+    run: |-
+      echo ${IMPORT1} > import1.txt
