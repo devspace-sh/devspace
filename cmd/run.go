@@ -3,11 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"io"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
+	"mvdan.cc/sh/v3/expand"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
