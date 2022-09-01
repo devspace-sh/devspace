@@ -281,7 +281,7 @@ func (d *DeployConfig) buildManifests(ctx devspacecontext.Context, manifest stri
 		return NewKustomizeBuilder(kustomizePath, d.DeploymentConfig, ctx.Log()).Build(ctx.Context(), ctx.Environ(), ctx.WorkingDir(), manifest)
 	}
 
-	raw, err := ctx.KubeClient().KubeConfigLoader().LoadConfig().RawConfig()
+	raw, err := ctx.KubeClient().KubeConfigLoader().LoadRawConfig()
 	if err != nil {
 		return nil, fmt.Errorf("get raw config")
 	}

@@ -364,6 +364,14 @@ var Functions = []Function{
 		Group:       groupOther,
 	},
 	{
+		Name:        "wait_pod",
+		Description: "Waits for a pod to become running",
+		Args:        `[command]`,
+		Handler:     commands.WaitPod,
+		Flags:       commands.WaitPodOptions{},
+		Group:       groupOther,
+	},
+	{
 		Name:        "exec_container",
 		Description: `Executes the command provided as argument inside a container`,
 		Args:        `[command]`,

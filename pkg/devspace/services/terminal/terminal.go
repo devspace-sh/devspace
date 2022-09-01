@@ -27,6 +27,7 @@ func StartTerminalFromCMD(
 	command []string,
 	wait,
 	restart,
+	tty,
 	screen bool,
 	screenSession string,
 	stdout io.Writer,
@@ -41,7 +42,7 @@ func StartTerminalFromCMD(
 	ctx.Log().Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
 	done := make(chan error)
 	go func() {
-		done <- startTerminal(ctx, command, !screen, screenSession, stdout, stderr, stdin, container)
+		done <- startTerminal(ctx, command, tty, !screen, screenSession, stdout, stderr, stdin, container)
 	}()
 
 	// wait until either client has finished or we got interrupted
@@ -62,14 +63,14 @@ func StartTerminalFromCMD(
 				if restart && IsUnexpectedExitCode(exitError.Code) {
 					ctx.Log().WriteString(logrus.InfoLevel, "\n")
 					ctx.Log().Infof("Restarting because: %s", err)
-					return StartTerminalFromCMD(ctx, selector, command, wait, restart, screen, screenSession, stdout, stderr, stdin)
+					return StartTerminalFromCMD(ctx, selector, command, wait, restart, tty, screen, screenSession, stdout, stderr, stdin)
 				}
 
 				return exitError.Code, nil
 			} else if restart {
 				ctx.Log().WriteString(logrus.InfoLevel, "\n")
 				ctx.Log().Infof("Restarting because: %s", err)
-				return StartTerminalFromCMD(ctx, selector, command, wait, restart, screen, screenSession, stdout, stderr, stdin)
+				return StartTerminalFromCMD(ctx, selector, command, wait, restart, tty, screen, screenSession, stdout, stderr, stdin)
 			}
 
 			return 0, err
@@ -118,7 +119,7 @@ func StartTerminal(
 	ctx.Log().Infof("Opening shell to %s:%s (pod:container)", ansi.Color(container.Container.Name, "white+b"), ansi.Color(container.Pod.Name, "white+b"))
 	errChan := make(chan error)
 	parent.Go(func() error {
-		errChan <- startTerminal(ctx, command, devContainer.Terminal.DisableScreen, "dev", stdout, stderr, stdin, container)
+		errChan <- startTerminal(ctx, command, !devContainer.Terminal.DisableTTY, devContainer.Terminal.DisableScreen, "dev", stdout, stderr, stdin, container)
 		return nil
 	})
 
@@ -158,6 +159,7 @@ func StartTerminal(
 func startTerminal(
 	ctx devspacecontext.Context,
 	command []string,
+	tty bool,
 	disableScreen bool,
 	screenSession string,
 	stdout io.Writer,
@@ -218,7 +220,7 @@ fi`,
 		Pod:         container.Pod,
 		Container:   container.Container.Name,
 		Command:     command,
-		TTY:         true,
+		TTY:         tty,
 		Stdin:       stdin,
 		Stdout:      stdout,
 		Stderr:      stderr,

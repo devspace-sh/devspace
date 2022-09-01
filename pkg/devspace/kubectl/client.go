@@ -108,6 +108,7 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 		return nil, err
 	}
 	restConfig.UserAgent = "DevSpace Version " + upgrade.GetVersion()
+
 	kubeClient, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "new client")
