@@ -1234,6 +1234,9 @@ type Terminal struct {
 	// DisableScreen will disable screen which is used by DevSpace by default to preserve
 	// sessions if connections interrupt or the session is lost.
 	DisableScreen bool `yaml:"disableScreen,omitempty" json:"disableScreen,omitempty"`
+
+	// DisableTTY will disable a tty shell for terminal command execution
+	DisableTTY bool `yaml:"disableTTY,omitempty" json:"disableTTY,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency

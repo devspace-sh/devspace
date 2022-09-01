@@ -260,8 +260,8 @@ func (r *resolver) insertVariableGraph(g *graph.Graph, node *latest.Variable) er
 func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{}, includedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range includedPaths {
-		path = strings.ReplaceAll(path, "*", "[^/]+")
 		path = strings.ReplaceAll(path, "**", ".+")
+		path = strings.ReplaceAll(path, "*", "[^/]+")
 		path = "^" + path + "$"
 		expr, err := regexp.Compile(path)
 		if err != nil {
@@ -290,8 +290,8 @@ func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{
 func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{}, excludedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range excludedPaths {
-		path = strings.ReplaceAll(path, "*", "[^/]+")
 		path = strings.ReplaceAll(path, "**", ".+")
+		path = strings.ReplaceAll(path, "*", "[^/]+")
 		path = "^" + path + "$"
 		expr, err := regexp.Compile(path)
 		if err != nil {

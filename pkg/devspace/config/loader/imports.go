@@ -46,7 +46,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
 	}
 
-	rawImportsInterface, err := resolver.FillVariablesInclude(ctx, rawImports, []string{"/imports/*/enabled"})
+	rawImportsInterface, err := resolver.FillVariablesInclude(ctx, rawImports, []string{"/imports/**"})
 	if err != nil {
 		return nil, err
 	}

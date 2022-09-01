@@ -121,7 +121,7 @@ type forward struct {
 }
 
 func newHandler(ctx devspacecontext.Context, path string, pipeline types.Pipeline) (*handler, error) { // Get kube config
-	kubeConfig, err := kubeconfig.NewLoader().LoadConfig().RawConfig()
+	kubeConfig, err := kubeconfig.NewLoader().LoadRawConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "load kube config")
 	}

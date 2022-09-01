@@ -76,6 +76,9 @@ var PipelineCommands = map[string]func(devCtx devspacecontext.Context, pipeline 
 	"select_pod": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.SelectPod(devCtx, args)
 	},
+	"wait_pod": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.WaitPod(devCtx, args)
+	},
 }
 
 func init() {

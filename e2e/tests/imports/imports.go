@@ -31,6 +31,60 @@ var _ = DevSpaceDescribe("imports", func() {
 		framework.ExpectNoError(err)
 	})
 
+	ginkgo.It("should import correctly with variables", func() {
+		tempDir, err := framework.CopyToTempDir("tests/imports/testdata/conditional")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("imports")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+				Profiles:  []string{},
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// read temp folder
+		framework.ExpectLocalFileContentsWithoutSpaces("import1.txt", "import1")
+
+		// change path
+		err = os.Setenv("IMPORT1_PATH", "import2.yaml")
+		framework.ExpectNoError(err)
+		defer func() {
+			_ = os.Unsetenv("IMPORT1_PATH")
+		}()
+
+		// create a new dev command
+		deployCmd = &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+				Profiles:  []string{},
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// read temp folder
+		framework.ExpectLocalFileContentsWithoutSpaces("import1.txt", "import2")
+	})
+
 	ginkgo.It("should import correctly", func() {
 		tempDir, err := framework.CopyToTempDir("tests/imports/testdata/local")
 		framework.ExpectNoError(err)
