@@ -2,6 +2,18 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug cli",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceRoot}/main.go",
+      "cwd": "${workspaceRoot}",
+      "args": ["dev"],
+      "env": {
+        "DEVSPACE_CONFIG": "devspace.yaml"
+      }
+    },
+    {
       "name": "Launch e2e tests",
       "type": "go",
       "request": "launch",
