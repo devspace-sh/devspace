@@ -1813,6 +1813,10 @@
         "disableScreen": {
           "type": "boolean",
           "description": "DisableScreen will disable screen which is used by DevSpace by default to preserve\nsessions if connections interrupt or the session is lost."
+        },
+        "disableTTY": {
+          "type": "boolean",
+          "description": "DisableTTY will disable a tty shell for terminal command execution"
         }
       },
       "type": "object",
