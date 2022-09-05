@@ -20,7 +20,7 @@ import (
 )
 
 // ExpressionMatchRegex is the regex to check if a value matches the devspace var format
-var ExpressionMatchRegex = regexp.MustCompile(`(?ms)^\$\#?\!?\((.+)\)$`)
+var ExpressionMatchRegex = regexp.MustCompile(`(?ms)^\$\$?\#?\!?\((.+)\)$`)
 
 const DevSpaceSkipPreloadEnv = "DEVSPACE_SKIP_PRELOAD"
 
@@ -94,6 +94,8 @@ func ResolveExpressions(ctx context.Context, value, dir string, variables map[st
 	for _, match := range matches {
 		if len(match) != 2 {
 			continue
+		} else if value[1] == '$' {
+			return value[1:], nil
 		}
 
 		stdout := &bytes.Buffer{}
