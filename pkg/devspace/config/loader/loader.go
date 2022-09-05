@@ -3,7 +3,11 @@ package loader
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"io/ioutil"
@@ -12,11 +16,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
-	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/command"
 
 	"github.com/loft-sh/devspace/pkg/util/constraint"
 

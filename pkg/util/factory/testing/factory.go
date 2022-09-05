@@ -112,11 +112,6 @@ func (f *Factory) NewKubeClientFromContext(context, namespace string) (kubectl.C
 	return f.KubeClient, nil
 }
 
-// NewKubeClientBySelect implements interface
-func (f *Factory) NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error) {
-	return f.KubeClient, nil
-}
-
 // NewHelmClient implements interface
 func (f *Factory) NewHelmClient(log log.Logger) (types.Client, error) {
 	return f.HelmClient, nil

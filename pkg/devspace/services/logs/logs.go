@@ -65,6 +65,7 @@ func StartLogs(
 		lines = devContainer.Logs.LastLines
 	}
 
+	ctx.Log().Infof("Streaming logs of pod:container %s:%s", ansi.Color(containerObj.Pod.Name, "white+b"), ansi.Color(containerObj.Container.Name, "white+b"))
 	reader, err := ctx.KubeClient().Logs(ctx.Context(), containerObj.Pod.Namespace, containerObj.Pod.Name, containerObj.Container.Name, false, &lines, true)
 	if err != nil {
 		return err

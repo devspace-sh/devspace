@@ -125,7 +125,7 @@ func fillVariablesExcludeAndParse(ctx context.Context, resolver variable.Resolve
 }
 
 func fillVariablesAndParse(ctx context.Context, resolver variable.Resolver, preparedConfig map[string]interface{}, log log.Logger, excludedPaths ...string) (*latest.Config, map[string]interface{}, error) {
-	// fill in variables and expressions (leave out
+	// fill in variables and expressions
 	preparedConfigInterface, err := resolver.FillVariablesExclude(ctx, preparedConfig, excludedPaths)
 	if err != nil {
 		return nil, nil, err
