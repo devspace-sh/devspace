@@ -309,7 +309,7 @@ func initialize(ctx context.Context, f factory.Factory, options *CommandOptions,
 	if client != nil {
 		// If the current kube context or namespace is different than old,
 		// show warnings and reset kube client if necessary
-		client, err = kubectl.CheckKubeContext(client, localCache, options.NoWarn, options.SwitchContext, logger)
+		client, err = kubectl.CheckKubeContext(client, localCache, options.NoWarn, options.SwitchContext, false, logger)
 		if err != nil {
 			return nil, err
 		}

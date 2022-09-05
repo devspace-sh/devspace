@@ -87,12 +87,12 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 		// log into OCI registry if specified
 		if strings.HasPrefix(chartName, "oci://") {
 			if helmConfig.Chart.Username != "" && helmConfig.Chart.Password != "" {
-				chartNameUrl, err := url.Parse(chartName)
+				chartNameURL, err := url.Parse(chartName)
 				if err != nil {
 					return nil, errors.Wrap(err, "chartName malformed for oci registry")
 				}
 
-				_, err = c.genericHelm.Exec(ctx, []string{"registry", "login", chartNameUrl.Hostname(), "--username", helmConfig.Chart.Username, "--password", helmConfig.Chart.Password})
+				_, err = c.genericHelm.Exec(ctx, []string{"registry", "login", chartNameURL.Hostname(), "--username", helmConfig.Chart.Username, "--password", helmConfig.Chart.Password})
 				if err != nil {
 					return nil, errors.Wrap(err, "login oci registry")
 				}
@@ -166,11 +166,12 @@ func (c *client) Template(ctx devspacecontext.Context, releaseName, releaseNames
 	// Chart settings
 	chartName := ""
 	if helmConfig.Chart.Source != nil {
-		chartName, err = c.DownloadChart(ctx, helmConfig)
+		chartName, err = dependencyutil.GetDependencyPath(ctx.WorkingDir(), helmConfig.Chart.Source)
 		if err != nil {
 			return "", err
 		}
 
+		chartName = filepath.Dir(chartName)
 		args = append(args, chartName)
 	} else {
 		var chartRepo string

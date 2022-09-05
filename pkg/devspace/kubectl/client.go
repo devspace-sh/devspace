@@ -152,7 +152,7 @@ func (client *client) IsInCluster() bool {
 }
 
 // CheckKubeContext prints a warning if the last kube context is different than this one
-func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, autoSwitch bool, log log.Logger) (Client, error) {
+func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, autoSwitch, skipWakeUpPing bool, log log.Logger) (Client, error) {
 	currentConfigContext := &localcache.LastContextConfig{
 		Namespace: client.Namespace(),
 		Context:   client.CurrentContext(),
@@ -285,9 +285,11 @@ func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, aut
 	}
 
 	// wake up and ping
-	err := wakeUpAndPing(context.TODO(), client, log)
-	if err != nil {
-		return nil, errors.Wrap(err, "wakeup environment")
+	if !skipWakeUpPing {
+		err := wakeUpAndPing(context.TODO(), client, log)
+		if err != nil {
+			return nil, errors.Wrap(err, "wakeup environment")
+		}
 	}
 
 	return client, nil
@@ -385,7 +387,7 @@ func wakeUp(ctx context.Context, client Client, log log.Logger) error {
 	// wake up the environment
 	_, err = kubeClient.CoreV1().Pods(client.Namespace()).List(ctx, metav1.ListOptions{LabelSelector: "devspace=wakeup"})
 	if err != nil && !isSleeping {
-		return fmt.Errorf("Please make sure you have an existing valid kube config. You might want to check one of the following things:\n\n* Make sure you can use 'kubectl get namespaces' locally\n* If you are using Loft, you might want to run 'devspace create space' or 'loft create space'")
+		return fmt.Errorf("please make sure you have an existing valid kube config. You might want to check one of the following things:\n\n* Make sure you can use 'kubectl get namespaces' locally\n* If you are using Loft, you might want to run 'devspace create space' or 'loft create space'")
 	} else if !isSleeping {
 		return nil
 	}
@@ -411,7 +413,7 @@ func wakeUp(ctx context.Context, client Client, log log.Logger) error {
 	}
 
 	// print message if it takes too long
-	log.Infof("DevSpace is waking up the Kubernetes environment, please wait a second...")
+	log.Infof("DevSpace is waking up the Kubernetes environment, please wait a moment...")
 
 	// wake up the environment
 	_, err = kubeClient.CoreV1().Pods(client.Namespace()).List(ctx, metav1.ListOptions{LabelSelector: "devspace=wakeup"})

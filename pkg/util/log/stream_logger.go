@@ -516,8 +516,10 @@ func (s *StreamLogger) Question(params *survey.QuestionOptions) (string, error) 
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	if !s.isTerminal {
-		return "", fmt.Errorf("cannot ask question '%s' because you are not currently using a terminal", params.Question)
+	if !s.isTerminal && (params.DefaultValue == "" || params.DefaultValue == "<nil>") {
+		return "", fmt.Errorf("cannot ask question '%s' because currently you're not using devspace in a terminal and default value is also not provided", params.Question)
+	} else if !s.isTerminal && params.DefaultValue != "" {
+		return params.DefaultValue, nil
 	}
 
 	// Check if we can ask the question

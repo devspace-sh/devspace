@@ -4,16 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
-	"mvdan.cc/sh/v3/expand"
-	"mvdan.cc/sh/v3/interp"
 	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
+	"mvdan.cc/sh/v3/expand"
+	"mvdan.cc/sh/v3/interp"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 )
@@ -21,7 +22,7 @@ import (
 // ExpressionMatchRegex is the regex to check if a value matches the devspace var format
 var ExpressionMatchRegex = regexp.MustCompile(`(?ms)^\$\$?\#?\!?\((.+)\)$`)
 
-const DEVSPACE_SKIP_PRELOAD_ENV = "DEVSPACE_SKIP_PRELOAD"
+const DevSpaceSkipPreloadEnv = "DEVSPACE_SKIP_PRELOAD"
 
 func expressionMatchFn(key, value string) bool {
 	return ExpressionMatchRegex.MatchString(value)
@@ -101,7 +102,7 @@ func ResolveExpressions(ctx context.Context, value, dir string, variables map[st
 		stderr := &bytes.Buffer{}
 
 		envVars := []string{}
-		envVars = append(envVars, DEVSPACE_SKIP_PRELOAD_ENV+"=true")
+		envVars = append(envVars, DevSpaceSkipPreloadEnv+"=true")
 		envVars = append(envVars, os.Environ()...)
 		err := engine.ExecuteSimpleShellCommand(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(envVars...), vars), stdout, stderr, nil, match[1], os.Args[1:]...)
 		if err != nil {
