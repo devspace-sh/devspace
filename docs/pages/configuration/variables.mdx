@@ -14,17 +14,20 @@ While there is no need to explicitly define a config variable, it allows you to 
 
 ## Built-In Variables
 DevSpace provides a set of built-in variables:
-- `${DEVSPACE_NAMESPACE}` contains the current namespace
+
 - `${DEVSPACE_CONTEXT}` contains the name of the current kube-context (e.g. `minikube`)
-- `${DEVSPACE_NAME}` contains the value of the `name` field of the current `devspace.yaml` file
+- `${DEVSPACE_EXECUTABLE}` contains the path to the devspace binary used
 - `${DEVSPACE_GIT_BRANCH}` contains the name of the local git branch that the user is currently on
 - `${DEVSPACE_GIT_COMMIT}` contains the hash of the latest git commit in the current repository
-- `${DEVSPACE_TIMESTAMP}` contains the current UNIX timestamp
-- `${DEVSPACE_USER_HOME}` contains the path to the current user's home directory
-- `${DEVSPACE_TMPDIR}` contains a path to a temporary folder that DevSpace cleans up after the `devspace` command terminates
+- `${DEVSPACE_KUBECTL_EXECUTABLE}` contains the path to the kubectl binary
+- `${DEVSPACE_NAME}` contains the value of the `name` field of the current `devspace.yaml` file
+- `${DEVSPACE_NAMESPACE}` contains the current namespace
 - `${DEVSPACE_PROFILE}` contains the profile that is currently active in DevSpace (e.g. the string provided via `-p / --profile` in a command such as `devspace dev -p my-profile`)
+- `${DEVSPACE_RANDOM}` contains a random 6 character long string
+- `${DEVSPACE_TIMESTAMP}` contains the current UNIX timestamp
+- `${DEVSPACE_TMPDIR}` contains a path to a temporary folder that DevSpace cleans up after the `devspace` command terminates
+- `${DEVSPACE_USER_HOME}` contains the path to the current user's home directory
 - `${DEVSPACE_VERSION}` contains the version of DevSpace that is currently running
-
 
 ## Custom Variables
 DevSpace lets you define custom varables inside `devspace.yaml` within the `vars` section.
