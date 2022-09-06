@@ -791,7 +791,7 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 	writer := &bytes.Buffer{}
 	renderCmd := &RunPipelineCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Silent:     true,
+			Silent:     false,
 			ConfigPath: renderPath,
 		},
 		Pipeline:     "deploy",
@@ -799,7 +799,6 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 		SkipBuild:    true,
 		Render:       true,
 		RenderWriter: writer,
-		Log:          &log.DiscardLogger{},
 	}
 	err = renderCmd.RunDefault(f)
 	if err != nil {
