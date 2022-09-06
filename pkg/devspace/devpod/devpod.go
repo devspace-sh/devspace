@@ -166,7 +166,9 @@ func (d *devPod) startWithRetry(ctx devspacecontext.Context, devPodConfig *lates
 				return true, nil
 			}, ctx.Context().Done())
 			if err != nil {
-				ctx.Log().Errorf("error restarting dev: %v", err)
+				if err != wait.ErrWaitTimeout {
+					ctx.Log().Errorf("error restarting dev: %v", err)
+				}
 			} else if shouldRestart {
 				d.restart(ctx, devPodConfig, options)
 				return

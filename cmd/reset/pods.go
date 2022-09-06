@@ -82,7 +82,7 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 
 	// If the current kube context or namespace is different from old,
 	// show warnings and reset kube client if necessary
-	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, cmd.log)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, false, cmd.log)
 	if err != nil {
 		return err
 	}

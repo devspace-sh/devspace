@@ -63,7 +63,13 @@ func (k *kubectlCommand) DownloadURL() string {
 }
 
 func (k *kubectlCommand) IsValid(ctx context.Context, path string) (bool, error) {
-	out, err := command.Output(ctx, "", expand.ListEnviron(os.Environ()...), path, "version", "--client")
+	environ := []string{}
+	environ = append(environ, os.Environ()...)
+	// this is a hack because kubectl sometimes tries to reach the server anyways, so
+	// we make sure this is not gonna actually contact the server
+	environ = append(environ, "KUBECONFIG=does-not-exist.yaml")
+
+	out, err := command.Output(ctx, "", expand.ListEnviron(environ...), path, "version", "--client")
 	if err != nil {
 		return false, nil
 	}

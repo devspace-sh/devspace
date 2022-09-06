@@ -31,7 +31,6 @@ type Factory interface {
 	// NewKubeDefaultClient creates a new kube client
 	NewKubeDefaultClient() (kubectl.Client, error)
 	NewKubeClientFromContext(context, namespace string) (kubectl.Client, error)
-	NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error)
 
 	// NewHelmClient creates a new helm client
 	NewHelmClient(log log.Logger) (types.Client, error)
@@ -138,12 +137,6 @@ func (f *DefaultFactoryImpl) NewKubeClientFromContext(context, namespace string)
 
 	plugin.SetPluginKubeContext(client.CurrentContext(), client.Namespace())
 	return client, nil
-}
-
-// NewKubeClientBySelect implements interface
-func (f *DefaultFactoryImpl) NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error) {
-	kubeLoader := f.NewKubeConfigLoader()
-	return kubectl.NewClientBySelect(allowPrivate, switchContext, kubeLoader, log)
 }
 
 // NewHelmClient implements interface
