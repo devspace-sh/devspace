@@ -787,11 +787,15 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 		return "", errors.Wrap(err, "temp render.yaml")
 	}
 
+	silent := true
+	if cmd.Debug {
+		silent = false
+	}
 	// Use the render command to render it.
 	writer := &bytes.Buffer{}
 	renderCmd := &RunPipelineCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Silent:     true,
+			Silent:     silent,
 			ConfigPath: renderPath,
 		},
 		Pipeline:     "deploy",
@@ -799,7 +803,6 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 		SkipBuild:    true,
 		Render:       true,
 		RenderWriter: writer,
-		Log:          &log.DiscardLogger{},
 	}
 	err = renderCmd.RunDefault(f)
 	if err != nil {
