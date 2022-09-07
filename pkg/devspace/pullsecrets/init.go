@@ -1,10 +1,11 @@
 package pullsecrets
 
 import (
+	"time"
+
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -166,6 +167,10 @@ func (r *client) createPullSecret(ctx devspacecontext.Context, dockerClient dock
 		if authConfig != nil {
 			username = authConfig.Username
 			password = authConfig.Password
+
+			if password == "" && authConfig.IdentityToken != "" {
+				password = authConfig.IdentityToken
+			}
 		}
 	}
 

@@ -39,7 +39,6 @@ func (c *client) Login(ctx context.Context, registryURL, user, password string, 
 	}
 
 	authConfig, err := getDefaultAuthConfig(checkCredentialsStore, serverAddress, isDefaultRegistry)
-	authConfig.IdentityToken = ""
 	if err != nil || authConfig.Username == "" || authConfig.Password == "" || relogin {
 		authConfig.Username = strings.TrimSpace(user)
 		authConfig.Password = strings.TrimSpace(password)
