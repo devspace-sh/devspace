@@ -227,7 +227,7 @@ func (d *DeployConfig) getDeploymentValues(ctx devspacecontext.Context) (bool, m
 			return false, nil, errors.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
 		}
 
-		if d.DeploymentConfig.UpdateImageTags == nil || *d.DeploymentConfig.UpdateImageTags {
+		if d.DeploymentConfig.UpdateImageTags != nil && *d.DeploymentConfig.UpdateImageTags {
 			redeploy, err := legacy.ReplaceImageNames(overwriteValues, ctx.Config(), ctx.Dependencies(), nil)
 			if err != nil {
 				return false, nil, err
@@ -247,7 +247,7 @@ func (d *DeployConfig) getDeploymentValues(ctx devspacecontext.Context) (bool, m
 			}
 
 			// Replace image names
-			if d.DeploymentConfig.UpdateImageTags == nil || *d.DeploymentConfig.UpdateImageTags {
+			if d.DeploymentConfig.UpdateImageTags != nil && *d.DeploymentConfig.UpdateImageTags {
 				redeploy, err := legacy.ReplaceImageNames(overwriteValuesFromPath, ctx.Config(), ctx.Dependencies(), nil)
 				if err != nil {
 					return false, nil, err
@@ -262,7 +262,7 @@ func (d *DeployConfig) getDeploymentValues(ctx devspacecontext.Context) (bool, m
 	// Load override values from data and merge them
 	if d.DeploymentConfig.Helm.Values != nil {
 		enableLegacy := false
-		if d.DeploymentConfig.UpdateImageTags == nil || *d.DeploymentConfig.UpdateImageTags {
+		if d.DeploymentConfig.UpdateImageTags != nil && *d.DeploymentConfig.UpdateImageTags {
 			enableLegacy = true
 		}
 		redeploy, _, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), enableLegacy).FillRuntimeVariablesWithRebuild(ctx.Context(), d.DeploymentConfig.Helm.Values, ctx.Config(), ctx.Dependencies())
