@@ -191,9 +191,11 @@ func NewOnAddresses(dialer httpstream.Dialer, addresses []string, ports []string
 }
 
 func (pf *PortForwarder) raiseError(err error) {
-	if pf.errChan != nil {
-		pf.errChan <- err
-	}
+	go func() {
+		if pf.errChan != nil {
+			pf.errChan <- err
+		}
+	}()
 
 	_ = pf.streamConn.Close()
 }
