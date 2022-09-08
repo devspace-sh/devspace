@@ -7,7 +7,7 @@ import ConfigPartial from '../../_partials/v2beta1/dev/restartHelper.mdx'
 
 DevSpace provides a small shell script that can used as container entrypoint (PID 1 process) to start the container instead of your actual container start command.
 
-For example, if your entrypoint would be `pyhton main.py`, DevSpace would rewrite the container start command to:
+For example, if your entrypoint would be `python main.py`, DevSpace would rewrite the container start command to:
 ```bash
 /.devspace/devspace-restart-helper python main.py
 ```
