@@ -15,6 +15,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
@@ -24,6 +25,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -459,6 +461,16 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 
 	// get deploy pipeline
 	pipe := pipeline.NewPipeline(ctx.Config().Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
+	kill.SetStopFunction(func(message string) {
+		if message != "" {
+			ctx.Log().WriteString(logrus.FatalLevel, "\n"+ansi.Color("fatal", "red+b")+" "+message+"\n")
+		}
+
+		err = pipe.Close()
+		if err != nil {
+			ctx.Log().Debugf("Error closing pipeline: %v", err)
+		}
+	})
 
 	// start ui & open
 	serv, err := dev.UI(ctx, options.UIPort, options.ShowUI, pipe)
@@ -478,6 +490,10 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	// start pipeline
 	err = pipe.Run(ctx.WithLogger(log.NewStreamLoggerWithFormat(stdoutWriter, stderrWriter, ctx.Log().GetLevel(), log.TimeFormat)), args)
 	if err != nil {
+		if err == context.Canceled {
+			return nil
+		}
+
 		return err
 	}
 	ctx.Log().Debugf("Wait for dev to finish")
@@ -485,6 +501,10 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	// wait for dev
 	err = pipe.WaitDev()
 	if err != nil {
+		if err == context.Canceled {
+			return nil
+		}
+
 		return err
 	}
 

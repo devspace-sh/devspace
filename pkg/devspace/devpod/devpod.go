@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"io"
 	"net/http"
 	"os"
@@ -420,8 +421,8 @@ func (d *devPod) startAttach(ctx devspacecontext.Context, devContainer *latest.D
 		}
 
 		// kill ourselves here
-		if !opts.ContinueOnTerminalExit && opts.KillApplication != nil {
-			go opts.KillApplication()
+		if !opts.ContinueOnTerminalExit {
+			kill.StopDevSpace("")
 		} else {
 			parent.Kill(nil)
 		}
@@ -460,8 +461,8 @@ func (d *devPod) startTerminal(ctx devspacecontext.Context, devContainer *latest
 		}
 
 		// kill ourselves here
-		if !opts.ContinueOnTerminalExit && opts.KillApplication != nil {
-			go opts.KillApplication()
+		if !opts.ContinueOnTerminalExit {
+			kill.StopDevSpace("")
 		} else {
 			parent.Kill(nil)
 		}

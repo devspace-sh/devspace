@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/idle"
@@ -118,7 +119,7 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 			requestType:  "Regular",
 			callback: func(response *http.Response) {
 				if response.Header.Get("X-DevSpace-Response-Type") == "Blocked" {
-					log.GetInstance().Fatalf("Targeted Kubernetes environment has begun sleeping. Please restart DevSpace to wake up the environment")
+					kill.StopDevSpace("Targeted Kubernetes environment has begun sleeping. Please restart DevSpace to wake up the environment")
 				}
 			},
 		}
@@ -329,7 +330,7 @@ func wakeUpAndPing(ctx context.Context, client Client, log log.Logger) error {
 			requestType:  "Ping",
 			callback: func(response *http.Response) {
 				if response.Header.Get("X-DevSpace-Response-Type") == "Blocked" {
-					log.Fatalf("Targeted Kubernetes environment has begun sleeping. Please restart DevSpace to wake up the environment")
+					kill.StopDevSpace("Targeted Kubernetes environment has begun sleeping. Please restart DevSpace to wake up the environment")
 				}
 			},
 		}
@@ -356,7 +357,7 @@ func wakeUpAndPing(ctx context.Context, client Client, log log.Logger) error {
 			if err != nil {
 				log.Debugf("Error pinging Kubernetes environment: %v", err)
 			}
-		}, time.Minute*3)
+		}, time.Minute)
 	}()
 
 	return nil
@@ -416,9 +417,16 @@ func wakeUp(ctx context.Context, client Client, log log.Logger) error {
 	log.Infof("DevSpace is waking up the Kubernetes environment, please wait a moment...")
 
 	// wake up the environment
-	_, err = kubeClient.CoreV1().Pods(client.Namespace()).List(ctx, metav1.ListOptions{LabelSelector: "devspace=wakeup"})
-	if err != nil {
-		return errors.Wrap(err, "error waking up the environment")
+	waitErr := wait.PollImmediate(time.Second, time.Second*30, func() (done bool, err error) {
+		_, err = kubeClient.CoreV1().Pods(client.Namespace()).List(ctx, metav1.ListOptions{LabelSelector: "devspace=wakeup"})
+		if err != nil {
+			return false, nil
+		}
+
+		return true, nil
+	})
+	if waitErr != nil {
+		return errors.Wrap(err, "wake up environment")
 	}
 
 	return nil

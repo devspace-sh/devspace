@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -209,6 +210,13 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 	})
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
+	kill.SetStopFunction(func(message string) {
+		if message == "" {
+			os.Exit(1)
+		} else {
+			f.GetLog().Fatal(message)
+		}
+	})
 
 	rootCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
