@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"mvdan.cc/sh/v3/interp"
@@ -16,6 +17,8 @@ type XArgsOptions struct {
 	Delimiter string
 }
 
+var XArgsFocusCommands = map[string]bool{}
+
 func XArgs(ctx context.Context, args []string, handler types.ExecHandler) error {
 	options := &XArgsOptions{
 		Delimiter: " ",
@@ -26,6 +29,10 @@ func XArgs(ctx context.Context, args []string, handler types.ExecHandler) error 
 		return err
 	} else if len(args) == 0 {
 		return errXArgsUsage
+	} else if !XArgsFocusCommands[args[0]] {
+		newArgs := []string{"xargs"}
+		newArgs = append(newArgs, args...)
+		return interp.DefaultExecHandler(2*time.Second)(ctx, newArgs)
 	}
 
 	hc := interp.HandlerCtx(ctx)

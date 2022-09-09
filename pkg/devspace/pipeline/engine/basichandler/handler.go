@@ -14,6 +14,15 @@ import (
 	"time"
 )
 
+func init() {
+	for k := range BasicCommands {
+		enginecommands.XArgsFocusCommands[k] = true
+	}
+	for k := range OverwriteCommands {
+		enginecommands.XArgsFocusCommands[k] = true
+	}
+}
+
 // BasicCommands are extra commands DevSpace provides within the shell or are common
 // commands that might not be available locally for example in windows systems.
 var BasicCommands = map[string]func(ctx context.Context, args []string) error{

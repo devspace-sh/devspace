@@ -93,6 +93,9 @@ func init() {
 			return interp.NewExitStatus(1)
 		}
 	}
+	for k := range PipelineCommands {
+		basichandlercommands.XArgsFocusCommands[k] = true
+	}
 }
 
 func NewPipelineExecHandler(ctx devspacecontext.Context, stdout, stderr io.Writer, pipeline types.Pipeline) enginetypes.ExecHandler {
