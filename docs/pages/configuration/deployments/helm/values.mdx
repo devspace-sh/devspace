@@ -65,7 +65,7 @@ DevSpace allows you to specify `values` (for inline values) and `valuesFiles` (f
 
 
 ## Update Image Tags
-If the `updateImageTags` is set to `true`, DevSpace searches through the Helm values for this deployment (specified via `values` or `valuesFiles`) and tries to find any images in the Helm values that are also defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it updates the image tag in the Helm values dynamically, so the tag in the Helm values matches the tag that DevSpace created during the most recent image building process for this image. Image tag updates make sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
+If the `updateImageTags` (defaults to true) is set to `true`, DevSpace searches through the Helm values for this deployment (specified via `values` or `valuesFiles`) and tries to find any images in the Helm values that are also defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it updates the image tag in the Helm values dynamically, so the tag in the Helm values matches the tag that DevSpace created during the most recent image building process for this image. Image tag updates make sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
 
 #### Example: Enable Tag Updates
 ```yaml {3}
