@@ -83,9 +83,9 @@ class Commands extends React.PureComponent<Props, State> {
   render() {
     return (
       <PageLayout className={styles['commands-component']} heading={<CommandsLinkTabSelector />}>
-        {!this.props.devSpaceConfig.rawConfig ||
-        !this.props.devSpaceConfig.rawConfig.commands ||
-        Object.entries(this.props.devSpaceConfig.rawConfig.commands).length === 0 ? (
+        {!this.props.devSpaceConfig.config ||
+        !this.props.devSpaceConfig.config.commands ||
+        Object.entries(this.props.devSpaceConfig.config.commands).length === 0 ? (
           <div className={styles['no-config']}>
             <div>
               No commands available. Take a look at&nbsp;
@@ -100,7 +100,7 @@ class Commands extends React.PureComponent<Props, State> {
             {this.renderTerminals()}
             <div className={styles['info-part']}>
               <CommandsList
-                commandsList={this.props.devSpaceConfig.rawConfig.commands}
+                commandsList={this.props.devSpaceConfig.config.commands}
                 running={this.state.terminals.map((terminal) => terminal.url)}
                 selected={this.state.selected}
                 onSelect={this.onSelectCommand}
