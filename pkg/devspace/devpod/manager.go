@@ -22,9 +22,6 @@ type Options struct {
 	DisablePortForwarding bool `long:"disable-port-forwarding" description:"If enabled will not start any port forwarding configuration"`
 	DisablePodReplace     bool `long:"disable-pod-replace" description:"If enabled will not replace any pods"`
 	DisableOpen           bool `long:"disable-open" description:"If enabled will not replace any pods"`
-
-	// KillApplication kills the whole pipeline including all dev pods
-	KillApplication func()
 }
 
 type Manager interface {

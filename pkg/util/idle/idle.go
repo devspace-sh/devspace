@@ -1,6 +1,8 @@
 package idle
 
 import (
+	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -48,7 +50,7 @@ func (m *monitor) Start(timeout time.Duration, log log.Logger) {
 				return
 			} else if duration > timeout {
 				// we exit here
-				log.Fatalf("Automatically exit DevSpace, because the user is inactive for %s. To disable automatic exiting, run with --inactivity-timeout=0", duration.String())
+				kill.StopDevSpace(fmt.Sprintf("Automatically exit DevSpace, because the user is inactive for %s. To disable automatic exiting, run with --inactivity-timeout=0", duration.String()))
 			}
 		}, time.Second*10)
 	}()

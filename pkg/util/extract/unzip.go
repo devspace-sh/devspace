@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -34,7 +33,7 @@ func (e *extractor) UntarGz(src, dest string) error {
 
 	uncompressedStream, err := gzip.NewReader(gzipStream)
 	if err != nil {
-		log.Fatal("ExtractTarGz: NewReader failed")
+		return fmt.Errorf("ExtractTarGz: NewReader failed")
 	}
 
 	tarReader := tar.NewReader(uncompressedStream)

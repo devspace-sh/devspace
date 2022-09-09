@@ -6,7 +6,6 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
-	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/pkg/errors"
 	"strings"
@@ -72,19 +71,5 @@ func StartDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []strin
 	} else {
 		return fmt.Errorf("either specify 'start_dev --all' or 'dev devConfig1 devConfig2'")
 	}
-	options.Options.KillApplication = func() {
-		killApplication(pipeline)
-	}
 	return pipeline.DevPodManager().StartMultiple(ctx, args, options.Options)
-}
-
-func killApplication(pipeline types.Pipeline) {
-	for pipeline.Parent() != nil {
-		pipeline = pipeline.Parent()
-	}
-
-	err := pipeline.Close()
-	if err != nil {
-		logpkg.GetInstance().Errorf("error closing pipeline: %v", err)
-	}
 }
