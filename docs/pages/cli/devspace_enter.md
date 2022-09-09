@@ -44,6 +44,7 @@ devspace enter bash --image-selector "${runtime.images.app.image}:${runtime.imag
       --reconnect               Will reconnect the terminal if an unexpected return code is encountered
       --screen                  Use a screen session to connect
       --screen-session string   The screen session to create or connect to (default "enter")
+      --tty                     If to use a tty to start the command (default true)
       --wait                    Wait for the pod(s) to start if they are not running
       --workdir string          The working directory where to open the terminal or execute the command
 ```
@@ -56,6 +57,7 @@ devspace enter bash --image-selector "${runtime.images.app.image}:${runtime.imag
       --disable-profile-activation   If true will ignore all profile activations
       --inactivity-timeout int       Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems
       --kube-context string          The kubernetes context to use
+      --kubeconfig string            The kubeconfig path to use
   -n, --namespace string             The kubernetes namespace to use
       --no-warn                      If true does not show any warning when deploying into a different namespace or kube-context than before
       --override-name string         If specified will override the devspace.yaml name

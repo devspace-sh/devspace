@@ -27,10 +27,10 @@ devspace use namespace my-namespace
 
 ## Flags
 
-```      
-      --create  Create the namespace if it doesn't exist
-  -h, --help    help for namespace
-      --reset   Resets the default namespace of the current kube-context
+```
+      --create   Create the namespace if it doesn't exist
+  -h, --help     help for namespace
+      --reset    Resets the default namespace of the current kube-context
 ```
 
 
@@ -41,6 +41,7 @@ devspace use namespace my-namespace
       --disable-profile-activation   If true will ignore all profile activations
       --inactivity-timeout int       Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems
       --kube-context string          The kubernetes context to use
+      --kubeconfig string            The kubeconfig path to use
   -n, --namespace string             The kubernetes namespace to use
       --no-warn                      If true does not show any warning when deploying into a different namespace or kube-context than before
       --override-name string         If specified will override the devspace.yaml name
@@ -49,3 +50,4 @@ devspace use namespace my-namespace
   -s, --switch-context               Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings                  Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+
