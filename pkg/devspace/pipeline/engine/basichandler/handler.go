@@ -3,6 +3,9 @@ package basichandler
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
+
 	enginecommands "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler/commands"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"github.com/loft-sh/devspace/pkg/util/downloader"
@@ -10,8 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/interp"
-	"os"
-	"time"
 )
 
 // BasicCommands are extra commands DevSpace provides within the shell or are common
@@ -31,6 +32,9 @@ var BasicCommands = map[string]func(ctx context.Context, args []string) error{
 	},
 	"is_true": func(ctx context.Context, args []string) error {
 		return enginecommands.IsTrue(args)
+	},
+	"is_in": func(ctx context.Context, args []string) error {
+		return enginecommands.IsIn(args)
 	},
 	"sleep": func(ctx context.Context, args []string) error {
 		return HandleError(ctx, "sleep", enginecommands.Sleep(ctx, args))
