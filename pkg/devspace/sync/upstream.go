@@ -408,6 +408,7 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 	_, err := u.client.Execute(ctx, &remote.Command{
 		Cmd:  cmd,
 		Args: args,
+		Once: exec.Once,
 	})
 	if err != nil {
 		if exec.FailOnError {

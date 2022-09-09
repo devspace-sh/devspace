@@ -1147,6 +1147,10 @@ type SyncExec struct {
 	// container
 	Local bool `yaml:"local,omitempty" json:"local,omitempty"`
 
+	// Once executes this command only once in the container's life. Can be used to initialize
+	// a container before starting it, but after everything was synced.
+	Once bool `yaml:"once,omitempty" json:"once,omitempty"`
+
 	// OnChange is an array of file patterns that trigger this command execution
 	OnChange []string `yaml:"onChange,omitempty" json:"onChange,omitempty"`
 }

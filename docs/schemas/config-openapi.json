@@ -1740,6 +1740,10 @@
                 "type": "boolean",
                 "description": "Local specifies if the command should be executed locally instead of within the\ncontainer"
               },
+              "once": {
+                "type": "boolean",
+                "description": "Once executes this command only once in the container's life. Can be used to initialize\na container before starting it, but after everything was synced."
+              },
               "onChange": {
                 "items": {
                   "type": "string"

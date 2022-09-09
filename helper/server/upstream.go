@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/helper/util/pingtimeout"
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"github.com/loft-sh/devspace/pkg/util/hash"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -286,6 +287,27 @@ func (u *Upstream) writeTar(writer io.WriteCloser, stream remote.Upstream_Upload
 }
 
 func (u *Upstream) Execute(ctx context.Context, cmd *remote.Command) (*remote.Empty, error) {
+	if cmd.Once {
+		hashString := cmd.Cmd
+		for _, arg := range cmd.Args {
+			hashString += arg
+		}
+
+		hashed := hash.String(hashString)
+		fileName := "/tmp/devspace-" + hashed
+		_, err := os.Stat(fileName)
+		if os.IsNotExist(err) {
+			err := os.WriteFile(fileName, []byte("1"), 0666)
+			if err != nil {
+				return nil, errors.Wrap(err, "writing hash file")
+			}
+		} else if err != nil {
+			return nil, errors.Wrap(err, "stat hash file")
+		} else {
+			return &remote.Empty{}, nil
+		}
+	}
+
 	out, err := exec.Command(cmd.Cmd, cmd.Args...).CombinedOutput()
 	if err != nil {
 		return nil, errors.Errorf("Error executing command '%s %s': %s => %v", cmd.Cmd, strings.Join(cmd.Args, " "), string(out), err)
