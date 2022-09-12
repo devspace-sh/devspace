@@ -8,7 +8,7 @@ const inquirer = require('inquirer');
 const findProcess = require('find-process');
 
 const downloadPathTemplate =
-    "https://github.com/loft-sh/devspace/releases/download/{{version}}/devspace-{{platform}}-{{arch}}";
+    "https://github.com/loft-sh/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
 const ARCH_MAPPING = {
   ia32: "386",
   x64: "amd64",
