@@ -6,24 +6,25 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/assets"
-	"github.com/loft-sh/devspace/pkg/devspace/env"
 	"io"
 	"io/fs"
 	"io/ioutil"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/assets"
+	"github.com/loft-sh/devspace/pkg/devspace/env"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
+	"github.com/loft-sh/devspace/pkg/util/git"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mitchellh/go-homedir"
@@ -31,14 +32,14 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+// DevSpaceHelperRepository is the repository containing the devspace helper
+const DevSpaceHelperRepository = "https://github.com/loft-sh/devspace"
+
 // DevSpaceHelperBaseURL is the base url where to look for the sync helper
-const DevSpaceHelperBaseURL = "https://github.com/loft-sh/devspace/releases"
+const DevSpaceHelperBaseURL = DevSpaceHelperRepository + "/releases/download"
 
 // DevSpaceHelperTempFolder is the local folder where we store the sync helper
 const DevSpaceHelperTempFolder = "devspacehelper"
-
-// helperBinaryRegEx is the regexp that finds the correct download link for the sync helper binary
-var helperBinaryRegEx = `href="(\/loft-sh\/devspace\/releases\/download\/[^\/]*\/%s)"`
 
 // DevSpaceHelperContainerPath is the path of the devspace helper in the container
 const DevSpaceHelperContainerPath = "/tmp/devspacehelper"
@@ -153,34 +154,15 @@ func installDevSpaceHelperInContainer(ctx context.Context, client kubectl.Client
 
 // getDownloadURL
 func devSpaceHelperDownloadURL(version, filename string) (string, error) {
-	url := ""
 	if version == "latest" {
-		url = fmt.Sprintf("%s/%s", DevSpaceHelperBaseURL, version)
-	} else {
-		url = fmt.Sprintf("%s/tag/%s", DevSpaceHelperBaseURL, version)
+		var err error
+		version, err = git.GetLatestVersion(DevSpaceHelperRepository)
+		if err != nil {
+			return "", errors.Wrap(err, "get latest version")
+		}
 	}
 
-	// Download html
-	resp, err := http.Get(url)
-	if err != nil {
-		return "", errors.Wrap(err, "get url")
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", errors.Wrap(err, "read body")
-	}
-
-	regEx, err := regexp.Compile(fmt.Sprintf(helperBinaryRegEx, filename))
-	if err != nil {
-		return "", err
-	}
-
-	matches := regEx.FindStringSubmatch(string(body))
-	if len(matches) != 2 {
-		return "", errors.Errorf("couldn't find %s in github release %s at url %s", filename, version, url)
-	}
-	return "https://github.com" + matches[1], nil
+	return fmt.Sprintf("%s/%s/%s", DevSpaceHelperBaseURL, version, filename), nil
 }
 
 func downloadSyncHelper(ctx context.Context, helperName, syncBinaryFolder, version string, log logpkg.Logger) error {
