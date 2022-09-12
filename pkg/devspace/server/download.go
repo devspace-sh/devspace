@@ -6,11 +6,9 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -18,16 +16,17 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
+	"github.com/loft-sh/devspace/pkg/util/git"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 )
 
-// UIDownloadBaseURL is the base url where to look for the ui
-const UIDownloadBaseURL = "https://github.com/loft-sh/devspace/releases"
+// UIRepository is the repository containing the devspace UI
+const UIRepository = "https://github.com/loft-sh/devspace"
 
-// UIDownloadRegEx is the regexp that finds the correct download link for the ui
-var UIDownloadRegEx = regexp.MustCompile(`href="(\/loft-sh\/devspace\/releases\/download\/[^\/]*\/ui.tar.gz)"`)
+// UIDownloadBaseURL is the base url where to look for the ui
+const UIDownloadBaseURL = UIRepository + "/releases/download"
 
 // UITempFolder is the temp folder to cache the ui in
 const UITempFolder = "ui"
@@ -77,30 +76,15 @@ func downloadFile(version string, folder string) error {
 	}
 
 	// Create download url
-	url := ""
 	if version == "latest" {
-		url = fmt.Sprintf("%s/%s", UIDownloadBaseURL, version)
-	} else {
-		url = fmt.Sprintf("%s/tag/%s", UIDownloadBaseURL, version)
+		version, err = git.GetLatestVersion(UIRepository)
+		if err != nil {
+			return errors.Wrap(err, "get latest version")
+		}
 	}
 
-	// Download html
+	url := fmt.Sprintf("%s/%s/%s", UIDownloadBaseURL, version, "ui.tar.gz")
 	resp, err := http.Get(url)
-	if err != nil {
-		return errors.Wrap(err, "get url")
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return errors.Wrap(err, "read body")
-	}
-
-	matches := UIDownloadRegEx.FindStringSubmatch(string(body))
-	if len(matches) != 2 {
-		return errors.Errorf("Couldn't find ui in github release %s at url %s", version, url)
-	}
-
-	resp, err = http.Get("https://github.com" + matches[1])
 	if err != nil {
 		return errors.Wrap(err, "download ui archive")
 	}

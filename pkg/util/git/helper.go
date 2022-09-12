@@ -1,13 +1,18 @@
 package git
 
 import (
+	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
 	"gopkg.in/src-d/go-git.v4"
 )
+
+var LatestTagRegEx = regexp.MustCompile(`\/tag\/(.*)$`)
 
 // GetBranch retrieves the current HEADs name
 func GetBranch(localPath string) (string, error) {
@@ -76,4 +81,29 @@ func GetRemote(localPath string) (string, error) {
 	}
 
 	return urls[0], nil
+}
+
+func GetLatestVersion(repository string) (string, error) {
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Get(repository + "/releases/latest")
+	if err != nil {
+		return "", err
+	}
+
+	redirect := resp.Header.Get("location")
+	if redirect == "" {
+		return "", fmt.Errorf("redirect URL not found")
+	}
+
+	matches := LatestTagRegEx.FindStringSubmatch(redirect)
+	if len(matches) != 2 {
+		return "", errors.Errorf("Couldn't find latest release version")
+	}
+
+	return matches[1], nil
 }
