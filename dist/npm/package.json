@@ -1,6 +1,6 @@
 {
     "name": "devspace",
-    "version": "4.12.4",
+    "version": "6.1.1",
     "description": "DevSpace CLI - the swiss-army knife for Kubernetes. DevSpace CLI accelerates developing, deploying and debugging applications with Docker and Kubernetes.",
     "bin": {
         "devspace": "bin/devspace"
@@ -21,7 +21,7 @@
         "cli-spinner": "^0.2.10",
         "find-process": "^1.4.7",
         "inquirer": "^7.0.5",
-        "request": "^2.88.2"
+        "node-fetch": "^2.6.7"
     },
     "license": "Apache-2.0"
 }
