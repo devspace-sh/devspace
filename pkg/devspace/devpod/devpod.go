@@ -255,7 +255,32 @@ func (d *devPod) start(ctx devspacecontext.Context, devPodConfig *latest.DevPod,
 	if err != nil {
 		return errors.Wrap(err, "waiting for pod to become ready")
 	}
-	ctx.Log().Infof("Selected %s (%s)", ansi.Color(fmt.Sprintf("%s:%s", selectedPod.Pod.Name, selectedPod.Container.Name), "yellow+b"), ansi.Color("pod:container", "white+b"))
+
+	// check if the correct pod is matched
+	loader.EachDevContainer(devPodConfig, func(devContainer *latest.DevContainer) bool {
+		if devContainer.Container == "" {
+			return true
+		}
+
+		// check if the container exists in the pod
+		for _, container := range selectedPod.Pod.Spec.Containers {
+			if container.Name == devContainer.Container {
+				return true
+			}
+		}
+		for _, container := range selectedPod.Pod.Spec.InitContainers {
+			if container.Name == devContainer.Container {
+				return true
+			}
+		}
+
+		err = fmt.Errorf("selected pod '%s/%s' doesn't include container '%s', please make sure you don't have overlapping label selectors within the namespace and the pod you select contains container '%s'", selectedPod.Pod.Namespace, selectedPod.Pod.Name, devContainer.Container, devContainer.Container)
+		return false
+	})
+	if err != nil {
+		return errors.Wrap(err, "select pod")
+	}
+	ctx.Log().Infof("Selected pod %s", ansi.Color(selectedPod.Pod.Name, "yellow+b"))
 
 	// set selected pod
 	d.m.Lock()
