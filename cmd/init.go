@@ -5,12 +5,13 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"mvdan.cc/sh/v3/expand"
 
 	"github.com/loft-sh/devspace/pkg/devspace/compose"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
@@ -787,11 +788,15 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 		return "", errors.Wrap(err, "temp render.yaml")
 	}
 
+	silent := true
+	if cmd.Debug {
+		silent = false
+	}
 	// Use the render command to render it.
 	writer := &bytes.Buffer{}
 	renderCmd := &RunPipelineCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Silent:     true,
+			Silent:     silent,
 			ConfigPath: renderPath,
 		},
 		Pipeline:     "deploy",

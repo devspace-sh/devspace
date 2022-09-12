@@ -35,7 +35,7 @@ class CommandsList extends React.PureComponent<Props, State> {
   };
 
   renderCommands = () => {
-    return Object.entries(this.props.devSpaceConfig.rawConfig.commands).map(([key, cmd]) => {
+    return Object.entries(this.props.commandsList).map(([key, cmd]) => {
       return <PortletSimple key={key}>
         {{
           top: {

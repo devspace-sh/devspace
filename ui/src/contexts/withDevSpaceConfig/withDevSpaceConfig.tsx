@@ -41,6 +41,7 @@ interface Config {
   version: string;
 
   images: { [key: string]: ImageConfig };
+  commands: { [key: string]: Command };
 }
 
 interface RawConfig {
