@@ -79,7 +79,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 		return GetLastProfile(options.Profile), nil
 	},
 	"DEVSPACE_PROFILES": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
-		return options.Profile, nil
+		return strings.Join(options.Profile, " "), nil
 	},
 	"DEVSPACE_USER_HOME": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		homeDir, err := homedir.Dir()
