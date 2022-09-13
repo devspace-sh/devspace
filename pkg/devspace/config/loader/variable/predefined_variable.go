@@ -6,17 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/downloader"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/sirupsen/logrus"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -30,7 +31,7 @@ import (
 type PredefinedVariableOptions struct {
 	ConfigPath string
 	KubeClient kubectl.Client
-	Profile    string
+	Profile    []string
 }
 
 // PredefinedVariableFunction is the definition of a predefined variable
@@ -75,7 +76,10 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 		return randutil.GenerateRandomString(6), nil
 	},
 	"DEVSPACE_PROFILE": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
-		return options.Profile, nil
+		return GetLastProfile(options.Profile), nil
+	},
+	"DEVSPACE_PROFILES": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
+		return strings.Join(options.Profile, " "), nil
 	},
 	"DEVSPACE_USER_HOME": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		homeDir, err := homedir.Dir()
@@ -193,4 +197,11 @@ func (p *predefinedVariable) Load(ctx context.Context, definition *latest.Variab
 	}
 
 	return getVar(ctx, p.options, p.log)
+}
+
+func GetLastProfile(profiles []string) string {
+	if len(profiles) == 0 {
+		return ""
+	}
+	return profiles[len(profiles)-1]
 }
