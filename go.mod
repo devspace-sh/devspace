@@ -28,7 +28,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/juju/ratelimit v1.0.1
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
-	github.com/loft-sh/loft-util v0.0.8-alpha
+	github.com/loft-sh/loft-util v0.0.9-alpha
 	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/mitchellh/go-homedir v1.1.0

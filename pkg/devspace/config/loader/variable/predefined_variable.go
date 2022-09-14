@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -55,7 +56,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 	},
 	"DEVSPACE_KUBECTL_EXECUTABLE": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		debugLog := log.WithLevel(logrus.DebugLevel)
-		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), debugLog).EnsureCommand(ctx)
+		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), debugLog, constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
 		if err != nil {
 			debugLog.Debugf("Error downloading kubectl: %v", err)
 			return "", nil

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"io"
 	"mvdan.cc/sh/v3/expand"
 	"os"
@@ -57,7 +58,7 @@ func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (de
 	if deployConfig.Kubectl.KubectlBinaryPath != "" {
 		cmdPath = deployConfig.Kubectl.KubectlBinaryPath
 	} else {
-		cmdPath, err = downloader.NewDownloader(commands.NewKubectlCommand(), ctx.Log()).EnsureCommand(ctx.Context())
+		cmdPath, err = downloader.NewDownloader(commands.NewKubectlCommand(), ctx.Log(), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx.Context())
 		if err != nil {
 			return nil, err
 		}

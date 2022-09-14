@@ -767,6 +767,8 @@ github.com/loft-sh/loft-util v0.0.7-alpha h1:z8frQKx2WgDzdLz+KNp7ogonpP4QiiCzBSC
 github.com/loft-sh/loft-util v0.0.7-alpha/go.mod h1:lsjG5Exh5iEf7Z/87nqwkxx3GRQTizFRLGuS1knF6Cg=
 github.com/loft-sh/loft-util v0.0.8-alpha h1:bRyi99kYgSj1Tj08/8VuYyWJJ0qH94SQlepeca5olOQ=
 github.com/loft-sh/loft-util v0.0.8-alpha/go.mod h1:lsjG5Exh5iEf7Z/87nqwkxx3GRQTizFRLGuS1knF6Cg=
+github.com/loft-sh/loft-util v0.0.9-alpha h1:kGcyTQWxWHWy7bbjhS8Hsq/JRdlSztAU++anV6P+sqk=
+github.com/loft-sh/loft-util v0.0.9-alpha/go.mod h1:lsjG5Exh5iEf7Z/87nqwkxx3GRQTizFRLGuS1knF6Cg=
 github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee h1:hZ79+pKEbCBrH1dVmgZ4jtFrrDPxgM4zqEP1lHlSnvI=
 github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee/go.mod h1:pq83B8lgfCY7tKdegTTXU6DZxGQkcWMowUTOTpTQmqk=
 github.com/logrusorgru/aurora v0.0.0-20181002194514-a7b3b318ed4e/go.mod h1:7rIyQOR62GCctdiQpZ/zOJlFyk6y+94wXzv6RNZgaR4=

@@ -3,6 +3,7 @@ package basichandler
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"os"
 	"time"
 
@@ -69,7 +70,7 @@ var OverwriteCommands = map[string]func(ctx context.Context, args []string, hand
 var EnsureCommands = map[string]func(ctx context.Context, args []string) (string, error){
 	"kubectl": func(ctx context.Context, args []string) (string, error) {
 		hc := interp.HandlerCtx(ctx)
-		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), log.GetFileLogger("shell")).EnsureCommand(ctx)
+		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), log.GetFileLogger("shell"), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
 		if err != nil {
 			_, _ = fmt.Fprintln(hc.Stderr, err)
 			return "", interp.NewExitStatus(127)
@@ -78,7 +79,7 @@ var EnsureCommands = map[string]func(ctx context.Context, args []string) (string
 	},
 	"helm": func(ctx context.Context, args []string) (string, error) {
 		hc := interp.HandlerCtx(ctx)
-		path, err := downloader.NewDownloader(commands.NewHelmV3Command(), log.GetFileLogger("shell")).EnsureCommand(ctx)
+		path, err := downloader.NewDownloader(commands.NewHelmV3Command(), log.GetFileLogger("shell"), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
 		if err != nil {
 			_, _ = fmt.Fprintln(hc.Stderr, err)
 			return "", interp.NewExitStatus(127)
