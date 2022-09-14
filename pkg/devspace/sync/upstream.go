@@ -27,7 +27,7 @@ import (
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/loft-sh/devspace/helper/util/crc32"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/loft-util/pkg/command"
 	"github.com/loft-sh/notify"
 	"github.com/pkg/errors"
 )

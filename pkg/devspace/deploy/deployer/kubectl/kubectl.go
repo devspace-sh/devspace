@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"io"
 	"mvdan.cc/sh/v3/expand"
 	"os"
@@ -13,12 +14,12 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
-	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
+	"github.com/loft-sh/loft-util/pkg/command"
 	"github.com/sirupsen/logrus"
 
-	"github.com/loft-sh/devspace/pkg/util/downloader"
-	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
+	"github.com/loft-sh/loft-util/pkg/downloader"
+	"github.com/loft-sh/loft-util/pkg/downloader/commands"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/ghodss/yaml"
@@ -57,7 +58,7 @@ func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (de
 	if deployConfig.Kubectl.KubectlBinaryPath != "" {
 		cmdPath = deployConfig.Kubectl.KubectlBinaryPath
 	} else {
-		cmdPath, err = downloader.NewDownloader(commands.NewKubectlCommand(), ctx.Log()).EnsureCommand(ctx.Context())
+		cmdPath, err = downloader.NewDownloader(commands.NewKubectlCommand(), ctx.Log(), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx.Context())
 		if err != nil {
 			return nil, err
 		}

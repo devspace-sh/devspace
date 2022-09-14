@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,9 +15,9 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/downloader"
-	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/loft-util/pkg/downloader"
+	"github.com/loft-sh/loft-util/pkg/downloader/commands"
 	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -55,7 +56,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 	},
 	"DEVSPACE_KUBECTL_EXECUTABLE": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		debugLog := log.WithLevel(logrus.DebugLevel)
-		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), debugLog).EnsureCommand(ctx)
+		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), debugLog, constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
 		if err != nil {
 			debugLog.Debugf("Error downloading kubectl: %v", err)
 			return "", nil

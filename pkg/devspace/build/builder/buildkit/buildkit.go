@@ -17,7 +17,7 @@ import (
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	command2 "github.com/loft-sh/devspace/pkg/util/command"
+	command2 "github.com/loft-sh/loft-util/pkg/command"
 
 	cliconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/docker/api/types"

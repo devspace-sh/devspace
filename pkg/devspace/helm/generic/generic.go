@@ -3,18 +3,19 @@ package generic
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/loft-util/pkg/command"
 	"io/ioutil"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/downloader"
-	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
-	"github.com/loft-sh/devspace/pkg/util/extract"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/loft-util/pkg/downloader"
+	"github.com/loft-sh/loft-util/pkg/downloader/commands"
+	"github.com/loft-sh/loft-util/pkg/extract"
 
 	"github.com/pkg/errors"
 )
@@ -32,7 +33,7 @@ func NewGenericClient(command commands.Command, log log.Logger) Client {
 		extract: extract.NewExtractor(),
 	}
 
-	c.downloader = downloader.NewDownloader(command, log)
+	c.downloader = downloader.NewDownloader(command, log, constants.DefaultHomeDevSpaceFolder)
 	return c
 }
 

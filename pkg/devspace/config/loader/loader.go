@@ -17,7 +17,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/loft-util/pkg/command"
 
 	"github.com/loft-sh/devspace/pkg/util/constraint"
 

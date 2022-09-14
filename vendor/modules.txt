@@ -82,7 +82,7 @@ github.com/containerd/continuity/fs
 github.com/containerd/continuity/sysx
 # github.com/cpuguy83/go-md2man/v2 v2.0.1
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/creack/pty v1.1.15
+# github.com/creack/pty v1.1.17
 ## explicit
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
@@ -207,7 +207,7 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/google/go-cmp v0.5.6
+# github.com/google/go-cmp v0.5.8
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -269,6 +269,13 @@ github.com/kballard/go-shellquote
 github.com/kevinburke/ssh_config
 # github.com/kr/fs v0.1.0
 github.com/kr/fs
+# github.com/loft-sh/loft-util v0.0.9-alpha
+## explicit
+github.com/loft-sh/loft-util/pkg/command
+github.com/loft-sh/loft-util/pkg/downloader
+github.com/loft-sh/loft-util/pkg/downloader/commands
+github.com/loft-sh/loft-util/pkg/extract
+github.com/loft-sh/loft-util/pkg/logger
 # github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 ## explicit
 github.com/loft-sh/notify
@@ -366,11 +373,9 @@ github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v1.0.0-rc92
 github.com/opencontainers/runc/libcontainer/user
-# github.com/otiai10/copy v0.0.0-20180813030456-0046ee23fdbd
+# github.com/otiai10/copy v1.7.0
 ## explicit
 github.com/otiai10/copy
-# github.com/otiai10/mint v1.3.3
-## explicit
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
@@ -401,7 +406,7 @@ github.com/russross/blackfriday/v2
 github.com/sabhiram/go-gitignore
 # github.com/sergi/go-diff v1.1.0
 github.com/sergi/go-diff/diffmatchpatch
-# github.com/sirupsen/logrus v1.8.1
+# github.com/sirupsen/logrus v1.9.0
 ## explicit
 github.com/sirupsen/logrus
 # github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
@@ -498,14 +503,14 @@ golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359
+# golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.0.0-20210916214954-140adaaadfaf
+# golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 golang.org/x/term
 # golang.org/x/text v0.3.7
 ## explicit
@@ -759,7 +764,6 @@ k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
 # k8s.io/apimachinery v0.23.0
 ## explicit
-k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/api/meta
 k8s.io/apimachinery/pkg/api/resource
@@ -998,9 +1002,10 @@ k8s.io/utils/clock/testing
 k8s.io/utils/integer
 k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
-# mvdan.cc/sh/v3 v3.4.3
+# mvdan.cc/sh/v3 v3.5.1
 ## explicit
 mvdan.cc/sh/v3/expand
+mvdan.cc/sh/v3/fileutil
 mvdan.cc/sh/v3/interp
 mvdan.cc/sh/v3/pattern
 mvdan.cc/sh/v3/syntax

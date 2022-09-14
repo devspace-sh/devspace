@@ -11,7 +11,7 @@ import (
 	"mvdan.cc/sh/v3/expand"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/loft-util/pkg/command"
 	"github.com/pkg/errors"
 )
 

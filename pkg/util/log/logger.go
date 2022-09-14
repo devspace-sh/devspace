@@ -2,11 +2,12 @@ package log
 
 import (
 	"github.com/loft-sh/devspace/pkg/util/survey"
+	log "github.com/loft-sh/loft-util/pkg/logger"
 	"github.com/sirupsen/logrus"
 	"io"
 )
 
-// Level type
+// logFunctionType type
 type logFunctionType uint32
 
 const (
@@ -18,42 +19,18 @@ const (
 	doneFn
 )
 
-// Logger defines the common logging interface
+// Logger defines the devspace common logging interface
 type Logger interface {
-	Debug(args ...interface{})
-	Debugf(format string, args ...interface{})
-
-	Info(args ...interface{})
-	Infof(format string, args ...interface{})
-
-	Done(args ...interface{})
-	Donef(format string, args ...interface{})
-
-	Warn(args ...interface{})
-	Warnf(format string, args ...interface{})
-
-	Error(args ...interface{})
-	Errorf(format string, args ...interface{})
-
-	Fatal(args ...interface{})
-	Fatalf(format string, args ...interface{})
-
-	Print(level logrus.Level, args ...interface{})
-	Printf(level logrus.Level, format string, args ...interface{})
-
-	Writer(level logrus.Level, raw bool) io.WriteCloser
-	WriteString(level logrus.Level, message string)
-
-	Question(params *survey.QuestionOptions) (string, error)
-
-	SetLevel(level logrus.Level)
-	GetLevel() logrus.Level
-
+	log.Logger
 	// WithLevel creates a new logger with the given level
 	WithLevel(level logrus.Level) Logger
+	Question(params *survey.QuestionOptions) (string, error)
 	ErrorStreamOnly() Logger
 	WithPrefix(prefix string) Logger
 	WithPrefixColor(prefix, color string) Logger
 	WithSink(sink Logger) Logger
 	AddSink(sink Logger)
+
+	Writer(level logrus.Level, raw bool) io.WriteCloser
+	WriteString(level logrus.Level, message string)
 }

@@ -8,7 +8,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bmatcuk/doublestar v1.1.1
 	github.com/compose-spec/compose-go v1.2.2
-	github.com/creack/pty v1.1.15
+	github.com/creack/pty v1.1.17
 	github.com/docker/cli v20.10.0-beta1.0.20201029214301-1d20b15adc38+incompatible
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v20.10.5+incompatible
@@ -28,6 +28,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/juju/ratelimit v1.0.1
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
+	github.com/loft-sh/loft-util v0.0.9-alpha
 	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/mitchellh/go-homedir v1.1.0
@@ -37,13 +38,12 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
-	github.com/otiai10/copy v0.0.0-20180813030456-0046ee23fdbd
-	github.com/otiai10/mint v1.3.3 // indirect
+	github.com/otiai10/copy v1.7.0
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/sftp v1.13.1
 	github.com/rhysd/go-github-selfupdate v0.0.0-20180520142321-41c1bbb0804a
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.0
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
@@ -68,6 +68,6 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.30.0
 	k8s.io/kubectl v0.23.0
-	mvdan.cc/sh/v3 v3.4.3
+	mvdan.cc/sh/v3 v3.5.1
 	sigs.k8s.io/yaml v1.2.0
 )
