@@ -14,9 +14,9 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/downloader"
-	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/loft-util/pkg/downloader"
+	"github.com/loft-sh/loft-util/pkg/downloader/commands"
 	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"

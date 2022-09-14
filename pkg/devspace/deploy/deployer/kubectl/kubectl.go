@@ -13,12 +13,12 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
-	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
+	"github.com/loft-sh/loft-util/pkg/command"
 	"github.com/sirupsen/logrus"
 
-	"github.com/loft-sh/devspace/pkg/util/downloader"
-	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
+	"github.com/loft-sh/loft-util/pkg/downloader"
+	"github.com/loft-sh/loft-util/pkg/downloader/commands"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/ghodss/yaml"

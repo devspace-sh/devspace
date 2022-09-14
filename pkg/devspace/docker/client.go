@@ -2,7 +2,7 @@ package docker
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/loft-util/pkg/command"
 	"io"
 	"mvdan.cc/sh/v3/expand"
 	"net/http"
@@ -42,7 +42,7 @@ type Client interface {
 	DockerAPIClient() dockerclient.CommonAPIClient
 }
 
-//Client is a client for docker
+// Client is a client for docker
 type client struct {
 	dockerclient.CommonAPIClient
 

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	command2 "github.com/loft-sh/devspace/pkg/util/command"
+	command2 "github.com/loft-sh/loft-util/pkg/command"
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"

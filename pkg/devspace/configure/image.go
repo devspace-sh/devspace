@@ -10,8 +10,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
+	"github.com/loft-sh/loft-util/pkg/command"
 	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"

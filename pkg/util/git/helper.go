@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/loft-util/pkg/command"
 	"mvdan.cc/sh/v3/expand"
 
 	"github.com/pkg/errors"

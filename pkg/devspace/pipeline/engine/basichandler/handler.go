@@ -8,9 +8,9 @@ import (
 
 	enginecommands "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler/commands"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
-	"github.com/loft-sh/devspace/pkg/util/downloader"
-	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/loft-util/pkg/downloader"
+	"github.com/loft-sh/loft-util/pkg/downloader/commands"
 	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/interp"
 )
