@@ -43,6 +43,7 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 	// Set config root
 	ctx := context.Background()
 	log := f.GetLog()
+
 	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
 	if err != nil {
 		return err
@@ -65,6 +66,11 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 		kubeContext = cmd.KubeContext
 	}
 
+	kubeClient, err := f.NewKubeDefaultClient()
+	if err != nil {
+		return errors.Wrap(err, "new kube client")
+	}
+
 	// Create docker client
 	client, err := docker.NewClientWithMinikube(ctx, kubeContext, true, log)
 	if err != nil {
@@ -72,7 +78,7 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 	}
 
 	// Load config
-	configInterface, err := configLoader.Load(ctx, nil, cmd.ToConfigOptions(), log)
+	configInterface, err := configLoader.Load(ctx, kubeClient, cmd.ToConfigOptions(), log)
 	if err != nil {
 		return err
 	}
