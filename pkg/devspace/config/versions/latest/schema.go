@@ -1104,7 +1104,7 @@ type SyncConfig struct {
 	File bool `yaml:"file,omitempty" json:"file,omitempty"`
 
 	// PrintLogs defines if sync logs should be displayed on the terminal
-	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty"`
+	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty" jsonschema:"-"`
 }
 
 type ContainerArchitecture string
@@ -1125,8 +1125,8 @@ type SyncOnUpload struct {
 	Exec []SyncExec `yaml:"exec,omitempty" json:"exec,omitempty"`
 
 	// Defines what commands should be executed on the container side if a change is uploaded and applied in the target
-	// container
-	ExecRemote *SyncExecCommand `yaml:"execRemote,omitempty" json:"execRemote,omitempty"`
+	// container. Deprecated, use `Exec`.
+	ExecRemote *SyncExecCommand `yaml:"execRemote,omitempty" json:"execRemote,omitempty" jsonschema:"-"`
 }
 
 type SyncExec struct {
