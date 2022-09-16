@@ -91,9 +91,14 @@ func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
 		if variable.Default != "" {
 			params.DefaultValue = fmt.Sprintf("%v", variable.Default)
 		}
-
+		if variable.Default != nil {
+			params.DefaultValueSet = true
+		}
 		if len(variable.Options) > 0 {
 			params.Options = variable.Options
+			if variable.Default == nil {
+				params.DefaultValue = params.Options[0]
+			}
 		} else if variable.ValidationPattern != "" {
 			params.ValidationRegexPattern = variable.ValidationPattern
 
