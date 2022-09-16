@@ -1706,10 +1706,6 @@
               "file": {
                 "type": "boolean",
                 "description": "File signals DevSpace that this is a single file that should get synced instead of a whole directory"
-              },
-              "printLogs": {
-                "type": "boolean",
-                "description": "PrintLogs defines if sync logs should be displayed on the terminal"
               }
             },
             "type": "object",
@@ -1798,7 +1794,7 @@
               },
               "execRemote": {
                 "$ref": "#/definitions/Config/$defs/SyncExecCommand",
-                "description": "Defines what commands should be executed on the container side if a change is uploaded and applied in the target\ncontainer"
+                "description": "Defines what commands should be executed on the container side if a change is uploaded and applied in the target\ncontainer. Deprecated, use `Exec`."
               }
             },
             "type": "object",
