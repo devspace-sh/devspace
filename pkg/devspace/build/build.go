@@ -1,11 +1,14 @@
 package build
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/build/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -38,7 +41,9 @@ type Controller interface {
 	Build(ctx devspacecontext.Context, images []string, options *Options) error
 }
 
-type controller struct{}
+type controller struct {
+	// localRegistry *registry.LocalRegistry
+}
 
 // NewController creates a new image build controller
 func NewController() Controller {
@@ -80,6 +85,70 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		}
 	}
 
+	imageConfs := map[string]*latest.Image{}
+	localRegistries := map[string]*registry.LocalRegistry{}
+	// localRegistry := NewLocalRegistry()
+	for key, imageConf := range conf.Images {
+		// Check compatibility with image build
+		isLocalRegistryConfigured := imageConf.LocalRegistry != nil
+		if isLocalRegistryConfigured && !registry.IsLocalRegistrySupported(imageConf) {
+			return fmt.Errorf("local registry is configured for this image build, but is only available for docker and buildkit image builds")
+		}
+
+		isLocalReqistryRequired := !registry.HasPushPermission(imageConf)
+
+		// No push permissions and local registry is disabled
+		if isLocalReqistryRequired && registry.IsLocalRegistryDisabled(imageConf) {
+			return fmt.Errorf("unable to push image %s and using a local registry is disabled", imageConf.Image)
+		}
+
+		// No push permissions and local registry is not supported by the build type
+		if isLocalReqistryRequired && !registry.IsLocalRegistrySupported(imageConf) {
+			return fmt.Errorf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
+		}
+
+		if isLocalReqistryRequired {
+			options := registry.NewDefaultOptions().
+				WithNamespace(ctx.KubeClient().Namespace())
+
+			if imageConf.LocalRegistry != nil {
+				options = options.
+					WithName(imageConf.LocalRegistry.Name).
+					WithNamespace(imageConf.LocalRegistry.Namespace).
+					WithImage(imageConf.LocalRegistry.Image).
+					WithPort(imageConf.LocalRegistry.Port)
+
+				if imageConf.LocalRegistry.Persistence != nil {
+					options = options.
+						EnableStorage().
+						WithStorageClassName(imageConf.LocalRegistry.Persistence.StorageClassName).
+						WithStorageSize(imageConf.LocalRegistry.Persistence.Size)
+				}
+			}
+
+			localRegistry := localRegistries[options.ID()]
+			if localRegistry == nil {
+				localRegistry = registry.NewLocalRegistry(options)
+
+				err := localRegistry.Start(ctx)
+				if err != nil {
+					return errors.Wrap(err, "start registry")
+				}
+
+				localRegistries[options.ID()] = localRegistry
+			}
+
+			rewrittenImage, err := localRegistry.RewriteImage(imageConf.Image)
+			if err != nil {
+				return errors.Wrap(err, "rewrite image")
+			}
+
+			imageConf.Image = rewrittenImage
+		}
+
+		imageConfs[key] = imageConf
+	}
+
 	// Execute before images build hook
 	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{}, "before:build")
 	if pluginErr != nil {
@@ -87,7 +156,7 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 	}
 
 	imagesToBuild := 0
-	for key, imageConf := range conf.Images {
+	for key, imageConf := range imageConfs {
 		ctx := ctx.WithLogger(ctx.Log().WithPrefix("build:" + key + " "))
 		if len(images) > 0 && !stringutil.Contains(images, key) {
 			continue

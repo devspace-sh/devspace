@@ -1,0 +1,46 @@
+version: v2beta1
+name: local-registry
+pipelines:
+    build:
+        run: |-
+            build_images app
+    deploy: 
+        run: |-
+            build_images app
+            create_deployments app --sequential
+    dev:
+        run: |-
+            build_images app
+            
+            echo $(get_image app) > get_image.out
+            
+            create_deployments app --sequential
+
+            start_dev --all
+    purge:
+        run: |-
+            stop_dev --all
+            purge_deployments app --sequential
+images:
+    app:
+        image: my-docker-username/helloworld
+        tags:
+            - latest
+        rebuildStrategy: default
+deployments:
+    app:
+        helm:
+            values:
+                containers:
+                    - image: my-docker-username/helloworld
+vars:
+    DEVSPACE_ENV_FILE:
+        value: .env
+        alwaysResolve: false
+hooks:
+  - command: |
+      echo -n ${runtime.images.app} > app.out
+    events: ["after:build"]
+  - command: |
+      echo -n ${runtime.images.app.image} > app_image.out
+    events: ["after:build"]

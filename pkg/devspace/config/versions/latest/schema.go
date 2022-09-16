@@ -309,6 +309,9 @@ type Image struct {
 	// RestartHelperPath will load the restart helper from this location instead of using the bundled
 	// one within DevSpace. Can be either a local path or an URL where to find the restart helper.
 	RestartHelperPath string `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty" jsonschema:"-"`
+
+	// LocalRegistry specifies the configuration for a local image registry
+	LocalRegistry *LocalRegistryConfig `yaml:"localRegistry,omitempty" json:"localRegistry,omitempty"  jsonschema:"-"`
 }
 
 // RebuildStrategy is the type of a image rebuild strategy
@@ -580,6 +583,39 @@ type CustomConfigCommand struct {
 	Command string `yaml:"command,omitempty" json:"command,omitempty"`
 	// OperatingSystem to run this command on
 	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
+}
+
+// LocalRegistryConfig holds the configuration of the local image registry
+type LocalRegistryConfig struct {
+	// Disable disables the local registry when true. True by default
+	Disable bool `yaml:"disable,omitempty" json:"disable,omitempty"`
+
+	// Namespace where the local registry is deployed
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+
+	// Name of the deployment and service of the local registry
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Image of the local docker registry
+	Image string `yaml:"image,omitempty" json:"image,omitempty"`
+
+	// Port that the registry image listens on
+	Port *int `yaml:"port,omitempty" json:"port,omitempty"`
+
+	// Persistence settings for the local docker registry
+	Persistence *LocalRegistryPersistence `yaml:"persistence,omitempty" json:"persistence,omitempty"`
+}
+
+// LocalRegistryPersistence holds the persistence settings
+type LocalRegistryPersistence struct {
+	// Enable enables persistence for the local docker registry
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// Size of the persistent volume for local docker registry storage
+	Size string `yaml:"size,omitempty" json:"size,omitempty"`
+
+	// StorageClassName of the persistent volume
+	StorageClassName string `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
 }
 
 // DeploymentConfig defines the configuration how the devspace should be deployed
