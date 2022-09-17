@@ -72,6 +72,11 @@ func (r *resolver) DefinedVars() map[string]*latest.Variable {
 
 func (r *resolver) UpdateVars(vars map[string]*latest.Variable) {
 	r.vars = vars
+	memoryCache := map[string]interface{}{}
+	for key, value := range vars {
+		memoryCache[key] = value.Value
+	}
+	r.memoryCache = memoryCache
 }
 
 func (r *resolver) fillVariables(ctx context.Context, haystack interface{}, exclude, include []*regexp.Regexp) (interface{}, error) {
