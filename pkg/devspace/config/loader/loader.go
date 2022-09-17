@@ -330,7 +330,7 @@ func (l *configLoader) parseConfig(
 	}
 
 	// reload variables to make sure they are loaded correctly
-	err = reloadVariables(resolver, copiedRawConfig, log)
+	err = reloadVariables(ctx, resolver, copiedRawConfig, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -359,7 +359,7 @@ func (l *configLoader) parseConfig(
 	return latestConfig, rawBeforeConversion, resolver, nil
 }
 
-func reloadVariables(resolver variable.Resolver, rawConfig map[string]interface{}, log log.Logger) error {
+func reloadVariables(ctx context.Context, resolver variable.Resolver, rawConfig map[string]interface{}, log log.Logger) error {
 	// Load defined variables again (might be changed through profiles)
 	loadedVars, err := versions.ParseVariables(rawConfig, log)
 	if err != nil {
@@ -367,7 +367,7 @@ func reloadVariables(resolver variable.Resolver, rawConfig map[string]interface{
 	}
 
 	// update the used vars in the resolver
-	resolver.UpdateVars(loadedVars)
+	resolver.UpdateVars(ctx, loadedVars)
 	return nil
 }
 

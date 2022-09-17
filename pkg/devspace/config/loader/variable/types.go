@@ -2,6 +2,7 @@ package variable
 
 import (
 	"context"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -27,7 +28,7 @@ type Resolver interface {
 	DefinedVars() map[string]*latest.Variable
 
 	// UpdateVars sets the defined variables to use in the resolver
-	UpdateVars(vars map[string]*latest.Variable)
+	UpdateVars(ctx context.Context, vars map[string]*latest.Variable)
 
 	// FindVariables returns all variable names that were found in the given map
 	FindVariables(haystack interface{}) ([]*latest.Variable, error)
