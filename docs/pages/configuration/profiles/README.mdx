@@ -70,22 +70,6 @@ To get a list of available profiles, you can run this command:
 devspace list profiles
 ```
 
-### `devspace use profile [profile]`
-To permanently switch to a different profile, you can run this command:
-```bash
-devspace use profile [PROFILE_NAME]
-```
-
-:::note
-Permanently switching to a profile means that all future commands (e.g. `devspace deploy` or `devspace dev`) will be executed using this profile until the user [resets the profile](#devspace-use-profile---reset) (see below).
-:::
-
-### `devspace use profile --reset`
-To permanently switch back to the default configuration (no profile replaces and patches active), you can run this command:
-```bash
-devspace use profile --reset
-```
-
 ### `devspace [deploy] -p [profile]`
 Most DevSpace commands support the `-p / --profile` flag. Using this flag, you can run a single command with a different profile without switching your profile permenantly:
 ```bash
