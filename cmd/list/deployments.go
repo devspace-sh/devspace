@@ -2,12 +2,14 @@ package list
 
 import (
 	"context"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	deployHelm "github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	deployKubectl "github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl"
+	deployTanka "github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/tanka"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -124,6 +126,12 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 				deployClient, err = deployHelm.New(helmClient, deployConfig)
 				if err != nil {
 					logger.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
+					continue
+				}
+			} else if deployConfig.Tanka != nil {
+				deployClient, err = deployTanka.New(ctx, deployConfig)
+				if err != nil {
+					logger.Warnf("Unable to create tanka deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			} else {

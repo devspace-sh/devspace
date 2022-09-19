@@ -16,6 +16,7 @@ type Manager interface {
 	AddKubectlDeployment(deploymentName string, isKustomization bool) error
 	AddHelmDeployment(deploymentName string) error
 	AddComponentDeployment(deploymentName, image string, servicePort int) error
+	AddTankaDeployment(deploymentName string) error
 	AddImage(imageName, image, projectNamespace, dockerfile string) error
 	IsRemoteDeployment(imageName string) bool
 }

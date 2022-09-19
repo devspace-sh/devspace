@@ -53,6 +53,7 @@ const (
 	DeployOptionHelm                  = "helm"
 	DeployOptionKubectl               = "kubectl"
 	DeployOptionKustomize             = "kustomize"
+	DeployOptionTanka                 = "tanka"
 	NewDevSpaceConfigOption           = "Create a new devspace.yaml from scratch"
 	DockerComposeDevSpaceConfigOption = "Convert existing docker-compose.yml to devspace.yaml"
 )
@@ -244,6 +245,7 @@ func (cmd *InitCmd) initDevspace(f factory.Factory, configLoader loader.ConfigLo
 				DeployOptionHelm,
 				DeployOptionKubectl,
 				DeployOptionKustomize,
+				DeployOptionTanka,
 			},
 		})
 		if err != nil {
@@ -328,6 +330,16 @@ func (cmd *InitCmd) initDevspace(f factory.Factory, configLoader loader.ConfigLo
 					cmd.log.Errorf("Error: %s", err.Error())
 				}
 
+				// Retry questions on error
+				continue
+			}
+		} else if selectedDeploymentOption == DeployOptionTanka {
+			err = configureManager.AddTankaDeployment(imageName)
+			if err != nil {
+				if err.Error() != "" {
+					cmd.log.WriteString(logrus.InfoLevel, "\n")
+					cmd.log.Errorf("Error: %s", err.Error())
+				}
 				// Retry questions on error
 				continue
 			}
@@ -639,6 +651,7 @@ func annotateConfig(configPath string) error {
 		"(?m)^(      )(chart:)":       "$1# We are deploying this project with the Helm chart you provided\n$1$2",
 		"(?m)^(      )(values:)":      "$1# Under `values` we can define the values for this Helm chart used during `helm install/upgrade`\n$1# You may also use `valuesFiles` to load values from files, e.g. valuesFiles: [\"values.yaml\"]\n$1$2",
 		"(?m)^(    )(kubectl:)":       "$1# This deployment uses `kubectl` but you can also define `helm` deployments\n$1$2",
+		"(?m)^(    )(tanka:)":         "$1# This deployment uses `tanka` but you can also define `helm` deployments\n$1$2",
 		"(?m)^(dev:)":                 "\n# This is a list of `dev` containers that are based on the containers created by your deployments\n$1",
 		"(?m)^(    )(imageSelector:)": "$1# Search for the container that runs this image\n$1$2",
 		"(?m)^(    )(devImage:)":      "$1# Replace the container image with this dev-optimized image (allows to skip image building during development)\n$1$2",

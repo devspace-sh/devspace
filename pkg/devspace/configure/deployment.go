@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"mvdan.cc/sh/v3/expand"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"mvdan.cc/sh/v3/expand"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
@@ -324,6 +325,44 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 
 		break
 	}
+
+	return nil
+}
+
+// AddKubectlDeployment adds a new kubectl deployment to the provided config
+func (m *manager) AddTankaDeployment(deploymentName string) error {
+	question := "Please enter the path to your tanka environment [Enter to abort]"
+
+	path, err := m.log.Question(&survey.QuestionOptions{
+		Question: question,
+		ValidationFunc: func(value string) error {
+			if value == "" {
+				return nil
+			}
+			// TANKA TODO CHECK IF DIRECTORY EXIST
+			return nil
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	if path == "" {
+		return fmt.Errorf("adding tanka deployment aborted")
+	}
+	if m.config.Deployments == nil {
+		m.config.Deployments = map[string]*latest.DeploymentConfig{}
+	}
+	// TANKA TODO ask for additional questoins
+	m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
+		Name: deploymentName,
+		Tanka: &latest.TankaConfig{
+			Path: path,
+		},
+	}
+
+	// TANKA TODO CHECK IF is Remote
+	m.isRemote[deploymentName] = false
 
 	return nil
 }

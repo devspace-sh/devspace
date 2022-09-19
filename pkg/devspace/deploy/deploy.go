@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/tanka"
 	helmclient "github.com/loft-sh/devspace/pkg/devspace/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	kubectlclient "github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -198,6 +199,13 @@ func (c *controller) deployOne(ctx devspacecontext.Context, deployConfig *latest
 		}
 
 		method = "helm"
+	} else if deployConfig.Tanka != nil {
+		deployClient, err = tanka.New(ctx, deployConfig)
+		if err != nil {
+			return true, errors.Errorf("error deploying: deployment %s error: %v", deployConfig.Name, err)
+		}
+		method = "tanka"
+
 	} else {
 		return true, errors.Errorf("error deploying: deployment %s has no deployment method", deployConfig.Name)
 	}
@@ -325,9 +333,15 @@ func (c *controller) Purge(ctx devspacecontext.Context, deployments []string, op
 		// Delete kubectl engine
 		ctx.Log().Info("Deleting deployment " + deploymentCache.Name + "...")
 		if deploymentCache.Kubectl != nil {
+			// Purge Kubectl Deployment
 			err = kubectl.Delete(ctx, deploymentCache.Name)
 		} else if deploymentCache.Helm != nil {
+			// Purge Helm Deployment
 			err = helm.Delete(ctx, deploymentCache.Name)
+		} else if deploymentCache.Tanka != nil {
+			// Purge Tanka Deployment
+			ctx.Log().Error("been here")
+			err = tanka.Purge(ctx, deploymentCache.Name)
 		} else {
 			ctx.Log().Errorf("error purging: deployment %s has no deployment method", deploymentCache.Name)
 			ctx.Config().RemoteCache().DeleteDeployment(deploymentCache.Name)

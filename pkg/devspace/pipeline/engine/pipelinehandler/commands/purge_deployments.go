@@ -2,13 +2,14 @@ package commands
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/jessevdk/go-flags"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 // PurgeDeploymentsOptions describe how deployments should get deployed
