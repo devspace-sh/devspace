@@ -69,6 +69,17 @@ func convertStringValue(value string) interface{} {
 }
 
 func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
+	params := getParams(variable)
+
+	answer, err := log.Question(params)
+	if err != nil {
+		return "", err
+	}
+
+	return answer, nil
+}
+
+func getParams(variable *latest.Variable) *survey.QuestionOptions {
 	params := &survey.QuestionOptions{}
 
 	if variable == nil {
@@ -107,11 +118,5 @@ func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
 			}
 		}
 	}
-
-	answer, err := log.Question(params)
-	if err != nil {
-		return "", err
-	}
-
-	return answer, nil
+	return params
 }
