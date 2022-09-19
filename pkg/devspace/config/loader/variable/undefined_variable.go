@@ -69,6 +69,17 @@ func convertStringValue(value string) interface{} {
 }
 
 func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
+	params := getParams(variable)
+
+	answer, err := log.Question(params)
+	if err != nil {
+		return "", err
+	}
+
+	return answer, nil
+}
+
+func getParams(variable *latest.Variable) *survey.QuestionOptions {
 	params := &survey.QuestionOptions{}
 
 	if variable == nil {
@@ -91,9 +102,14 @@ func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
 		if variable.Default != "" {
 			params.DefaultValue = fmt.Sprintf("%v", variable.Default)
 		}
-
+		if variable.Default != nil {
+			params.DefaultValueSet = true
+		}
 		if len(variable.Options) > 0 {
 			params.Options = variable.Options
+			if variable.Default == nil {
+				params.DefaultValue = params.Options[0]
+			}
 		} else if variable.ValidationPattern != "" {
 			params.ValidationRegexPattern = variable.ValidationPattern
 
@@ -102,11 +118,5 @@ func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
 			}
 		}
 	}
-
-	answer, err := log.Question(params)
-	if err != nil {
-		return "", err
-	}
-
-	return answer, nil
+	return params
 }

@@ -1,0 +1,10 @@
+version: v2beta1
+name: test
+
+vars:
+  MYSQL_VERSION:
+    question: Which mysql version do you want to use?
+    default: ""
+pipelines:
+  dev: |-
+    echo ${MYSQL_VERSION}
