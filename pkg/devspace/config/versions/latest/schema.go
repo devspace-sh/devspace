@@ -591,6 +591,8 @@ type DeploymentConfig struct {
 	Helm *HelmConfig `yaml:"helm,omitempty" json:"helm,omitempty"`
 	// Kubectl tells DevSpace to deploy this deployment via kubectl or kustomize
 	Kubectl *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
+	// Tanka tells DevSpace to deployment via Tanka
+	Tanka *TankaConfig `yaml:"tanka,omitempty" json:"tanka,omitempty`
 
 	// UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the
 	// images section with their most recent built tag.
@@ -776,6 +778,13 @@ type RollingUpdateConfig struct {
 	MaxSurge       string `yaml:"maxSurge,omitempty" json:"maxSurge,omitempty"`
 	MaxUnavailable string `yaml:"maxUnavailable,omitempty" json:"maxUnavailable,omitempty"`
 	Partition      *int   `yaml:"partition,omitempty" json:"partition,omitempty"`
+}
+
+// TankaConfig defines the specific tanka options used during deployment
+type TankaConfig struct {
+	Path              string `yaml:"path,omitempty" json:"path,omitempty"`
+	InstallJsonnetLib bool   `yaml:"installJsonnetLib,omitempty" json:"installJsonnetLib,omitempty"`
+	TankaBinaryPath   string `yaml:"tankaBinaryPath,omitempty" json:"tankaBinaryPath,omitempty"`
 }
 
 // HelmConfig defines the specific helm options used during deployment

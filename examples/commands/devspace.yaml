@@ -1,0 +1,26 @@
+version: v2beta1
+name: commands
+
+imports:
+  - path: ./commands.yaml
+
+profiles:
+  - name: profile1
+  - name: profile2
+  - name: profile3
+
+commands:
+  testo:
+    command: echo "666"
+  profiles:
+    command: echo ${DEVSPACE_PROFILES}
+
+pipelines:
+  test:
+    run: |-
+      if is_in "prof1" "${DEVSPACE_PROFILES}"
+      then
+        echo "YES";
+      else 
+        echo "NO";
+      fi

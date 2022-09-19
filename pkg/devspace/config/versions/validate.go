@@ -253,15 +253,23 @@ func validateDeployments(config *latest.Config) error {
 		if encoding.IsUnsafeName(deployConfig.Name) {
 			return fmt.Errorf("deployments.%s has to match the following regex: %v", index, encoding.UnsafeNameRegEx.String())
 		}
-		if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
+		if deployConfig.Helm == nil && deployConfig.Kubectl == nil && deployConfig.Tanka == nil {
 			return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 		}
+		// TODO Tanka
 		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
 			return errors.Errorf("deployments[%s].kubectl.manifests is required", index)
 		}
 		if deployConfig.Kubectl != nil && deployConfig.Helm != nil {
 			return errors.Errorf("deployments[%s].kubectl and deployments[%s].helm cannot be used together", index, index)
 		}
+		if deployConfig.Kubectl != nil && deployConfig.Tanka != nil {
+			return errors.Errorf("deployments[%s].kubectl and deployments[%s].tanka cannot be used together", index, index)
+		}
+		if deployConfig.Helm != nil && deployConfig.Tanka != nil {
+			return errors.Errorf("deployments[%s].helm and deployments[%s].tanka cannot be used together", index, index)
+		}
+
 	}
 
 	return nil

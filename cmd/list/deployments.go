@@ -2,6 +2,7 @@ package list
 
 import (
 	"context"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -126,6 +127,8 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 					logger.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
+			} else if deployConfig.Tanka != nil {
+				deployClient, err := deployTanka.New(ctx, deployConfig)
 			} else {
 				logger.Warnf("No deployment method defined for deployment %s", deployConfig.Name)
 				continue
