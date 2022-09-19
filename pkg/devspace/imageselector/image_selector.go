@@ -20,12 +20,11 @@ type ImageSelector struct {
 func Resolve(configImageName string, config config.Config, dependencies []types.Dependency) (*ImageSelector, error) {
 	if configImageName != "" && config != nil && config.LocalCache() != nil && config.Config() != nil {
 		var (
-			c         = config.Config()
-			generated = config.LocalCache()
+			c = config.Config()
 		)
 
 		// check if cached
-		imageCache, _ := generated.GetImageCache(configImageName)
+		imageCache, _ := config.ResolveImageCache(configImageName)
 		if imageCache.ImageName != "" && imageCache.Tag != "" && c.Images != nil && c.Images[configImageName] != nil {
 			return &ImageSelector{
 				Image: imageCache.ImageName + ":" + imageCache.Tag,

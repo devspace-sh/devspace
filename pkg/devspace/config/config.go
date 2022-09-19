@@ -30,6 +30,10 @@ type Config interface {
 	// RemoteCache returns the remote cache
 	RemoteCache() remotecache.Cache
 
+	ResolveImageCache(imageConfigName string) (localcache.ImageCache, bool)
+
+	UpdateImageCache(imageConfigName string, do func(*localcache.ImageCache))
+
 	// Path returns the absolute path from which the config was loaded
 	Path() string
 }
@@ -90,6 +94,25 @@ func (c *config) Variables() map[string]interface{} {
 
 func (c *config) Path() string {
 	return c.path
+}
+
+func (c *config) ResolveImageCache(imageConfigName string) (localcache.ImageCache, bool) {
+	if imageCache, ok := c.RemoteCache().GetImageCache(imageConfigName); ok {
+		return imageCache, ok
+	} else {
+		return c.LocalCache().GetImageCache(imageConfigName)
+	}
+}
+
+func (c *config) UpdateImageCache(imageConfigName string, do func(*localcache.ImageCache)) {
+	if imageCache, remote := c.RemoteCache().GetImageCache(imageConfigName); remote {
+		do(&imageCache)
+		c.RemoteCache().SetImageCache(imageConfigName, imageCache)
+	} else {
+		imageCache, _ := c.LocalCache().GetImageCache(imageConfigName)
+		do(&imageCache)
+		c.LocalCache().SetImageCache(imageConfigName, imageCache)
+	}
 }
 
 func Ensure(config Config) Config {

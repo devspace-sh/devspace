@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	command2 "github.com/loft-sh/loft-util/pkg/command"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	command2 "github.com/loft-sh/loft-util/pkg/command"
+	"github.com/sirupsen/logrus"
 
 	"github.com/docker/cli/cli/streams"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
@@ -71,14 +72,19 @@ func (b *Builder) Build(ctx devspacecontext.Context) error {
 
 // ShouldRebuild determines if an image has to be rebuilt
 func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) (bool, error) {
-	rebuild, err := b.helper.ShouldRebuild(ctx, forceRebuild)
+	rebuild, err := b.helper.ShouldRebuildRemotely(ctx, forceRebuild)
+	if rebuild && err == nil {
+		return rebuild, nil
+	}
+
+	rebuild, err = b.helper.ShouldRebuild(ctx, forceRebuild)
 
 	// Check if image is present in local repository
 	if !rebuild && err == nil {
 		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
 			found, err := b.helper.IsImageAvailableLocally(ctx, b.client)
 			if !found && err == nil {
-				imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
+				imageCache, _ := ctx.Config().ResolveImageCache(b.helper.ImageConfigName)
 				ctx.Log().Infof("Rebuild image %s because it was not found in local docker daemon", imageCache.ImageName)
 				return true, nil
 			}

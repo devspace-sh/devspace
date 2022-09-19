@@ -125,7 +125,7 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 
 func GetImage(c config.Config, imageName string, onlyImage, onlyTag bool) (bool, string, error) {
 	// search for image name in cache
-	imageCache, ok := c.LocalCache().GetImageCache(imageName)
+	imageCache, ok := c.ResolveImageCache(imageName)
 	if ok && imageCache.ImageName != "" && imageCache.Tag != "" {
 		shouldRedeploy, image := BuildImageString(c, imageName, imageCache.ImageName, imageCache.Tag, onlyImage, onlyTag)
 		if image != "" {
@@ -152,8 +152,7 @@ func GetImage(c config.Config, imageName string, onlyImage, onlyTag bool) (bool,
 }
 
 func BuildImageString(c config.Config, name string, fallbackImage string, fallbackTag string, onlyImage, onlyTag bool) (bool, string) {
-	cache := c.LocalCache()
-	imageCache, _ := cache.GetImageCache(name)
+	imageCache, _ := c.ResolveImageCache(name)
 
 	// try to find the image
 	image := ""

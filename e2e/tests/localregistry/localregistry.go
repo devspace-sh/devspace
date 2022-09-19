@@ -159,7 +159,48 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		}, pollingDurationLong, pollingInterval).
 			Should(gomega.MatchRegexp(`^localhost`))
 
-		cancel()
+		ginkgo.By("Checking deployment container1")
+		gomega.Eventually(func() (string, error) {
+			deployment, err := kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "app", v1.GetOptions{})
+			if err != nil {
+				if kerrors.IsNotFound(err) {
+					return "", nil
+				}
+
+				return "", err
+			}
+
+			for _, container := range deployment.Spec.Template.Spec.Containers {
+				if container.Name == "container1" {
+					return container.Image, nil
+				}
+			}
+
+			return "", nil
+		}, pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking deployment container2")
+		gomega.Eventually(func() (string, error) {
+			deployment, err := kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "app", v1.GetOptions{})
+			if err != nil {
+				if kerrors.IsNotFound(err) {
+					return "", nil
+				}
+
+				return "", err
+			}
+
+			for _, container := range deployment.Spec.Template.Spec.Containers {
+				if container.Name == "container2" {
+					return container.Image, nil
+				}
+			}
+
+			return "", nil
+		}, pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
 		err = <-done
 		framework.ExpectNoError(err)
 	})

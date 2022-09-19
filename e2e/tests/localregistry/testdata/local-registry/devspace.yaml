@@ -32,7 +32,15 @@ deployments:
         helm:
             values:
                 containers:
-                    - image: my-docker-username/helloworld
+                    - name: container1
+                      image: image(app)
+                    - name: container2
+                      image: my-docker-username/helloworld
+dev:
+    app:
+        labelSelector:
+          app.kubernetes.io/component: app
+        devImage: my-docker-username/helloworld
 vars:
     DEVSPACE_ENV_FILE:
         value: .env

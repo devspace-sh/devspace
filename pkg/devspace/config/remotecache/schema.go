@@ -21,6 +21,10 @@ import (
 )
 
 type Cache interface {
+	ListImageCache() map[string]localcache.ImageCache
+	GetImageCache(imageConfigName string) (localcache.ImageCache, bool)
+	SetImageCache(imageConfigName string, imageCache localcache.ImageCache)
+
 	GetDeployment(deploymentName string) (DeploymentCache, bool)
 	DeleteDeployment(deploymentName string)
 	ListDeployments() []DeploymentCache
@@ -48,8 +52,9 @@ type RemoteCache struct {
 	Vars          map[string]string `yaml:"vars,omitempty"`
 	VarsEncrypted bool              `yaml:"varsEncrypted,omitempty"`
 
-	DevPods     []DevPodCache     `yaml:"devPods,omitempty"`
-	Deployments []DeploymentCache `yaml:"deployments,omitempty"`
+	Images      map[string]localcache.ImageCache `yaml:"images,omitempty"`
+	DevPods     []DevPodCache                    `yaml:"devPods,omitempty"`
+	Deployments []DeploymentCache                `yaml:"deployments,omitempty"`
 
 	// Data is arbitrary key value cache
 	Data map[string]string `yaml:"data,omitempty"`
@@ -119,6 +124,33 @@ type KubectlObject struct {
 	Kind       string `yaml:"kind"`
 	Name       string `yaml:"name"`
 	Namespace  string `yaml:"namespace"`
+}
+
+func (l *RemoteCache) ListImageCache() map[string]localcache.ImageCache {
+	l.accessMutex.Lock()
+	defer l.accessMutex.Unlock()
+
+	retMap := map[string]localcache.ImageCache{}
+	for k, v := range l.Images {
+		retMap[k] = v
+	}
+
+	return retMap
+}
+
+func (l *RemoteCache) GetImageCache(imageConfigName string) (localcache.ImageCache, bool) {
+	l.accessMutex.Lock()
+	defer l.accessMutex.Unlock()
+
+	cache, ok := l.Images[imageConfigName]
+	return cache, ok
+}
+
+func (l *RemoteCache) SetImageCache(imageConfigName string, imageCache localcache.ImageCache) {
+	l.accessMutex.Lock()
+	defer l.accessMutex.Unlock()
+
+	l.Images[imageConfigName] = imageCache
 }
 
 func (l *RemoteCache) ListDevPods() []DevPodCache {

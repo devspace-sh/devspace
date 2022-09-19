@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/build/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 
@@ -87,8 +88,18 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 	imageConfs := map[string]*latest.Image{}
 	localRegistries := map[string]*registry.LocalRegistry{}
-	// localRegistry := NewLocalRegistry()
-	for key, imageConf := range conf.Images {
+	for imageConfigName, imageConf := range conf.Images {
+		// imageConfCopy := &latest.Image{}
+		// data, err := yaml.Marshal(imageConf)
+		// if err != nil {
+		// 	return err
+		// }
+
+		// err = yaml.Unmarshal(data, imageConfCopy)
+		// if err != nil {
+		// 	return err
+		// }
+
 		// Check compatibility with image build
 		isLocalRegistryConfigured := imageConf.LocalRegistry != nil
 		if isLocalRegistryConfigured && !registry.IsLocalRegistrySupported(imageConf) {
@@ -144,9 +155,13 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 			}
 
 			imageConf.Image = rewrittenImage
+
+			imageCache, _ := ctx.Config().RemoteCache().GetImageCache(imageConfigName)
+			imageCache.ImageName = rewrittenImage
+			ctx.Config().RemoteCache().SetImageCache(imageConfigName, imageCache)
 		}
 
-		imageConfs[key] = imageConf
+		imageConfs[imageConfigName] = imageConf
 	}
 
 	// Execute before images build hook
@@ -251,14 +266,14 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 			}
 
 			// Update cache
-			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
-			if imageCache.Tag == imageTags[0] {
-				ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTags[0])
-			}
+			ctx.Config().UpdateImageCache(imageConfigName, func(imageCache *localcache.ImageCache) {
+				if imageCache.Tag == imageTags[0] {
+					ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTags[0])
+				}
 
-			imageCache.ImageName = imageName
-			imageCache.Tag = imageTags[0]
-			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
+				imageCache.ImageName = imageName
+				imageCache.Tag = imageTags[0]
+			})
 
 			// Track built images
 			builtImages[imageConfigName] = types.ImageNameTag{
@@ -370,14 +385,14 @@ func (c *controller) waitForBuild(ctx devspacecontext.Context, errChan <-chan er
 		ctx.Log().Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
 
 		// Update cache
-		imageCache, _ := ctx.Config().LocalCache().GetImageCache(done.imageConfigName)
-		if imageCache.Tag == done.imageTag {
-			ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
-		}
+		ctx.Config().UpdateImageCache(done.imageConfigName, func(imageCache *localcache.ImageCache) {
+			if imageCache.Tag == done.imageTag {
+				ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
+			}
 
-		imageCache.ImageName = done.imageName
-		imageCache.Tag = done.imageTag
-		ctx.Config().LocalCache().SetImageCache(done.imageConfigName, imageCache)
+			imageCache.ImageName = done.imageName
+			imageCache.Tag = done.imageTag
+		})
 
 		// Track built images
 		builtImages[done.imageConfigName] = types.ImageNameTag{

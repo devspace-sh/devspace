@@ -1,9 +1,13 @@
 package helper
 
 import (
+	"os"
+
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -13,7 +17,6 @@ import (
 	"github.com/loft-sh/loft-util/pkg/command"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 // BuildHelper is the helper class to store common functionality used by both the docker and kaniko builder
@@ -222,4 +225,136 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx devspacecontext.Context, docke
 		}
 	}
 	return false, nil
+}
+
+func (b *BuildHelper) ShouldRebuildRemotely(ctx devspacecontext.Context, forceRebuild bool) (bool, error) {
+	_, local := ctx.Config().LocalCache().GetImageCache(b.ImageConfigName)
+	if local {
+		return false, nil
+	}
+
+	imageCache, _ := ctx.Config().RemoteCache().GetImageCache(b.ImageConfigName)
+
+	// if rebuild strategy is always, we return here
+	if b.ImageConf.RebuildStrategy == latest.RebuildStrategyAlways {
+		ctx.Log().Infof("Rebuild image %s because strategy is always rebuild", imageCache.ImageName)
+		return true, nil
+	}
+
+	// Hash dockerfile
+	_, err := os.Stat(b.DockerfilePath)
+	if err != nil {
+		return false, errors.Errorf("Dockerfile %s missing: %v", b.DockerfilePath, err)
+	}
+	dockerfileHash, err := hash.Directory(b.DockerfilePath)
+	if err != nil {
+		return false, errors.Wrap(err, "hash dockerfile")
+	}
+
+	// Hash image config
+	configStr, err := yaml.Marshal(*b.ImageConf)
+	if err != nil {
+		return false, errors.Wrap(err, "marshal image config")
+	}
+
+	imageConfigHash := hash.String(string(configStr))
+
+	// Hash entrypoint
+	entrypointHash := ""
+	if len(b.Entrypoint) > 0 {
+		for _, str := range b.Entrypoint {
+			entrypointHash += str
+		}
+	}
+	if len(b.Cmd) > 0 {
+		for _, str := range b.Cmd {
+			entrypointHash += str
+		}
+	}
+	if entrypointHash != "" {
+		entrypointHash = hash.String(entrypointHash)
+	}
+
+	// only rebuild Docker image when Dockerfile or context has changed since latest build
+	mustRebuild := imageCache.Tag == "" || imageCache.DockerfileHash != dockerfileHash || imageCache.ImageConfigHash != imageConfigHash || imageCache.EntrypointHash != entrypointHash
+	if imageCache.Tag == "" {
+		ctx.Log().Infof("Rebuild image %s because tag is missing", imageCache.ImageName)
+	} else if imageCache.DockerfileHash != dockerfileHash {
+		ctx.Log().Infof("Rebuild image %s because dockerfile has changed", imageCache.ImageName)
+	} else if imageCache.ImageConfigHash != imageConfigHash {
+		ctx.Log().Infof("Rebuild image %s because image config has changed", imageCache.ImageName)
+	} else if imageCache.EntrypointHash != entrypointHash {
+		ctx.Log().Infof("Rebuild image %s because entrypoint has changed", imageCache.ImageName)
+	}
+
+	// Okay this check verifies if the previous deploy context was local kubernetes context where we didn't push the image and now have a kubernetes context where we probably push
+	// or use another docker client (e.g. minikube <-> docker-desktop)
+	if !mustRebuild && ctx.KubeClient() != nil && ctx.Config().LocalCache().GetLastContext() != nil && ctx.Config().LocalCache().GetLastContext().Context != ctx.KubeClient().CurrentContext() && kubectl.IsLocalKubernetes(ctx.Config().LocalCache().GetLastContext().Context) {
+		mustRebuild = true
+		ctx.Log().Infof("Rebuild image %s because previous build was local kubernetes", imageCache.ImageName)
+		ctx.Config().LocalCache().SetLastContext(&localcache.LastContextConfig{
+			Namespace: ctx.KubeClient().Namespace(),
+			Context:   ctx.KubeClient().CurrentContext(),
+		})
+	}
+
+	// Check if should consider context path changes for rebuilding
+	if b.ImageConf.RebuildStrategy != latest.RebuildStrategyIgnoreContextChanges {
+		// Hash context path
+		contextDir, relDockerfile, err := build.GetContextFromLocalDir(b.ContextPath, b.DockerfilePath)
+		if err != nil {
+			return false, errors.Wrap(err, "get context from local dir")
+		}
+
+		relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
+		excludes, err := ReadDockerignore(contextDir, relDockerfile)
+		if err != nil {
+			return false, errors.Errorf("Error reading .dockerignore: %v", err)
+		}
+
+		contextHash, err := hash.DirectoryExcludes(contextDir, excludes, false)
+		if err != nil {
+			return false, errors.Errorf("Error hashing %s: %v", contextDir, err)
+		}
+
+		if !mustRebuild && imageCache.ContextHash != contextHash {
+			ctx.Log().Infof("Rebuild image %s because build context has changed", imageCache.ImageName)
+		}
+		mustRebuild = mustRebuild || imageCache.ContextHash != contextHash
+
+		// TODO: This is not an ideal solution since there can be the issue that the user runs
+		// devspace dev & the generated.yaml is written without ContextHash and on a subsequent
+		// devspace deploy the image would be rebuild, because the ContextHash was empty and is
+		// now different. However in this case it is probably better to save the context hash computing
+		// time during devspace dev instead of always hashing the context path.
+		if forceRebuild || mustRebuild {
+			imageCache.ContextHash = contextHash
+		}
+	}
+
+	mustRebuild = mustRebuild || !b.IsImageAvailableRemotely(ctx)
+
+	if forceRebuild || mustRebuild {
+		imageCache.DockerfileHash = dockerfileHash
+		imageCache.ImageConfigHash = imageConfigHash
+		imageCache.EntrypointHash = entrypointHash
+	}
+
+	ctx.Config().RemoteCache().SetImageCache(b.ImageConfigName, imageCache)
+	return mustRebuild, nil
+}
+
+func (b *BuildHelper) IsImageAvailableRemotely(ctx devspacecontext.Context) bool {
+	ref, err := name.ParseReference(b.ImageName)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = remote.Image(
+		ref,
+		remote.WithContext(ctx.Context()),
+		// remote.WithAuthFromKeychain(authn.DefaultKeychain),
+		// remote.WithTransport(http.DefaultTransport),
+	)
+	return err == nil
 }
