@@ -57,8 +57,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("should build dockerfile with docker and use local registry", func() {
-		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry")
+	ginkgo.It("should build dockerfile with docker and use local registry with helm deployment", func() {
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-helm")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
@@ -160,29 +160,53 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			Should(gomega.MatchRegexp(`^localhost`))
 
 		ginkgo.By("Checking deployment container1")
-		gomega.Eventually(func() (string, error) {
-			deployment, err := kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "app", v1.GetOptions{})
-			if err != nil {
-				if kerrors.IsNotFound(err) {
-					return "", nil
-				}
-
-				return "", err
-			}
-
-			for _, container := range deployment.Spec.Template.Spec.Containers {
-				if container.Name == "container1" {
-					return container.Image, nil
-				}
-			}
-
-			return "", nil
-		}, pollingDurationLong, pollingInterval).
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container1"), pollingDurationLong, pollingInterval).
 			Should(gomega.MatchRegexp(`^localhost`))
 
 		ginkgo.By("Checking deployment container2")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container2"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking deployment container3")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container3"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should build dockerfile with docker and use local registry with kubectl deployment", func() {
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-kubectl")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("localregistry")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			defer ginkgo.GinkgoRecover()
+
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
+			}
+
+			done <- devCmd.RunDefault(f)
+		}()
+
+		var registryHost string
+		ginkgo.By("Checking registry for pushed image")
 		gomega.Eventually(func() (string, error) {
-			deployment, err := kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "app", v1.GetOptions{})
+			service, err := kubeClient.RawClient().CoreV1().Services(ns).Get(ctx, "registry", v1.GetOptions{})
 			if err != nil {
 				if kerrors.IsNotFound(err) {
 					return "", nil
@@ -191,14 +215,78 @@ var _ = DevSpaceDescribe("localregistry", func() {
 				return "", err
 			}
 
-			for _, container := range deployment.Spec.Template.Spec.Containers {
-				if container.Name == "container2" {
-					return container.Image, nil
-				}
+			registryPort := registry.GetNodePort(service)
+			registryHost = fmt.Sprintf("localhost:%d", registryPort)
+			registry, err := name.NewRegistry(registryHost)
+			if err != nil {
+				return "", err
 			}
 
-			return "", nil
+			images, err := remote.Catalog(ctx, registry)
+			if err != nil {
+				return "", err
+			}
+
+			if len(images) == 0 {
+				return "", nil
+			}
+
+			return images[0], nil
 		}, pollingDurationLong, pollingInterval).
+			Should(gomega.Equal("my-docker-username/helloworld"))
+
+		ginkgo.By("Checking get_image output")
+		gomega.Eventually(func() (string, error) {
+			out, err := ioutil.ReadFile("get_image.out")
+			if err != nil {
+				if !os.IsNotExist(err) {
+					return "", err
+				}
+
+				return "", nil
+			}
+			return string(out), nil
+		}, pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking %{runtime.images.app} output")
+		gomega.Eventually(func() (string, error) {
+			out, err := ioutil.ReadFile("app.out")
+			if err != nil {
+				if !os.IsNotExist(err) {
+					return "", err
+				}
+
+				return "", nil
+			}
+			return string(out), nil
+		}, pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking %{runtime.images.app.image} output")
+		gomega.Eventually(func() (string, error) {
+			out, err := ioutil.ReadFile("app_image.out")
+			if err != nil {
+				if !os.IsNotExist(err) {
+					return "", err
+				}
+
+				return "", nil
+			}
+			return string(out), nil
+		}, pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking deployment container1")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container1"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking deployment container2")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container2"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking deployment container3")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container3"), pollingDurationLong, pollingInterval).
 			Should(gomega.MatchRegexp(`^localhost`))
 
 		err = <-done
@@ -269,3 +357,24 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		)
 	})
 })
+
+func selectContainerImage(kubeHelper *kube.KubeHelper, namespace, deployment, containerName string) func() (string, error) {
+	return func() (string, error) {
+		deployment, err := kubeHelper.RawClient().AppsV1().Deployments(namespace).Get(context.TODO(), deployment, v1.GetOptions{})
+		if err != nil {
+			if kerrors.IsNotFound(err) {
+				return "", nil
+			}
+
+			return "", err
+		}
+
+		for _, container := range deployment.Spec.Template.Spec.Containers {
+			if container.Name == containerName {
+				return container.Image, nil
+			}
+		}
+
+		return "", nil
+	}
+}
