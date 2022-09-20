@@ -1,6 +1,10 @@
 package registry
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+)
 
 var (
 	RegistryName           = "registry"
@@ -81,6 +85,25 @@ func (o Options) WithStorageSize(storageSize string) Options {
 	newOptions := o
 	if storageSize != "" {
 		newOptions.StorageSize = storageSize
+	}
+	return newOptions
+}
+
+func (o Options) WithLocalRegistryConfig(config *latest.LocalRegistryConfig) Options {
+	newOptions := o
+	if config != nil {
+		newOptions = newOptions.
+			WithName(config.Name).
+			WithNamespace(config.Namespace).
+			WithImage(config.Image).
+			WithPort(config.Port)
+
+		if config.Persistence != nil {
+			newOptions = newOptions.
+				EnableStorage().
+				WithStorageClassName(config.Persistence.StorageClassName).
+				WithStorageSize(config.Persistence.Size)
+		}
 	}
 	return newOptions
 }

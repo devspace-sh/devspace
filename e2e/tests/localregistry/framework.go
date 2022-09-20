@@ -4,5 +4,5 @@ import "github.com/onsi/ginkgo"
 
 // DevSpaceDescribe annotates the test with the label.
 func DevSpaceDescribe(text string, body func()) bool {
-	return ginkgo.FDescribe("[localregistry] "+text, body)
+	return ginkgo.Describe("[localregistry] "+text, body)
 }

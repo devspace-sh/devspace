@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/buildkit"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/build/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 
@@ -18,11 +19,12 @@ import (
 )
 
 type imageNameAndTag struct {
-	imageConfigName string
-	imageName       string
-	imageTag        string
-	imageTags       []string
-	imageConfig     latest.Image
+	imageConfigName        string
+	localRegistryImageName string
+	imageName              string
+	imageTag               string
+	imageTags              []string
+	imageConfig            latest.Image
 }
 
 // Options describe how images should be build
@@ -86,55 +88,39 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		}
 	}
 
-	imageConfs := map[string]*latest.Image{}
+	// Execute before images build hook
+	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{}, "before:build")
+	if pluginErr != nil {
+		return pluginErr
+	}
+
+	imagesToBuild := 0
 	localRegistries := map[string]*registry.LocalRegistry{}
-	for imageConfigName, imageConf := range conf.Images {
-		// imageConfCopy := &latest.Image{}
-		// data, err := yaml.Marshal(imageConf)
-		// if err != nil {
-		// 	return err
-		// }
-
-		// err = yaml.Unmarshal(data, imageConfCopy)
-		// if err != nil {
-		// 	return err
-		// }
-
-		// Check compatibility with image build
-		isLocalRegistryConfigured := imageConf.LocalRegistry != nil
-		if isLocalRegistryConfigured && !registry.IsLocalRegistrySupported(imageConf) {
-			return fmt.Errorf("local registry is configured for this image build, but is only available for docker and buildkit image builds")
+	for key, imageConf := range conf.Images {
+		ctx := ctx.WithLogger(ctx.Log().WithPrefix("build:" + key + " "))
+		if len(images) > 0 && !stringutil.Contains(images, key) {
+			continue
 		}
+
+		// This is necessary for parallel build otherwise we would override the image conf pointer during the loop
+		cImageConf := *imageConf
+		imageName := cImageConf.Image
+		imageConfigName := key
+		localRegistryImageName := ""
 
 		isLocalReqistryRequired := !registry.HasPushPermission(imageConf)
+		if isLocalReqistryRequired && !options.SkipPush {
+			// No push permissions and local registry is disabled
+			if registry.IsLocalRegistryDisabled(imageConf) {
+				return fmt.Errorf("unable to push image %s and using a local registry is disabled", imageConf.Image)
+			}
 
-		// No push permissions and local registry is disabled
-		if isLocalReqistryRequired && registry.IsLocalRegistryDisabled(imageConf) {
-			return fmt.Errorf("unable to push image %s and using a local registry is disabled", imageConf.Image)
-		}
-
-		// No push permissions and local registry is not supported by the build type
-		if isLocalReqistryRequired && !registry.IsLocalRegistrySupported(imageConf) {
-			return fmt.Errorf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
-		}
-
-		if isLocalReqistryRequired {
 			options := registry.NewDefaultOptions().
-				WithNamespace(ctx.KubeClient().Namespace())
+				WithLocalRegistryConfig(imageConf.LocalRegistry)
 
-			if imageConf.LocalRegistry != nil {
-				options = options.
-					WithName(imageConf.LocalRegistry.Name).
-					WithNamespace(imageConf.LocalRegistry.Namespace).
-					WithImage(imageConf.LocalRegistry.Image).
-					WithPort(imageConf.LocalRegistry.Port)
-
-				if imageConf.LocalRegistry.Persistence != nil {
-					options = options.
-						EnableStorage().
-						WithStorageClassName(imageConf.LocalRegistry.Persistence.StorageClassName).
-						WithStorageSize(imageConf.LocalRegistry.Persistence.Size)
-				}
+			kubeClient := ctx.KubeClient()
+			if kubeClient != nil {
+				options = options.WithNamespace(kubeClient.Namespace())
 			}
 
 			localRegistry := localRegistries[options.ID()]
@@ -149,38 +135,17 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 				localRegistries[options.ID()] = localRegistry
 			}
 
-			rewrittenImage, err := localRegistry.RewriteImage(imageConf.Image)
+			localRegistryImageName, err := localRegistry.RewriteImage(imageName)
 			if err != nil {
 				return errors.Wrap(err, "rewrite image")
 			}
 
-			imageConf.Image = rewrittenImage
-
-			imageCache, _ := ctx.Config().RemoteCache().GetImageCache(imageConfigName)
-			imageCache.ImageName = rewrittenImage
-			ctx.Config().RemoteCache().SetImageCache(imageConfigName, imageCache)
+			// Update cache
+			// imageName = localRegistryImageName
+			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
+			imageCache.LocalRegistryImageName = localRegistryImageName
+			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 		}
-
-		imageConfs[imageConfigName] = imageConf
-	}
-
-	// Execute before images build hook
-	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{}, "before:build")
-	if pluginErr != nil {
-		return pluginErr
-	}
-
-	imagesToBuild := 0
-	for key, imageConf := range imageConfs {
-		ctx := ctx.WithLogger(ctx.Log().WithPrefix("build:" + key + " "))
-		if len(images) > 0 && !stringutil.Contains(images, key) {
-			continue
-		}
-
-		// This is necessary for parallel build otherwise we would override the image conf pointer during the loop
-		cImageConf := *imageConf
-		imageName := cImageConf.Image
-		imageConfigName := key
 
 		// Get image tags
 		imageTags := []string{}
@@ -203,6 +168,16 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		builder, err := c.createBuilder(ctx, imageConfigName, &cImageConf, imageTags, options)
 		if err != nil {
 			return errors.Wrap(err, "create builder")
+		}
+
+		// Check compatibility with local registry
+		if isLocalReqistryRequired {
+			switch builder.(type) {
+			case *buildkit.Builder:
+			case *docker.Builder:
+			default:
+				return fmt.Errorf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
+			}
 		}
 
 		// Execute before images build hook
@@ -266,20 +241,21 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 			}
 
 			// Update cache
-			ctx.Config().UpdateImageCache(imageConfigName, func(imageCache *localcache.ImageCache) {
-				if imageCache.Tag == imageTags[0] {
-					ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTags[0])
-				}
+			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
+			if imageCache.Tag == imageTags[0] {
+				ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTags[0])
+			}
 
-				imageCache.ImageName = imageName
-				imageCache.Tag = imageTags[0]
-			})
+			imageCache.ImageName = imageName
+			imageCache.Tag = imageTags[0]
+			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 
 			// Track built images
 			builtImages[imageConfigName] = types.ImageNameTag{
-				ImageConfigName: imageConfigName,
-				ImageName:       imageName,
-				ImageTag:        imageTags[0],
+				ImageConfigName:        imageConfigName,
+				ImageName:              imageName,
+				ImageTag:               imageTags[0],
+				LocalRegistryImageName: localRegistryImageName,
 			}
 
 			// Execute before images build hook
@@ -321,11 +297,12 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 				// Send the response
 				cacheChan <- imageNameAndTag{
-					imageConfigName: imageConfigName,
-					imageName:       imageName,
-					imageTag:        imageTags[0],
-					imageTags:       imageTags,
-					imageConfig:     cImageConf,
+					imageConfigName:        imageConfigName,
+					imageName:              imageName,
+					imageTag:               imageTags[0],
+					imageTags:              imageTags,
+					imageConfig:            cImageConf,
+					localRegistryImageName: localRegistryImageName,
 				}
 			}(ctx)
 		}
@@ -385,20 +362,21 @@ func (c *controller) waitForBuild(ctx devspacecontext.Context, errChan <-chan er
 		ctx.Log().Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
 
 		// Update cache
-		ctx.Config().UpdateImageCache(done.imageConfigName, func(imageCache *localcache.ImageCache) {
-			if imageCache.Tag == done.imageTag {
-				ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
-			}
+		imageCache, _ := ctx.Config().LocalCache().GetImageCache(done.imageConfigName)
+		if imageCache.Tag == done.imageTag {
+			ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
+		}
 
-			imageCache.ImageName = done.imageName
-			imageCache.Tag = done.imageTag
-		})
+		imageCache.ImageName = done.imageName
+		imageCache.Tag = done.imageTag
+		ctx.Config().LocalCache().SetImageCache(done.imageConfigName, imageCache)
 
 		// Track built images
 		builtImages[done.imageConfigName] = types.ImageNameTag{
-			ImageConfigName: done.imageConfigName,
-			ImageName:       done.imageName,
-			ImageTag:        done.imageTag,
+			ImageConfigName:        done.imageConfigName,
+			ImageName:              done.imageName,
+			ImageTag:               done.imageTag,
+			LocalRegistryImageName: done.localRegistryImageName,
 		}
 
 		// Execute plugin hook

@@ -110,7 +110,7 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			}
 
 			if len(images) == 0 {
-				return "", err
+				return "", nil
 			}
 
 			return images[0], nil
@@ -227,26 +227,26 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		)
 	})
 
-	ginkgo.It("should error when local registry is configured and not supported by build type", func() {
-		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-invalid")
-		framework.ExpectNoError(err)
-		defer framework.CleanupTempDir(initialDir, tempDir)
+	// ginkgo.XIt("should error when local registry is configured and not supported by build type", func() {
+	// 	tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-invalid")
+	// 	framework.ExpectNoError(err)
+	// 	defer framework.CleanupTempDir(initialDir, tempDir)
 
-		// create build command
-		output := &bytes.Buffer{}
-		buildCmd := &cmd.RunPipelineCmd{
-			GlobalFlags: &flags.GlobalFlags{
-				NoWarn: true,
-			},
-			Pipeline: "build",
-			Log:      logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
-		}
-		err = buildCmd.RunDefault(f)
-		framework.ExpectError(err)
-		gomega.Expect(output.String()).To(
-			gomega.ContainSubstring("local registry is configured for this image build, but is only available for docker and buildkit image builds"),
-		)
-	})
+	// 	// create build command
+	// 	output := &bytes.Buffer{}
+	// 	buildCmd := &cmd.RunPipelineCmd{
+	// 		GlobalFlags: &flags.GlobalFlags{
+	// 			NoWarn: true,
+	// 		},
+	// 		Pipeline: "build",
+	// 		Log:      logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
+	// 	}
+	// 	err = buildCmd.RunDefault(f)
+	// 	framework.ExpectError(err)
+	// 	gomega.Expect(output.String()).To(
+	// 		gomega.ContainSubstring("local registry is configured for this image build, but is only available for docker and buildkit image builds"),
+	// 	)
+	// })
 
 	ginkgo.It("should error when local registry is required and disabled by configuration", func() {
 		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-disabled")

@@ -26,7 +26,6 @@ type Loader interface {
 func NewCache(configName, secretName string) *RemoteCache {
 	return &RemoteCache{
 		Vars:        make(map[string]string),
-		Images:      make(map[string]localcache.ImageCache),
 		Deployments: []DeploymentCache{},
 		DevPods:     []DevPodCache{},
 		Data:        make(map[string]string),
@@ -64,9 +63,6 @@ func NewCacheFromSecret(ctx context.Context, client kubectl.Client, secretName s
 
 	if remoteCache.Data == nil {
 		remoteCache.Data = make(map[string]string)
-	}
-	if remoteCache.Images == nil {
-		remoteCache.Images = make(map[string]localcache.ImageCache)
 	}
 	if remoteCache.Vars == nil {
 		remoteCache.Vars = make(map[string]string)

@@ -24,26 +24,6 @@ func IsLocalRegistryDisabled(image *latest.Image) bool {
 	return image.LocalRegistry != nil && image.LocalRegistry.Disable
 }
 
-func IsLocalRegistrySupported(image *latest.Image) bool {
-	if image.Custom != nil {
-		return false
-	}
-
-	if image.Kaniko != nil {
-		return false
-	}
-
-	if image.Docker == nil && image.Kaniko == nil {
-		return true
-	}
-
-	if image.BuildKit != nil {
-		return true
-	}
-
-	return false
-}
-
 func GetNodePort(service *corev1.Service) int32 {
 	for _, port := range service.Spec.Ports {
 		if port.Name == "registry" {

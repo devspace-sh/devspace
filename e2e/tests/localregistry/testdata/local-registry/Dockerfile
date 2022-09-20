@@ -1,2 +1,2 @@
 FROM alpine
-CMD ["/bin/echo", "'Hello world!'"]
+CMD ["tail", "-f", "/dev/null"]

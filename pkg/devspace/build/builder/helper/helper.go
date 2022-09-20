@@ -46,6 +46,12 @@ func NewBuildHelper(ctx devspacecontext.Context, engineName string, imageConfigN
 		imageName                   = imageConf.Image
 	)
 
+	// Update the image name to the local registry image name
+	imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
+	if imageCache.LocalRegistryImageName != "" {
+		imageName = imageCache.LocalRegistryImageName
+	}
+
 	// Check if we should overwrite entrypoint
 	var (
 		entrypoint []string
@@ -227,6 +233,7 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx devspacecontext.Context, docke
 	return false, nil
 }
 
+/*
 func (b *BuildHelper) ShouldRebuildRemotely(ctx devspacecontext.Context, forceRebuild bool) (bool, error) {
 	_, local := ctx.Config().LocalCache().GetImageCache(b.ImageConfigName)
 	if local {
@@ -343,6 +350,7 @@ func (b *BuildHelper) ShouldRebuildRemotely(ctx devspacecontext.Context, forceRe
 	ctx.Config().RemoteCache().SetImageCache(b.ImageConfigName, imageCache)
 	return mustRebuild, nil
 }
+*/
 
 func (b *BuildHelper) IsImageAvailableRemotely(ctx devspacecontext.Context) bool {
 	ref, err := name.ParseReference(b.ImageName)
