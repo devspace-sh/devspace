@@ -33,30 +33,28 @@ yarn global add devspace
 <TabItem value="mac">
 
 ```bash
-curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
-sudo mv devspace /usr/local/bin;
+curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-darwin-amd64" && sudo install -c -m 0755 devspace /usr/local/bin
 ```
 
 </TabItem>
 <TabItem value="linux">
 
 ```bash
-curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
-sudo install devspace /usr/local/bin;
+curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-linux-amd64" && sudo install -c -m 0755 devspace /usr/local/bin
 ```
 
 </TabItem>
 <TabItem value="windows">
 
 ```powershell {4}
-md -Force "$Env:APPDATA\devspace"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
-Invoke-WebRequest -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/loft-sh/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe;
-$env:Path += ";" + $Env:APPDATA + "\devspace";
+md -Force "$Env:APPDATA\loft"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
+Invoke-WebRequest -URI "https://github.com/loft-sh/devspace/releases/latest/download/devspace-windows-amd64.exe" -o $Env:APPDATA\loft\devspace.exe;
+$env:Path += ";" + $Env:APPDATA + "\loft";
 [Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
 ```
 
 :::info Check Environment Variable $PATH
-Line 4 of this install script adds the install directory `%APPDATA%\devspace` to the `$PATH` environment variable. This is only effective for the current powershell session, i.e. when opening a new terminal window, `devspace` may not be found. 
+Line 4 of this install script adds the install directory `%APPDATA%\devspace` to the `$PATH` environment variable. This is only effective for the current powershell session, i.e. when opening a new terminal window, `devspace` may not be found.
 
 **Make sure to add the folder `%APPDATA%\devspace` to the `PATH` environment variable after installing DevSpace via Powershell. Afterwards, a reboot might be necessary.**
 
