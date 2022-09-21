@@ -64,6 +64,20 @@ func GetDependencyPath(workingDirectory string, source *latest.SourceConfig) (co
 	return getDependencyConfigPath(localPath, source)
 }
 
+// switch https <-> ssh  urls
+func switchURLType(gitPath string) string {
+	var newGitURL string
+	if strings.HasPrefix(gitPath, "https") {
+		splitURL := strings.Split(gitPath, "/")
+		newGitURL = fmt.Sprintf("git@%s:%s", splitURL[2], strings.Join(splitURL[3:], "/"))
+	} else {
+		splitURL := strings.Split(gitPath, "@")
+		replacedURL := strings.ReplaceAll(splitURL[1], ":", "/")
+		newGitURL = fmt.Sprintf("https://%s", replacedURL)
+	}
+	return newGitURL
+}
+
 func DownloadDependency(ctx context.Context, workingDirectory string, source *latest.SourceConfig, log log.Logger) (configPath string, err error) {
 	downloadMutex.Lock()
 	defer downloadMutex.Unlock()
@@ -110,7 +124,17 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 					return getDependencyConfigPath(localPath, source)
 				}
 
-				return "", errors.Wrap(err, "clone repository")
+				err = repo.Clone(ctx, git.CloneOptions{
+					URL:            switchURLType(gitPath),
+					Tag:            source.Tag,
+					Branch:         source.Branch,
+					Commit:         source.Revision,
+					Args:           source.CloneArgs,
+					DisableShallow: source.DisableShallow,
+				})
+				if err != nil {
+					return "", errors.Wrap(err, "clone repository")
+				}
 			}
 
 			log.Debugf("Pulled %s", gitPath)
