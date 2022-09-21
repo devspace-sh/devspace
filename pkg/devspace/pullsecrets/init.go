@@ -1,6 +1,7 @@
 package pullsecrets
 
 import (
+	"strings"
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -170,6 +171,12 @@ func (r *client) createPullSecret(ctx devspacecontext.Context, dockerClient dock
 
 			if password == "" && authConfig.IdentityToken != "" {
 				password = authConfig.IdentityToken
+			}
+
+			// Handle Azure Container Registry (ACR) when credentials helper does not provide a username
+			// https://learn.microsoft.com/en-us/azure/container-registry/container-registry-authentication?tabs=azure-cli#az-acr-login-with---expose-token
+			if username == "" && strings.HasSuffix(authConfig.ServerAddress, "azurecr.io") {
+				username = "00000000-0000-0000-0000-000000000000"
 			}
 		}
 	}
