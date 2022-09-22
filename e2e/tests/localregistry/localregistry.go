@@ -110,158 +110,6 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		gomega.Eventually(getImages(ctx, registryHost), pollingDurationLong, pollingInterval).
 			Should(gomega.ContainElement("my-docker-username/helloworld"))
 
-		ginkgo.By("Checking get_image output")
-		gomega.Eventually(func() (string, error) {
-			out, err := ioutil.ReadFile("get_image.out")
-			if err != nil {
-				if !os.IsNotExist(err) {
-					return "", err
-				}
-
-				return "", nil
-			}
-			return string(out), nil
-		}, pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		ginkgo.By("Checking %{runtime.images.app} output")
-		gomega.Eventually(func() (string, error) {
-			out, err := ioutil.ReadFile("app.out")
-			if err != nil {
-				if !os.IsNotExist(err) {
-					return "", err
-				}
-
-				return "", nil
-			}
-			return string(out), nil
-		}, pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		ginkgo.By("Checking %{runtime.images.app.image} output")
-		gomega.Eventually(func() (string, error) {
-			out, err := ioutil.ReadFile("app_image.out")
-			if err != nil {
-				if !os.IsNotExist(err) {
-					return "", err
-				}
-
-				return "", nil
-			}
-			return string(out), nil
-		}, pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		ginkgo.By("Checking deployment container1")
-		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container1"), pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		ginkgo.By("Checking deployment container2")
-		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container2"), pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		ginkgo.By("Checking deployment container3")
-		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container3"), pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		err = <-done
-		framework.ExpectNoError(err)
-	})
-
-	ginkgo.It("should build dockerfile with docker and use local registry with kubectl deployment", func() {
-		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-kubectl")
-		framework.ExpectNoError(err)
-		defer framework.CleanupTempDir(initialDir, tempDir)
-
-		ns, err := kubeClient.CreateNamespace("localregistry")
-		framework.ExpectNoError(err)
-		defer framework.ExpectDeleteNamespace(kubeClient, ns)
-
-		done := make(chan error)
-		cancelCtx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		go func() {
-			defer ginkgo.GinkgoRecover()
-
-			devCmd := &cmd.RunPipelineCmd{
-				GlobalFlags: &flags.GlobalFlags{
-					NoWarn:    true,
-					Namespace: ns,
-				},
-				Pipeline: "dev",
-				Ctx:      cancelCtx,
-			}
-
-			done <- devCmd.RunDefault(f)
-		}()
-
-		var registryHost string
-		ginkgo.By("Waiting for registry service node port")
-		gomega.Eventually(func() (*corev1.Service, error) {
-			service, err := getRegistryService(ctx, kubeClient, ns)
-			if err != nil {
-				return nil, err
-			}
-
-			if service != nil {
-				registryPort := registry.GetServicePort(service)
-				if registryPort.NodePort != 0 {
-					registryHost = fmt.Sprintf("localhost:%d", registryPort.NodePort)
-					return service, nil
-				}
-			}
-
-			return nil, nil
-		}, pollingDurationLong, pollingInterval).
-			ShouldNot(gomega.BeNil())
-
-		ginkgo.By("Checking registry for pushed image")
-		gomega.Eventually(getImages(ctx, registryHost), pollingDurationLong, pollingInterval).
-			Should(gomega.ContainElement("my-docker-username/helloworld"))
-
-		ginkgo.By("Checking get_image output")
-		gomega.Eventually(func() (string, error) {
-			out, err := ioutil.ReadFile("get_image.out")
-			if err != nil {
-				if !os.IsNotExist(err) {
-					return "", err
-				}
-
-				return "", nil
-			}
-			return string(out), nil
-		}, pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		ginkgo.By("Checking %{runtime.images.app} output")
-		gomega.Eventually(func() (string, error) {
-			out, err := ioutil.ReadFile("app.out")
-			if err != nil {
-				if !os.IsNotExist(err) {
-					return "", err
-				}
-
-				return "", nil
-			}
-			return string(out), nil
-		}, pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		ginkgo.By("Checking %{runtime.images.app.image} output")
-		gomega.Eventually(func() (string, error) {
-			out, err := ioutil.ReadFile("app_image.out")
-			if err != nil {
-				if !os.IsNotExist(err) {
-					return "", err
-				}
-
-				return "", nil
-			}
-			return string(out), nil
-		}, pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
 		ginkgo.By("Checking deployment container1")
 		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container1"), pollingDurationLong, pollingInterval).
 			Should(gomega.MatchRegexp(`^localhost`))
@@ -329,6 +177,50 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		ginkgo.By("Checking registry for pushed image")
 		gomega.Eventually(getImages(ctx, registryHost), pollingDurationLong, pollingInterval).
 			Should(gomega.ContainElement("my-docker-username/helloworld"))
+
+		ginkgo.By("Checking deployment container1")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container1"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking deployment container2")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container2"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking deployment container3")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container3"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should use local registry with kubectl deployment", func() {
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-kubectl")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("localregistry")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			defer ginkgo.GinkgoRecover()
+
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
+			}
+
+			done <- devCmd.RunDefault(f)
+		}()
 
 		ginkgo.By("Checking get_image output")
 		gomega.Eventually(func() (string, error) {
@@ -409,27 +301,6 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			gomega.ContainSubstring("unable to push image my-docker-username/helloworld-kaniko and only docker and buildkit builds support using a local registry"),
 		)
 	})
-
-	// ginkgo.XIt("should error when local registry is configured and not supported by build type", func() {
-	// 	tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-invalid")
-	// 	framework.ExpectNoError(err)
-	// 	defer framework.CleanupTempDir(initialDir, tempDir)
-
-	// 	// create build command
-	// 	output := &bytes.Buffer{}
-	// 	buildCmd := &cmd.RunPipelineCmd{
-	// 		GlobalFlags: &flags.GlobalFlags{
-	// 			NoWarn: true,
-	// 		},
-	// 		Pipeline: "build",
-	// 		Log:      logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
-	// 	}
-	// 	err = buildCmd.RunDefault(f)
-	// 	framework.ExpectError(err)
-	// 	gomega.Expect(output.String()).To(
-	// 		gomega.ContainSubstring("local registry is configured for this image build, but is only available for docker and buildkit image builds"),
-	// 	)
-	// })
 
 	ginkgo.It("should error when local registry is required and disabled by configuration", func() {
 		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-disabled")
