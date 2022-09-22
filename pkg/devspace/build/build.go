@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/buildkit"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/build/registry"
@@ -171,13 +172,8 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		}
 
 		// Check compatibility with local registry
-		if isLocalReqistryRequired {
-			switch builder.(type) {
-			case *buildkit.Builder:
-			case *docker.Builder:
-			default:
-				return fmt.Errorf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
-			}
+		if isLocalReqistryRequired && !options.SkipPush && !IsSupportedBuilder(builder) {
+			return fmt.Errorf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
 		}
 
 		// Execute before images build hook
@@ -392,4 +388,16 @@ func (c *controller) waitForBuild(ctx devspacecontext.Context, errChan <-chan er
 	}
 
 	return nil
+}
+
+func IsSupportedBuilder(builder builder.Interface) bool {
+	switch builder.(type) {
+	case *buildkit.Builder:
+	case *docker.Builder:
+		return true
+	default:
+		return false
+	}
+
+	return false
 }
