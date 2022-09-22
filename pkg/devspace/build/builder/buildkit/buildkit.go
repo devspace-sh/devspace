@@ -131,13 +131,10 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
-		b.skipPush = true
-	}
-
-	// We skip pushing when using a local registry
 	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
-	if imageCache.IsLocalRegistryImage() {
+	if !imageCache.IsLocalRegistryImage() &&
+		b.skipPushOnLocalKubernetes &&
+		ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
 		b.skipPush = true
 	}
 
@@ -174,7 +171,7 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 	for _, tag := range options.Tags {
 		args = append(args, "--tag", tag)
 	}
-	if !skipPush {
+	if !skipPush && !useLocalRegistry {
 		if len(options.Tags) > 0 {
 			args = append(args, "--push")
 		}
@@ -229,7 +226,18 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 		return err
 	}
 
-	if kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != "" {
+	if useLocalRegistry {
+		// Push image to local registry
+		if !skipPush {
+			for _, tag := range options.Tags {
+				err := registry.CopyImageToRemote(ctx, tag)
+				if err != nil {
+					return errors.Errorf("error during local registry image push: %v", err)
+				}
+				log.Info("Image pushed to local registry")
+			}
+		}
+	} else if kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != "" {
 		// Load image if it is a kind-context
 		if !skipPush {
 			for _, tag := range options.Tags {
@@ -241,17 +249,6 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 					log.Info(errors.Errorf("error during image load to kind cluster: %v", err))
 				}
 				log.Info("Image loaded to kind cluster")
-			}
-		}
-	} else if useLocalRegistry {
-		// Push image to local registry
-		if !skipPush {
-			for _, tag := range options.Tags {
-				err := registry.CopyImageToRemote(ctx, tag)
-				if err != nil {
-					return errors.Errorf("error during local registry image push: %v", err)
-				}
-				log.Info("Image pushed to local registry")
 			}
 		}
 	}
