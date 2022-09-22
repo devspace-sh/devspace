@@ -292,7 +292,6 @@ var _ = DevSpaceDescribe("localregistry", func() {
 				NoWarn: true,
 			},
 			Pipeline: "build",
-			SkipPush: true,
 			Log:      logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
 		}
 		err = buildCmd.RunDefault(f)

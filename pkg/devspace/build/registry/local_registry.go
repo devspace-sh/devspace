@@ -64,7 +64,8 @@ func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
 	r.host = fmt.Sprintf("localhost:%d", r.servicePort.NodePort)
 
 	// Start port forwarding
-	pfctx, t := ctx.WithNewTomb()
+	tctx, t := ctx.WithNewTomb()
+	pfctx := tctx.WithContext(context.Background())
 	<-t.NotifyGo(func() error {
 		if err = r.startPortForwarding(pfctx); err != nil {
 			return errors.Wrap(err, "start port forwarding")
@@ -408,6 +409,6 @@ func (r *LocalRegistry) waitForRegistry(ctx context.Context) error {
 			return false, nil
 		}
 
-		return err == nil, nil
+		return true, nil
 	})
 }
