@@ -198,15 +198,6 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 			ctx.Log().Info("Image pushed to registry (" + displayRegistryURL + ")")
 		}
-	} else if imageCache.IsLocalRegistryImage() {
-		// Push image to local registry
-		for _, tag := range buildOptions.Tags {
-			err := registry.CopyImageToRemote(ctx.Context(), tag)
-			if err != nil {
-				return errors.Errorf("error during local registry image push: %v", err)
-			}
-			ctx.Log().Info("Image pushed to local registry")
-		}
 	} else if ctx.KubeClient() != nil && kubectl.GetKindContext(ctx.KubeClient().CurrentContext()) != "" {
 		// Load image if it is a kind-context
 		for _, tag := range buildOptions.Tags {
@@ -226,6 +217,15 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 				ctx.Log().Info(errors.Errorf("error during image load to kind cluster: %v", err))
 			}
 			ctx.Log().Info("Image loaded to kind cluster")
+		}
+	} else if imageCache.IsLocalRegistryImage() {
+		// Push image to local registry
+		for _, tag := range buildOptions.Tags {
+			err := registry.CopyImageToRemote(ctx.Context(), tag)
+			if err != nil {
+				return errors.Errorf("error during local registry image push: %v", err)
+			}
+			ctx.Log().Info("Image pushed to local registry")
 		}
 	} else {
 		ctx.Log().Infof("Skip image push for %s", b.helper.ImageName)

@@ -229,18 +229,9 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 		return err
 	}
 
-	if skipPush {
-		if useLocalRegistry {
-			// Push image to local registry
-			for _, tag := range options.Tags {
-				err := registry.CopyImageToRemote(ctx, tag)
-				if err != nil {
-					return errors.Errorf("error during local registry image push: %v", err)
-				}
-				log.Info("Image pushed to local registry")
-			}
-		} else if kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != "" {
-			// Load image if it is a kind-context
+	if kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != "" {
+		// Load image if it is a kind-context
+		if !skipPush {
 			for _, tag := range options.Tags {
 				command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(kubeClient.CurrentContext()), tag}
 				completeArgs := []string{}
@@ -250,6 +241,17 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 					log.Info(errors.Errorf("error during image load to kind cluster: %v", err))
 				}
 				log.Info("Image loaded to kind cluster")
+			}
+		}
+	} else if useLocalRegistry {
+		// Push image to local registry
+		if !skipPush {
+			for _, tag := range options.Tags {
+				err := registry.CopyImageToRemote(ctx, tag)
+				if err != nil {
+					return errors.Errorf("error during local registry image push: %v", err)
+				}
+				log.Info("Image pushed to local registry")
 			}
 		}
 	}
