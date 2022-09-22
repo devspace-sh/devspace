@@ -393,11 +393,10 @@ func (c *controller) waitForBuild(ctx devspacecontext.Context, errChan <-chan er
 func IsSupportedBuilder(builder builder.Interface) bool {
 	switch builder.(type) {
 	case *buildkit.Builder:
+		return true
 	case *docker.Builder:
 		return true
 	default:
 		return false
 	}
-
-	return false
 }
