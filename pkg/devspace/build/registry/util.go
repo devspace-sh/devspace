@@ -1,11 +1,14 @@
 package registry
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -24,11 +27,57 @@ func IsLocalRegistryDisabled(image *latest.Image) bool {
 	return image.LocalRegistry != nil && image.LocalRegistry.Disable
 }
 
-func GetNodePort(service *corev1.Service) int32 {
+func GetServicePort(service *corev1.Service) *corev1.ServicePort {
 	for _, port := range service.Spec.Ports {
 		if port.Name == "registry" {
-			return port.NodePort
+			return &port
 		}
 	}
-	return 0
+	return nil
+}
+
+func IsImageAvailableRemotely(ctx context.Context, imageName string) (bool, error) {
+	ref, err := name.ParseReference(imageName)
+	if err != nil {
+		return false, err
+	}
+
+	image, err := remote.Image(
+		ref,
+		remote.WithContext(ctx),
+		remote.WithTransport(remote.DefaultTransport),
+	)
+	if err != nil {
+		transportError, ok := err.(*transport.Error)
+		if ok && transportError.StatusCode == http.StatusNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return image != nil, nil
+}
+
+func CopyImageToRemote(ctx context.Context, imageName string) error {
+	ref, err := name.ParseReference(imageName)
+	if err != nil {
+		return err
+	}
+
+	image, err := daemon.Image(ref, daemon.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+
+	err = remote.Write(
+		ref,
+		image,
+		remote.WithContext(ctx),
+		remote.WithTransport(remote.DefaultTransport),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

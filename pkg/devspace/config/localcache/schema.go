@@ -72,6 +72,18 @@ type ImageCache struct {
 	Tag                    string `yaml:"tag,omitempty"`
 }
 
+func (ic ImageCache) IsLocalRegistryImage() bool {
+	return ic.LocalRegistryImageName != ""
+}
+
+func (ic ImageCache) ResolveImage() string {
+	if ic.IsLocalRegistryImage() {
+		return ic.LocalRegistryImageName
+	}
+
+	return ic.ImageName
+}
+
 func (l *LocalCache) ListImageCache() map[string]ImageCache {
 	l.accessMutex.Lock()
 	defer l.accessMutex.Unlock()

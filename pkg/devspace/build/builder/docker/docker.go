@@ -16,6 +16,7 @@ import (
 
 	"github.com/docker/cli/cli/streams"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/build/registry"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -72,14 +73,23 @@ func (b *Builder) Build(ctx devspacecontext.Context) error {
 
 // ShouldRebuild determines if an image has to be rebuilt
 func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) (bool, error) {
+	// Check if image is present in local registry
+	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
+	if imageCache.IsLocalRegistryImage() {
+		found, err := registry.IsImageAvailableRemotely(ctx.Context(), b.helper.ImageName)
+		if !found && err == nil {
+			ctx.Log().Infof("Rebuild image %s because it was not found in the local registry", imageCache.ImageName)
+			return true, nil
+		}
+	}
+
 	rebuild, err := b.helper.ShouldRebuild(ctx, forceRebuild)
 
-	// Check if image is present in local repository
+	// Check if image is present in local docker daemon
 	if !rebuild && err == nil {
 		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
 			found, err := b.helper.IsImageAvailableLocally(ctx, b.client)
 			if !found && err == nil {
-				imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
 				ctx.Log().Infof("Rebuild image %s because it was not found in local docker daemon", imageCache.ImageName)
 				return true, nil
 			}
@@ -108,6 +118,12 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 	// We skip pushing when it is the minikube client
 	if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+		b.skipPush = true
+	}
+
+	// We skip pushing when using a local registry
+	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
+	if imageCache.IsLocalRegistryImage() {
 		b.skipPush = true
 	}
 
@@ -182,29 +198,37 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 			ctx.Log().Info("Image pushed to registry (" + displayRegistryURL + ")")
 		}
+	} else if imageCache.IsLocalRegistryImage() {
+		// Push image to local registry
+		for _, tag := range buildOptions.Tags {
+			err := registry.CopyImageToRemote(ctx.Context(), tag)
+			if err != nil {
+				return errors.Errorf("error during local registry image push: %v", err)
+			}
+			ctx.Log().Info("Image pushed to local registry")
+		}
+	} else if ctx.KubeClient() != nil && kubectl.GetKindContext(ctx.KubeClient().CurrentContext()) != "" {
+		// Load image if it is a kind-context
+		for _, tag := range buildOptions.Tags {
+			command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(ctx.KubeClient().CurrentContext()), tag}
+			completeArgs := []string{}
+			completeArgs = append(completeArgs, command[1:]...)
+			// Determine output writer
+			var writeCloser io.WriteCloser
+			if ctx.Log() == logpkg.GetInstance() {
+				writeCloser = logpkg.WithNopCloser(stdout)
+			} else {
+				writeCloser = ctx.Log().Writer(logrus.InfoLevel, false)
+			}
+			defer writeCloser.Close()
+			err = command2.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writeCloser, writeCloser, nil, command[0], completeArgs...)
+			if err != nil {
+				ctx.Log().Info(errors.Errorf("error during image load to kind cluster: %v", err))
+			}
+			ctx.Log().Info("Image loaded to kind cluster")
+		}
 	} else {
 		ctx.Log().Infof("Skip image push for %s", b.helper.ImageName)
-		//load image if it is a kind-context
-		if ctx.KubeClient() != nil && kubectl.GetKindContext(ctx.KubeClient().CurrentContext()) != "" {
-			for _, tag := range buildOptions.Tags {
-				command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(ctx.KubeClient().CurrentContext()), tag}
-				completeArgs := []string{}
-				completeArgs = append(completeArgs, command[1:]...)
-				// Determine output writer
-				var writeCloser io.WriteCloser
-				if ctx.Log() == logpkg.GetInstance() {
-					writeCloser = logpkg.WithNopCloser(stdout)
-				} else {
-					writeCloser = ctx.Log().Writer(logrus.InfoLevel, false)
-				}
-				defer writeCloser.Close()
-				err = command2.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writeCloser, writeCloser, nil, command[0], completeArgs...)
-				if err != nil {
-					ctx.Log().Info(errors.Errorf("error during image load to kind cluster: %v", err))
-				}
-				ctx.Log().Info("Image loaded to kind cluster")
-			}
-		}
 	}
 
 	return nil

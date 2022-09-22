@@ -11,7 +11,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -86,36 +87,28 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		}()
 
 		var registryHost string
-		ginkgo.By("Checking registry for pushed image")
-		gomega.Eventually(func() (string, error) {
-			service, err := kubeClient.RawClient().CoreV1().Services(ns).Get(ctx, "registry", v1.GetOptions{})
+		ginkgo.By("Waiting for registry service node port")
+		gomega.Eventually(func() (*corev1.Service, error) {
+			service, err := getRegistryService(ctx, kubeClient, ns)
 			if err != nil {
-				if kerrors.IsNotFound(err) {
-					return "", nil
+				return nil, err
+			}
+
+			if service != nil {
+				registryPort := registry.GetServicePort(service)
+				if registryPort.NodePort != 0 {
+					registryHost = fmt.Sprintf("localhost:%d", registryPort.NodePort)
+					return service, nil
 				}
-
-				return "", err
 			}
 
-			registryPort := registry.GetNodePort(service)
-			registryHost = fmt.Sprintf("localhost:%d", registryPort)
-			registry, err := name.NewRegistry(registryHost)
-			if err != nil {
-				return "", err
-			}
-
-			images, err := remote.Catalog(ctx, registry)
-			if err != nil {
-				return "", err
-			}
-
-			if len(images) == 0 {
-				return "", nil
-			}
-
-			return images[0], nil
+			return nil, nil
 		}, pollingDurationLong, pollingInterval).
-			Should(gomega.Equal("my-docker-username/helloworld"))
+			ShouldNot(gomega.BeNil())
+
+		ginkgo.By("Checking registry for pushed image")
+		gomega.Eventually(getImages(ctx, registryHost), pollingDurationLong, pollingInterval).
+			Should(gomega.ContainElement("my-docker-username/helloworld"))
 
 		ginkgo.By("Checking get_image output")
 		gomega.Eventually(func() (string, error) {
@@ -204,36 +197,138 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		}()
 
 		var registryHost string
-		ginkgo.By("Checking registry for pushed image")
-		gomega.Eventually(func() (string, error) {
-			service, err := kubeClient.RawClient().CoreV1().Services(ns).Get(ctx, "registry", v1.GetOptions{})
+		ginkgo.By("Waiting for registry service node port")
+		gomega.Eventually(func() (*corev1.Service, error) {
+			service, err := getRegistryService(ctx, kubeClient, ns)
 			if err != nil {
-				if kerrors.IsNotFound(err) {
-					return "", nil
+				return nil, err
+			}
+
+			if service != nil {
+				registryPort := registry.GetServicePort(service)
+				if registryPort.NodePort != 0 {
+					registryHost = fmt.Sprintf("localhost:%d", registryPort.NodePort)
+					return service, nil
+				}
+			}
+
+			return nil, nil
+		}, pollingDurationLong, pollingInterval).
+			ShouldNot(gomega.BeNil())
+
+		ginkgo.By("Checking registry for pushed image")
+		gomega.Eventually(getImages(ctx, registryHost), pollingDurationLong, pollingInterval).
+			Should(gomega.ContainElement("my-docker-username/helloworld"))
+
+		ginkgo.By("Checking get_image output")
+		gomega.Eventually(func() (string, error) {
+			out, err := ioutil.ReadFile("get_image.out")
+			if err != nil {
+				if !os.IsNotExist(err) {
+					return "", err
 				}
 
-				return "", err
-			}
-
-			registryPort := registry.GetNodePort(service)
-			registryHost = fmt.Sprintf("localhost:%d", registryPort)
-			registry, err := name.NewRegistry(registryHost)
-			if err != nil {
-				return "", err
-			}
-
-			images, err := remote.Catalog(ctx, registry)
-			if err != nil {
-				return "", err
-			}
-
-			if len(images) == 0 {
 				return "", nil
 			}
-
-			return images[0], nil
+			return string(out), nil
 		}, pollingDurationLong, pollingInterval).
-			Should(gomega.Equal("my-docker-username/helloworld"))
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking %{runtime.images.app} output")
+		gomega.Eventually(func() (string, error) {
+			out, err := ioutil.ReadFile("app.out")
+			if err != nil {
+				if !os.IsNotExist(err) {
+					return "", err
+				}
+
+				return "", nil
+			}
+			return string(out), nil
+		}, pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking %{runtime.images.app.image} output")
+		gomega.Eventually(func() (string, error) {
+			out, err := ioutil.ReadFile("app_image.out")
+			if err != nil {
+				if !os.IsNotExist(err) {
+					return "", err
+				}
+
+				return "", nil
+			}
+			return string(out), nil
+		}, pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking deployment container1")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container1"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking deployment container2")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container2"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking deployment container3")
+		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container3"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should build dockerfile with buildkit and use local registry", func() {
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-buildkit")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("localregistry")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			defer ginkgo.GinkgoRecover()
+
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
+			}
+
+			done <- devCmd.RunDefault(f)
+		}()
+
+		var registryHost string
+		ginkgo.By("Waiting for registry service node port")
+		gomega.Eventually(func() (*corev1.Service, error) {
+			service, err := getRegistryService(ctx, kubeClient, ns)
+			if err != nil {
+				return nil, err
+			}
+
+			if service != nil {
+				registryPort := registry.GetServicePort(service)
+				if registryPort.NodePort != 0 {
+					registryHost = fmt.Sprintf("localhost:%d", registryPort.NodePort)
+					return service, nil
+				}
+			}
+
+			return nil, nil
+		}, pollingDurationLong, pollingInterval).
+			ShouldNot(gomega.BeNil())
+
+		ginkgo.By("Checking registry for pushed image")
+		gomega.Eventually(getImages(ctx, registryHost), pollingDurationLong, pollingInterval).
+			Should(gomega.ContainElement("my-docker-username/helloworld"))
 
 		ginkgo.By("Checking get_image output")
 		gomega.Eventually(func() (string, error) {
@@ -360,7 +455,7 @@ var _ = DevSpaceDescribe("localregistry", func() {
 
 func selectContainerImage(kubeHelper *kube.KubeHelper, namespace, deployment, containerName string) func() (string, error) {
 	return func() (string, error) {
-		deployment, err := kubeHelper.RawClient().AppsV1().Deployments(namespace).Get(context.TODO(), deployment, v1.GetOptions{})
+		deployment, err := kubeHelper.RawClient().AppsV1().Deployments(namespace).Get(context.TODO(), deployment, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				return "", nil
@@ -377,4 +472,33 @@ func selectContainerImage(kubeHelper *kube.KubeHelper, namespace, deployment, co
 
 		return "", nil
 	}
+}
+
+func getRegistryService(ctx context.Context, kubeHelper *kube.KubeHelper, namespace string) (*corev1.Service, error) {
+	service, err := kubeHelper.RawClient().CoreV1().Services(namespace).Get(ctx, "registry", metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+	return service, nil
+}
+
+func getImages(ctx context.Context, registryHost string) func() ([]string, error) {
+	return func() ([]string, error) {
+		registry, err := name.NewRegistry(registryHost)
+		if err != nil {
+			return nil, err
+		}
+
+		images, err := remote.Catalog(ctx, registry)
+		if err != nil {
+			return nil, err
+		}
+
+		return images, nil
+	}
+
 }
