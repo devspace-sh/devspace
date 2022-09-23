@@ -98,7 +98,7 @@ func (o Options) WithLocalRegistryConfig(config *latest.LocalRegistryConfig) Opt
 			WithImage(config.Image).
 			WithPort(config.Port)
 
-		if config.Persistence != nil {
+		if config.Persistence != nil && *config.Persistence.Enabled {
 			newOptions = newOptions.
 				EnableStorage().
 				WithStorageClassName(config.Persistence.StorageClassName).

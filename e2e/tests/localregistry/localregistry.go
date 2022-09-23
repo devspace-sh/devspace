@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -275,6 +276,53 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		ginkgo.By("Checking deployment container3")
 		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container3"), pollingDurationLong, pollingInterval).
 			Should(gomega.MatchRegexp(`^localhost`))
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.FIt("should use local registry with storage", func() {
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-storage")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("localregistry")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			defer ginkgo.GinkgoRecover()
+
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
+			}
+
+			done <- devCmd.RunDefault(f)
+		}()
+
+		ginkgo.By("Checking for statefulset registry")
+		gomega.Eventually(func() (*appsv1.StatefulSet, error) {
+			statefulset, err := kubeClient.RawClient().AppsV1().StatefulSets(ns).Get(context.TODO(), "registry", metav1.GetOptions{})
+			if err != nil {
+				if kerrors.IsNotFound(err) {
+					return nil, nil
+				}
+
+				return nil, err
+			}
+
+			return statefulset, nil
+		}, pollingDurationLong, pollingInterval).
+			ShouldNot(gomega.BeNil())
 
 		err = <-done
 		framework.ExpectNoError(err)
