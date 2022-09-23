@@ -367,7 +367,10 @@ func reloadVariables(ctx context.Context, resolver variable.Resolver, rawConfig 
 	}
 
 	// update the used vars in the resolver
-	resolver.UpdateVars(ctx, loadedVars)
+	err = resolver.UpdateVars(ctx, loadedVars)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

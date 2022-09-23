@@ -28,7 +28,7 @@ type Resolver interface {
 	DefinedVars() map[string]*latest.Variable
 
 	// UpdateVars sets the defined variables to use in the resolver
-	UpdateVars(ctx context.Context, vars map[string]*latest.Variable)
+	UpdateVars(ctx context.Context, vars map[string]*latest.Variable) error
 
 	// FindVariables returns all variable names that were found in the given map
 	FindVariables(haystack interface{}) ([]*latest.Variable, error)
