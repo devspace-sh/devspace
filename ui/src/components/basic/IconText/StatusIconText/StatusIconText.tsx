@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import GreenCircle from 'images/green-ellipse.svg';
+import DarkGreenCircle from 'images/dark-green-ellipse.svg';
 import RedCircle from 'images/red-ellipse.svg';
 import OrangeCircle from 'images/orange-ellipse.svg';
 import styles from './StatusIconText.module.scss';
@@ -25,8 +26,12 @@ const CriticalStatus = {
 
 // OkayStatus container status
 const OkayStatus = {
-  Completed: true,
   Running: true,
+};
+
+// CompletedStatus container status
+const CompletedStatus = {
+  Completed: true,
 };
 
 const StatusIconText = (props: Props) => {
@@ -34,7 +39,7 @@ const StatusIconText = (props: Props) => {
 
   if (CriticalStatus[props.status]) icon = RedCircle;
   if (OkayStatus[props.status]) icon = GreenCircle;
-
+  if (CompletedStatus[props.status]) icon = DarkGreenCircle
   const classNames = [styles['status-icon-text']];
   if (props.status) {
     classNames.push(props.status);
