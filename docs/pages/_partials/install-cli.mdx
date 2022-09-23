@@ -67,17 +67,6 @@ $env:Path += ";" + $Env:APPDATA + "\devspace";
 [Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
 ```
 
-:::info Check Environment Variable $PATH
-Line 4 of this install script adds the install directory `%APPDATA%\devspace` to the `$PATH` environment variable. This is only effective for the current powershell session, i.e. when opening a new terminal window, `devspace` may not be found.
-
-**Make sure to add the folder `%APPDATA%\devspace` to the `PATH` environment variable after installing DevSpace via Powershell. Afterwards, a reboot might be necessary.**
-
-To confirm that DevSpace is successfully installed, reboot and test via:
-```bash
-devspace --version
-```
-:::
-
 </TabItem>
 </Tabs>
 
