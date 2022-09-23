@@ -281,7 +281,7 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.FIt("should use local registry with storage", func() {
+	ginkgo.It("should use local registry with storage", func() {
 		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-storage")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -309,7 +309,7 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			done <- devCmd.RunDefault(f)
 		}()
 
-		ginkgo.By("Checking for statefulset registry")
+		ginkgo.By("Checking for registry statefulset")
 		gomega.Eventually(func() (*appsv1.StatefulSet, error) {
 			statefulset, err := kubeClient.RawClient().AppsV1().StatefulSets(ns).Get(context.TODO(), "registry", metav1.GetOptions{})
 			if err != nil {
@@ -323,6 +323,54 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			return statefulset, nil
 		}, pollingDurationLong, pollingInterval).
 			ShouldNot(gomega.BeNil())
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should update devImage with local registry image", func() {
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-devimage")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("localregistry")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			defer ginkgo.GinkgoRecover()
+
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
+			}
+
+			done <- devCmd.RunDefault(f)
+		}()
+
+		ginkgo.By("Checking for replaced deployment")
+		var actuals *appsv1.DeploymentList
+		gomega.Eventually(func() ([]appsv1.Deployment, error) {
+			actuals, err = kubeClient.RawClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: "devspace.sh/replaced=true"})
+			if err != nil {
+				return nil, err
+			}
+
+			return actuals.Items, nil
+		}, pollingDurationLong, pollingInterval).
+			ShouldNot(gomega.BeEmpty())
+
+		actual := actuals.Items[0]
+		gomega.Expect(actual.Spec.Template.Spec.Containers[0].Image).To(gomega.MatchRegexp("localhost"))
+		gomega.Expect(actual.Spec.Template.Spec.Containers[0].Image).To(gomega.MatchRegexp("my-docker-username/helloworld-dev"))
 
 		err = <-done
 		framework.ExpectNoError(err)

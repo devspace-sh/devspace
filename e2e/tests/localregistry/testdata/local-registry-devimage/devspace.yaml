@@ -1,0 +1,32 @@
+version: v2beta1
+name: local-registry
+images:
+  app:
+    image: my-docker-username/helloworld
+    tags:
+      - latest
+  app-dev:
+    image: my-docker-username/helloworld-dev
+    tags:
+      - latest
+deployments:
+  app:
+    helm:
+      values:
+        containers:
+          - name: container1
+            image: image(app):tag(app)
+          - name: container2
+            image: my-docker-username/helloworld
+          - name: container3
+            image: app
+dev:
+  app:
+    imageSelector: my-docker-username/helloworld
+    devImage: my-docker-username/helloworld-dev
+    command: ["tail", "-f", "/dev/null"]
+    container: container1
+vars:
+  DEVSPACE_ENV_FILE:
+    value: .env
+    alwaysResolve: false
