@@ -1,15 +1,16 @@
 version: v2beta1
 name: local-registry
+localRegistry:
+  name: registry-storage
+  persistence:
+    enabled: true
+    size: 5Gi
 images:
   app:
     image: my-docker-username/helloworld
     tags:
       - latest
     rebuildStrategy: default
-    localRegistry:
-      persistence:
-        enabled: true
-        size: 5Gi
 deployments:
   app:
     kubectl:

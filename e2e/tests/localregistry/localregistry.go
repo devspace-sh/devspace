@@ -25,6 +25,7 @@ import (
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 var _ = DevSpaceDescribe("localregistry", func() {
@@ -310,8 +311,10 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		}()
 
 		ginkgo.By("Checking for registry statefulset")
+		var actual *appsv1.StatefulSet
 		gomega.Eventually(func() (*appsv1.StatefulSet, error) {
-			statefulset, err := kubeClient.RawClient().AppsV1().StatefulSets(ns).Get(context.TODO(), "registry", metav1.GetOptions{})
+			var err error
+			actual, err = kubeClient.RawClient().AppsV1().StatefulSets(ns).Get(context.TODO(), "registry-storage", metav1.GetOptions{})
 			if err != nil {
 				if kerrors.IsNotFound(err) {
 					return nil, nil
@@ -320,9 +323,12 @@ var _ = DevSpaceDescribe("localregistry", func() {
 				return nil, err
 			}
 
-			return statefulset, nil
+			return actual, nil
 		}, pollingDurationLong, pollingInterval).
 			ShouldNot(gomega.BeNil())
+
+		gomega.Expect(actual.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]).
+			To(gomega.Equal(resource.MustParse("5Gi")))
 
 		err = <-done
 		framework.ExpectNoError(err)

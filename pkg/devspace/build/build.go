@@ -95,8 +95,18 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		return pluginErr
 	}
 
+	// Prepare a registry to start if it is required
+	registryOptions := registry.NewDefaultOptions().
+		WithLocalRegistryConfig(conf.LocalRegistry)
+
+	kubeClient := ctx.KubeClient()
+	if kubeClient != nil {
+		registryOptions = registryOptions.WithNamespace(kubeClient.Namespace())
+	}
+
+	localRegistry := registry.NewLocalRegistry(registryOptions)
+
 	imagesToBuild := 0
-	localRegistries := map[string]*registry.LocalRegistry{}
 	for key, imageConf := range conf.Images {
 		ctx := ctx.WithLogger(ctx.Log().WithPrefix("build:" + key + " "))
 		if len(images) > 0 && !stringutil.Contains(images, key) {
@@ -112,28 +122,15 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		isLocalReqistryRequired := !registry.HasPushPermission(imageConf)
 		if isLocalReqistryRequired && !options.SkipPush {
 			// No push permissions and local registry is disabled
-			if registry.IsLocalRegistryDisabled(imageConf) {
+			if registry.IsLocalRegistryDisabled(conf) {
 				return fmt.Errorf("unable to push image %s and using a local registry is disabled", imageConf.Image)
 			}
 
-			options := registry.NewDefaultOptions().
-				WithLocalRegistryConfig(imageConf.LocalRegistry)
-
-			kubeClient := ctx.KubeClient()
-			if kubeClient != nil {
-				options = options.WithNamespace(kubeClient.Namespace())
-			}
-
-			localRegistry := localRegistries[options.ID()]
-			if localRegistry == nil {
-				localRegistry = registry.NewLocalRegistry(options)
-
+			if !localRegistry.IsStarted() {
 				err := localRegistry.Start(ctx)
 				if err != nil {
 					return errors.Wrap(err, "start registry")
 				}
-
-				localRegistries[options.ID()] = localRegistry
 			}
 
 			localRegistryImageName, err := localRegistry.RewriteImage(imageName)
@@ -142,7 +139,6 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 			}
 
 			// Update cache
-			// imageName = localRegistryImageName
 			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
 			imageCache.LocalRegistryImageName = localRegistryImageName
 			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)

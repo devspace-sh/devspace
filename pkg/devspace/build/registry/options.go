@@ -1,8 +1,6 @@
 package registry
 
 import (
-	"fmt"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
@@ -106,8 +104,4 @@ func (o Options) WithLocalRegistryConfig(config *latest.LocalRegistryConfig) Opt
 		}
 	}
 	return newOptions
-}
-
-func (o Options) ID() string {
-	return fmt.Sprintf("%s/%s", o.Namespace, o.Name)
 }

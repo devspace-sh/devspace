@@ -1,4 +1,7 @@
 version: v2beta1
+localRegistry:
+  name: my-registry
+  namespace: my-registry
 images:
   app:
     image: my-docker-username/helloworld-kaniko
@@ -9,6 +12,3 @@ images:
       cache: false
       args:
       - --no-push
-    localRegistry:
-      name: my-registry
-      namespace: my-registry

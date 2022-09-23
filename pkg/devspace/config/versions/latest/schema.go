@@ -118,6 +118,9 @@ type Config struct {
 	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
 	// in the order they are specified. They are deprecated and pipelines should be used instead.
 	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty" jsonschema:"-"`
+
+	// LocalRegistry specifies the configuration for a local image registry
+	LocalRegistry *LocalRegistryConfig `yaml:"localRegistry,omitempty" json:"localRegistry,omitempty"  jsonschema:"-"`
 }
 
 // Import specifies the source of the devspace config to merge
@@ -309,9 +312,6 @@ type Image struct {
 	// RestartHelperPath will load the restart helper from this location instead of using the bundled
 	// one within DevSpace. Can be either a local path or an URL where to find the restart helper.
 	RestartHelperPath string `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty" jsonschema:"-"`
-
-	// LocalRegistry specifies the configuration for a local image registry
-	LocalRegistry *LocalRegistryConfig `yaml:"localRegistry,omitempty" json:"localRegistry,omitempty"  jsonschema:"-"`
 }
 
 // RebuildStrategy is the type of a image rebuild strategy

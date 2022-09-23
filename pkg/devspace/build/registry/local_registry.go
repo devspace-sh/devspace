@@ -35,6 +35,10 @@ func NewLocalRegistry(options Options) *LocalRegistry {
 	}
 }
 
+func (r *LocalRegistry) IsStarted() bool {
+	return r.servicePort != nil
+}
+
 func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
 	ctx.Log().Info("Starting Local Image Registry")
 
@@ -309,7 +313,7 @@ func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "registry",
+									Name:      r.options.Name,
 									MountPath: "/var/lib/registry",
 								},
 							},

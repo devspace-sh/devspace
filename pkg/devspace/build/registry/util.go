@@ -23,8 +23,8 @@ func HasPushPermission(image *latest.Image) bool {
 	return pushErr == nil
 }
 
-func IsLocalRegistryDisabled(image *latest.Image) bool {
-	return image.LocalRegistry != nil && image.LocalRegistry.Disable
+func IsLocalRegistryDisabled(config *latest.Config) bool {
+	return config.LocalRegistry != nil && config.LocalRegistry.Disable
 }
 
 func GetServicePort(service *corev1.Service) *corev1.ServicePort {

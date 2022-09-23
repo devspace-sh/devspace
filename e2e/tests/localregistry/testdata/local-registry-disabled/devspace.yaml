@@ -1,9 +1,9 @@
 version: v2beta1
+localRegistry:
+  disable: true
 images:
   app:
     image: my-docker-username/helloworld-kaniko
     dockerfile: ./Dockerfile
     tags:
     - latest
-    localRegistry:
-      disable: true
