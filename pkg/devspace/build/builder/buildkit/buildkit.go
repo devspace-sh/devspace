@@ -226,30 +226,26 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 		return err
 	}
 
-	if useLocalRegistry {
+	if useLocalRegistry && !skipPush {
 		// Push image to local registry
-		if !skipPush {
-			for _, tag := range options.Tags {
-				err := registry.CopyImageToRemote(ctx, tag)
-				if err != nil {
-					return errors.Errorf("error during local registry image push: %v", err)
-				}
-				log.Info("Image pushed to local registry")
+		for _, tag := range options.Tags {
+			err := registry.CopyImageToRemote(ctx, tag)
+			if err != nil {
+				return errors.Errorf("error during local registry image push: %v", err)
 			}
+			log.Info("Image pushed to local registry")
 		}
-	} else if kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != "" {
+	} else if skipPush && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != "" {
 		// Load image if it is a kind-context
-		if !skipPush {
-			for _, tag := range options.Tags {
-				command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(kubeClient.CurrentContext()), tag}
-				completeArgs := []string{}
-				completeArgs = append(completeArgs, command[1:]...)
-				err = command2.Command(ctx, dir, env.NewVariableEnvProvider(environ, minikubeEnv), writer, writer, nil, command[0], completeArgs...)
-				if err != nil {
-					log.Info(errors.Errorf("error during image load to kind cluster: %v", err))
-				}
-				log.Info("Image loaded to kind cluster")
+		for _, tag := range options.Tags {
+			command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(kubeClient.CurrentContext()), tag}
+			completeArgs := []string{}
+			completeArgs = append(completeArgs, command[1:]...)
+			err = command2.Command(ctx, dir, env.NewVariableEnvProvider(environ, minikubeEnv), writer, writer, nil, command[0], completeArgs...)
+			if err != nil {
+				log.Info(errors.Errorf("error during image load to kind cluster: %v", err))
 			}
+			log.Info("Image loaded to kind cluster")
 		}
 	}
 
