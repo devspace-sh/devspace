@@ -18,7 +18,6 @@ import (
 
 	"github.com/loft-sh/devspace/assets"
 	"github.com/loft-sh/devspace/pkg/devspace/env"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -68,10 +67,10 @@ func InjectDevSpaceHelper(ctx context.Context, client kubectl.Client, pod *v1.Po
 			arch = "-" + arch
 		}
 	} else {
-		// check arch on pod node
-		node, err := client.KubeClient().CoreV1().Nodes().Get(ctx, pod.Spec.NodeName, metav1.GetOptions{})
-		if err == nil {
-			if node.Labels != nil && node.Labels["beta.kubernetes.io/arch"] == "arm64" {
+		// check arch on pod node\
+		stdout, _, err := client.ExecBuffered(ctx, pod, container, []string{"uname", "-a"}, nil)
+		if err != nil {
+			if strings.Contains(string(stdout), "arm64") {
 				arch = "-" + string(latest.ContainerArchitectureArm64)
 			}
 		}
