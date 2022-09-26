@@ -74,10 +74,12 @@ func (b *Builder) Build(ctx devspacecontext.Context) error {
 func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) (bool, error) {
 	// Check if image is present in local registry
 	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
+	imageName := imageCache.ResolveImage()
+
 	if imageCache.IsLocalRegistryImage() {
-		found, err := registry.IsImageAvailableRemotely(ctx.Context(), b.helper.ImageName)
+		found, err := registry.IsImageAvailableRemotely(ctx.Context(), imageName)
 		if !found && err == nil {
-			ctx.Log().Infof("Rebuild image %s because it was not found in the local registry", imageCache.ImageName)
+			ctx.Log().Infof("Rebuild image %s because it was not found in the local registry", imageName)
 			return true, nil
 		}
 	}
@@ -94,8 +96,7 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 
 			found, err := b.helper.IsImageAvailableLocally(ctx, dockerClient)
 			if !found && err == nil {
-				imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
-				ctx.Log().Infof("Rebuild image %s because it was not found in local docker daemon", imageCache.ImageName)
+				ctx.Log().Infof("Rebuild image %s because it was not found in local docker daemon", imageName)
 				return true, nil
 			}
 		}

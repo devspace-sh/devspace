@@ -215,7 +215,9 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx devspacecontext.Context, docke
 	}
 
 	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.ImageConfigName)
-	imageName := imageCache.ImageName + ":" + imageCache.Tag
+	imageName := imageCache.ResolveImage()
+	imageTag := imageName + ":" + imageCache.Tag
+
 	dockerAPIClient := dockerClient.DockerAPIClient()
 	imageList, err := dockerAPIClient.ImageList(ctx.Context(), types.ImageListOptions{})
 	if err != nil {
@@ -223,7 +225,7 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx devspacecontext.Context, docke
 	}
 	for _, image := range imageList {
 		for _, repoTag := range image.RepoTags {
-			if repoTag == imageName {
+			if repoTag == imageTag {
 				return true, nil
 			}
 		}
