@@ -201,7 +201,9 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	} else if imageCache.IsLocalRegistryImage() {
 		// Push image to local registry
 		for _, tag := range buildOptions.Tags {
-			err := registry.CopyImageToRemote(ctx.Context(), tag)
+			ctx.Log().Info("The push refers to repository [" + tag + "]")
+			writer := logpkg.WithNopCloser(stdout)
+			err := registry.CopyImageToRemote(ctx.Context(), writer, tag)
 			if err != nil {
 				return errors.Errorf("error during local registry image push: %v", err)
 			}

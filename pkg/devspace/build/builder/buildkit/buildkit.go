@@ -29,12 +29,17 @@ import (
 	dockerpkg "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 // EngineName is the name of the building engine
 const EngineName = "buildkit"
+
+var (
+	_, stdout, _ = dockerterm.StdStreams()
+)
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
@@ -229,7 +234,9 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 	if useLocalRegistry && !skipPush {
 		// Push image to local registry
 		for _, tag := range options.Tags {
-			err := registry.CopyImageToRemote(ctx, tag)
+			log.Info("The push refers to repository [" + tag + "]")
+			writer := logpkg.WithNopCloser(stdout)
+			err := registry.CopyImageToRemote(ctx, writer, tag)
 			if err != nil {
 				return errors.Errorf("error during local registry image push: %v", err)
 			}

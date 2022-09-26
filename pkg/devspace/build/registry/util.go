@@ -2,10 +2,15 @@ package registry
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 
+	"github.com/docker/cli/cli/streams"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
@@ -58,7 +63,7 @@ func IsImageAvailableRemotely(ctx context.Context, imageName string) (bool, erro
 	return image != nil, nil
 }
 
-func CopyImageToRemote(ctx context.Context, imageName string) error {
+func CopyImageToRemote(ctx context.Context, output io.Writer, imageName string) error {
 	ref, err := name.ParseReference(imageName)
 	if err != nil {
 		return err
@@ -69,15 +74,50 @@ func CopyImageToRemote(ctx context.Context, imageName string) error {
 		return err
 	}
 
-	err = remote.Write(
-		ref,
-		image,
-		remote.WithContext(ctx),
-		remote.WithTransport(remote.DefaultTransport),
-	)
-	if err != nil {
-		return err
+	progressChan := make(chan v1.Update, 200)
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- remote.Write(
+			ref,
+			image,
+			remote.WithContext(ctx),
+			remote.WithTransport(remote.DefaultTransport),
+			remote.WithProgress(progressChan),
+		)
+	}()
+
+	reader, writer := io.Pipe()
+	defer writer.Close()
+
+	outStream := streams.NewOut(output)
+	outStream.SetIsTerminal(true)
+	go func() {
+		errChan <- jsonmessage.DisplayJSONMessagesStream(reader, outStream, outStream.FD(), outStream.IsTerminal(), nil)
+	}()
+
+	enc := json.NewEncoder(writer)
+	for update := range progressChan {
+		if update.Error != nil {
+			return err
+		}
+
+		status := "Pushing"
+		if update.Complete == update.Total {
+			status = "Pushed"
+		}
+
+		err := enc.Encode(&jsonmessage.JSONMessage{
+			ID:     ref.Identifier(),
+			Status: status,
+			Progress: &jsonmessage.JSONProgress{
+				Current: update.Complete,
+				Total:   update.Total,
+			},
+		})
+		if err != nil {
+			return err
+		}
 	}
 
-	return nil
+	return <-errChan
 }
