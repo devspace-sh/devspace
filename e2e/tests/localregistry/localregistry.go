@@ -81,8 +81,9 @@ var _ = DevSpaceDescribe("localregistry", func() {
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline: "dev",
-				Ctx:      cancelCtx,
+				Pipeline:            "dev",
+				Ctx:                 cancelCtx,
+				PreferLocalRegistry: true,
 			}
 
 			done <- devCmd.RunDefault(f)
@@ -149,8 +150,9 @@ var _ = DevSpaceDescribe("localregistry", func() {
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline: "dev",
-				Ctx:      cancelCtx,
+				Pipeline:            "dev",
+				Ctx:                 cancelCtx,
+				PreferLocalRegistry: true,
 			}
 
 			done <- devCmd.RunDefault(f)
@@ -217,8 +219,9 @@ var _ = DevSpaceDescribe("localregistry", func() {
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline: "dev",
-				Ctx:      cancelCtx,
+				Pipeline:            "dev",
+				Ctx:                 cancelCtx,
+				PreferLocalRegistry: true,
 			}
 
 			done <- devCmd.RunDefault(f)
@@ -303,8 +306,9 @@ var _ = DevSpaceDescribe("localregistry", func() {
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline: "dev",
-				Ctx:      cancelCtx,
+				Pipeline:            "dev",
+				Ctx:                 cancelCtx,
+				PreferLocalRegistry: true,
 			}
 
 			done <- devCmd.RunDefault(f)
@@ -355,8 +359,9 @@ var _ = DevSpaceDescribe("localregistry", func() {
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline: "dev",
-				Ctx:      cancelCtx,
+				Pipeline:            "dev",
+				Ctx:                 cancelCtx,
+				PreferLocalRegistry: true,
 			}
 
 			done <- devCmd.RunDefault(f)
@@ -393,8 +398,9 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
-			Pipeline: "build",
-			Log:      logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
+			Pipeline:            "build",
+			Log:                 logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
+			PreferLocalRegistry: true,
 		}
 		err = buildCmd.RunDefault(f)
 		framework.ExpectError(err)
@@ -414,8 +420,9 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
-			Pipeline: "build",
-			Log:      logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
+			Pipeline:            "build",
+			Log:                 logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
+			PreferLocalRegistry: true,
 		}
 		err = buildCmd.RunDefault(f)
 		framework.ExpectError(err)

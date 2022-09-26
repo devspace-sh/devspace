@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -34,6 +35,7 @@ type Options struct {
 	SkipBuild                 bool     `long:"skip" description:"If enabled will skip building"`
 	SkipPush                  bool     `long:"skip-push" description:"Skip pushing"`
 	SkipPushOnLocalKubernetes bool     `long:"skip-push-on-local-kubernetes" description:"Skip pushing"`
+	PreferLocalRegistry       bool     `long:"prefer-local-registry" description:"Use local registry over 'kind load' if unable to push to a remote registry"`
 	ForceRebuild              bool     `long:"force-rebuild" description:"Skip pushing"`
 	Sequential                bool     `long:"sequential" description:"Skip pushing"`
 
@@ -45,9 +47,7 @@ type Controller interface {
 	Build(ctx devspacecontext.Context, images []string, options *Options) error
 }
 
-type controller struct {
-	// localRegistry *registry.LocalRegistry
-}
+type controller struct{}
 
 // NewController creates a new image build controller
 func NewController() Controller {
@@ -95,16 +95,9 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		return pluginErr
 	}
 
-	// Prepare a registry to start if it is required
-	registryOptions := registry.NewDefaultOptions().
-		WithLocalRegistryConfig(conf.LocalRegistry)
-
+	var localRegistry *registry.LocalRegistry
 	kubeClient := ctx.KubeClient()
-	if kubeClient != nil {
-		registryOptions = registryOptions.WithNamespace(kubeClient.Namespace())
-	}
-
-	localRegistry := registry.NewLocalRegistry(registryOptions)
+	useKindLoad := !options.PreferLocalRegistry && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
 
 	imagesToBuild := 0
 	for key, imageConf := range conf.Images {
@@ -119,14 +112,26 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		imageConfigName := key
 		localRegistryImageName := ""
 
-		isLocalReqistryRequired := !registry.HasPushPermission(imageConf)
+		isLocalReqistryRequired := !useKindLoad && !registry.HasPushPermission(imageConf)
 		if isLocalReqistryRequired && !options.SkipPush {
 			// No push permissions and local registry is disabled
 			if registry.IsLocalRegistryDisabled(conf) {
 				return fmt.Errorf("unable to push image %s and using a local registry is disabled", imageConf.Image)
 			}
 
-			if !localRegistry.IsStarted() {
+			// Not able to deploy a local registry
+			if kubeClient == nil {
+				return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
+			}
+
+			if localRegistry == nil {
+
+				localRegistry = registry.NewLocalRegistry(
+					registry.NewDefaultOptions().
+						WithLocalRegistryConfig(conf.LocalRegistry).
+						WithNamespace(kubeClient.Namespace()),
+				)
+
 				err := localRegistry.Start(ctx)
 				if err != nil {
 					return errors.Wrap(err, "start registry")
@@ -168,7 +173,7 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		}
 
 		// Check compatibility with local registry
-		if isLocalReqistryRequired && !options.SkipPush && !IsSupportedBuilder(builder) {
+		if isLocalReqistryRequired && !options.SkipPush && !SupportsLocalRegistry(builder) {
 			return fmt.Errorf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
 		}
 
@@ -386,7 +391,7 @@ func (c *controller) waitForBuild(ctx devspacecontext.Context, errChan <-chan er
 	return nil
 }
 
-func IsSupportedBuilder(builder builder.Interface) bool {
+func SupportsLocalRegistry(builder builder.Interface) bool {
 	switch builder.(type) {
 	case *buildkit.Builder:
 		return true
