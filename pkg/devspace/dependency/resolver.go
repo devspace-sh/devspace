@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 
+	"github.com/joho/godotenv"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -245,6 +246,16 @@ func (r *resolver) resolveDependency(ctx devspacecontext.Context, dependencyConf
 		return nil, err
 	}
 
+	if val, ok := dConfigWrapper.Variables()["DEVSPACE_ENV_FILE"]; ok {
+		var dDotEnv map[string]string
+		dDotEnv, err = godotenv.Read(fmt.Sprintf("%s/%s", filepath.Dir(dependencyConfigPath), val))
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range dDotEnv {
+			dConfigWrapper.SetResolvedVariable(k, v)
+		}
+	}
 	// set parsed variables in parent config
 	if dependency.OverwriteVars {
 		baseVars := ctx.Config().Variables()

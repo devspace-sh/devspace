@@ -32,6 +32,9 @@ type Config interface {
 
 	// Path returns the absolute path from which the config was loaded
 	Path() string
+
+	// SetResolvedVariable allows to set a runtime variable
+	SetResolvedVariable(key string, value interface{})
 }
 
 func NewConfig(raw map[string]interface{}, rawBeforeConversion map[string]interface{}, parsed *latest.Config, localCache localcache.Cache, remoteCache remotecache.Cache, resolvedVariables map[string]interface{}, path string) Config {
@@ -86,6 +89,10 @@ func (c *config) Variables() map[string]interface{} {
 	}
 
 	return newVariables
+}
+
+func (c *config) SetResolvedVariable(key string, value interface{}) {
+	c.resolvedVariables[key] = value
 }
 
 func (c *config) Path() string {
