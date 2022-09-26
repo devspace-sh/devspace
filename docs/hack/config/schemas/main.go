@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -90,7 +89,7 @@ func genSchema(schema *jsonschema.Schema, schemaFile string) {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(schemaFile, []byte(schemaString), os.ModePerm)
+	err = os.WriteFile(schemaFile, []byte(schemaString), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
@@ -109,6 +108,9 @@ func modifyAnyOf(field interface{}) []*jsonschema.Schema {
 		{
 			Type:              "object",
 			PatternProperties: field.(*jsonschema.Schema).PatternProperties,
+		},
+		{
+			Type: "object",
 		},
 	}
 }

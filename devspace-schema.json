@@ -1582,23 +1582,6 @@
       },
       "type": "object"
     },
-    "SyncCommand": {
-      "properties": {
-        "command": {
-          "type": "string",
-          "description": "Command is the command that should get executed"
-        },
-        "args": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Args are arguments that should get appended to the command"
-        }
-      },
-      "type": "object",
-      "description": "SyncCommand holds a command definition"
-    },
     "SyncConfig": {
       "properties": {
         "path": {
@@ -1742,35 +1725,6 @@
       },
       "type": "object"
     },
-    "SyncExecCommand": {
-      "properties": {
-        "command": {
-          "type": "string",
-          "description": "Command is the command that should get executed"
-        },
-        "args": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Args are arguments that should get appended to the command"
-        },
-        "onFileChange": {
-          "$ref": "#/$defs/SyncCommand",
-          "description": "OnFileChange is invoked after every file change. DevSpace will wait for the command to successfully finish\nand then will continue to upload files \u0026 create folders"
-        },
-        "onDirCreate": {
-          "$ref": "#/$defs/SyncCommand",
-          "description": "OnDirCreate is invoked after every directory that is created. DevSpace will wait for the command to successfully finish\nand then will continue to upload files \u0026 create folders"
-        },
-        "onBatch": {
-          "$ref": "#/$defs/SyncCommand",
-          "description": "OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish\nand then will continue execution. This is useful for commands\nthat shouldn't be executed after every single change that may take a little bit longer like recompiling etc."
-        }
-      },
-      "type": "object",
-      "description": "SyncExecCommand holds the configuration of commands that should be executed when files / folders are change"
-    },
     "SyncOnUpload": {
       "properties": {
         "restartContainer": {
@@ -1783,10 +1737,6 @@
           },
           "type": "array",
           "description": "Exec will execute the given commands in order after a sync operation"
-        },
-        "execRemote": {
-          "$ref": "#/$defs/SyncExecCommand",
-          "description": "Defines what commands should be executed on the container side if a change is uploaded and applied in the target\ncontainer. Deprecated, use `Exec`."
         }
       },
       "type": "object",
@@ -2024,6 +1974,9 @@
             }
           },
           "type": "object"
+        },
+        {
+          "type": "object"
         }
       ],
       "type": "object",
@@ -2073,6 +2026,9 @@
             }
           },
           "type": "object"
+        },
+        {
+          "type": "object"
         }
       ],
       "type": "object",
@@ -2094,6 +2050,9 @@
               "$ref": "#/$defs/CommandConfig"
             }
           },
+          "type": "object"
+        },
+        {
           "type": "object"
         }
       ],
