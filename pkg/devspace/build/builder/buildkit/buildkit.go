@@ -29,17 +29,12 @@ import (
 	dockerpkg "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 // EngineName is the name of the building engine
 const EngineName = "buildkit"
-
-var (
-	_, stdout, _ = dockerterm.StdStreams()
-)
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
