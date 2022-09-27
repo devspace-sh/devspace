@@ -90,14 +90,9 @@ func (cmd *localRegistryCmd) RunCleanupLocalRegistry(f factory.Factory, cobraCmd
 
 	// clean up registry according to options
 	config := configInterface.Config()
-	options := registry.NewDefaultOptions()
-	if config.LocalRegistry != nil {
-		options = options.WithLocalRegistryConfig(config.LocalRegistry)
-	}
-
-	if client != nil {
-		options = options.WithNamespace(client.Namespace())
-	}
+	options := registry.NewDefaultOptions().
+		WithNamespace(client.Namespace()).
+		WithLocalRegistryConfig(config.LocalRegistry)
 
 	// prompt user since this is a destructive action
 	cleanupAnswer, err := log.Question(&survey.QuestionOptions{
@@ -115,16 +110,14 @@ func (cmd *localRegistryCmd) RunCleanupLocalRegistry(f factory.Factory, cobraCmd
 		return nil
 	}
 
-	if options.StorageEnabled {
-		err = client.KubeClient().AppsV1().StatefulSets(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			return errors.Wrap(err, "clean up statefulset")
-		}
-	} else {
-		err = client.KubeClient().AppsV1().Deployments(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			return errors.Wrap(err, "clean up deployment")
-		}
+	err = client.KubeClient().AppsV1().StatefulSets(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return errors.Wrap(err, "clean up statefulset")
+	}
+
+	err = client.KubeClient().AppsV1().Deployments(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return errors.Wrap(err, "clean up deployment")
 	}
 
 	err = client.KubeClient().CoreV1().Services(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})

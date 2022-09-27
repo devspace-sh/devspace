@@ -128,8 +128,8 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 			if localRegistry == nil {
 				localRegistry = registry.NewLocalRegistry(
 					registry.NewDefaultOptions().
-						WithLocalRegistryConfig(conf.LocalRegistry).
-						WithNamespace(kubeClient.Namespace()),
+						WithNamespace(kubeClient.Namespace()).
+						WithLocalRegistryConfig(conf.LocalRegistry),
 				)
 
 				err := localRegistry.Start(ctx)

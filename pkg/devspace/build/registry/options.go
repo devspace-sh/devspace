@@ -52,7 +52,7 @@ func (o Options) WithNamespace(namespace string) Options {
 func (o Options) WithImage(image string) Options {
 	newOptions := o
 	if image != "" {
-		newOptions.Name = image
+		newOptions.Image = image
 	}
 	return newOptions
 }
@@ -96,7 +96,7 @@ func (o Options) WithLocalRegistryConfig(config *latest.LocalRegistryConfig) Opt
 			WithImage(config.Image).
 			WithPort(config.Port)
 
-		if config.Persistence != nil && *config.Persistence.Enabled {
+		if config.Persistence != nil && config.Persistence.Enabled != nil && *config.Persistence.Enabled {
 			newOptions = newOptions.
 				EnableStorage().
 				WithStorageClassName(config.Persistence.StorageClassName).

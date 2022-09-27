@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/mgutz/ansi"
@@ -21,6 +23,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
+)
+
+const (
+	LastAppliedConfigurationAnnotation = "devspace.sh/last-applied-configuration"
 )
 
 type LocalRegistry struct {
@@ -41,6 +47,10 @@ func (r *LocalRegistry) IsStarted() bool {
 
 func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
 	ctx.Log().Info("Starting Local Image Registry")
+
+	if err := r.ensureNamespace(ctx); err != nil {
+		return errors.Wrap(err, "ensure namespace")
+	}
 
 	if r.options.StorageEnabled {
 		if err := r.ensureStatefulset(ctx); err != nil {
@@ -102,28 +112,184 @@ func (r *LocalRegistry) RewriteImage(image string) (string, error) {
 	return tag.Repository.Name(), nil
 }
 
-func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) error {
-	_, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Create(ctx.Context(), r.getDeployment(), metav1.CreateOptions{})
-	if err != nil && !kerrors.IsAlreadyExists(err) {
+func (r *LocalRegistry) ensureNamespace(ctx devspacecontext.Context) error {
+	_, err := ctx.KubeClient().KubeClient().CoreV1().Namespaces().Create(
+		ctx.Context(),
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: r.options.Namespace,
+			},
+		}, metav1.CreateOptions{},
+	)
+	if err != nil {
+		if kerrors.IsAlreadyExists(err) {
+			return nil
+		}
 		return err
 	}
 	return nil
 }
 
-func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) error {
-	_, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Create(ctx.Context(), r.getStatefulSet(), metav1.CreateOptions{})
-	if err != nil && !kerrors.IsAlreadyExists(err) {
+func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) error {
+	// Switching from a persistent registry, delete the statefulset.
+	_, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Get(ctx.Context(), r.options.Name, metav1.GetOptions{})
+	if err == nil {
+		err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Delete(ctx.Context(), r.options.Name, metav1.DeleteOptions{})
+		if err != nil && kerrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	desired := r.getDeployment()
+	raw, _ := json.Marshal(desired.Spec)
+	desiredConfiguration := hash.String(string(raw))
+	desired.Annotations = map[string]string{}
+	desired.Annotations[LastAppliedConfigurationAnnotation] = desiredConfiguration
+
+	// Check if there's a deployment already
+	existing, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Get(ctx.Context(), r.options.Name, metav1.GetOptions{})
+	if err != nil {
+		// Create if not found
+		if kerrors.IsNotFound(err) {
+			_, err = ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
+			if err != nil {
+				return err
+			}
+		}
+
 		return err
+	}
+
+	if existing.Annotations == nil {
+		existing.Annotations = map[string]string{}
+	}
+
+	// Check if configuration changes need to be applied
+	lastAppliedConfiguration := existing.Annotations[LastAppliedConfigurationAnnotation]
+	if desiredConfiguration != lastAppliedConfiguration {
+		// Update the deployment
+		existing.Annotations[LastAppliedConfigurationAnnotation] = desiredConfiguration
+		existing.Spec = desired.Spec
+		_, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Update(ctx.Context(), existing, metav1.UpdateOptions{})
+		if err != nil {
+			// Re-create if update fails
+			if kerrors.IsInvalid(err) {
+				err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Delete(ctx.Context(), existing.Name, metav1.DeleteOptions{})
+				if err != nil {
+					return err
+				}
+
+				_, err = ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) error {
+	// Switching from an unpersistent registry, delete the deployment.
+	_, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Get(ctx.Context(), r.options.Name, metav1.GetOptions{})
+	if err == nil {
+		err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Delete(ctx.Context(), r.options.Name, metav1.DeleteOptions{})
+		if err != nil && kerrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	desired := r.getStatefulSet()
+	raw, _ := json.Marshal(desired.Spec)
+	desiredConfiguration := hash.String(string(raw))
+	desired.Annotations = map[string]string{}
+	desired.Annotations[LastAppliedConfigurationAnnotation] = desiredConfiguration
+
+	// Check if there's a statefulset already
+	existing, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Get(ctx.Context(), desired.Name, metav1.GetOptions{})
+	if err != nil {
+		// Create if not found
+		if kerrors.IsNotFound(err) {
+			_, err = ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		return err
+	}
+
+	if existing.Annotations == nil {
+		existing.Annotations = map[string]string{}
+	}
+
+	// Check if configuration changes need to be applied
+	lastAppliedConfiguration := existing.Annotations[LastAppliedConfigurationAnnotation]
+	if desiredConfiguration != lastAppliedConfiguration {
+		// Update the statefulset
+		existing.Annotations[LastAppliedConfigurationAnnotation] = desiredConfiguration
+		existing.Spec = desired.Spec
+		_, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Update(ctx.Context(), existing, metav1.UpdateOptions{})
+		if err != nil {
+			// Re-create if update fails
+			if kerrors.IsInvalid(err) {
+				err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Delete(ctx.Context(), existing.Name, metav1.DeleteOptions{})
+				if err != nil {
+					return err
+				}
+
+				_, err = ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (r *LocalRegistry) ensureService(ctx devspacecontext.Context) error {
-	_, err := ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Create(ctx.Context(), r.getService(), metav1.CreateOptions{})
-	if err != nil && !kerrors.IsAlreadyExists(err) {
-		return errors.Wrap(err, "create service")
+	desired := r.getService()
+	raw, _ := json.Marshal(desired.Spec)
+	desiredConfiguration := hash.String(string(raw))
+	desired.Annotations = map[string]string{}
+	desired.Annotations[LastAppliedConfigurationAnnotation] = desiredConfiguration
+
+	// Check if there's a service already
+	existing, err := ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Get(ctx.Context(), desired.Name, metav1.GetOptions{})
+	if err != nil {
+		// Create if not found
+		if kerrors.IsNotFound(err) {
+			_, err := ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 	}
+
+	if existing.Annotations == nil {
+		existing.Annotations = map[string]string{}
+	}
+
+	// Check if configuration changes need to be applied
+	lastAppliedConfiguration := existing.Annotations[LastAppliedConfigurationAnnotation]
+	if desiredConfiguration != lastAppliedConfiguration {
+		// Update the service
+		existing.Annotations[LastAppliedConfigurationAnnotation] = desiredConfiguration
+		existing.Spec = desired.Spec
+		_, err := ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Update(ctx.Context(), existing, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

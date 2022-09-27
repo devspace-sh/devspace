@@ -3,10 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"os"
-
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -34,6 +30,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	"io"
+	"io/ioutil"
+	"os"
 )
 
 // RunPipelineCmd holds the command flags

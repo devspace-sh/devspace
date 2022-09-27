@@ -27,15 +27,9 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 		// check if cached
 		imageCache, _ := generated.GetImageCache(configImageName)
 		if imageCache.ImageName != "" && imageCache.Tag != "" && c.Images != nil && c.Images[configImageName] != nil {
-			if imageCache.LocalRegistryImageName != "" {
-				return &ImageSelector{
-					Image: imageCache.LocalRegistryImageName + ":" + imageCache.Tag,
-				}, nil
-			} else {
-				return &ImageSelector{
-					Image: imageCache.ImageName + ":" + imageCache.Tag,
-				}, nil
-			}
+			return &ImageSelector{
+				Image: imageCache.ResolveImage() + ":" + imageCache.Tag,
+			}, nil
 		}
 
 		// check if defined in images
