@@ -56,22 +56,19 @@ var _ = DevSpaceDescribe("hooks", func() {
 			SkipPush: false,
 		}
 		err = buildCmd.Run(nil, nil, f, "buildCommand")
-		framework.ExpectNoError(err)
+		framework.ExpectError(err)
 
 		// check if files are there
 		out, err := ioutil.ReadFile("before1.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "before1")
 		framework.ExpectNoError(os.Remove("before1.txt"))
-
-		out, err = ioutil.ReadFile("after1.txt")
+		out, err = ioutil.ReadFile("error1.txt")
 		framework.ExpectNoError(err)
-		framework.ExpectEqual(string(out), "after1")
-		framework.ExpectNoError(os.Remove("after1.txt"))
-
+		framework.ExpectEqual(string(out), "error1")
+		framework.ExpectNoError(os.Remove("error1.txt"))
 		_, err = os.Stat("after1.txt")
 		framework.ExpectError(err)
-
 		_, err = os.Stat("before3.txt")
 		framework.ExpectError(err)
 
@@ -91,31 +88,24 @@ var _ = DevSpaceDescribe("hooks", func() {
 		out, err = ioutil.ReadFile("before1.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "before1")
-
 		out, err = ioutil.ReadFile("after1.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "after1")
-
 		out, err = ioutil.ReadFile("before2.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "before2")
-
 		out, err = ioutil.ReadFile("error2.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "error2")
-
 		out, err = ioutil.ReadFile("before3.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "before3")
-
 		out, err = ioutil.ReadFile("error3.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "error3")
-
 		out, err = ioutil.ReadFile("after3.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "after3")
-
 		_, err = os.Stat("after2.txt")
 		framework.ExpectError(err)
 	})
