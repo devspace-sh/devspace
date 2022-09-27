@@ -81,9 +81,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline:            "dev",
-				Ctx:                 cancelCtx,
-				PreferLocalRegistry: true,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
 
 			done <- devCmd.RunDefault(f)
@@ -150,9 +149,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline:            "dev",
-				Ctx:                 cancelCtx,
-				PreferLocalRegistry: true,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
 
 			done <- devCmd.RunDefault(f)
@@ -219,9 +217,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline:            "dev",
-				Ctx:                 cancelCtx,
-				PreferLocalRegistry: true,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
 
 			done <- devCmd.RunDefault(f)
@@ -306,9 +303,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline:            "dev",
-				Ctx:                 cancelCtx,
-				PreferLocalRegistry: true,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
 
 			done <- devCmd.RunDefault(f)
@@ -359,9 +355,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 					NoWarn:    true,
 					Namespace: ns,
 				},
-				Pipeline:            "dev",
-				Ctx:                 cancelCtx,
-				PreferLocalRegistry: true,
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
 			}
 
 			done <- devCmd.RunDefault(f)
@@ -388,7 +383,7 @@ var _ = DevSpaceDescribe("localregistry", func() {
 	})
 
 	ginkgo.It("should error when local registry is required and not supported by build type", func() {
-		tempDir, err := framework.CopyToTempDir("tests/build/testdata/kaniko")
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-kaniko")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
@@ -398,9 +393,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
-			Pipeline:            "build",
-			Log:                 logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
-			PreferLocalRegistry: true,
+			Pipeline: "build",
+			Log:      logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
 		}
 		err = buildCmd.RunDefault(f)
 		framework.ExpectError(err)
@@ -420,9 +414,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
-			Pipeline:            "build",
-			Log:                 logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
-			PreferLocalRegistry: true,
+			Pipeline: "build",
+			Log:      logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
 		}
 		err = buildCmd.RunDefault(f)
 		framework.ExpectError(err)

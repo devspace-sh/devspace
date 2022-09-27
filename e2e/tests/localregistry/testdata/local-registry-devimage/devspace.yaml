@@ -1,5 +1,6 @@
 version: v2beta1
 name: local-registry
+localRegistry: {}
 images:
   app:
     image: my-docker-username/helloworld

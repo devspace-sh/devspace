@@ -53,7 +53,6 @@ type RunPipelineCmd struct {
 	SkipBuild           bool
 	BuildSequential     bool
 	MaxConcurrentBuilds int
-	PreferLocalRegistry bool
 
 	ForcePurge bool
 
@@ -81,7 +80,6 @@ func (cmd *RunPipelineCmd) AddPipelineFlags(f factory.Factory, command *cobra.Co
 	command.Flags().BoolVar(&cmd.ForcePurge, "force-purge", cmd.ForcePurge, "Forces to purge every deployment even though it might be in use by another DevSpace project")
 	command.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", cmd.ForceDeploy, "Forces to deploy every deployment")
 	command.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", cmd.SkipDeploy, "If enabled will skip deploying")
-	command.Flags().BoolVar(&cmd.PreferLocalRegistry, "prefer-local-registry", cmd.SkipDeploy, "If enabled will prefer using a local registry over 'kind load' if unable to push image to a remote registry")
 	command.Flags().StringVar(&cmd.Pipeline, "pipeline", cmd.Pipeline, "The pipeline to execute")
 
 	command.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", cmd.Tags, "Use the given tag for all built images")
@@ -403,7 +401,6 @@ func (cmd *RunPipelineCmd) BuildOptions(configOptions *loader.ConfigOptions) *Co
 				SkipBuild:                 cmd.SkipBuild,
 				SkipPush:                  cmd.SkipPush,
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
-				PreferLocalRegistry:       cmd.PreferLocalRegistry,
 				ForceRebuild:              cmd.ForceBuild,
 				Sequential:                cmd.BuildSequential,
 				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,

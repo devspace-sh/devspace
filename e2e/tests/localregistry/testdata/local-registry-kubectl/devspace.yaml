@@ -1,13 +1,7 @@
 version: v2beta1
 name: local-registry
+localRegistry: {}
 pipelines:
-  build:
-    run: |-
-      build_images app
-  deploy:
-    run: |-
-      build_images app
-      create_deployments app --sequential
   dev:
     run: |-
       build_images app
@@ -17,10 +11,6 @@ pipelines:
       create_deployments app --sequential
 
       start_dev --all
-  purge:
-    run: |-
-      stop_dev --all
-      purge_deployments app --sequential
 images:
   app:
     image: my-docker-username/helloworld

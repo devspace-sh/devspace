@@ -5,6 +5,16 @@ localRegistry:
   persistence:
     enabled: true
     size: 5Gi
+pipelines:
+  dev:
+    run: |-
+      build_images app
+
+      echo $(get_image app) > get_image.out
+
+      create_deployments app --sequential
+
+      start_dev --all
 images:
   app:
     image: my-docker-username/helloworld
@@ -21,10 +31,6 @@ dev:
     labelSelector:
       app.kubernetes.io/component: app
     container: container1
-vars:
-  DEVSPACE_ENV_FILE:
-    value: .env
-    alwaysResolve: false
 hooks:
   - command: |
       echo -n ${runtime.images.app} > app.out

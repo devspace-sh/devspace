@@ -35,7 +35,6 @@ type Options struct {
 	SkipBuild                 bool     `long:"skip" description:"If enabled will skip building"`
 	SkipPush                  bool     `long:"skip-push" description:"Skip pushing"`
 	SkipPushOnLocalKubernetes bool     `long:"skip-push-on-local-kubernetes" description:"Skip pushing"`
-	PreferLocalRegistry       bool     `long:"prefer-local-registry" description:"Use local registry over 'kind load' if unable to push to a remote registry"`
 	ForceRebuild              bool     `long:"force-rebuild" description:"Skip pushing"`
 	Sequential                bool     `long:"sequential" description:"Skip pushing"`
 
@@ -97,7 +96,8 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 	var localRegistry *registry.LocalRegistry
 	kubeClient := ctx.KubeClient()
-	useKindLoad := !options.PreferLocalRegistry && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
+	useLocalRegistry := conf.LocalRegistry != nil
+	useKindLoad := !useLocalRegistry && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
 
 	imagesToBuild := 0
 	for key, imageConf := range conf.Images {
