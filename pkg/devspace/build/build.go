@@ -113,6 +113,7 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		localRegistryImageName := ""
 
 		isLocalReqistryRequired := !useKindLoad && !registry.HasPushPermission(imageConf)
+		imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
 		if isLocalReqistryRequired && !options.SkipPush {
 			// No push permissions and local registry is disabled
 			if registry.IsLocalRegistryDisabled(conf) {
@@ -125,7 +126,6 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 			}
 
 			if localRegistry == nil {
-
 				localRegistry = registry.NewLocalRegistry(
 					registry.NewDefaultOptions().
 						WithLocalRegistryConfig(conf.LocalRegistry).
@@ -143,11 +143,13 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 				return errors.Wrap(err, "rewrite image")
 			}
 
-			// Update cache
-			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
+			// Update cache for local registry use
 			imageCache.LocalRegistryImageName = localRegistryImageName
-			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
+		} else {
+			// Update if not using local registry
+			imageCache.LocalRegistryImageName = ""
 		}
+		ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 
 		// Get image tags
 		imageTags := []string{}
