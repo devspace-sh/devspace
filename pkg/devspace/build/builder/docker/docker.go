@@ -204,11 +204,11 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 		// Push image to local registry
 		for _, tag := range buildOptions.Tags {
 			ctx.Log().Info("The push refers to repository [" + tag + "]")
-			writer := logpkg.WithNopCloser(stdout)
-			err := registry.CopyImageToRemote(ctx.Context(), writer, tag)
+			err := registry.CopyImageToRemote(ctx.Context(), tag, ctx.Log())
 			if err != nil {
 				return errors.Errorf("error during local registry image push: %v", err)
 			}
+
 			ctx.Log().Info("Image pushed to local registry")
 		}
 	} else if ctx.KubeClient() != nil && kubectl.GetKindContext(ctx.KubeClient().CurrentContext()) != "" {
@@ -217,15 +217,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 			command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(ctx.KubeClient().CurrentContext()), tag}
 			completeArgs := []string{}
 			completeArgs = append(completeArgs, command[1:]...)
-			// Determine output writer
-			var writeCloser io.WriteCloser
-			if ctx.Log() == logpkg.GetInstance() {
-				writeCloser = logpkg.WithNopCloser(stdout)
-			} else {
-				writeCloser = ctx.Log().Writer(logrus.InfoLevel, false)
-			}
-			defer writeCloser.Close()
-			err = command2.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writeCloser, writeCloser, nil, command[0], completeArgs...)
+			err = command2.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writer, writer, nil, command[0], completeArgs...)
 			if err != nil {
 				ctx.Log().Info(errors.Errorf("error during image load to kind cluster: %v", err))
 			}
