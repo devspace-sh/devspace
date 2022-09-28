@@ -132,10 +132,13 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}
 
 	// We skip pushing when it is the minikube client
+	if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+		b.skipPush = true
+	}
+
+	// We skip pushing when using a local registry
 	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
-	if !imageCache.IsLocalRegistryImage() &&
-		b.skipPushOnLocalKubernetes &&
-		ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+	if !b.skipPush && !imageCache.IsLocalRegistryImage() {
 		b.skipPush = true
 	}
 

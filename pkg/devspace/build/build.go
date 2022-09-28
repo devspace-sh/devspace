@@ -96,8 +96,7 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 	var localRegistry *registry.LocalRegistry
 	kubeClient := ctx.KubeClient()
-	useLocalRegistry := conf.LocalRegistry != nil
-	useKindLoad := !useLocalRegistry && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
+	useKindLoad := !registry.IsLocalRegistryDisabled(conf) && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
 
 	imagesToBuild := 0
 	for key, imageConf := range conf.Images {

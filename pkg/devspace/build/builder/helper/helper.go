@@ -46,7 +46,7 @@ func NewBuildHelper(ctx devspacecontext.Context, engineName string, imageConfigN
 
 	// Update the image name to the local registry image name
 	imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
-	if imageCache.LocalRegistryImageName != "" {
+	if imageCache.IsLocalRegistryImage() {
 		imageName = imageCache.LocalRegistryImageName
 	}
 
@@ -215,8 +215,7 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx devspacecontext.Context, docke
 	}
 
 	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.ImageConfigName)
-	imageName := imageCache.ResolveImage()
-	imageTag := imageName + ":" + imageCache.Tag
+	imageName := imageCache.ResolveImage() + ":" + imageCache.Tag
 
 	dockerAPIClient := dockerClient.DockerAPIClient()
 	imageList, err := dockerAPIClient.ImageList(ctx.Context(), types.ImageListOptions{})
@@ -225,7 +224,7 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx devspacecontext.Context, docke
 	}
 	for _, image := range imageList {
 		for _, repoTag := range image.RepoTags {
-			if repoTag == imageTag {
+			if repoTag == imageName {
 				return true, nil
 			}
 		}

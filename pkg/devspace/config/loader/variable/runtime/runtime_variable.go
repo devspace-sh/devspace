@@ -155,14 +155,12 @@ func BuildImageString(c config.Config, name string, fallbackImage string, fallba
 	imageCache, _ := c.LocalCache().GetImageCache(name)
 
 	// try to find the image
-	image := ""
-	if imageCache.LocalRegistryImageName != "" {
-		image = imageCache.LocalRegistryImageName
-	} else if imageCache.ImageName != "" {
-		image = imageCache.ImageName
-	} else if fallbackImage != "" {
+	image := imageCache.ResolveImage()
+	if image == "" && fallbackImage != "" {
 		image = fallbackImage
-	} else {
+	}
+
+	if image == "" {
 		return false, ""
 	}
 
