@@ -1,9 +1,8 @@
-version: v2beta1
-localRegistry:
-  disable: true
+version: v1beta10
 images:
   app:
     image: my-docker-username/helloworld-buildkit
     tags:
     - latest
-    buildKit: {}
+    build:
+      buildKit: {}
