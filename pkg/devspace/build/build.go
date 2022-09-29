@@ -88,17 +88,20 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 	}
 
 	// Determine if we need to use the local registry to build any images.
+	kubeClient := ctx.KubeClient()
+	isKindContext := kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
+	useKindLoad := !registry.IsLocalRegistryEnabled(conf) && isKindContext
 	var localRegistry *registry.LocalRegistry
-	if registry.IsLocalRegistryEnabled(conf) {
-		kubeClient := ctx.KubeClient()
-		useKindLoad := conf.LocalRegistry == nil && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
+	if !options.SkipPush &&
+		!useKindLoad &&
+		(registry.IsLocalRegistryEnabled(conf) || registry.IsLocalRegistryFallback(conf)) {
 		for key, imageConf := range conf.Images {
 			imageName := imageConf.Image
 			imageConfigName := key
-			isLocalReqistryRequired := !useKindLoad && !registry.HasPushPermission(imageConf)
+			isLocalReqistryRequired := !registry.HasPushPermission(imageConf)
 
 			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
-			if isLocalReqistryRequired && !options.SkipPush {
+			if isLocalReqistryRequired {
 				// Not able to deploy a local registry
 				if kubeClient == nil {
 					return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
@@ -177,7 +180,7 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		}
 
 		// Check compatibility with local registry
-		if imageCache.IsLocalRegistryImage() && !options.SkipPush && !SupportsLocalRegistry(builder) {
+		if imageCache.IsLocalRegistryImage() && !SupportsLocalRegistry(builder) {
 			return fmt.Errorf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
 		}
 

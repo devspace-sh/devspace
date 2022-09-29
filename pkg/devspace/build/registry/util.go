@@ -27,8 +27,12 @@ func HasPushPermission(image *latest.Image) bool {
 	return pushErr == nil
 }
 
+func IsLocalRegistryFallback(config *latest.Config) bool {
+	return config.LocalRegistry == nil || (config.LocalRegistry != nil || config.LocalRegistry.Enabled == nil)
+}
+
 func IsLocalRegistryEnabled(config *latest.Config) bool {
-	return config.LocalRegistry == nil || (config.LocalRegistry.Enabled == nil || *config.LocalRegistry.Enabled)
+	return config.LocalRegistry != nil && (config.LocalRegistry.Enabled != nil && *config.LocalRegistry.Enabled)
 }
 
 func GetServicePort(service *corev1.Service) *corev1.ServicePort {
