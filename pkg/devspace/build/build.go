@@ -21,12 +21,11 @@ import (
 )
 
 type imageNameAndTag struct {
-	imageConfigName        string
-	localRegistryImageName string
-	imageName              string
-	imageTag               string
-	imageTags              []string
-	imageConfig            latest.Image
+	imageConfigName string
+	imageName       string
+	imageTag        string
+	imageTags       []string
+	imageConfig     latest.Image
 }
 
 // Options describe how images should be build
@@ -88,30 +87,15 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		}
 	}
 
-	// Execute before images build hook
-	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{}, "before:build")
-	if pluginErr != nil {
-		return pluginErr
-	}
-
+	// Determine if we need to use the local registry to build any images.
 	var localRegistry *registry.LocalRegistry
 	kubeClient := ctx.KubeClient()
-	useKindLoad := !registry.IsLocalRegistryDisabled(conf) && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
-
-	imagesToBuild := 0
+	useKindLoad := conf.LocalRegistry == nil && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
 	for key, imageConf := range conf.Images {
-		ctx := ctx.WithLogger(ctx.Log().WithPrefix("build:" + key + " "))
-		if len(images) > 0 && !stringutil.Contains(images, key) {
-			continue
-		}
-
-		// This is necessary for parallel build otherwise we would override the image conf pointer during the loop
-		cImageConf := *imageConf
-		imageName := cImageConf.Image
+		imageName := imageConf.Image
 		imageConfigName := key
-		localRegistryImageName := ""
-
 		isLocalReqistryRequired := !useKindLoad && !registry.HasPushPermission(imageConf)
+
 		imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
 		if isLocalReqistryRequired && !options.SkipPush {
 			// No push permissions and local registry is disabled
@@ -137,18 +121,40 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 				}
 			}
 
-			localRegistryImageName, err := localRegistry.RewriteImage(imageName)
+			var err error
+			builtImageName, err := localRegistry.RewriteImage(imageName)
 			if err != nil {
 				return errors.Wrap(err, "rewrite image")
 			}
 
 			// Update cache for local registry use
-			imageCache.LocalRegistryImageName = localRegistryImageName
+			imageCache.LocalRegistryImageName = builtImageName
 		} else {
 			// Update if not using local registry
 			imageCache.LocalRegistryImageName = ""
 		}
 		ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
+	}
+
+	// Execute before images build hook
+	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{}, "before:build")
+	if pluginErr != nil {
+		return pluginErr
+	}
+
+	imagesToBuild := 0
+	for key, imageConf := range conf.Images {
+		ctx := ctx.WithLogger(ctx.Log().WithPrefix("build:" + key + " "))
+		if len(images) > 0 && !stringutil.Contains(images, key) {
+			continue
+		}
+
+		// This is necessary for parallel build otherwise we would override the image conf pointer during the loop
+		cImageConf := *imageConf
+		imageName := cImageConf.Image
+		imageConfigName := key
+		imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
+		resolvedImage := imageCache.ResolveImage()
 
 		// Get image tags
 		imageTags := []string{}
@@ -174,14 +180,14 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		}
 
 		// Check compatibility with local registry
-		if isLocalReqistryRequired && !options.SkipPush && !SupportsLocalRegistry(builder) {
+		if imageCache.IsLocalRegistryImage() && !options.SkipPush && !SupportsLocalRegistry(builder) {
 			return fmt.Errorf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
 		}
 
 		// Execute before images build hook
 		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"IMAGE_CONFIG_NAME": imageConfigName,
-			"IMAGE_NAME":        imageName,
+			"IMAGE_NAME":        resolvedImage,
 			"IMAGE_CONFIG":      cImageConf,
 			"IMAGE_TAGS":        imageTags,
 		}, hook.EventsForSingle("before:build", imageConfigName).With("build.beforeBuild")...)
@@ -194,7 +200,7 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		if err != nil {
 			pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 				"IMAGE_CONFIG_NAME": imageConfigName,
-				"IMAGE_NAME":        imageName,
+				"IMAGE_NAME":        resolvedImage,
 				"IMAGE_CONFIG":      cImageConf,
 				"IMAGE_TAGS":        imageTags,
 				"ERROR":             err,
@@ -209,7 +215,7 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 			// Execute before images build hook
 			pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 				"IMAGE_CONFIG_NAME": imageConfigName,
-				"IMAGE_NAME":        imageName,
+				"IMAGE_NAME":        resolvedImage,
 				"IMAGE_CONFIG":      cImageConf,
 				"IMAGE_TAGS":        imageTags,
 			}, hook.EventsForSingle("skip:build", imageConfigName)...)
@@ -227,7 +233,7 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 			if err != nil {
 				pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 					"IMAGE_CONFIG_NAME": imageConfigName,
-					"IMAGE_NAME":        imageName,
+					"IMAGE_NAME":        resolvedImage,
 					"IMAGE_CONFIG":      cImageConf,
 					"IMAGE_TAGS":        imageTags,
 					"ERROR":             err,
@@ -250,16 +256,16 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 			// Track built images
 			builtImages[imageConfigName] = types.ImageNameTag{
-				ImageConfigName:        imageConfigName,
-				ImageName:              imageName,
-				ImageTag:               imageTags[0],
-				LocalRegistryImageName: localRegistryImageName,
+				ImageConfigName: imageConfigName,
+				ImageName:       imageName,
+				ImageTag:        imageTags[0],
+				// LocalRegistryImageName: localRegistryImageName,
 			}
 
 			// Execute before images build hook
 			pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 				"IMAGE_CONFIG_NAME": imageConfigName,
-				"IMAGE_NAME":        imageName,
+				"IMAGE_NAME":        resolvedImage,
 				"IMAGE_CONFIG":      cImageConf,
 				"IMAGE_TAGS":        imageTags,
 			}, hook.EventsForSingle("after:build", imageConfigName).With("build.afterBuild")...)
@@ -284,23 +290,22 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 				if err != nil {
 					hook.LogExecuteHooks(ctx, map[string]interface{}{
 						"IMAGE_CONFIG_NAME": imageConfigName,
-						"IMAGE_NAME":        imageName,
+						"IMAGE_NAME":        resolvedImage,
 						"IMAGE_CONFIG":      cImageConf,
 						"IMAGE_TAGS":        imageTags,
 						"ERROR":             err,
 					}, hook.EventsForSingle("error:build", imageConfigName).With("build.errorBuild")...)
-					errChan <- errors.Errorf("error building image %s:%s: %v", imageName, imageTags[0], err)
+					errChan <- errors.Errorf("error building image %s:%s: %v", resolvedImage, imageTags[0], err)
 					return
 				}
 
 				// Send the response
 				cacheChan <- imageNameAndTag{
-					imageConfigName:        imageConfigName,
-					imageName:              imageName,
-					imageTag:               imageTags[0],
-					imageTags:              imageTags,
-					imageConfig:            cImageConf,
-					localRegistryImageName: localRegistryImageName,
+					imageConfigName: imageConfigName,
+					imageName:       imageName,
+					imageTag:        imageTags[0],
+					imageTags:       imageTags,
+					imageConfig:     cImageConf,
 				}
 			}(ctx)
 		}
@@ -356,11 +361,13 @@ func (c *controller) waitForBuild(ctx devspacecontext.Context, errChan <-chan er
 	case err := <-errChan:
 		return err
 	case done := <-cacheChan:
+		imageCache, _ := ctx.Config().LocalCache().GetImageCache(done.imageConfigName)
+		resolvedImage := imageCache.ResolveImage()
+
 		ctx := ctx.WithLogger(ctx.Log().WithPrefix("build:" + done.imageConfigName + " "))
-		ctx.Log().Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
+		ctx.Log().Donef("Done building image %s:%s (%s)", resolvedImage, done.imageTag, done.imageConfigName)
 
 		// Update cache
-		imageCache, _ := ctx.Config().LocalCache().GetImageCache(done.imageConfigName)
 		if imageCache.Tag == done.imageTag {
 			ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
 		}
@@ -371,16 +378,15 @@ func (c *controller) waitForBuild(ctx devspacecontext.Context, errChan <-chan er
 
 		// Track built images
 		builtImages[done.imageConfigName] = types.ImageNameTag{
-			ImageConfigName:        done.imageConfigName,
-			ImageName:              done.imageName,
-			ImageTag:               done.imageTag,
-			LocalRegistryImageName: done.localRegistryImageName,
+			ImageConfigName: done.imageConfigName,
+			ImageName:       done.imageName,
+			ImageTag:        done.imageTag,
 		}
 
 		// Execute plugin hook
 		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"IMAGE_CONFIG_NAME": done.imageConfigName,
-			"IMAGE_NAME":        done.imageName,
+			"IMAGE_NAME":        resolvedImage,
 			"IMAGE_CONFIG":      done.imageConfig,
 			"IMAGE_TAGS":        done.imageTags,
 		}, hook.EventsForSingle("after:build", done.imageConfigName).With("build.afterBuild")...)

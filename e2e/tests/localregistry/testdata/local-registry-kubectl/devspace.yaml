@@ -27,10 +27,6 @@ dev:
     labelSelector:
       app.kubernetes.io/component: app
     container: container1
-vars:
-  DEVSPACE_ENV_FILE:
-    value: .env
-    alwaysResolve: false
 hooks:
   - command: |
       echo -n ${runtime.images.app} > app.out

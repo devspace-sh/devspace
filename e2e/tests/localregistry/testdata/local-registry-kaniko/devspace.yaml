@@ -1,14 +1,6 @@
 version: v2beta1
-localRegistry:
-  name: my-registry
-  namespace: my-registry
+localRegistry: {}
 images:
   app:
     image: my-docker-username/helloworld-kaniko
-    dockerfile: ./Dockerfile
-    tags:
-    - latest
-    kaniko:
-      cache: false
-      args:
-      - --no-push
+    kaniko: {}

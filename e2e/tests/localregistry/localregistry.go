@@ -60,8 +60,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("should build dockerfile with docker and use local registry with helm deployment", func() {
-		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-helm")
+	ginkgo.It("should build dockerfile with docker and use local registry", func() {
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-docker")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
@@ -224,48 +224,6 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			done <- devCmd.RunDefault(f)
 		}()
 
-		ginkgo.By("Checking get_image output")
-		gomega.Eventually(func() (string, error) {
-			out, err := ioutil.ReadFile("get_image.out")
-			if err != nil {
-				if !os.IsNotExist(err) {
-					return "", err
-				}
-
-				return "", nil
-			}
-			return string(out), nil
-		}, pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		ginkgo.By("Checking %{runtime.images.app} output")
-		gomega.Eventually(func() (string, error) {
-			out, err := ioutil.ReadFile("app.out")
-			if err != nil {
-				if !os.IsNotExist(err) {
-					return "", err
-				}
-
-				return "", nil
-			}
-			return string(out), nil
-		}, pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		ginkgo.By("Checking %{runtime.images.app.image} output")
-		gomega.Eventually(func() (string, error) {
-			out, err := ioutil.ReadFile("app_image.out")
-			if err != nil {
-				if !os.IsNotExist(err) {
-					return "", err
-				}
-
-				return "", nil
-			}
-			return string(out), nil
-		}, pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
 		ginkgo.By("Checking deployment container1")
 		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container1"), pollingDurationLong, pollingInterval).
 			Should(gomega.MatchRegexp(`^localhost`))
@@ -282,8 +240,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("should use local registry with storage", func() {
-		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-storage")
+	ginkgo.It("should use local registry with persistence", func() {
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-persistence")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
@@ -334,8 +292,8 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("should update devImage with local registry image", func() {
-		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-devimage")
+	ginkgo.It("should use local registry image in image selectors", func() {
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-image-selectors")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
@@ -377,6 +335,86 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		actual := actuals.Items[0]
 		gomega.Expect(actual.Spec.Template.Spec.Containers[0].Image).To(gomega.MatchRegexp("localhost"))
 		gomega.Expect(actual.Spec.Template.Spec.Containers[0].Image).To(gomega.MatchRegexp("my-docker-username/helloworld-dev"))
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should use local registry and update runtime and hook variables", func() {
+		tempDir, err := framework.CopyToTempDir("tests/localregistry/testdata/local-registry-runtime-variables")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("localregistry")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			defer ginkgo.GinkgoRecover()
+
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
+			}
+
+			done <- devCmd.RunDefault(f)
+		}()
+
+		ginkgo.By("Checking get_image app output")
+		gomega.Eventually(readFile("get_image.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking %{runtime.images.app} output")
+		gomega.Eventually(readFile("before_app.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+		gomega.Eventually(readFile("after_app.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking %{runtime.images.app.image} output")
+		gomega.Eventually(readFile("before_app_image.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+		gomega.Eventually(readFile("after_app_image.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking hook before:build:app $DEVSPACE_HOOK_IMAGE_NAME")
+		gomega.Eventually(readFile("before_build_app.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking hook after:build:app $DEVSPACE_HOOK_IMAGE_NAME")
+		gomega.Eventually(readFile("after_build_app.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking get_image app-dev output")
+		gomega.Eventually(readFile("get_image_dev.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking %{runtime.images.app-dev} output")
+		gomega.Eventually(readFile("before_app_dev.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+		gomega.Eventually(readFile("after_app_dev.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking %{runtime.images.app-dev.image} output")
+		gomega.Eventually(readFile("before_app_dev_image.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+		gomega.Eventually(readFile("after_app_dev_image.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking hook before:build:app-dev $DEVSPACE_HOOK_IMAGE_NAME")
+		gomega.Eventually(readFile("before_build_app_dev.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
+
+		ginkgo.By("Checking hook after:build:app-dev $DEVSPACE_HOOK_IMAGE_NAME")
+		gomega.Eventually(readFile("after_build_app_dev.out"), pollingDurationLong, pollingInterval).
+			Should(gomega.MatchRegexp(`^localhost`))
 
 		err = <-done
 		framework.ExpectNoError(err)
@@ -472,5 +510,18 @@ func getImages(ctx context.Context, registryHost string) func() ([]string, error
 
 		return images, nil
 	}
+}
 
+func readFile(name string) func() (string, error) {
+	return func() (string, error) {
+		out, err := ioutil.ReadFile(name)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return "", err
+			}
+
+			return "", nil
+		}
+		return string(out), nil
+	}
 }

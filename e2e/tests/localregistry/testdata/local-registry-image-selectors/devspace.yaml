@@ -4,12 +4,8 @@ localRegistry: {}
 images:
   app:
     image: my-docker-username/helloworld
-    tags:
-      - latest
   app-dev:
     image: my-docker-username/helloworld-dev
-    tags:
-      - latest
 deployments:
   app:
     helm:
@@ -27,7 +23,3 @@ dev:
     devImage: my-docker-username/helloworld-dev
     command: ["tail", "-f", "/dev/null"]
     container: container1
-vars:
-  DEVSPACE_ENV_FILE:
-    value: .env
-    alwaysResolve: false
