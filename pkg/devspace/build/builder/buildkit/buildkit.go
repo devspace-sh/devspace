@@ -234,7 +234,7 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 		// Push image to local registry
 		for _, tag := range options.Tags {
 			log.Info("The push refers to repository [" + tag + "]")
-			err := registry.CopyImageToRemote(ctx, tag, log)
+			err := registry.CopyImageToRemote(ctx, tag, writer)
 			if err != nil {
 				return errors.Errorf("error during local registry image push: %v", err)
 			}

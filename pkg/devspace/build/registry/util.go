@@ -2,6 +2,8 @@ package registry
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/docker/docker/pkg/jsonmessage"
@@ -12,7 +14,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -61,7 +62,7 @@ func IsImageAvailableRemotely(ctx context.Context, imageName string) (bool, erro
 	return image != nil, nil
 }
 
-func CopyImageToRemote(ctx context.Context, imageName string, log log.Logger) error {
+func CopyImageToRemote(ctx context.Context, imageName string, writer io.Writer) error {
 	ref, err := name.ParseReference(imageName)
 	if err != nil {
 		return err
@@ -103,7 +104,7 @@ func CopyImageToRemote(ctx context.Context, imageName string, log log.Logger) er
 			},
 		}
 
-		log.Infof("%s %s", jm.Status, jm.Progress.String())
+		_, err := fmt.Fprintf(writer, "%s %s\n", jm.Status, jm.Progress.String())
 		if err != nil {
 			return err
 		}
