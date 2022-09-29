@@ -587,8 +587,11 @@ type CustomConfigCommand struct {
 
 // LocalRegistryConfig holds the configuration of the local image registry
 type LocalRegistryConfig struct {
-	// Disable disables the local registry when true. True by default
-	Disable bool `yaml:"disable,omitempty" json:"disable,omitempty"`
+	// Enabled enables the local registry for pushing images.
+	// When unset the local registry will be used as a fall back if there are no push permissions for the registry.
+	// When true the local registry will always be used
+	// When false the local registry will never be used
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
 	// Namespace where the local registry is deployed
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`

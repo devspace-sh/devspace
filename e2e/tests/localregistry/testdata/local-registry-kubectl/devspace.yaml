@@ -1,6 +1,7 @@
 version: v2beta1
 name: local-registry
-localRegistry: {}
+localRegistry:
+  enabled: true
 pipelines:
   dev:
     run: |-

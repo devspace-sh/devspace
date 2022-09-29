@@ -89,51 +89,48 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 	// Determine if we need to use the local registry to build any images.
 	var localRegistry *registry.LocalRegistry
-	kubeClient := ctx.KubeClient()
-	useKindLoad := conf.LocalRegistry == nil && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
-	for key, imageConf := range conf.Images {
-		imageName := imageConf.Image
-		imageConfigName := key
-		isLocalReqistryRequired := !useKindLoad && !registry.HasPushPermission(imageConf)
+	if registry.IsLocalRegistryEnabled(conf) {
+		kubeClient := ctx.KubeClient()
+		useKindLoad := conf.LocalRegistry == nil && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
+		for key, imageConf := range conf.Images {
+			imageName := imageConf.Image
+			imageConfigName := key
+			isLocalReqistryRequired := !useKindLoad && !registry.HasPushPermission(imageConf)
 
-		imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
-		if isLocalReqistryRequired && !options.SkipPush {
-			// No push permissions and local registry is disabled
-			if registry.IsLocalRegistryDisabled(conf) {
-				return fmt.Errorf("unable to push image %s and using a local registry is disabled", imageConf.Image)
-			}
-
-			// Not able to deploy a local registry
-			if kubeClient == nil {
-				return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
-			}
-
-			if localRegistry == nil {
-				localRegistry = registry.NewLocalRegistry(
-					registry.NewDefaultOptions().
-						WithNamespace(kubeClient.Namespace()).
-						WithLocalRegistryConfig(conf.LocalRegistry),
-				)
-
-				err := localRegistry.Start(ctx)
-				if err != nil {
-					return errors.Wrap(err, "start registry")
+			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
+			if isLocalReqistryRequired && !options.SkipPush {
+				// Not able to deploy a local registry
+				if kubeClient == nil {
+					return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
 				}
-			}
 
-			var err error
-			builtImageName, err := localRegistry.RewriteImage(imageName)
-			if err != nil {
-				return errors.Wrap(err, "rewrite image")
-			}
+				if localRegistry == nil {
+					localRegistry = registry.NewLocalRegistry(
+						registry.NewDefaultOptions().
+							WithNamespace(kubeClient.Namespace()).
+							WithLocalRegistryConfig(conf.LocalRegistry),
+					)
 
-			// Update cache for local registry use
-			imageCache.LocalRegistryImageName = builtImageName
-		} else {
-			// Update if not using local registry
-			imageCache.LocalRegistryImageName = ""
+					err := localRegistry.Start(ctx)
+					if err != nil {
+						return errors.Wrap(err, "start registry")
+					}
+				}
+
+				var err error
+				builtImageName, err := localRegistry.RewriteImage(imageName)
+				if err != nil {
+					return errors.Wrap(err, "rewrite image")
+				}
+
+				// Update cache for local registry use
+				imageCache.LocalRegistryImageName = builtImageName
+			} else {
+				// Update if not using local registry
+				imageCache.LocalRegistryImageName = ""
+			}
+			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 		}
-		ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 	}
 
 	// Execute before images build hook

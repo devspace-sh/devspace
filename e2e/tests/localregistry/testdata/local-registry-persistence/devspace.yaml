@@ -1,6 +1,7 @@
 version: v2beta1
 name: local-registry
 localRegistry:
+  enabled: true
   name: registry-storage
   persistence:
     enabled: true

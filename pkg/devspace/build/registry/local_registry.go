@@ -62,6 +62,7 @@ func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
 	}
 
 	// Wait for service to have a node port
+	ctx.Log().Debug("Wait for local registry node port to be assigned...")
 	var err error
 	r.servicePort, err = r.waitForNodePort(ctx)
 	if err != nil {
@@ -72,12 +73,14 @@ func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
 	r.host = fmt.Sprintf("localhost:%d", r.servicePort.NodePort)
 
 	// Select the registry pod
+	ctx.Log().Debug("Wait for running local registry pod...")
 	imageRegistryPod, err := r.selectRegistryPod(ctx)
 	if err != nil {
 		return errors.Wrap(err, "select registry pod")
 	}
 
 	// Check if local registry is already available
+	ctx.Log().Debug("Check for running local registry")
 	isRegistryAvailable, err := r.ping(ctx.Context())
 	if err != nil {
 		return errors.Wrap(err, "ping local registry")
@@ -94,6 +97,7 @@ func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
 	}
 
 	// Wait for registry to be responsive
+	ctx.Log().Debug("Waiting for local registry to become ready...")
 	if err := r.waitForRegistry(ctx.Context()); err != nil {
 		return errors.Wrap(err, "wait for registry")
 	}

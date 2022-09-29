@@ -458,7 +458,7 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		err = buildCmd.RunDefault(f)
 		framework.ExpectError(err)
 		gomega.Expect(output.String()).To(
-			gomega.ContainSubstring("build images: unable to push image my-docker-username/helloworld-kaniko and using a local registry is disabled"),
+			gomega.ContainSubstring("error during image push:"),
 		)
 	})
 })
