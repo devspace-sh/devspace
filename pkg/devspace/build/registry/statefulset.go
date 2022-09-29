@@ -1,10 +1,7 @@
 package registry
 
 import (
-	"encoding/json"
-
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -12,72 +9,43 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	appsapplyv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 )
 
-func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) error {
+func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.StatefulSet, error) {
 	// Switching from an unpersistent registry, delete the deployment.
 	_, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Get(ctx.Context(), r.options.Name, metav1.GetOptions{})
 	if err == nil {
 		err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Delete(ctx.Context(), r.options.Name, metav1.DeleteOptions{})
 		if err != nil && kerrors.IsNotFound(err) {
-			return err
+			return nil, err
 		}
 	}
 
+	// Create if it does not exist
 	desired := r.getStatefulSet()
-	raw, _ := json.Marshal(desired.Spec)
-	desiredConfiguration := hash.String(string(raw))
-	desired.Annotations = map[string]string{}
-	desired.Annotations[LastAppliedConfigurationAnnotation] = desiredConfiguration
-
-	// Check if there's a statefulset already
-	existing, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Get(ctx.Context(), desired.Name, metav1.GetOptions{})
+	existing, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Get(ctx.Context(), r.options.Name, metav1.GetOptions{})
 	if err != nil {
-		// Create if not found
 		if kerrors.IsNotFound(err) {
-			_, err = ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
 		}
 
-		return err
+		return nil, err
 	}
 
-	if existing.Annotations == nil {
-		existing.Annotations = map[string]string{}
+	// Use server side apply if it does exist
+	applyConfiguration, err := appsapplyv1.ExtractStatefulSet(existing, ApplyFieldManager)
+	if err != nil {
+		return nil, err
 	}
-
-	// Check if configuration changes need to be applied
-	lastAppliedConfiguration := existing.Annotations[LastAppliedConfigurationAnnotation]
-	if desiredConfiguration != lastAppliedConfiguration {
-		// Update the statefulset
-		existing.Annotations[LastAppliedConfigurationAnnotation] = desiredConfiguration
-		existing.Spec = desired.Spec
-		_, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Update(ctx.Context(), existing, metav1.UpdateOptions{})
-		if err != nil {
-			// Re-create if update fails
-			if kerrors.IsInvalid(err) {
-				err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Delete(ctx.Context(), existing.Name, metav1.DeleteOptions{})
-				if err != nil {
-					return err
-				}
-
-				_, err = ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
-				if err != nil {
-					return err
-				}
-
-				return nil
-			}
-
-			return err
-		}
-	}
-
-	return nil
+	return ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Apply(
+		ctx.Context(),
+		applyConfiguration,
+		metav1.ApplyOptions{
+			FieldManager: ApplyFieldManager,
+			Force:        true,
+		},
+	)
 }
 
 func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {

@@ -14,13 +14,14 @@ import (
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
 const (
 	LastAppliedConfigurationAnnotation = "devspace.sh/last-applied-configuration"
+	ApplyFieldManager                  = "devspace"
 )
 
 type LocalRegistry struct {
@@ -47,16 +48,16 @@ func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
 	}
 
 	if r.options.StorageEnabled {
-		if err := r.ensureStatefulset(ctx); err != nil {
+		if _, err := r.ensureStatefulset(ctx); err != nil {
 			return errors.Wrap(err, "ensure statefulset")
 		}
 	} else {
-		if err := r.ensureDeployment(ctx); err != nil {
+		if _, err := r.ensureDeployment(ctx); err != nil {
 			return errors.Wrap(err, "ensure deployment")
 		}
 	}
 
-	if err := r.ensureService(ctx); err != nil {
+	if _, err := r.ensureService(ctx); err != nil {
 		return errors.Wrap(err, "ensure service")
 	}
 
@@ -70,19 +71,30 @@ func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
 	// Save registry host for rewriting images
 	r.host = fmt.Sprintf("localhost:%d", r.servicePort.NodePort)
 
-	// Start port forwarding
-	tctx, t := ctx.WithNewTomb()
-	pfctx := tctx.WithContext(context.Background())
-	<-t.NotifyGo(func() error {
-		if err = r.startPortForwarding(pfctx); err != nil {
+	// Select the registry pod
+	imageRegistryPod, err := r.selectRegistryPod(ctx)
+	if err != nil {
+		return errors.Wrap(err, "select registry pod")
+	}
+
+	// Check if local registry is already available
+	isRegistryAvailable, err := r.ping(ctx.Context())
+	if err != nil {
+		return errors.Wrap(err, "ping local registry")
+	}
+
+	if !isRegistryAvailable {
+		// Start port forwarding
+		ctx.Log().Debug("Starting local registry port forwarding")
+		if err := r.startPortForwarding(ctx, imageRegistryPod); err != nil {
 			return errors.Wrap(err, "start port forwarding")
 		}
-
-		return nil
-	})
+	} else {
+		ctx.Log().Debug("Skip local registry port forwarding")
+	}
 
 	// Wait for registry to be responsive
-	if err = r.waitForRegistry(ctx.Context()); err != nil {
+	if err := r.waitForRegistry(ctx.Context()); err != nil {
 		return errors.Wrap(err, "wait for registry")
 	}
 
@@ -106,35 +118,51 @@ func (r *LocalRegistry) RewriteImage(image string) (string, error) {
 }
 
 func (r *LocalRegistry) ensureNamespace(ctx devspacecontext.Context) error {
-	_, err := ctx.KubeClient().KubeClient().CoreV1().Namespaces().Create(
-		ctx.Context(),
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: r.options.Namespace,
-			},
-		}, metav1.CreateOptions{},
-	)
+	applyConfiguration, err := applyv1.ExtractNamespace(&corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: r.options.Namespace,
+		},
+	}, ApplyFieldManager)
 	if err != nil {
-		if kerrors.IsAlreadyExists(err) {
-			return nil
-		}
 		return err
 	}
-	return nil
+
+	_, err = ctx.KubeClient().KubeClient().CoreV1().Namespaces().Apply(
+		ctx.Context(),
+		applyConfiguration,
+		metav1.ApplyOptions{
+			FieldManager: ApplyFieldManager,
+			Force:        true,
+		},
+	)
+	return err
 }
 
-func (r *LocalRegistry) startPortForwarding(ctx devspacecontext.Context) error {
+func (r *LocalRegistry) ping(ctx context.Context) (done bool, err error) {
+	registry, err := name.NewRegistry(r.host)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = remote.Catalog(ctx, registry)
+	if err != nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (r *LocalRegistry) selectRegistryPod(ctx devspacecontext.Context) (*corev1.Pod, error) {
 	options := targetselector.NewEmptyOptions().
 		WithLabelSelector(fmt.Sprintf("app=%s", r.options.Name)).
 		WithNamespace(r.options.Namespace).
 		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 500)).
 		WithSkipInitContainers(true)
 	selector := targetselector.NewTargetSelector(options)
-	imageRegistryPod, err := selector.SelectSinglePod(ctx.Context(), ctx.KubeClient(), &log.DiscardLogger{})
-	if err != nil {
-		return errors.Wrap(err, "select registry pod")
-	}
+	return selector.SelectSinglePod(ctx.Context(), ctx.KubeClient(), &log.DiscardLogger{})
+}
 
+func (r *LocalRegistry) startPortForwarding(ctx devspacecontext.Context, imageRegistryPod *corev1.Pod) error {
 	localPort := r.servicePort.NodePort
 	remotePort := r.servicePort.TargetPort.IntVal
 	ports := []string{fmt.Sprintf("%d:%d", localPort, remotePort)}
@@ -201,16 +229,6 @@ func (r *LocalRegistry) waitForNodePort(ctx devspacecontext.Context) (*corev1.Se
 
 func (r *LocalRegistry) waitForRegistry(ctx context.Context) error {
 	return wait.PollImmediateWithContext(ctx, time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
-		registry, err := name.NewRegistry(r.host)
-		if err != nil {
-			return false, err
-		}
-
-		_, err = remote.Catalog(ctx, registry)
-		if err != nil {
-			return false, nil
-		}
-
-		return true, nil
+		return r.ping(ctx)
 	})
 }

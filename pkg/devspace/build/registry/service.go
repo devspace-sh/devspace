@@ -1,54 +1,40 @@
 package registry
 
 import (
-	"encoding/json"
-
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/util/hash"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
-func (r *LocalRegistry) ensureService(ctx devspacecontext.Context) error {
+func (r *LocalRegistry) ensureService(ctx devspacecontext.Context) (*corev1.Service, error) {
+	// Create if it does not exist
 	desired := r.getService()
-	raw, _ := json.Marshal(desired.Spec)
-	desiredConfiguration := hash.String(string(raw))
-	desired.Annotations = map[string]string{}
-	desired.Annotations[LastAppliedConfigurationAnnotation] = desiredConfiguration
-
-	// Check if there's a service already
-	existing, err := ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Get(ctx.Context(), desired.Name, metav1.GetOptions{})
+	existing, err := ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Get(ctx.Context(), r.options.Name, metav1.GetOptions{})
 	if err != nil {
-		// Create if not found
 		if kerrors.IsNotFound(err) {
-			_, err := ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
 		}
+
+		return nil, err
 	}
 
-	if existing.Annotations == nil {
-		existing.Annotations = map[string]string{}
+	// Use server side apply if it does exist
+	applyConfiguration, err := applyv1.ExtractService(existing, ApplyFieldManager)
+	if err != nil {
+		return nil, err
 	}
 
-	// Check if configuration changes need to be applied
-	lastAppliedConfiguration := existing.Annotations[LastAppliedConfigurationAnnotation]
-	if desiredConfiguration != lastAppliedConfiguration {
-		// Update the service
-		existing.Annotations[LastAppliedConfigurationAnnotation] = desiredConfiguration
-		existing.Spec = desired.Spec
-		_, err := ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Update(ctx.Context(), existing, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Apply(
+		ctx.Context(),
+		applyConfiguration,
+		metav1.ApplyOptions{
+			FieldManager: ApplyFieldManager,
+			Force:        true,
+		},
+	)
 }
 
 func (r *LocalRegistry) getService() *corev1.Service {
