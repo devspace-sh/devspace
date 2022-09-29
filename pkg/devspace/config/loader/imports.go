@@ -15,6 +15,7 @@ import (
 )
 
 var ImportSections = []string{
+	"require",
 	"vars",
 	"dev",
 	"deployments",
