@@ -118,25 +118,30 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 				Args:           source.CloneArgs,
 				DisableShallow: source.DisableShallow,
 			})
-			if err != nil {
-				if statErr == nil {
-					log.Warnf("Error cloning or pulling git repository %s: %v", gitPath, err)
-					return getDependencyConfigPath(localPath, source)
-				}
 
+			if err != nil {
+				log.Warn("Error cloning repo: ", err)
+				newGitURL := switchURLType(gitPath)
+				log.Infof("Switching URL from %s to %s and will try cloning again", gitPath, newGitURL)
 				err = repo.Clone(ctx, git.CloneOptions{
-					URL:            switchURLType(gitPath),
+					URL:            newGitURL,
 					Tag:            source.Tag,
 					Branch:         source.Branch,
 					Commit:         source.Revision,
 					Args:           source.CloneArgs,
 					DisableShallow: source.DisableShallow,
 				})
+
 				if err != nil {
+					log.Warn("Failed to clone repo with both HTTPS and SSH URL. Please make sure if your git login or ssh setup is correct.")
+					if statErr == nil {
+						log.Warnf("Error cloning or pulling git repository %s: %v", gitPath, err)
+						return getDependencyConfigPath(localPath, source)
+					}
+
 					return "", errors.Wrap(err, "clone repository")
 				}
 			}
-
 			log.Debugf("Pulled %s", gitPath)
 		}
 	} else if source.Path != "" {
