@@ -21,7 +21,6 @@ require (
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/websocket v1.4.2
-	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
 	github.com/invopop/jsonschema v0.3.0
 	github.com/jessevdk/go-flags v1.4.0

@@ -24,7 +24,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
-	"github.com/hashicorp/go-multierror"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/mitchellh/go-homedir"
@@ -203,7 +203,7 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 		return nil
 	}
 
-	var requireErrs *multierror.Error
+	var aggregatedErrors := []error{}
 
 	if config.Require.DevSpace != "" {
 		parsedConstraint, err := constraint.NewConstraint(config.Require.DevSpace)
@@ -217,7 +217,7 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 		}
 
 		if !parsedConstraint.Check(v) {
-			requireErrs = multierror.Append(requireErrs, fmt.Errorf("DevSpace version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed DevSpace with version %s", upgrade.GetVersion(), config.Require.DevSpace, config.Require.DevSpace))
+			aggregatedErrors = append(aggregatedErrors, fmt.Errorf("DevSpace version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed DevSpace with version %s", upgrade.GetVersion(), config.Require.DevSpace, config.Require.DevSpace))
 		}
 	}
 
@@ -226,10 +226,10 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 		for index, p := range config.Require.Plugins {
 			_, metadata, err := pluginClient.GetByName(p.Name)
 			if err != nil {
-				requireErrs = multierror.Append(requireErrs, fmt.Errorf("cannot find plugin '%s' (%v), however it is required by the config. Please make sure you have installed the plugin '%s' with version %s", p.Name, err, p.Name, p.Version))
+				aggregatedErrors = append(aggregatedErrors, fmt.Errorf("cannot find plugin '%s' (%v), however it is required by the config. Please make sure you have installed the plugin '%s' with version %s", p.Name, err, p.Name, p.Version))
 				continue
 			} else if metadata == nil {
-				requireErrs = multierror.Append(requireErrs, fmt.Errorf("cannot find plugin '%s', however it is required by the config. Please make sure you have installed the plugin '%s' with version %s", p.Name, p.Name, p.Version))
+				aggregatedErrors = append(aggregatedErrors, fmt.Errorf("cannot find plugin '%s', however it is required by the config. Please make sure you have installed the plugin '%s' with version %s", p.Name, p.Name, p.Version))
 				continue
 			}
 
@@ -244,7 +244,7 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 			}
 
 			if !parsedConstraint.Check(v) {
-				requireErrs = multierror.Append(requireErrs, fmt.Errorf("plugin '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed the plugin '%s' with version %s", p.Name, metadata.Version, p.Version, p.Name, p.Version))
+				aggregatedErrors = append(aggregatedErrors, fmt.Errorf("plugin '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed the plugin '%s' with version %s", p.Name, metadata.Version, p.Version, p.Name, p.Version))
 			}
 		}
 	}
@@ -272,7 +272,7 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 
 		out, err := command.Output(ctx, filepath.Dir(l.absConfigPath), expand.ListEnviron(os.Environ()...), c.Name, versionArgs...)
 		if err != nil {
-			requireErrs = multierror.Append(requireErrs, fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version))
+			aggregatedErrors = append(aggregatedErrors, fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version))
 			continue
 		}
 
@@ -287,11 +287,11 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 		}
 
 		if !parsedConstraint.Check(v) {
-			requireErrs = multierror.Append(requireErrs, fmt.Errorf("command '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have correctly installed '%s' with version %s", c.Name, matches[1], c.Version, c.Name, c.Version))
+			aggregatedErrors = append(aggregatedErrors, fmt.Errorf("command '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have correctly installed '%s' with version %s", c.Name, matches[1], c.Version, c.Name, c.Version))
 		}
 	}
 
-	return requireErrs.ErrorOrNil()
+	return kerrors.NewAggregate(aggregatedErrors)
 }
 
 func (l *configLoader) parseConfig(

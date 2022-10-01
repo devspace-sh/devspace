@@ -232,11 +232,6 @@ github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.2
 ## explicit
 github.com/gorilla/websocket
-# github.com/hashicorp/errwrap v1.0.0
-github.com/hashicorp/errwrap
-# github.com/hashicorp/go-multierror v1.1.1
-## explicit
-github.com/hashicorp/go-multierror
 # github.com/iancoleman/orderedmap v0.0.0-20190318233801-ac98e3ecb4b0
 github.com/iancoleman/orderedmap
 # github.com/imdario/mergo v0.3.12
