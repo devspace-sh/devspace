@@ -1201,6 +1201,54 @@
       "type": "object",
       "description": "KubectlConfig defines the specific kubectl options used during deployment"
     },
+    "LocalRegistryConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enabled enables the local registry for pushing images.\nWhen unset the local registry will be used as a fallback if there are no push permissions for the registry.\nWhen `true` the local registry will always be used.\nWhen `false` the local registry will never be used."
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Namespace where the local registry is deployed. Default is the current context's namespace"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the deployment and service of the local registry. Default is `registry`"
+        },
+        "image": {
+          "type": "string",
+          "description": "Image of the local registry. Default is `registry:2.8.1`"
+        },
+        "port": {
+          "type": "integer",
+          "description": "Port that the registry image listens on. Default is `5000`"
+        },
+        "persistence": {
+          "$ref": "#/$defs/LocalRegistryPersistence",
+          "description": "Persistence settings for the local registry"
+        }
+      },
+      "type": "object",
+      "description": "LocalRegistryConfig holds the configuration of the local image registry"
+    },
+    "LocalRegistryPersistence": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable enables persistence for the local registry"
+        },
+        "size": {
+          "type": "string",
+          "description": "Size of the persistent volume for local docker registry storage. Default is `5Gi`"
+        },
+        "storageClassName": {
+          "type": "string",
+          "description": "StorageClassName of the persistent volume. Default is your cluster's configured default storage class"
+        }
+      },
+      "type": "object",
+      "description": "LocalRegistryPersistence configures persistence settings for the local registry"
+    },
     "Logs": {
       "properties": {
         "enabled": {
@@ -2084,6 +2132,10 @@
     "require": {
       "$ref": "#/$defs/RequireConfig",
       "description": "Require defines what DevSpace, plugins and command versions are required to use this config and if a condition is not\nfulfilled, DevSpace will fail."
+    },
+    "localRegistry": {
+      "$ref": "#/$defs/LocalRegistryConfig",
+      "description": "LocalRegistry specifies the configuration for a local image registry"
     }
   },
   "type": "object",
