@@ -2,10 +2,11 @@ package git
 
 import (
 	"context"
-	"github.com/loft-sh/loft-util/pkg/command"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"strings"
+
+	"github.com/loft-sh/loft-util/pkg/command"
+	"mvdan.cc/sh/v3/expand"
 
 	"github.com/pkg/errors"
 )
@@ -64,7 +65,13 @@ func (gr *GitCLIRepository) Clone(ctx context.Context, options CloneOptions) err
 		}
 
 		args = append(args, options.Args...)
-		out, err := command.CombinedOutput(ctx, gr.LocalPath, expand.ListEnviron(os.Environ()...), "git", args...)
+		// Below envvar are required to prevent git from prompting for user login or ssh
+		gitEnv := []string{
+			"GIT_TERMINAL_PROMPT=0",
+			"GIT_SSH_COMMAND=ssh -oBatchMode=yes",
+		}
+		gitEnv = append(gitEnv, os.Environ()...)
+		out, err := command.CombinedOutput(ctx, gr.LocalPath, expand.ListEnviron(gitEnv...), "git", args...)
 		if err != nil {
 			return errors.Errorf("Error running 'git %s': %v -> %s", strings.Join(args, " "), err, string(out))
 		}
