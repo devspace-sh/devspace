@@ -119,6 +119,12 @@ func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, paren
 		if contains(options.SkipDependencies, dependencyConfig.Name) {
 			continue
 		}
+
+		if dependencyConfig.Disabled {
+			ctx.Log().Debugf("Skip dependency %s, because it is disabled", dependencyConfig.Name)
+			continue
+		}
+
 		dependencyConfigPath, err := util.DownloadDependency(ctx.Context(), basePath, dependencyConfig.Source, ctx.Log())
 		if err != nil {
 			return err
