@@ -203,7 +203,7 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 		return nil
 	}
 
-	var aggregatedErrors := []error{}
+	var aggregatedErrors []error
 
 	if config.Require.DevSpace != "" {
 		parsedConstraint, err := constraint.NewConstraint(config.Require.DevSpace)
