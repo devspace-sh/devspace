@@ -145,6 +145,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			OverwriteVars:            dep.OverwriteVars,
 			IgnoreDependencies:       dep.IgnoreDependencies,
 			Namespace:                dep.Namespace,
+			Disabled:                 dep.Disabled,
 		}
 		if dep.Profile != "" {
 			nextConfig.Dependencies[name].Profiles = append(nextConfig.Dependencies[name].Profiles, dep.Profile)

@@ -3,16 +3,17 @@ package framework
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/onsi/gomega"
 	"github.com/pkg/errors"
-	"io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"os"
-	"strings"
-	"time"
 )
 
 // ExpectEqual expects the specified two are the same, otherwise an exception raises
@@ -158,6 +159,12 @@ func ExpectLocalFileContentsImmediately(filePath string, contents string) {
 	out, err := ioutil.ReadFile(filePath)
 	ExpectNoError(err)
 	gomega.ExpectWithOffset(1, string(out)).To(gomega.Equal(contents))
+}
+
+func ExpectLocalFileContainSubstringImmediately(filePath string, contents string) {
+	out, err := ioutil.ReadFile(filePath)
+	ExpectNoError(err)
+	gomega.ExpectWithOffset(1, string(out)).To(gomega.ContainSubstring(contents))
 }
 
 func ExpectLocalFileContents(filePath string, contents string) {

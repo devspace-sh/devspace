@@ -1248,6 +1248,9 @@ type DependencyConfig struct {
 	// Name is used internally
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
+	// Disabled excludes this dependency from variable resolution and pipeline runs
+	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+
 	// Source holds the dependency project
 	Source *SourceConfig `yaml:",inline" json:",inline"`
 

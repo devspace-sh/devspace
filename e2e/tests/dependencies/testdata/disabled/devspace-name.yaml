@@ -1,0 +1,33 @@
+version: v2beta1
+vars:
+  DEP1_DISABLED:
+    default: false
+pipelines:
+  build:
+    run: run_dependencies dep1 --pipeline build
+  deploy:
+    run: |-
+      run_dependencies dep1
+      create_deployments nginx --sequential
+  dev:
+    run: |-
+      run_dependencies dep1
+      create_deployments nginx --sequential
+
+      start_dev --all
+  purge:
+    run: |-
+      stop_dev --all
+      purge_deployments nginx --sequential
+
+      run_dependencies dep1 --pipeline purge
+deployments:
+  nginx:
+    helm:
+      values:
+        containers:
+          - image: nginx
+dependencies:
+  dep1:
+    disabled: ${DEP1_DISABLED}
+    git: https://github.com/doesntexist/youcantcloneme

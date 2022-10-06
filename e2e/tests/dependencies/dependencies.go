@@ -20,6 +20,7 @@ import (
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/onsi/ginkgo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -491,5 +492,85 @@ dep2dep2wait
 		framework.ExpectNoError(err)
 		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "nginx2", metav1.GetOptions{})
 		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should not resolve disabled dependencies", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/disabled")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dep")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		os.Setenv("DEP1_DISABLED", "true")
+		defer os.Unsetenv("DEP1_DISABLED")
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should not run disabled dependencies during run_dependencies --all", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/disabled")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dep")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		os.Setenv("DEP1_DISABLED", "true")
+		defer os.Unsetenv("DEP1_DISABLED")
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "devspace-all.yaml",
+				NoWarn:     true,
+				Namespace:  ns,
+			},
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should error on disabled dependencies during run_dependencies [NAME]", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/disabled")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dep")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		os.Setenv("DEP1_DISABLED", "true")
+		defer os.Unsetenv("DEP1_DISABLED")
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "devspace-name.yaml",
+				NoWarn:     true,
+				Namespace:  ns,
+			},
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
+			Log:      log.GetFileLogger("devspace-name"),
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectError(err)
+		framework.ExpectLocalFileContainSubstringImmediately(".devspace/logs/devspace-name.log", "couldn't find dependency dep1")
 	})
 })
