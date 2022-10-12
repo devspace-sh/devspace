@@ -94,6 +94,41 @@ func (cmd *localRegistryCmd) RunCleanupLocalRegistry(f factory.Factory, cobraCmd
 		WithNamespace(client.Namespace()).
 		WithLocalRegistryConfig(config.LocalRegistry)
 
+	hasStatefulSet := true
+	_, err = client.KubeClient().AppsV1().StatefulSets(options.Namespace).Get(ctx, options.Name, v1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			hasStatefulSet = false
+		} else {
+			return errors.Wrap(err, "clean up statefulset")
+		}
+	}
+
+	hasDeployment := true
+	_, err = client.KubeClient().AppsV1().Deployments(options.Namespace).Get(ctx, options.Name, v1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			hasDeployment = false
+		} else {
+			return errors.Wrap(err, "clean up statefulset")
+		}
+	}
+
+	hasService := true
+	_, err = client.KubeClient().CoreV1().Services(options.Namespace).Get(ctx, options.Name, v1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			hasService = false
+		} else {
+			return errors.Wrap(err, "clean up statefulset")
+		}
+	}
+
+	if !hasStatefulSet && !hasDeployment && !hasService {
+		log.Donef("No local registry found.")
+		return nil
+	}
+
 	// prompt user since this is a destructive action
 	cleanupAnswer, err := log.Question(&survey.QuestionOptions{
 		Question: "This will delete your local registry and all the images it contains. Do you wish to continue?",
@@ -110,19 +145,25 @@ func (cmd *localRegistryCmd) RunCleanupLocalRegistry(f factory.Factory, cobraCmd
 		return nil
 	}
 
-	err = client.KubeClient().AppsV1().StatefulSets(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})
-	if err != nil && !kerrors.IsNotFound(err) {
-		return errors.Wrap(err, "clean up statefulset")
+	if hasStatefulSet {
+		err = client.KubeClient().AppsV1().StatefulSets(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return errors.Wrap(err, "clean up statefulset")
+		}
 	}
 
-	err = client.KubeClient().AppsV1().Deployments(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})
-	if err != nil && !kerrors.IsNotFound(err) {
-		return errors.Wrap(err, "clean up deployment")
+	if hasDeployment {
+		err = client.KubeClient().AppsV1().Deployments(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return errors.Wrap(err, "clean up deployment")
+		}
 	}
 
-	err = client.KubeClient().CoreV1().Services(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})
-	if err != nil && !kerrors.IsNotFound(err) {
-		return errors.Wrap(err, "clean up service")
+	if hasService {
+		err = client.KubeClient().CoreV1().Services(options.Namespace).Delete(ctx, options.Name, v1.DeleteOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return errors.Wrap(err, "clean up service")
+		}
 	}
 
 	log.Donef("Successfully cleaned up local registry")
