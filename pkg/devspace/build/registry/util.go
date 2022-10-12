@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -115,4 +116,19 @@ func CopyImageToRemote(ctx context.Context, imageName string, writer io.Writer) 
 	}
 
 	return <-errChan
+}
+
+func UseMinikubeDocker(ctx devspacecontext.Context, image *latest.Image) bool {
+	// preferMinikube := false
+	var preferMinikube *bool
+
+	if image.Docker != nil {
+		preferMinikube = image.Docker.PreferMinikube
+	}
+
+	if image.BuildKit != nil {
+		preferMinikube = image.BuildKit.PreferMinikube
+	}
+
+	return ctx.KubeClient() != nil && ctx.KubeClient().CurrentContext() == "minikube" && (preferMinikube == nil || *preferMinikube)
 }

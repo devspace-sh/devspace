@@ -98,7 +98,8 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		for key, imageConf := range conf.Images {
 			imageName := imageConf.Image
 			imageConfigName := key
-			isLocalReqistryRequired := !registry.HasPushPermission(imageConf)
+			useMinikubeDocker := registry.UseMinikubeDocker(ctx, imageConf)
+			isLocalReqistryRequired := !useMinikubeDocker && !registry.HasPushPermission(imageConf)
 
 			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
 			if isLocalReqistryRequired {
