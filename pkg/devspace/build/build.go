@@ -115,6 +115,7 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 							WithLocalRegistryConfig(conf.LocalRegistry),
 					)
 
+					ctx := ctx.WithLogger(ctx.Log().WithPrefix("local-registry: "))
 					err := localRegistry.Start(ctx)
 					if err != nil {
 						return errors.Wrap(err, "start registry")
