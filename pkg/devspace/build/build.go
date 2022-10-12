@@ -243,13 +243,13 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 				if pluginErr != nil {
 					return pluginErr
 				}
-				return errors.Wrapf(err, "error building image %s:%s", imageName, imageTags[0])
+				return errors.Wrapf(err, "error building image %s:%s", resolvedImage, imageTags[0])
 			}
 
 			// Update cache
 			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
 			if imageCache.Tag == imageTags[0] {
-				ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTags[0])
+				ctx.Log().Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", resolvedImage, imageTags[0])
 			}
 
 			imageCache.ImageName = imageName
@@ -261,7 +261,6 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 				ImageConfigName: imageConfigName,
 				ImageName:       imageName,
 				ImageTag:        imageTags[0],
-				// LocalRegistryImageName: localRegistryImageName,
 			}
 
 			// Execute before images build hook
