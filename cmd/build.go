@@ -10,9 +10,10 @@ import (
 // NewBuildCmd creates a new devspace build command
 func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *RawConfig) *cobra.Command {
 	cmd := &RunPipelineCmd{
-		GlobalFlags: globalFlags,
-		Pipeline:    "build",
-		ForceBuild:  true,
+		GlobalFlags:             globalFlags,
+		Pipeline:                "build",
+		ForceBuild:              true,
+		SkipPushLocalKubernetes: true,
 	}
 
 	var pipeline *latest.Pipeline
