@@ -664,6 +664,18 @@ func annotateConfig(configPath string) error {
 #     path: ./ui        # Path-based dependencies (for monorepos)
 `)...)
 
+	annotatedConfig = append(annotatedConfig, []byte(`
+# Customize local registry settings 
+# localRegistry:
+#   name: registry
+#   namespace: ${devspace.namespace}
+#   image: registry:2.8.1
+#   port: 5000
+#   persistence:
+#     enabled: false
+#     size: 5Gi
+`)...)
+
 	err = ioutil.WriteFile(configPath, annotatedConfig, os.ModePerm)
 	if err != nil {
 		return err
