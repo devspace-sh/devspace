@@ -95,14 +95,21 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 	if !options.SkipPush &&
 		!useKindLoad &&
 		(registry.IsLocalRegistryEnabled(conf) || registry.IsLocalRegistryFallback(conf)) {
+		ctx := ctx.WithLogger(ctx.Log().WithPrefix("local-registry: "))
 		for key, imageConf := range conf.Images {
 			imageName := imageConf.Image
 			imageConfigName := key
-			useMinikubeDocker := registry.UseMinikubeDocker(ctx, imageConf)
-			isLocalReqistryRequired := !useMinikubeDocker && !registry.HasPushPermission(imageConf)
 
+			// Update cache for non-local registry use by default
 			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
-			if isLocalReqistryRequired {
+			imageCache.LocalRegistryImageName = ""
+
+			// Determine whether the local registry is required / enabled
+			isLocalReqistryRequired := !registry.HasPushPermission(imageConf)
+			useMinikubeDocker := registry.UseMinikubeDocker(ctx, imageConf)
+			if useMinikubeDocker {
+				ctx.Log().Warnf("Using Minikube for image %s, skipping local registry", imageConf.Image)
+			} else if isLocalReqistryRequired {
 				// Not able to deploy a local registry
 				if kubeClient == nil {
 					return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
@@ -115,7 +122,6 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 							WithLocalRegistryConfig(conf.LocalRegistry),
 					)
 
-					ctx := ctx.WithLogger(ctx.Log().WithPrefix("local-registry: "))
 					err := localRegistry.Start(ctx)
 					if err != nil {
 						return errors.Wrap(err, "start registry")
@@ -130,9 +136,6 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 				// Update cache for local registry use
 				imageCache.LocalRegistryImageName = builtImageName
-			} else {
-				// Update if not using local registry
-				imageCache.LocalRegistryImageName = ""
 			}
 			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 		}
