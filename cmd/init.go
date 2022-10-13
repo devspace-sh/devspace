@@ -667,8 +667,9 @@ func annotateConfig(configPath string) error {
 	annotatedConfig = append(annotatedConfig, []byte(`
 # Customize local registry settings 
 # localRegistry:
+#   enabled: true                     # Always use local registry, remove to only use the local registry when required
 #   name: registry
-#   namespace: ${devspace.namespace}
+#   namespace: ${devspace.namespace}  # Uses the current kube context's namespace (can be removed)
 #   image: registry:2.8.1
 #   port: 5000
 #   persistence:
