@@ -1,7 +1,8 @@
 ---
 name: Feature request
 about: Suggest an idea for this project
-
+labels:
+- kind/feature
 ---
 
 **Is your feature request related to a problem?**  
@@ -14,7 +15,3 @@ about: Suggest an idea for this project
 
 
 **Additional context**  
-
-
-<!-- DO NOT EDIT BELOW THIS LINE -->
-/kind feature
