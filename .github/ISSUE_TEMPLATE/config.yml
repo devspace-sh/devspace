@@ -1,0 +1,7 @@
+contact_links:
+  - name: DevSpace channel in K8S slack community
+    url: https://slack.k8s.io/#devspace
+    about: For any queries or have any question related to DevSpace join us on slack
+  - name: Loft labs slack community
+    url: https://slack.loft.sh/
+    about: For any queries or have any question related to DevSpace join us on slack
