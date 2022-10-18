@@ -1512,7 +1512,7 @@ type Variable struct {
 	// system.
 	Commands []VariableCommand `yaml:"commands,omitempty" json:"commands,omitempty" jsonschema_extras:"group=execution"`
 
-	// AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere. Defaults to true.
+	// AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere. Defaults to false.
 	AlwaysResolve *bool `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
 
 	// Source defines where the variable should be taken from

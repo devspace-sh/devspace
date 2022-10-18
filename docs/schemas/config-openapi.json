@@ -263,6 +263,10 @@
                 "type": "string",
                 "description": "Name is used internally"
               },
+              "disabled": {
+                "type": "boolean",
+                "description": "Disabled excludes this dependency from variable resolution and pipeline runs"
+              },
               "path": {
                 "type": "string",
                 "description": "Path is the local path where DevSpace can find the artifact.\nThis option is mutually exclusive with the git option.",
@@ -1902,7 +1906,7 @@
               },
               "alwaysResolve": {
                 "type": "boolean",
-                "description": "AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere. Defaults to true."
+                "description": "AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere. Defaults to false."
               },
               "source": {
                 "type": "string",
