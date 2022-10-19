@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	command2 "github.com/loft-sh/loft-util/pkg/command"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	command2 "github.com/loft-sh/loft-util/pkg/command"
+	"github.com/sirupsen/logrus"
 
 	"github.com/docker/cli/cli/streams"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
@@ -112,13 +113,21 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 	// Authenticate
 	if !b.skipPush && !b.helper.ImageConf.SkipPush {
-		ctx.Log().Info("Authenticating (" + displayRegistryURL + ")...")
-		_, err = b.Authenticate(ctx.Context())
-		if err != nil {
-			return errors.Errorf("Error during image registry authentication: %v", err)
-		}
+		if pullsecrets.IsAzureContainerRegistry(registryURL) {
+			ctx.Log().Warn("Using an Azure Container Registry(ACR), skipping authentication. You may need to refresh your credentials by running 'az acr login'")
+			b.authConfig, err = b.client.GetAuthConfig(ctx.Context(), registryURL, true)
+			if err != nil {
+				return err
+			}
+		} else {
+			ctx.Log().Info("Authenticating (" + displayRegistryURL + ")...")
+			_, err = b.Authenticate(ctx.Context())
+			if err != nil {
+				return errors.Errorf("Error during image registry authentication: %v", err)
+			}
 
-		ctx.Log().Done("Authentication successful (" + displayRegistryURL + ")")
+			ctx.Log().Done("Authentication successful (" + displayRegistryURL + ")")
+		}
 	}
 
 	// Buildoptions

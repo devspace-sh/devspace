@@ -1,6 +1,8 @@
 package pullsecrets
 
 import (
+	"strings"
+
 	"github.com/docker/distribution/reference"
 	dockerregistry "github.com/docker/docker/registry"
 )
@@ -22,4 +24,8 @@ func GetRegistryFromImageName(imageName string) (string, error) {
 	}
 
 	return repoInfo.Index.Name, nil
+}
+
+func IsAzureContainerRegistry(serverAddress string) bool {
+	return strings.HasSuffix(serverAddress, "azurecr.io")
 }

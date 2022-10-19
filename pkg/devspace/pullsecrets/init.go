@@ -1,7 +1,6 @@
 package pullsecrets
 
 import (
-	"strings"
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -18,6 +17,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const AzureContainerRegistryUsername = "00000000-0000-0000-0000-000000000000"
 
 func (r *client) EnsurePullSecret(ctx devspacecontext.Context, dockerClient docker.Client, namespace, registryURL string) error {
 	pullSecret := &latest.PullSecretConfig{Registry: registryURL}
@@ -175,8 +176,8 @@ func (r *client) createPullSecret(ctx devspacecontext.Context, dockerClient dock
 
 			// Handle Azure Container Registry (ACR) when credentials helper does not provide a username
 			// https://learn.microsoft.com/en-us/azure/container-registry/container-registry-authentication?tabs=azure-cli#az-acr-login-with---expose-token
-			if username == "" && strings.HasSuffix(authConfig.ServerAddress, "azurecr.io") {
-				username = "00000000-0000-0000-0000-000000000000"
+			if username == "" && IsAzureContainerRegistry(authConfig.ServerAddress) {
+				username = AzureContainerRegistryUsername
 			}
 		}
 	}
