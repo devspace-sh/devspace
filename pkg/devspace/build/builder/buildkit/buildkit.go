@@ -5,16 +5,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"io"
 	"io/ioutil"
 	"math/rand"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
+	"mvdan.cc/sh/v3/expand"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	command2 "github.com/loft-sh/loft-util/pkg/command"
@@ -23,6 +24,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/build/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dockerpkg "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -65,9 +67,21 @@ func (b *Builder) Build(ctx devspacecontext.Context) error {
 
 // ShouldRebuild determines if an image has to be rebuilt
 func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) (bool, error) {
+	// Check if image is present in local registry
+	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
+	imageName := imageCache.ResolveImage()
+
+	if imageCache.IsLocalRegistryImage() {
+		found, err := registry.IsImageAvailableRemotely(ctx.Context(), imageName)
+		if !found && err == nil {
+			ctx.Log().Infof("Rebuild image %s because it was not found in the local registry", imageName)
+			return true, nil
+		}
+	}
+
 	rebuild, err := b.helper.ShouldRebuild(ctx, forceRebuild)
 
-	// Check if image is present in local repository
+	// Check if image is present in local docker daemon
 	if !rebuild && err == nil && b.helper.ImageConf.BuildKit.InCluster == nil {
 		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
 			dockerClient, err := dockerpkg.NewClientWithMinikube(ctx.Context(), ctx.KubeClient().CurrentContext(), b.helper.ImageConf.BuildKit.PreferMinikube == nil || *b.helper.ImageConf.BuildKit.PreferMinikube, ctx.Log())
@@ -77,8 +91,7 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 
 			found, err := b.helper.IsImageAvailableLocally(ctx, dockerClient)
 			if !found && err == nil {
-				imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
-				ctx.Log().Infof("Rebuild image %s because it was not found in local docker daemon", imageCache.ImageName)
+				ctx.Log().Infof("Rebuild image %s because it was not found in local docker daemon", imageName)
 				return true, nil
 			}
 		}
@@ -119,7 +132,14 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+	usingLocalKubernetes := ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext())
+	if b.skipPushOnLocalKubernetes && usingLocalKubernetes {
+		b.skipPush = true
+	}
+
+	// We skip pushing when using a local registry
+	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
+	if !usingLocalKubernetes && imageCache.IsLocalRegistryImage() {
 		b.skipPush = true
 	}
 
@@ -131,10 +151,10 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 	// Should we build with cli?
 	skipPush := b.skipPush || b.helper.ImageConf.SkipPush
-	return buildWithCLI(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), body, writer, ctx.KubeClient(), builder, buildKitConfig, *buildOptions, useMinikubeDocker, skipPush, ctx.Log())
+	return buildWithCLI(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), body, writer, ctx.KubeClient(), builder, buildKitConfig, *buildOptions, useMinikubeDocker, imageCache.IsLocalRegistryImage(), skipPush, ctx.Log())
 }
 
-func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker, skipPush bool, log logpkg.Logger) error {
+func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker, useLocalRegistry, skipPush bool, log logpkg.Logger) error {
 	command := []string{"docker", "buildx"}
 	if len(imageConf.Command) > 0 {
 		command = imageConf.Command
@@ -156,7 +176,7 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 	for _, tag := range options.Tags {
 		args = append(args, "--tag", tag)
 	}
-	if !skipPush {
+	if !skipPush && !useLocalRegistry {
 		if len(options.Tags) > 0 {
 			args = append(args, "--push")
 		}
@@ -210,19 +230,28 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 	if err != nil {
 		return err
 	}
-	//load image if it is a kind-context
-	if skipPush && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != "" {
-		if len(options.Tags) > 0 {
-			for _, tag := range options.Tags {
-				command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(kubeClient.CurrentContext()), tag}
-				completeArgs := []string{}
-				completeArgs = append(completeArgs, command[1:]...)
-				err = command2.Command(ctx, dir, env.NewVariableEnvProvider(environ, minikubeEnv), writer, writer, nil, command[0], completeArgs...)
-				if err != nil {
-					log.Info(errors.Errorf("error during image load to kind cluster: %v", err))
-				}
-				log.Info("Image loaded to kind cluster")
+
+	if useLocalRegistry && !skipPush {
+		// Push image to local registry
+		for _, tag := range options.Tags {
+			log.Info("The push refers to repository [" + tag + "]")
+			err := registry.CopyImageToRemote(ctx, tag, writer)
+			if err != nil {
+				return errors.Errorf("error during local registry image push: %v", err)
 			}
+			log.Info("Image pushed to local registry")
+		}
+	} else if skipPush && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != "" {
+		// Load image if it is a kind-context
+		for _, tag := range options.Tags {
+			command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(kubeClient.CurrentContext()), tag}
+			completeArgs := []string{}
+			completeArgs = append(completeArgs, command[1:]...)
+			err = command2.Command(ctx, dir, env.NewVariableEnvProvider(environ, minikubeEnv), writer, writer, nil, command[0], completeArgs...)
+			if err != nil {
+				log.Info(errors.Errorf("error during image load to kind cluster: %v", err))
+			}
+			log.Info("Image loaded to kind cluster")
 		}
 	}
 

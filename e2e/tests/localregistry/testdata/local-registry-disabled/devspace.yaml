@@ -1,0 +1,7 @@
+version: v2beta1
+localRegistry:
+  enabled: false
+images:
+  app:
+    image: my-docker-username/helloworld-kaniko
+    dockerfile: ./Dockerfile

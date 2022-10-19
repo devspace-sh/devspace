@@ -1,7 +1,8 @@
 package types
 
 type ImageNameTag struct {
-	ImageConfigName string
-	ImageName       string
-	ImageTag        string
+	ImageConfigName        string
+	ImageName              string
+	LocalRegistryImageName string
+	ImageTag               string
 }

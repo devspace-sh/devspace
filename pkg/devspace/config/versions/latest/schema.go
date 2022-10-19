@@ -118,6 +118,9 @@ type Config struct {
 	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
 	// in the order they are specified. They are deprecated and pipelines should be used instead.
 	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty" jsonschema:"-"`
+
+	// LocalRegistry specifies the configuration for a local image registry
+	LocalRegistry *LocalRegistryConfig `yaml:"localRegistry,omitempty" json:"localRegistry,omitempty"  jsonschema:"-"`
 }
 
 // Import specifies the source of the devspace config to merge
@@ -580,6 +583,42 @@ type CustomConfigCommand struct {
 	Command string `yaml:"command,omitempty" json:"command,omitempty"`
 	// OperatingSystem to run this command on
 	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
+}
+
+// LocalRegistryConfig holds the configuration of the local image registry
+type LocalRegistryConfig struct {
+	// Enabled enables the local registry for pushing images.
+	// When unset the local registry will be used as a fall back if there are no push permissions for the registry.
+	// When true the local registry will always be used
+	// When false the local registry will never be used
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// Namespace where the local registry is deployed
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+
+	// Name of the deployment and service of the local registry
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Image of the local docker registry
+	Image string `yaml:"image,omitempty" json:"image,omitempty"`
+
+	// Port that the registry image listens on
+	Port *int `yaml:"port,omitempty" json:"port,omitempty"`
+
+	// Persistence settings for the local docker registry
+	Persistence *LocalRegistryPersistence `yaml:"persistence,omitempty" json:"persistence,omitempty"`
+}
+
+// LocalRegistryPersistence holds the persistence settings
+type LocalRegistryPersistence struct {
+	// Enable enables persistence for the local docker registry
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// Size of the persistent volume for local docker registry storage
+	Size string `yaml:"size,omitempty" json:"size,omitempty"`
+
+	// StorageClassName of the persistent volume
+	StorageClassName string `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
 }
 
 // DeploymentConfig defines the configuration how the devspace should be deployed

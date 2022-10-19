@@ -90,12 +90,16 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 	config = config2.Ensure(config)
 
 	// strip out images from cache that are not in the images conf anymore
-	imageCache := config.LocalCache().ListImageCache()
+	imageCacheMap := config.LocalCache().ListImageCache()
 
-	// config images
-	configImages := config.Config().Images
-	if configImages == nil {
-		configImages = map[string]*latest.Image{}
+	// strip original image name
+	originalImage := ""
+	if imageCache, ok := imageCacheMap[value]; ok {
+		strippedImage, _, err := dockerfile.GetStrippedDockerImageName(imageCache.ImageName)
+		if err != nil {
+			return false, false, "", nil
+		}
+		originalImage = strippedImage
 	}
 
 	// strip docker image name
@@ -107,27 +111,39 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 	// check if in built images
 	shouldRedeploy := false
 	for _, v := range builtImages {
-		if v.ImageName == image {
+		if v.ImageName == image || v.ImageName == originalImage {
 			shouldRedeploy = true
 			break
 		}
 	}
 
+	// config images
+	configImages := config.Config().Images
+	if configImages == nil {
+		configImages = map[string]*latest.Image{}
+	}
+
 	// search for image name
 	for configImageKey, configImage := range configImages {
-		if configImage.Image != image {
+		if configImage.Image != image && configImage.Image != originalImage {
 			continue
+		}
+
+		effectiveImage := image
+		imageCache, ok := imageCacheMap[configImageKey]
+		if ok && imageCache.LocalRegistryImageName != "" {
+			effectiveImage = imageCache.LocalRegistryImageName
 		}
 
 		// if we only need the image we are done here
 		if onlyImage {
-			return true, shouldRedeploy, configImage.Image, nil
+			return true, shouldRedeploy, effectiveImage, nil
 		}
 
 		// try to find the tag for the image
 		tag := originalTag
-		if imageCache[configImageKey].Tag != "" {
-			tag = imageCache[configImageKey].Tag
+		if imageCache.Tag != "" {
+			tag = imageCache.Tag
 		}
 
 		// does the config have a tag defined?
@@ -146,10 +162,10 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 
 		// return either with or without tag
 		if tag == "" {
-			return true, shouldRedeploy, image, nil
+			return true, shouldRedeploy, effectiveImage, nil
 		}
 
-		return true, shouldRedeploy, image + ":" + tag, nil
+		return true, shouldRedeploy, effectiveImage + ":" + tag, nil
 	}
 
 	// not found, return the initial value

@@ -21,6 +21,7 @@ func NewCleanupCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []
 	}
 
 	cleanupCmd.AddCommand(newImagesCmd(f, globalFlags))
+	cleanupCmd.AddCommand(newLocalRegistryCmd(f, globalFlags))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(cleanupCmd, plugins, "cleanup")

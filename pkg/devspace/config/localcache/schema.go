@@ -3,13 +3,14 @@ package localcache
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/env"
-	"github.com/loft-sh/devspace/pkg/util/encryption"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/loft-sh/devspace/pkg/devspace/env"
+	"github.com/loft-sh/devspace/pkg/util/encryption"
+	"gopkg.in/yaml.v3"
 )
 
 type Cache interface {
@@ -66,8 +67,21 @@ type ImageCache struct {
 
 	CustomFilesHash string `yaml:"customFilesHash,omitempty"`
 
-	ImageName string `yaml:"imageName,omitempty"`
-	Tag       string `yaml:"tag,omitempty"`
+	ImageName              string `yaml:"imageName,omitempty"`
+	LocalRegistryImageName string `yaml:"localRegistryImageName,omitempty"`
+	Tag                    string `yaml:"tag,omitempty"`
+}
+
+func (ic ImageCache) IsLocalRegistryImage() bool {
+	return ic.LocalRegistryImageName != ""
+}
+
+func (ic ImageCache) ResolveImage() string {
+	if ic.IsLocalRegistryImage() {
+		return ic.LocalRegistryImageName
+	}
+
+	return ic.ImageName
 }
 
 func (l *LocalCache) ListImageCache() map[string]ImageCache {

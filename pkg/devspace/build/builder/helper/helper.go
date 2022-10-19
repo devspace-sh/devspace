@@ -1,6 +1,8 @@
 package helper
 
 import (
+	"os"
+
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
@@ -13,7 +15,6 @@ import (
 	"github.com/loft-sh/loft-util/pkg/command"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 // BuildHelper is the helper class to store common functionality used by both the docker and kaniko builder
@@ -42,6 +43,12 @@ func NewBuildHelper(ctx devspacecontext.Context, engineName string, imageConfigN
 		dockerfilePath, contextPath = GetDockerfileAndContext(ctx, imageConf)
 		imageName                   = imageConf.Image
 	)
+
+	// Update the image name to the local registry image name
+	imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
+	if imageCache.IsLocalRegistryImage() {
+		imageName = imageCache.LocalRegistryImageName
+	}
 
 	// Check if we should overwrite entrypoint
 	var (
@@ -208,7 +215,8 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx devspacecontext.Context, docke
 	}
 
 	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.ImageConfigName)
-	imageName := imageCache.ImageName + ":" + imageCache.Tag
+	imageName := imageCache.ResolveImage() + ":" + imageCache.Tag
+
 	dockerAPIClient := dockerClient.DockerAPIClient()
 	imageList, err := dockerAPIClient.ImageList(ctx.Context(), types.ImageListOptions{})
 	if err != nil {

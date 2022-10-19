@@ -3,9 +3,11 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
@@ -106,8 +108,11 @@ var _ = DevSpaceDescribe("config", func() {
 		// read the generated.yaml
 		config, err := localcache.NewCacheLoader().Load(constants.DefaultConfigPath)
 		framework.ExpectNoError(err)
+
 		ic, _ := config.GetImageCache("app-test")
-		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out0.txt"), "my-docker-username/helloworld2:"+ic.Tag)
+		out, err := ioutil.ReadFile(filepath.Join(tempDir, "out0.txt"))
+		framework.ExpectNoError(err)
+		gomega.Expect(string(out)).To(gomega.MatchRegexp("my-docker-username/helloworld2:" + ic.Tag))
 	})
 
 	ginkgo.It("should load multiple profiles in order via --profile", func() {

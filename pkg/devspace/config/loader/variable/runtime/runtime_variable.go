@@ -152,16 +152,15 @@ func GetImage(c config.Config, imageName string, onlyImage, onlyTag bool) (bool,
 }
 
 func BuildImageString(c config.Config, name string, fallbackImage string, fallbackTag string, onlyImage, onlyTag bool) (bool, string) {
-	cache := c.LocalCache()
-	imageCache, _ := cache.GetImageCache(name)
+	imageCache, _ := c.LocalCache().GetImageCache(name)
 
 	// try to find the image
-	image := ""
-	if imageCache.ImageName != "" {
-		image = imageCache.ImageName
-	} else if fallbackImage != "" {
+	image := imageCache.ResolveImage()
+	if image == "" && fallbackImage != "" {
 		image = fallbackImage
-	} else {
+	}
+
+	if image == "" {
 		return false, ""
 	}
 

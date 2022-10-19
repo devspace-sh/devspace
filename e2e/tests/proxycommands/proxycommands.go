@@ -82,7 +82,6 @@ var _ = DevSpaceDescribe("proxyCommands", func() {
 			if err != nil {
 				return false, err
 			}
-			fmt.Printf("%+v\n", pods)
 			return len(pods.Items) > 0, nil
 		})
 		framework.ExpectNoError(err)
