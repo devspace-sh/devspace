@@ -21,6 +21,7 @@ module.exports = {
         'configuration/imports/README',
         'configuration/functions/README',
         'configuration/pipelines/README',
+        'configuration/hooks/README',
         {
           type: 'category',
           label: 'images',
