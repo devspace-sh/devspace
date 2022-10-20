@@ -20,13 +20,24 @@ This project is mainly written in Golang. To contribute code,
 5. Run `go clean -modcache`
 6. Run `go mod vendor` to update the dependencies
 7. Build the project, e.g. via `go build -o devspace.exe`
-8. Make changes
-9.  Run unit tests: `./hack/coverage.bash`
-10. Run E2E tests: `cd e2e/ && go test -v -ginkgo.v`
-11. Format your code: `go fmt ./...`
-12. Commit changes *([Please refer the commit message conventions](https://www.conventionalcommits.org/en/v1.0.0/))*
-13. Push commits
-14. Open pull request
+8. Build devspacehelper using below command
+   ```
+   CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags=-static" -o ~/.devspace/devspacehelper/latest/devspacehelper helper/main.go
+   chmod +x ~/.devspace/devspacehelper/latest/devspacehelper
+   ```
+   The above command is required to be executed as sometimes you may observe below error,
+   ```
+   start_dev: error setting up proxy commands in container:   Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "38d5fc79b8a7c63d38ba5f99237d80df186871fa4b43987a83a926628d1c47e1": OCI runtime exec failed: exec failed: unable to start container process: exec /tmp/devspacehelper: text file busy: unknown
+   ```
+
+
+9. Make changes
+10. Run unit tests: `./hack/coverage.bash`
+11. Run E2E tests: `cd e2e/ && go test -v -ginkgo.v`
+12. Format your code: `go fmt ./...`
+13. Commit changes *([Please refer the commit message conventions](https://www.conventionalcommits.org/en/v1.0.0/))*
+14. Push commits
+15. Open pull request
 
 ## Improving the Documentation
 The documentation is contained within `./docs` and made with Docusaurus. See the [Docs README](./docs) for infos about developing the docs.
