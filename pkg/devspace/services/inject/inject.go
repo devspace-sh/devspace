@@ -67,10 +67,10 @@ func InjectDevSpaceHelper(ctx context.Context, client kubectl.Client, pod *v1.Po
 			arch = "-" + arch
 		}
 	} else {
-		// check arch on pod node\
+		// check arch on pod node
 		stdout, _, err := client.ExecBuffered(ctx, pod, container, []string{"uname", "-a"}, nil)
-		if err != nil {
-			if strings.Contains(string(stdout), "arm64") {
+		if err == nil {
+			if strings.Contains(string(stdout), "arm64") || strings.Contains(string(stdout), "aarch64") {
 				arch = "-" + string(latest.ContainerArchitectureArm64)
 			}
 		}
