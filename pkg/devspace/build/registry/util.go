@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -14,7 +15,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -29,7 +31,7 @@ func HasPushPermission(image *latest.Image) bool {
 }
 
 func IsLocalRegistryFallback(config *latest.Config) bool {
-	return config.LocalRegistry == nil || (config.LocalRegistry != nil || config.LocalRegistry.Enabled == nil)
+	return config.LocalRegistry == nil || (config.LocalRegistry != nil && config.LocalRegistry.Enabled == nil)
 }
 
 func IsLocalRegistryEnabled(config *latest.Config) bool {
@@ -67,13 +69,13 @@ func IsImageAvailableRemotely(ctx context.Context, imageName string) (bool, erro
 	return image != nil, nil
 }
 
-func CopyImageToRemote(ctx context.Context, imageName string, writer io.Writer) error {
+func CopyImageToRemote(ctx context.Context, client dockerclient.Client, imageName string, writer io.Writer) error {
 	ref, err := name.ParseReference(imageName)
 	if err != nil {
 		return err
 	}
 
-	image, err := daemon.Image(ref, daemon.WithContext(ctx))
+	image, err := daemon.Image(ref, daemon.WithContext(ctx), daemon.WithClient(client.DockerAPIClient()))
 	if err != nil {
 		return err
 	}
@@ -118,17 +120,26 @@ func CopyImageToRemote(ctx context.Context, imageName string, writer io.Writer) 
 	return <-errChan
 }
 
-func UseMinikubeDocker(ctx devspacecontext.Context, image *latest.Image) bool {
-	// preferMinikube := false
-	var preferMinikube *bool
-
-	if image.Docker != nil {
-		preferMinikube = image.Docker.PreferMinikube
+func UseLocalRegistry(client kubectl.Client, config *latest.Config, skipPush bool) bool {
+	if skipPush {
+		return false
 	}
 
-	if image.BuildKit != nil {
-		preferMinikube = image.BuildKit.PreferMinikube
+	if client == nil {
+		return false
 	}
 
-	return ctx.KubeClient() != nil && ctx.KubeClient().CurrentContext() == "minikube" && (preferMinikube == nil || *preferMinikube)
+	if !IsLocalRegistryFallback(config) {
+		return IsLocalRegistryEnabled(config)
+	}
+
+	context := client.CurrentContext()
+
+	// Determine if this is a vcluster
+	isVClusterContext := strings.HasPrefix(context, "vcluster_")
+
+	// Determine if this is a local kubernetes cluster
+	isLocalKubernetes := kubectl.IsLocalKubernetes(context)
+
+	return !isLocalKubernetes && !(isVClusterContext && isLocalKubernetes)
 }

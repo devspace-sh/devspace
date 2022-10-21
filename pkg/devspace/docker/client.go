@@ -2,15 +2,17 @@ package docker
 
 import (
 	"context"
-	"github.com/loft-sh/loft-util/pkg/command"
 	"io"
-	"mvdan.cc/sh/v3/expand"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/loft-sh/loft-util/pkg/command"
+	"mvdan.cc/sh/v3/expand"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
 
 	dockertypes "github.com/docker/docker/api/types"
@@ -107,7 +109,7 @@ func newDockerClientFromEnvironment() (Client, error) {
 }
 
 func newDockerClientFromMinikube(ctx context.Context, currentKubeContext string) (Client, error) {
-	if currentKubeContext != "minikube" {
+	if !kubectl.IsMinikubeKubernetes(currentKubeContext) {
 		return nil, errNotMinikube
 	}
 

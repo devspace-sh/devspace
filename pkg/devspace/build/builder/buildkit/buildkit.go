@@ -139,13 +139,13 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 	// We skip pushing when using a local registry
 	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConfigName)
-	if !usingLocalKubernetes && imageCache.IsLocalRegistryImage() {
-		b.skipPush = true
+	if usingLocalKubernetes && imageCache.IsLocalRegistryImage() {
+		b.skipPush = false
 	}
 
 	// Should we use the minikube docker daemon?
 	useMinikubeDocker := false
-	if ctx.KubeClient() != nil && ctx.KubeClient().CurrentContext() == "minikube" && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube) {
+	if ctx.KubeClient() != nil && kubectl.IsMinikubeKubernetes(ctx.KubeClient().CurrentContext()) && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube) {
 		useMinikubeDocker = true
 	}
 
@@ -235,7 +235,13 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 		// Push image to local registry
 		for _, tag := range options.Tags {
 			log.Info("The push refers to repository [" + tag + "]")
-			err := registry.CopyImageToRemote(ctx, tag, writer)
+			preferMinikube := imageConf.PreferMinikube == nil || *imageConf.PreferMinikube
+			client, err := dockerpkg.NewClientWithMinikube(ctx, kubeClient.CurrentContext(), preferMinikube, log)
+			if err != nil {
+				return errors.Wrap(err, "new docker client")
+			}
+
+			err = registry.CopyImageToRemote(ctx, client, tag, writer)
 			if err != nil {
 				return errors.Errorf("error during local registry image push: %v", err)
 			}
