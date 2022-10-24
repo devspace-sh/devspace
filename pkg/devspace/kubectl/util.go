@@ -3,6 +3,10 @@ package kubectl
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -11,14 +15,13 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/transport/spdy"
-	"net"
-	"net/http"
-	"strings"
 )
 
-const minikubeContext = "minikube"
-const dockerDesktopContext = "docker-desktop"
-const dockerForDesktopContext = "docker-for-desktop"
+const (
+	minikubeContext         = "minikube"
+	dockerDesktopContext    = "docker-desktop"
+	dockerForDesktopContext = "docker-for-desktop"
+)
 
 // WaitStatus are the status to wait
 var WaitStatus = []string{
@@ -206,7 +209,23 @@ func IsLocalKubernetes(context string) bool {
 		context == dockerDesktopContext ||
 		context == dockerForDesktopContext {
 		return true
-	} else if strings.HasPrefix(context, "vcluster_") && (strings.HasSuffix(context, minikubeContext) || strings.HasSuffix(context, dockerDesktopContext) || strings.HasSuffix(context, dockerForDesktopContext)) {
+	} else if strings.HasPrefix(context, "vcluster_") &&
+		(strings.HasSuffix(context, minikubeContext) ||
+			strings.HasSuffix(context, dockerDesktopContext) ||
+			strings.HasSuffix(context, dockerForDesktopContext) ||
+			strings.Contains(context, "kind-")) {
+		return true
+	}
+
+	return false
+}
+
+func IsMinikubeKubernetes(context string) bool {
+	if context == minikubeContext {
+		return true
+	}
+
+	if strings.HasPrefix(context, "vcluster_") && strings.HasSuffix(context, minikubeContext) {
 		return true
 	}
 

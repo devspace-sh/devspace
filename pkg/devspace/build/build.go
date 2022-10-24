@@ -11,7 +11,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -89,12 +88,8 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 	// Determine if we need to use the local registry to build any images.
 	kubeClient := ctx.KubeClient()
-	isKindContext := kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != ""
-	useKindLoad := !registry.IsLocalRegistryEnabled(conf) && isKindContext
 	var localRegistry *registry.LocalRegistry
-	if !options.SkipPush &&
-		!useKindLoad &&
-		(registry.IsLocalRegistryEnabled(conf) || registry.IsLocalRegistryFallback(conf)) {
+	if registry.UseLocalRegistry(kubeClient, conf, options.SkipPush) {
 		ctx := ctx.WithLogger(ctx.Log().WithPrefix("local-registry: "))
 		for key, imageConf := range conf.Images {
 			imageName := imageConf.Image
@@ -106,10 +101,7 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 			// Determine whether the local registry is required / enabled
 			isLocalReqistryRequired := !registry.HasPushPermission(imageConf)
-			useMinikubeDocker := registry.UseMinikubeDocker(ctx, imageConf)
-			if useMinikubeDocker {
-				ctx.Log().Warnf("Using Minikube for image %s, skipping local registry", imageConf.Image)
-			} else if isLocalReqistryRequired {
+			if isLocalReqistryRequired {
 				// Not able to deploy a local registry
 				if kubeClient == nil {
 					return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
