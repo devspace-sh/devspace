@@ -2,6 +2,12 @@ package context
 
 import (
 	context2 "context"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -11,11 +17,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/expand"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 func NewContext(ctx context2.Context, variables map[string]interface{}, log log.Logger) Context {
@@ -196,6 +197,15 @@ func (c *context) ResolvePath(relPath string) string {
 	relPath = filepath.ToSlash(relPath)
 	if filepath.IsAbs(relPath) {
 		return path.Clean(relPath)
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		if relPath == "~" {
+			return homeDir
+		} else if strings.HasPrefix(relPath, "~/") {
+			return path.Clean(filepath.Join(homeDir, relPath[2:]))
+		}
 	}
 
 	outPath := path.Join(filepath.ToSlash(c.workingDir), relPath)
