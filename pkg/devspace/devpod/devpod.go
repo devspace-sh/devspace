@@ -4,11 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"io"
 	"net/http"
 	"os"
 	syncpkg "sync"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/mgutz/ansi"
@@ -246,12 +247,17 @@ func (d *devPod) start(ctx devspacecontext.Context, devPodConfig *latest.DevPod,
 
 	// wait for pod to be ready
 	ctx.Log().Infof("Waiting for pod to become ready...")
-	options := targetselector.NewEmptyOptions().
-		ApplyConfigParameter("", devPodConfig.LabelSelector, imageSelector, devPodConfig.Namespace, "").
-		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 500)).
-		WithSkipInitContainers(true)
+	targetSelectorOpts := targetselector.NewEmptyOptions().
+		ApplyConfigParameter("", devPodConfig.LabelSelector, imageSelector, devPodConfig.Namespace, "")
+
+	if devPodConfig.InitContainer {
+		targetSelectorOpts = targetSelectorOpts.WithWaitingStrategy(targetselector.NewUntilInitContainerIsRunningWaitingStrategy(time.Millisecond*500, devPodConfig))
+	} else {
+		targetSelectorOpts = targetSelectorOpts.WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 500))
+	}
+
 	var err error
-	selectedPod, err := targetselector.NewTargetSelector(options).SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
+	selectedPod, err := targetselector.NewTargetSelector(targetSelectorOpts).SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
 		return errors.Wrap(err, "waiting for pod to become ready")
 	}
@@ -261,16 +267,18 @@ func (d *devPod) start(ctx devspacecontext.Context, devPodConfig *latest.DevPod,
 		if devContainer.Container == "" {
 			return true
 		}
-
 		// check if the container exists in the pod
-		for _, container := range selectedPod.Pod.Spec.Containers {
-			if container.Name == devContainer.Container {
-				return true
+		if devPodConfig.DevContainer.InitContainer {
+			for _, container := range selectedPod.Pod.Spec.InitContainers {
+				if container.Name == devContainer.Container {
+					return true
+				}
 			}
-		}
-		for _, container := range selectedPod.Pod.Spec.InitContainers {
-			if container.Name == devContainer.Container {
-				return true
+		} else {
+			for _, container := range selectedPod.Pod.Spec.Containers {
+				if container.Name == devContainer.Container {
+					return true
+				}
 			}
 		}
 
@@ -315,15 +323,29 @@ func (d *devPod) start(ctx devspacecontext.Context, devPodConfig *latest.DevPod,
 	}
 
 	// start sync and port forwarding
-	err = d.startServices(ctx, devPodConfig, newTargetSelector(selectedPod.Pod.Name, selectedPod.Pod.Namespace, selectedPod.Container.Name, parent), opts, parent)
-	if err != nil {
-		return err
+	if !devPodConfig.InitContainer {
+		err = d.startServices(ctx, devPodConfig, newTargetSelector(selectedPod.Pod.Name, selectedPod.Pod.Namespace, selectedPod.Container.Name, parent), opts, parent)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = d.startServices(ctx, devPodConfig, targetselector.NewTargetSelector(targetSelectorOpts), opts, parent)
+		if err != nil {
+			return err
+		}
 	}
 
 	// start logs
+	var targetSelector targetselector.TargetSelector
+	if devPodConfig.InitContainer {
+		targetSelector = targetselector.NewTargetSelector(targetSelectorOpts)
+	} else {
+		targetSelector = newTargetSelector(selectedPod.Pod.Name, selectedPod.Pod.Namespace, selectedPod.Container.Name, parent)
+	}
+
 	terminalDevContainer := d.getTerminalDevContainer(devPodConfig)
 	if terminalDevContainer != nil {
-		return d.startTerminal(ctx, terminalDevContainer, opts, selectedPod, parent)
+		return d.startTerminal(ctx, terminalDevContainer, opts, targetSelector, parent)
 	}
 
 	// start attach if defined
@@ -457,7 +479,7 @@ func (d *devPod) startAttach(ctx devspacecontext.Context, devContainer *latest.D
 	return nil
 }
 
-func (d *devPod) startTerminal(ctx devspacecontext.Context, devContainer *latest.DevContainer, opts Options, selectedPod *selector.SelectedPodContainer, parent *tomb.Tomb) error {
+func (d *devPod) startTerminal(ctx devspacecontext.Context, devContainer *latest.DevContainer, opts Options, targetSelector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	parent.Go(func() error {
 		id, err := logpkg.AcquireGlobalSilence()
 		if err != nil {
@@ -470,7 +492,7 @@ func (d *devPod) startTerminal(ctx devspacecontext.Context, devContainer *latest
 		err = terminal.StartTerminal(
 			ctx,
 			devContainer,
-			newTargetSelector(selectedPod.Pod.Name, selectedPod.Pod.Namespace, selectedPod.Container.Name, parent),
+			targetSelector,
 			DefaultTerminalStdout,
 			DefaultTerminalStderr,
 			DefaultTerminalStdin,

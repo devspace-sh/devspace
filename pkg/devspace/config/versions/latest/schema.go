@@ -872,6 +872,9 @@ type DevContainer struct {
 	// Container is the container name these services should get started.
 	Container string `yaml:"container,omitempty" json:"container,omitempty" jsonschema_extras:"group=selector,group_name=Selector"`
 
+	// InitContainer is set if the dev container is from init containers
+	InitContainer bool `yaml:"initContainer,omitempty" json:"initContainer,omitempty"`
+
 	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64, but
 	// devspace tries to find out the architecture by itself by looking at the node this container runs on.
 	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty" jsonschema_extras:"group=selector"`

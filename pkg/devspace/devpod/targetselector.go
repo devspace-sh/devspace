@@ -2,14 +2,15 @@ package devpod
 
 import (
 	"context"
+	"sort"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	corev1 "k8s.io/api/core/v1"
-	"sort"
-	"time"
 )
 
 type DevPodLostConnection struct{}
@@ -150,6 +151,5 @@ func (u *untilNewestRunning) SelectContainer(ctx context.Context, client kubectl
 		u.podInfoPrinter.PrintPodInfo(ctx, client, containers[0].Pod, log)
 		return false, nil, nil
 	}
-
 	return true, containers[0], nil
 }

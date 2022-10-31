@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"

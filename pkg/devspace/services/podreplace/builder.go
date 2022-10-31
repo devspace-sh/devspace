@@ -231,7 +231,11 @@ func replaceResources(ctx devspacecontext.Context, devPod *latest.DevPod, devCon
 
 	container.Resources.Limits = limits
 	container.Resources.Requests = requests
-	podTemplate.Spec.Containers[index] = *container
+	if devContainer.InitContainer {
+		podTemplate.Spec.InitContainers[index] = *container
+	} else {
+		podTemplate.Spec.Containers[index] = *container
+	}
 	return nil
 }
 
@@ -249,7 +253,11 @@ func replaceWorkingDir(ctx devspacecontext.Context, devPod *latest.DevPod, devCo
 	container.LivenessProbe = nil
 	container.StartupProbe = nil
 	container.WorkingDir = devContainer.WorkingDir
-	podTemplate.Spec.Containers[index] = *container
+	if devContainer.InitContainer {
+		podTemplate.Spec.InitContainers[index] = *container
+	} else {
+		podTemplate.Spec.Containers[index] = *container
+	}
 	return nil
 }
 
@@ -329,7 +337,12 @@ func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devConta
 		if devContainer.Args != nil {
 			container.Args = devContainer.Args
 		}
-		podTemplate.Spec.Containers[index] = *container
+		if devContainer.InitContainer {
+			podTemplate.Spec.InitContainers[index] = *container
+		} else {
+			podTemplate.Spec.Containers[index] = *container
+		}
+
 		return nil
 	}
 
@@ -339,7 +352,11 @@ func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devConta
 	if devContainer.Args != nil {
 		container.Args = devContainer.Args
 	}
-	podTemplate.Spec.Containers[index] = *container
+	if devContainer.InitContainer {
+		podTemplate.Spec.InitContainers[index] = *container
+	} else {
+		podTemplate.Spec.Containers[index] = *container
+	}
 	return nil
 }
 
@@ -360,7 +377,11 @@ func replaceEnv(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer
 		})
 	}
 
-	podTemplate.Spec.Containers[index] = *container
+	if devContainer.InitContainer {
+		podTemplate.Spec.InitContainers[index] = *container
+	} else {
+		podTemplate.Spec.Containers[index] = *container
+	}
 	return nil
 }
 
@@ -379,7 +400,11 @@ func replaceAttach(ctx devspacecontext.Context, devPod *latest.DevPod, devContai
 	container.LivenessProbe = nil
 	container.Stdin = true
 	container.TTY = !devContainer.Attach.DisableTTY
-	podTemplate.Spec.Containers[index] = *container
+	if devContainer.InitContainer {
+		podTemplate.Spec.InitContainers[index] = *container
+	} else {
+		podTemplate.Spec.Containers[index] = *container
+	}
 	return nil
 }
 
@@ -398,13 +423,18 @@ func replaceTerminal(ctx devspacecontext.Context, devPod *latest.DevPod, devCont
 	container.LivenessProbe = nil
 	container.Command = []string{"sleep", "1000000000"}
 	container.Args = []string{}
-	podTemplate.Spec.Containers[index] = *container
+	if devContainer.InitContainer {
+		podTemplate.Spec.InitContainers[index] = *container
+	} else {
+		podTemplate.Spec.Containers[index] = *container
+	}
 	return nil
 }
 
 func getPodTemplateContainer(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) (int, *corev1.Container, error) {
 	containerName := devContainer.Container
-	if containerName == "" && len(podTemplate.Spec.Containers) > 1 {
+	if containerName == "" && (len(podTemplate.Spec.Containers) > 1 ||
+		(devContainer.InitContainer && len(podTemplate.Spec.InitContainers) > 1)) {
 		containers, err := matchesImageSelector(ctx, podTemplate, devPod)
 		if err != nil {
 			return 0, nil, err
@@ -418,6 +448,14 @@ func getPodTemplateContainer(ctx devspacecontext.Context, devPod *latest.DevPod,
 		}
 
 		containerName = containers[0]
+	}
+
+	if devContainer.InitContainer {
+		for i, con := range podTemplate.Spec.InitContainers {
+			if containerName == "" || con.Name == containerName {
+				return i, &con, nil
+			}
+		}
 	}
 
 	for i, con := range podTemplate.Spec.Containers {
@@ -457,7 +495,11 @@ func replaceImage(ctx devspacecontext.Context, devPod *latest.DevPod, devContain
 	container.LivenessProbe = nil
 	container.StartupProbe = nil
 	container.Image = imageStr
-	podTemplate.Spec.Containers[index] = *container
+	if devContainer.InitContainer {
+		podTemplate.Spec.InitContainers[index] = *container
+	} else {
+		podTemplate.Spec.Containers[index] = *container
+	}
 	return nil
 }
 

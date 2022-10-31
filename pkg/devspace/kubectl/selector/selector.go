@@ -274,16 +274,16 @@ func byLabelSelector(ctx context.Context, client kubectl.Client, namespace strin
 
 	for _, pod := range podList.Items {
 		if !skipInit {
-			for _, container := range pod.Spec.InitContainers {
-				if skipContainer != nil && skipContainer(&pod, &container) {
+			for _, initContainer := range pod.Spec.InitContainers {
+				if skipContainer != nil && skipContainer(&pod, &initContainer) {
 					continue
 				}
-				if containerName != "" && container.Name != containerName {
+				if containerName != "" && initContainer.Name != containerName {
 					continue
 				}
 
 				retPod := pod
-				retContainer := container
+				retContainer := initContainer
 				retPods = append(retPods, &SelectedPodContainer{
 					Pod:       &retPod,
 					Container: &retContainer,
@@ -319,18 +319,37 @@ func byImageName(ctx context.Context, client kubectl.Client, namespace string, i
 
 		for _, pod := range podList.Items {
 			if !skipInit {
-				for _, container := range pod.Spec.InitContainers {
+				for _, initContainer := range pod.Spec.InitContainers {
 					for _, imageName := range imageSelector {
-						if skipContainer != nil && skipContainer(&pod, &container) {
+						if skipContainer != nil && skipContainer(&pod, &initContainer) {
 							continue
 						}
-						if containerName != "" && container.Name != containerName {
+						if containerName != "" && initContainer.Name != containerName {
+							continue
+						}
+						// check if it is a replaced pod and if yes, check if the imageName and container name matches
+						containers := map[string]bool{}
+						if pod.Annotations != nil && pod.Annotations[MatchedContainerAnnotation] != "" {
+							splitted := strings.Split(pod.Annotations[MatchedContainerAnnotation], ";")
+							for _, s := range splitted {
+								containers[s] = true
+							}
+						}
+						if pod.Labels != nil && pod.Labels[ReplacedLabel] == "true" && containers[initContainer.Name] {
+							if pod.Annotations != nil && pod.Annotations[ImageSelectorAnnotation] != "" && pod.Annotations[ImageSelectorAnnotation] == imageName {
+								retPod := pod
+								retContainer := initContainer
+								retPods = append(retPods, &SelectedPodContainer{
+									Pod:       &retPod,
+									Container: &retContainer,
+								})
+							}
 							continue
 						}
 
-						if imageselector.CompareImageNames(imageName, container.Image) {
+						if imageselector.CompareImageNames(imageName, initContainer.Image) {
 							retPod := pod
-							retContainer := container
+							retContainer := initContainer
 							retPods = append(retPods, &SelectedPodContainer{
 								Pod:       &retPod,
 								Container: &retContainer,

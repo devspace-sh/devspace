@@ -92,7 +92,7 @@ func InjectDevSpaceHelper(ctx context.Context, client kubectl.Client, pod *v1.Po
 			log.Debugf("Trying to download devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
 			err = installDevSpaceHelperInContainer(ctx, client, pod, container, version, localHelperName)
 			if err == nil {
-				log.Donef("Successfully injected devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
+				log.Donef("Successfully injected devspacehelper into pod %s/%s container %s", pod.Namespace, pod.Name, container)
 				return nil
 			}
 
@@ -114,10 +114,10 @@ func InjectDevSpaceHelper(ctx context.Context, client kubectl.Client, pod *v1.Po
 		// Inject sync helper
 		err = injectSyncHelper(ctx, client, pod, container, filepath.Join(syncBinaryFolder, localHelperName))
 		if err != nil {
-			return errors.Wrap(err, "inject devspace helper")
+			return errors.Wrap(err, "inject devspace sync helper")
 		}
 
-		log.Donef("Successfully injected devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
+		log.Donef("Successfully injected devspace sync helper into pod %s/%s container %s", pod.Namespace, pod.Name, container)
 		return nil
 	}
 

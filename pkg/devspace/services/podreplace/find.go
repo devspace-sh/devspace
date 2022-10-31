@@ -2,6 +2,7 @@ package podreplace
 
 import (
 	"fmt"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -137,14 +138,27 @@ func matchesImageSelector(ctx devspacecontext.Context, pod *corev1.PodTemplateSp
 		}
 
 		loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
-			for i := range pod.Spec.Containers {
-				if devContainer.Container != "" && pod.Spec.Containers[i].Name != devContainer.Container {
-					continue
-				}
+			if devPod.InitContainer {
+				for i := range pod.Spec.InitContainers {
+					if devContainer.Container != "" && pod.Spec.InitContainers[i].Name != devContainer.Container {
+						continue
+					}
 
-				if imageselector.CompareImageNames(imageSelector.Image, pod.Spec.Containers[i].Image) {
-					matchingContainers = append(matchingContainers, pod.Spec.Containers[i].Name)
-					break
+					if imageselector.CompareImageNames(imageSelector.Image, pod.Spec.InitContainers[i].Image) {
+						matchingContainers = append(matchingContainers, pod.Spec.InitContainers[i].Name)
+						break
+					}
+				}
+			} else {
+				for i := range pod.Spec.Containers {
+					if devContainer.Container != "" && pod.Spec.Containers[i].Name != devContainer.Container {
+						continue
+					}
+
+					if imageselector.CompareImageNames(imageSelector.Image, pod.Spec.Containers[i].Image) {
+						matchingContainers = append(matchingContainers, pod.Spec.Containers[i].Name)
+						break
+					}
 				}
 			}
 			return true

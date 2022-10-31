@@ -2,9 +2,10 @@ package targetselector
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"sort"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/log"

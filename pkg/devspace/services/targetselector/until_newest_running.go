@@ -2,14 +2,15 @@ package targetselector
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/util/scanner"
-	"github.com/loft-sh/devspace/pkg/util/stringutil"
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/util/scanner"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
+	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
@@ -89,7 +90,6 @@ func (u *untilNewestRunning) SelectContainer(ctx context.Context, client kubectl
 		u.podInfoPrinter.PrintPodInfo(ctx, client, containers[0].Pod, log)
 		return false, nil, nil
 	}
-
 	return true, containers[0], nil
 }
 

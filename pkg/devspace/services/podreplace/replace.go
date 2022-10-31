@@ -2,6 +2,9 @@ package podreplace
 
 import (
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
@@ -9,8 +12,6 @@ import (
 	patch2 "github.com/loft-sh/devspace/pkg/util/patch"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"strconv"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"

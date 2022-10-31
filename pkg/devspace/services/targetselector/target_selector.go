@@ -3,8 +3,9 @@ package targetselector
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"k8s.io/apimachinery/pkg/labels"
@@ -211,7 +212,6 @@ func (t *targetSelector) SelectSingleContainer(ctx context.Context, client kubec
 
 func (t *targetSelector) SelectSinglePod(ctx context.Context, client kubectl.Client, log log.Logger) (*v1.Pod, error) {
 	log.Debugf("Start selecting a single pod with selector %v", t.options.selector.String())
-
 	if t.options.waitingStrategy != nil {
 		t.options.waitingStrategy = t.options.waitingStrategy.Reset()
 	}
