@@ -8,6 +8,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"sync"
 
 	"io"
 	"io/ioutil"
@@ -34,6 +35,9 @@ func init() {
 		PluginBinary += ".exe"
 	}
 }
+
+var devspaceVars = map[string]string{}
+var devspaceVarsOnce sync.Once
 
 type NewestVersionError struct {
 	version string
@@ -346,6 +350,23 @@ func Decode(encoded string) ([]byte, error) {
 	return encoding.DecodeString(encoded)
 }
 
+func AddDevspaceVarsToPluginEnv(vars interface{}) {
+	devspaceVarsOnce.Do(func() {
+		if vars != nil {
+			devspaceVar, isMapStringInterface := vars.(map[string]interface{})
+			if isMapStringInterface {
+				for key, value := range devspaceVar {
+					// only map[string]string will be processed, map[string]Variable will be skipped
+					vString, isString := value.(string)
+					if isString {
+						devspaceVars[key] = vString
+					}
+				}
+			}
+		}
+	})
+}
+
 func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand string) {
 	for _, plugin := range plugins {
 		pluginFolder := plugin.PluginFolder
@@ -364,7 +385,7 @@ func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand strin
 						newArgs := []string{}
 						newArgs = append(newArgs, md.BaseArgs...)
 						newArgs = append(newArgs, args...)
-						return CallPluginExecutable(filepath.Join(pluginFolder, PluginBinary), newArgs, nil, os.Stdout)
+						return CallPluginExecutable(filepath.Join(pluginFolder, PluginBinary), newArgs, devspaceVars, os.Stdout)
 					},
 					// This passes all the flags to the subcommand.
 					DisableFlagParsing: true,

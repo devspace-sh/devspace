@@ -294,6 +294,9 @@ Additional run commands:
 	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags, rawConfig))
 
 	// Add plugin commands
+	if rawConfig != nil && rawConfig.OriginalRawConfig != nil {
+		plugin.AddDevspaceVarsToPluginEnv(rawConfig.OriginalRawConfig["vars"])
+	}
 	plugin.AddPluginCommands(rootCmd, plugins, "")
 	variable.AddPredefinedVars(plugins)
 	return rootCmd
