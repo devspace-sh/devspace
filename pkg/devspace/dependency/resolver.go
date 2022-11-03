@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -225,6 +226,11 @@ func (r *resolver) resolveDependency(ctx devspacecontext.Context, dependencyConf
 		}
 		if err != nil {
 			return nil, errors.Wrap(err, "create new client")
+		}
+
+		// create namespace if doesn't exists
+		if err = kubectl.EnsureNamespace(ctx.Context(), client, dependency.Namespace, log.Discard); err != nil {
+			return nil, err
 		}
 	}
 
