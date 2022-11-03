@@ -1,6 +1,5 @@
 version: v2beta1
-name: kaniko
-
+name: tanka-deploy
 vars:
   IMAGE_NGINX: nginx:alpine
   TANKA_PATH:
@@ -16,11 +15,3 @@ deployments:
       environmentPath: environments/default
       externalStringVariables:
         IMAGE_NGINX: ${IMAGE_NGINX}
-
-dev:
-  nginx-test-dev:
-    imageSelector: ${IMAGE_NGINX}
-    ports:
-      - port: 8080:80
-    sync:
-      - path: ./nginx-files/:/usr/share/nginx/html/

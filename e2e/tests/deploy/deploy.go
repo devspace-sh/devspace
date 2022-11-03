@@ -85,6 +85,53 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectError(err)
 	})
 
+	ginkgo.It("should deploy tanka application", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/tanka")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new deploy command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if services are there
+		deployment, err := kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "nginx", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectHaveKey(deployment.Labels, "tanka.dev/environment")
+		// create a new purge command
+		purgeCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "purge",
+		}
+
+		// run the command
+		err = purgeCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if services are there
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "nginx", metav1.GetOptions{})
+		framework.ExpectError(err)
+	})
+
 	ginkgo.It("should deploy multiple namespaces", func() {
 		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/different_namespaces")
 		framework.ExpectNoError(err)
