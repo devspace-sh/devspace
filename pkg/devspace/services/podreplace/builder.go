@@ -84,16 +84,16 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
 		podTemplate.Spec.Hostname = strings.ReplaceAll(t.Name+"-0", ".", "-")
 		for _, pvc := range t.Spec.VolumeClaimTemplates {
-			pvcName := pvc.Name
+			pvcName := pvc.ObjectMeta.Name
 			if pvcName == "" {
 				pvcName = "data"
 			}
-			pvcName += "-" + t.Name + "-0"
+			claimName := pvcName + "-" + t.Name + "-0"
 			podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, corev1.Volume{
-				Name: "data",
+				Name: pvcName,
 				VolumeSource: corev1.VolumeSource{
 					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-						ClaimName: pvcName,
+						ClaimName: claimName,
 					},
 				},
 			})
