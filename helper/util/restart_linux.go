@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/pkg/errors"
@@ -69,6 +70,8 @@ func (*containerRestarter) RestartContainer() error {
 	}
 
 	// kill the process group
+	_ = syscall.Kill(-pgid, syscall.SIGINT)
+	time.Sleep(2000)
 	_ = syscall.Kill(-pgid, syscall.SIGKILL)
 	return nil
 }
