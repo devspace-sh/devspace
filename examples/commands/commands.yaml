@@ -1,8 +1,0 @@
-version: v2beta1
-
-profiles:
-  - name: profile1
-  - name: profile2
-commands:
-  test:
-    command: echo "123"
