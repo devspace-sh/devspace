@@ -97,10 +97,10 @@ func (t *tankaEnvironmentImpl) Apply(ctx devspacecontext.Context) error {
 	applyArgs = append(applyArgs, "--auto-approve=always")
 
 	ctx.Log().Debugf("Tanka apply arguments: %v", applyArgs)
-	cmd := exec.Command(t.tkBinaryPath, applyArgs...)
+	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, applyArgs...)
 	cmd.Stderr = out
 	cmd.Stdout = out
-	cmd.Path = t.rootDir
+	cmd.Dir = t.rootDir
 
 	err = cmd.Run()
 
@@ -121,8 +121,8 @@ func (t *tankaEnvironmentImpl) Diff(ctx devspacecontext.Context) (string, error)
 	diffArgs = append(diffArgs, t.flags...)
 	diffArgs = append(diffArgs, []string{"--exit-zero", "--summarize"}...)
 	ctx.Log().Debugf("Tanka diff arguments: %v", diffArgs)
-	cmd := exec.Command(t.tkBinaryPath, diffArgs...)
-	cmd.Path = t.rootDir
+	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, diffArgs...)
+	cmd.Dir = t.rootDir
 
 	out, err := cmd.CombinedOutput()
 
@@ -136,10 +136,10 @@ func (t *tankaEnvironmentImpl) Show(ctx devspacecontext.Context, out io.Writer) 
 	showArgs = append(showArgs, "--dangerous-allow-redirect")
 
 	ctx.Log().Debugf("Tanka show arguments: %v", showArgs)
-	cmd := exec.Command(t.tkBinaryPath, showArgs...)
+	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, showArgs...)
 	cmd.Stdout = out
 	cmd.Stderr = out
-	cmd.Path = t.rootDir
+	cmd.Dir = t.rootDir
 
 	return cmd.Run()
 }
@@ -151,10 +151,10 @@ func (t *tankaEnvironmentImpl) Prune(ctx devspacecontext.Context) error {
 	pruneArgs = append(pruneArgs, t.flags...)
 
 	ctx.Log().Debugf("Tanka prune arguments: %v", pruneArgs)
-	cmd := exec.Command(t.tkBinaryPath, pruneArgs...)
+	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, pruneArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
-	cmd.Path = t.rootDir
+	cmd.Dir = t.rootDir
 
 	return cmd.Run()
 }
@@ -166,10 +166,10 @@ func (t *tankaEnvironmentImpl) Delete(ctx devspacecontext.Context) error {
 	deleteArgs = append(deleteArgs, t.flags...)
 
 	ctx.Log().Debugf("Tanka delete arguments: %v", deleteArgs)
-	cmd := exec.Command(t.tkBinaryPath, deleteArgs...)
+	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, deleteArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
-	cmd.Path = t.rootDir
+	cmd.Dir = t.rootDir
 
 	return cmd.Run()
 }
@@ -178,10 +178,10 @@ func (t *tankaEnvironmentImpl) Install(ctx devspacecontext.Context) error {
 	installArgs := []string{"install"}
 
 	ctx.Log().Debugf("Jb install")
-	cmd := exec.Command(t.jbBinaryPath, installArgs...)
+	cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
-	cmd.Path = t.rootDir
+	cmd.Dir = t.rootDir
 
 	return cmd.Run()
 }
@@ -190,10 +190,10 @@ func (t *tankaEnvironmentImpl) Update(ctx devspacecontext.Context) error {
 	installArgs := []string{"update"}
 
 	ctx.Log().Debugf("Jb update")
-	cmd := exec.Command(t.jbBinaryPath, installArgs...)
+	cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
-	cmd.Path = t.rootDir
+	cmd.Dir = t.rootDir
 
 	return cmd.Run()
 }
