@@ -13,9 +13,9 @@ import (
 
 const (
 	// variables available to the tanka environment when using DevSpace
-	NAMESPACE  = "DEVSPACE_NAMESPACE"
-	API_SERVER = "DEVSPACE_API_SERVER"
-	NAME       = "DEVSPACE_NAME"
+	ExtVarNamespace = "DEVSPACE_NAMESPACE"
+	ExtVarAPIServer = "DEVSPACE_API_SERVER"
+	ExtVarName      = "DEVSPACE_NAME"
 )
 
 // DeployConfig holds the necessary information for tanka deployment
@@ -43,19 +43,19 @@ func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (de
 	}
 
 	// hydrate from deployConfig
-	hydrate[NAME] = deployConfig.Name
-	hydrate[NAMESPACE] = deployConfig.Namespace
+	hydrate[ExtVarName] = deployConfig.Name
+	hydrate[ExtVarNamespace] = deployConfig.Namespace
 
 	// hydrate tanka variables from Kubeconfig
 	if client := ctx.KubeClient(); client != nil {
 
 		// hydrate namespace if not set
-		if hydrate[NAMESPACE] == "" {
-			hydrate[NAMESPACE] = client.Namespace()
+		if hydrate[ExtVarNamespace] == "" {
+			hydrate[ExtVarNamespace] = client.Namespace()
 		}
 
 		// hydrate APIServer
-		hydrate[API_SERVER] = client.RestConfig().Host
+		hydrate[ExtVarAPIServer] = client.RestConfig().Host
 	}
 
 	// merge hydrated
@@ -103,6 +103,8 @@ func (d *DeployConfig) Status(ctx devspacecontext.Context) (*deployer.StatusResu
 
 // Deploy runs `tk apply` to apply local manifests to the cluster.
 func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error) {
+	var err error
+
 	deployCache, _ := ctx.Config().RemoteCache().GetDeployment(d.name)
 
 	// as devspace does not pass the original context on the purge option,
@@ -115,10 +117,18 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error)
 
 	// Check if we need to run jb install
 	if d.tankaConfig.RunJsonnetBundlerInstall {
-		d.tankaEnv.Install(ctx)
+		err = d.tankaEnv.Install(ctx)
+		if err != nil {
+			return false, err
+		}
+
 	}
+
 	if d.tankaConfig.RunJsonnetBundlerUpdate {
-		d.tankaEnv.Update(ctx)
+		err = d.tankaEnv.Update(ctx)
+		if err != nil {
+			return false, err
+		}
 	}
 	// Delete orphaned resources
 	if err := d.tankaEnv.Prune(ctx); err != nil {

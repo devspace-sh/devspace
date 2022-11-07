@@ -34,9 +34,9 @@ func TestNewTankaEnvironment(t *testing.T) {
 						"MY_CODE_ARG": "true",
 					},
 					ExternalStringVariables: map[string]string{
-						"MY_STR_ARG": "my-ext-var-string",
-						NAME:         "my-devspace-name",
-						NAMESPACE:    "my-devspace-namespace",
+						"MY_STR_ARG":    "my-ext-var-string",
+						ExtVarName:      "my-devspace-name",
+						ExtVarNamespace: "my-devspace-namespace",
 					},
 					TopLevelCode:   []string{"true"},
 					TopLevelString: []string{"my-tla-string"},

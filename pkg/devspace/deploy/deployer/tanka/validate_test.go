@@ -55,7 +55,7 @@ func Test_validateConfig(t *testing.T) {
 			args: args{
 				cfg: &latest.DeploymentConfig{Tanka: &latest.TankaConfig{
 					Path:            "./kubernetes/",
-					EnvironmentPath: "./kubernetes/envrionments/devspace",
+					EnvironmentPath: "./kubernetes/environments/devspace",
 				}},
 			},
 			wantErr: false,
@@ -65,7 +65,7 @@ func Test_validateConfig(t *testing.T) {
 			args: args{
 				cfg: &latest.DeploymentConfig{Tanka: &latest.TankaConfig{
 					Path:            "./kubernetes/",
-					EnvironmentPath: "./kubernetes/envrionments/production",
+					EnvironmentPath: "./kubernetes/environments/production",
 					EnvironmentName: "devspace/my-demo-app",
 				}},
 			},

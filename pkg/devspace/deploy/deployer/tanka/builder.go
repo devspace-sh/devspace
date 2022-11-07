@@ -77,8 +77,8 @@ func NewTankaEnvironment(config *latest.TankaConfig) TankaEnvironment {
 		rootDir:      config.Path,
 
 		// Extract those fields from the wellknown configuration
-		name:      config.ExternalStringVariables[NAME],
-		namespace: config.ExternalStringVariables[NAMESPACE],
+		name:      config.ExternalStringVariables[ExtVarName],
+		namespace: config.ExternalStringVariables[ExtVarNamespace],
 
 		// Pass stdout/stderr -> can be replaced for testing
 		stdout: os.Stdout,
@@ -88,11 +88,9 @@ func NewTankaEnvironment(config *latest.TankaConfig) TankaEnvironment {
 
 // Apply implements TankaEnvironment.
 func (t *tankaEnvironmentImpl) Apply(ctx devspacecontext.Context) error {
-	out := new(bytes.Buffer)
+	var err error
 
-	pwd, _ := os.Getwd()
-	defer os.Chdir(pwd)
-	os.Chdir(t.rootDir)
+	out := new(bytes.Buffer)
 
 	applyArgs := append([]string{"apply"}, t.args...)
 	applyArgs = append(applyArgs, t.flags...)
@@ -102,29 +100,29 @@ func (t *tankaEnvironmentImpl) Apply(ctx devspacecontext.Context) error {
 	cmd := exec.Command(t.tkBinaryPath, applyArgs...)
 	cmd.Stderr = out
 	cmd.Stdout = out
+	cmd.Path = t.rootDir
 
-	err := cmd.Run()
+	err = cmd.Run()
 
 	// Proxy output to stderr
-	t.stderr.Write(out.Bytes())
+	// Ignore if this fails or not. The output is wrapped in an error anyways
+	_, _ = t.stderr.Write(out.Bytes())
 
 	if err != nil {
 		return fmt.Errorf(out.String())
 	}
+
 	return nil
 }
 
 // Diff implements TankaEnvironment.
 func (t *tankaEnvironmentImpl) Diff(ctx devspacecontext.Context) (string, error) {
-	pwd, _ := os.Getwd()
-	defer os.Chdir(pwd)
-	os.Chdir(t.rootDir)
-
 	diffArgs := append([]string{"diff"}, t.args...)
 	diffArgs = append(diffArgs, t.flags...)
 	diffArgs = append(diffArgs, []string{"--exit-zero", "--summarize"}...)
 	ctx.Log().Debugf("Tanka diff arguments: %v", diffArgs)
 	cmd := exec.Command(t.tkBinaryPath, diffArgs...)
+	cmd.Path = t.rootDir
 
 	out, err := cmd.CombinedOutput()
 
@@ -133,10 +131,6 @@ func (t *tankaEnvironmentImpl) Diff(ctx devspacecontext.Context) (string, error)
 
 // Show implements TankaEnvironment.
 func (t *tankaEnvironmentImpl) Show(ctx devspacecontext.Context, out io.Writer) error {
-	pwd, _ := os.Getwd()
-	defer os.Chdir(pwd)
-	os.Chdir(t.rootDir)
-
 	showArgs := append([]string{"show"}, t.args...)
 	showArgs = append(showArgs, t.flags...)
 	showArgs = append(showArgs, "--dangerous-allow-redirect")
@@ -145,16 +139,13 @@ func (t *tankaEnvironmentImpl) Show(ctx devspacecontext.Context, out io.Writer) 
 	cmd := exec.Command(t.tkBinaryPath, showArgs...)
 	cmd.Stdout = out
 	cmd.Stderr = out
+	cmd.Path = t.rootDir
 
 	return cmd.Run()
 }
 
 // Prune implements TankaEnvironment.
 func (t *tankaEnvironmentImpl) Prune(ctx devspacecontext.Context) error {
-	pwd, _ := os.Getwd()
-	defer os.Chdir(pwd)
-	os.Chdir(t.rootDir)
-
 	pruneArgs := append([]string{"prune"}, t.args...)
 	pruneArgs = append(pruneArgs, "--auto-approve=always")
 	pruneArgs = append(pruneArgs, t.flags...)
@@ -163,16 +154,13 @@ func (t *tankaEnvironmentImpl) Prune(ctx devspacecontext.Context) error {
 	cmd := exec.Command(t.tkBinaryPath, pruneArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
+	cmd.Path = t.rootDir
 
 	return cmd.Run()
 }
 
 // Delete implements TankaEnvironment.
 func (t *tankaEnvironmentImpl) Delete(ctx devspacecontext.Context) error {
-	pwd, _ := os.Getwd()
-	defer os.Chdir(pwd)
-	os.Chdir(t.rootDir)
-
 	deleteArgs := append([]string{"delete"}, t.args...)
 	deleteArgs = append(deleteArgs, "--auto-approve=always")
 	deleteArgs = append(deleteArgs, t.flags...)
@@ -181,36 +169,31 @@ func (t *tankaEnvironmentImpl) Delete(ctx devspacecontext.Context) error {
 	cmd := exec.Command(t.tkBinaryPath, deleteArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
+	cmd.Path = t.rootDir
 
 	return cmd.Run()
 }
 
 func (t *tankaEnvironmentImpl) Install(ctx devspacecontext.Context) error {
-	pwd, _ := os.Getwd()
-	defer os.Chdir(pwd)
-	os.Chdir(t.rootDir)
-
 	installArgs := []string{"install"}
 
 	ctx.Log().Debugf("Jb install")
 	cmd := exec.Command(t.jbBinaryPath, installArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
+	cmd.Path = t.rootDir
 
 	return cmd.Run()
 }
 
 func (t *tankaEnvironmentImpl) Update(ctx devspacecontext.Context) error {
-	pwd, _ := os.Getwd()
-	defer os.Chdir(pwd)
-	os.Chdir(t.rootDir)
-
 	installArgs := []string{"update"}
 
 	ctx.Log().Debugf("Jb update")
 	cmd := exec.Command(t.jbBinaryPath, installArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
+	cmd.Path = t.rootDir
 
 	return cmd.Run()
 }
