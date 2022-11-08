@@ -3,6 +3,7 @@ package dependencies
 import (
 	"context"
 	"io/ioutil"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -233,6 +234,47 @@ dep2dep2wait
 
 		cancel()
 		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should create namespace if it doesn't exist for dependency", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/ns-creation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dependencies")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		nonExistentNs := "does-not-exist"
+		defer func() {
+			err := kubeClient.DeleteNamespace(nonExistentNs)
+			if !kerrors.IsNotFound(err) {
+				framework.ExpectNoError(err)
+			}
+		}()
+
+		// create a new dev command and start it
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+		cancel()
+
+		// now check if nonExistentNs got created
+		framework.ExpectNamespaceExistence(nonExistentNs)
+
 		framework.ExpectNoError(err)
 	})
 

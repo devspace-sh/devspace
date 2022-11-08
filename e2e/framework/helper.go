@@ -63,6 +63,21 @@ func ExpectEmpty(actual interface{}, explain ...interface{}) {
 	gomega.ExpectWithOffset(1, actual).To(gomega.BeEmpty(), explain...)
 }
 
+func ExpectNamespaceExistence(namespace string) {
+	kubeClient, err := kube.NewKubeHelper()
+	ExpectNoErrorWithOffset(1, err)
+
+	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		ns, err := kubeClient.GetNamespace(namespace)
+		if err != nil {
+			return false, nil
+		}
+
+		return ns.Name == namespace, nil
+	})
+	ExpectNoErrorWithOffset(1, err)
+}
+
 func ExpectRemoteFileContents(imageSelector string, namespace string, filePath string, contents string) {
 	kubeClient, err := kube.NewKubeHelper()
 	ExpectNoErrorWithOffset(1, err)

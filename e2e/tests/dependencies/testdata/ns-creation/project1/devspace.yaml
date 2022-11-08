@@ -1,0 +1,15 @@
+version: v2beta1
+name: project1
+
+deployments:
+  project1-deployment:
+    helm:
+      values:
+        containers:
+          - image: alpine
+
+dev:
+  project1-dev:
+    imageSelector: alpine
+    command: [ "sleep" ]
+    args: [ "1000000" ]

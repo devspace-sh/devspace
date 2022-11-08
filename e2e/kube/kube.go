@@ -98,3 +98,12 @@ func (k *KubeHelper) DeleteNamespace(name string) error {
 	}
 	return nil
 }
+
+func (k *KubeHelper) GetNamespace(nsName string) (*corev1.Namespace, error) {
+	ns, err := k.client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), nsName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}

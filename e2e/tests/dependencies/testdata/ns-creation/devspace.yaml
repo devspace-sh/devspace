@@ -1,0 +1,21 @@
+version: v2beta1
+name: project2
+
+deployments:
+  project2-deployment:
+    helm:
+      values:
+        containers:
+          - image: alpine
+
+dev:
+  project2-dev:
+    imageSelector: alpine
+    command: [ "sleep" ]
+    args: [ "1000000" ]
+
+dependencies:
+  project1:
+    path: project1
+    pipeline: dev
+    namespace: does-not-exist
