@@ -2,7 +2,7 @@ import InteractiveTerminal, { InteractiveTerminalProps } from 'components/advanc
 import { V1PodList } from '@kubernetes/client-node';
 import React from 'react';
 import { SelectedLogs } from 'components/views/Logs/LogsList/LogsList';
-import { ApiHostname } from '../../../../lib/rest';
+import { ApiHostname, ApiWebsocketProtocol } from '../../../../lib/rest';
 import AdvancedCodeLine from 'components/basic/CodeSnippet/AdvancedCodeLine/AdvancedCodeLine';
 import styles from './TerminalCache.module.scss';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
@@ -58,7 +58,7 @@ class TerminalCache extends React.PureComponent<Props, State> {
       this.cache.multiLog = {
         multiple: selected.multiple,
         props: {
-          url: `ws://${ApiHostname()}/api/logs-multiple?context=${this.props.devSpaceConfig.kubeContext}&namespace=${
+          url: `${ApiWebsocketProtocol()}://${ApiHostname()}/api/logs-multiple?context=${this.props.devSpaceConfig.kubeContext}&namespace=${
             this.props.devSpaceConfig.kubeNamespace
           }&imageSelector=${selected.multiple.join('&imageSelector=')}`,
           interactive: false,
@@ -71,7 +71,7 @@ class TerminalCache extends React.PureComponent<Props, State> {
         container: selected.container,
         interactive: selected.interactive,
         props: {
-          url: `ws://${ApiHostname()}/api/${selected.interactive ? 'enter' : 'logs'}?context=${
+          url: `${ApiWebsocketProtocol()}://${ApiHostname()}/api/${selected.interactive ? 'enter' : 'logs'}?context=${
             this.props.devSpaceConfig.kubeContext
           }&namespace=${this.props.devSpaceConfig.kubeNamespace}&name=${selected.pod}&container=${selected.container}`,
           interactive: selected.interactive,
