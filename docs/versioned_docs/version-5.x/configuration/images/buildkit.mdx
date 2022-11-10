@@ -51,7 +51,7 @@ By setting `name` and `namespace` you can share a single BuildKit deployment for
 
 ### `inCluster.name`
 
-The option takes a string and defines the name of the BuildKit builder DevSpace will use or create if it does not exist. `name` will also be the name of the BuildKit deployment that is created by DevSpace. By default, DevSpace will create a BuildKit builder in the following form: devspace-NAMESPACE. For more information about what BuildKit builders are check the [docker docs](https://docs.docker.com/engine/reference/commandline/buildx_create/).
+The option takes a string and defines the name of the BuildKit builder DevSpace will use or create if it does not exist. By default, DevSpace will create a BuildKit builder with the name: devspace-NAMESPACE. For more information about what BuildKit builders are check the [docker docs](https://docs.docker.com/engine/reference/commandline/buildx_create/).
 
 ### `inCluster.rootless`
 
@@ -158,4 +158,3 @@ DevSpace allows you to configure the following build options:
 ### `options.buildArgs`
 
 <FragmentBuildOptionsBuildArgs/>
-
