@@ -3,7 +3,6 @@ package engine
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path/filepath"
@@ -19,7 +18,7 @@ type testCaseShell struct {
 }
 
 func TestShellCat(t *testing.T) {
-	file, err := ioutil.TempFile(".", "testFile")
+	file, err := os.CreateTemp(".", "testFile")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +75,7 @@ func TestShellCatError(t *testing.T) {
 
 // this test forces the cat implementation to execute
 func TestShellCatEnforce(t *testing.T) {
-	file, err := ioutil.TempFile(".", "testFile")
+	file, err := os.CreateTemp(".", "testFile")
 	if err != nil {
 		t.Fatal(err)
 	}

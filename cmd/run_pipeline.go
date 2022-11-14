@@ -31,7 +31,6 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	"io"
-	"io/ioutil"
 	"os"
 )
 
@@ -274,7 +273,7 @@ func initialize(ctx context.Context, f factory.Factory, options *CommandOptions,
 	log.StartFileLogging()
 
 	// create a temporary folder for us to use
-	tempFolder, err := ioutil.TempDir("", "devspace-")
+	tempFolder, err := os.MkdirTemp("", "devspace-")
 	if err != nil {
 		return nil, errors.Wrap(err, "create temporary folder")
 	}

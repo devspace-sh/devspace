@@ -2,7 +2,6 @@ package proxycommands
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 
 	"github.com/loft-sh/devspace/helper/types"
@@ -34,7 +33,7 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 }
 
 func runProxyCommand(args []string) error {
-	key, err := ioutil.ReadFile(sshPrivateKeyPath)
+	key, err := os.ReadFile(sshPrivateKeyPath)
 	if err != nil {
 		return errors.Wrap(err, "read private key")
 	}

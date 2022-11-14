@@ -10,7 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
@@ -74,7 +74,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 			return nil, errors.Wrap(err, "resolve import")
 		}
 
-		fileContent, err := ioutil.ReadFile(configPath)
+		fileContent, err := os.ReadFile(configPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "read import config")
 		}

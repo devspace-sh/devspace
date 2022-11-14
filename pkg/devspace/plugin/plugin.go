@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -153,7 +152,7 @@ func (c *client) install(path, version string) (*Metadata, error) {
 		return nil, err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(pluginFolder, pluginYaml), out, 0666)
+	err = os.WriteFile(filepath.Join(pluginFolder, pluginYaml), out, 0666)
 	if err != nil {
 		return nil, err
 	}
@@ -243,15 +242,20 @@ func (c *client) List() ([]Metadata, error) {
 		return nil, err
 	}
 
-	plugins, err := ioutil.ReadDir(pluginFolder)
+	plugins, err := os.ReadDir(pluginFolder)
 	if err != nil {
 		return nil, err
 	}
 
 	retMetadatas := []Metadata{}
-	for _, plugin := range plugins {
+	for _, dirEntry := range plugins {
+		plugin, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
 		pFolder := filepath.Join(pluginFolder, plugin.Name())
-		metadataFileContents, err := ioutil.ReadFile(filepath.Join(pFolder, pluginYaml))
+		metadataFileContents, err := os.ReadFile(filepath.Join(pFolder, pluginYaml))
 		if os.IsNotExist(err) {
 			_ = os.RemoveAll(filepath.Join(pluginFolder, plugin.Name()))
 			continue
@@ -277,7 +281,7 @@ func (c *client) GetByName(name string) (string, *Metadata, error) {
 		return "", nil, err
 	}
 
-	plugins, err := ioutil.ReadDir(pluginFolder)
+	plugins, err := os.ReadDir(pluginFolder)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", nil, nil
@@ -286,8 +290,13 @@ func (c *client) GetByName(name string) (string, *Metadata, error) {
 		return "", nil, err
 	}
 
-	for _, plugin := range plugins {
-		metadataFileContents, err := ioutil.ReadFile(filepath.Join(pluginFolder, plugin.Name(), pluginYaml))
+	for _, dirEntry := range plugins {
+		plugin, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
+		metadataFileContents, err := os.ReadFile(filepath.Join(pluginFolder, plugin.Name(), pluginYaml))
 		if os.IsNotExist(err) {
 			_ = os.RemoveAll(filepath.Join(pluginFolder, plugin.Name()))
 			continue
@@ -320,7 +329,7 @@ func (c *client) Get(path string) (*Metadata, error) {
 		return nil, err
 	}
 
-	out, err := ioutil.ReadFile(filepath.Join(pluginFolder, Encode(path), pluginYaml))
+	out, err := os.ReadFile(filepath.Join(pluginFolder, Encode(path), pluginYaml))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil

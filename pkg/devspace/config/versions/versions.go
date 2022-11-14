@@ -3,7 +3,6 @@ package versions
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -228,7 +227,7 @@ func getProfiles(ctx context.Context, basePath string, data map[string]interface
 							return err
 						}
 
-						fileContent, err := ioutil.ReadFile(configPath)
+						fileContent, err := os.ReadFile(configPath)
 						if err != nil {
 							return errors.Wrap(err, "read parent config")
 						}

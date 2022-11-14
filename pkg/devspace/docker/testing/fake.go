@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	dockertypes "github.com/docker/docker/api/types"
@@ -39,13 +38,13 @@ func (client *FakeClient) ParseProxyConfig(buildArgs map[string]*string) map[str
 // ImageBuild is a fake implementation
 func (client *FakeClient) ImageBuild(ctx context.Context, context io.Reader, options dockertypes.ImageBuildOptions) (dockertypes.ImageBuildResponse, error) {
 	return dockertypes.ImageBuildResponse{
-		Body: ioutil.NopCloser(bytes.NewBufferString("")),
+		Body: io.NopCloser(bytes.NewBufferString("")),
 	}, nil
 }
 
 // ImagePush is a fake implementation
 func (client *FakeClient) ImagePush(ctx context.Context, ref string, options dockertypes.ImagePushOptions) (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewBufferString("")), nil
+	return io.NopCloser(bytes.NewBufferString("")), nil
 }
 
 // Login is a fake implementation

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -619,7 +618,7 @@ func (cmd *InitCmd) initDockerCompose(f factory.Factory, composePath string) err
 }
 
 func annotateConfig(configPath string) error {
-	annotatedConfig, err := ioutil.ReadFile(configPath)
+	annotatedConfig, err := os.ReadFile(configPath)
 	if err != nil {
 		panic(err)
 	}
@@ -677,7 +676,7 @@ func annotateConfig(configPath string) error {
 #     size: 5Gi
 `)...)
 
-	err = ioutil.WriteFile(configPath, annotatedConfig, os.ModePerm)
+	err = os.WriteFile(configPath, annotatedConfig, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -853,7 +852,7 @@ func appendToIgnoreFile(ignoreFile, content string) error {
 	if os.IsNotExist(err) {
 		_ = fsutil.WriteToFile([]byte(content), ignoreFile)
 	} else {
-		fileContent, err := ioutil.ReadFile(ignoreFile)
+		fileContent, err := os.ReadFile(ignoreFile)
 		if err != nil {
 			return errors.Errorf("Error reading file %s: %v", ignoreFile, err)
 		}

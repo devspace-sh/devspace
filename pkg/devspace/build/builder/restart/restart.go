@@ -2,8 +2,9 @@ package restart
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -135,7 +136,7 @@ func LoadRestartHelper(path string) (string, error) {
 			return "", err
 		}
 
-		out, err := ioutil.ReadAll(resp.Body)
+		out, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return "", err
 		} else if resp.StatusCode >= 400 {
@@ -145,7 +146,7 @@ func LoadRestartHelper(path string) (string, error) {
 		return string(out), nil
 	}
 
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}

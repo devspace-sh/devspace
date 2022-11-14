@@ -2,7 +2,6 @@ package loader
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -490,7 +489,7 @@ func TestParseCommands(t *testing.T) {
 
 	for idx, testCase := range testCases {
 		t.Run("Test "+strconv.Itoa(idx), func(t *testing.T) {
-			f, err := ioutil.TempFile("", "")
+			f, err := os.CreateTemp("", "")
 			if err != nil {
 				t.Fatal(err)
 			}

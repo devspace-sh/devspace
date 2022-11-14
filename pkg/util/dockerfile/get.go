@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"github.com/docker/distribution/reference"
 	dockerregistry "github.com/docker/docker/registry"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -43,7 +43,7 @@ func GetStrippedDockerImageName(imageName string) (string, string, error) {
 
 // GetPorts retrieves all the exported ports from a dockerfile
 func GetPorts(filename string) ([]int, error) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}

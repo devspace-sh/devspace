@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"sync"
 
@@ -292,7 +291,7 @@ func (f *fileLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
 	defer f.m.Unlock()
 
 	if f.level < level {
-		return &NopCloser{ioutil.Discard}
+		return &NopCloser{io.Discard}
 	}
 
 	return &NopCloser{f}

@@ -3,7 +3,7 @@ package commands
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"strings"
 	"time"
 
@@ -36,7 +36,7 @@ func XArgs(ctx context.Context, args []string, handler types.ExecHandler) error 
 	}
 
 	hc := interp.HandlerCtx(ctx)
-	out, err := ioutil.ReadAll(hc.Stdin)
+	out, err := io.ReadAll(hc.Stdin)
 	if err != nil {
 		return err
 	}

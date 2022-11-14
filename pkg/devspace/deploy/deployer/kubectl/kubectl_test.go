@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -183,7 +182,7 @@ func TestRender(t *testing.T) {
 			}
 		}()
 
-		streamOutput, err := ioutil.ReadAll(reader)
+		streamOutput, err := io.ReadAll(reader)
 		assert.NilError(t, err, "Error reading stream in testCase %s", testCase.name)
 		assert.Equal(t, string(streamOutput), testCase.expectedStreamOutput, "Unexpected stream output in testCase %s", testCase.name)
 	}

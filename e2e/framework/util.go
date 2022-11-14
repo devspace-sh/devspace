@@ -3,7 +3,6 @@ package framework
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -100,7 +99,7 @@ func CleanupTempDir(initialDir, tempDir string) {
 }
 
 func CopyToTempDir(relativePath string) (string, error) {
-	dir, err := ioutil.TempDir("", "temp-*")
+	dir, err := os.MkdirTemp("", "temp-*")
 	if err != nil {
 		return "", err
 	}
@@ -126,7 +125,7 @@ func CopyToTempDir(relativePath string) (string, error) {
 }
 
 func ChangeToTempDir() (string, error) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}

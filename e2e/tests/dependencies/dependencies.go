@@ -2,7 +2,6 @@ package dependencies
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -225,7 +224,7 @@ dep2dep2wait
 		framework.ExpectRemoteFileContents("alpine", ns, "/app/test.txt", "dependency123")
 
 		// now check if sync is still working
-		err = ioutil.WriteFile(filepath.Join(dependencyPath, "test123.txt"), []byte("test123"), 0777)
+		err = os.WriteFile(filepath.Join(dependencyPath, "test123.txt"), []byte("test123"), 0777)
 		framework.ExpectNoError(err)
 
 		// now check if file gets synced

@@ -4,7 +4,6 @@
 package sync
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -88,7 +87,7 @@ Outer:
 			localFile := path.Join(local, v.path)
 			remoteFile := path.Join(remote, v.path)
 
-			localData, err := ioutil.ReadFile(localFile)
+			localData, err := os.ReadFile(localFile)
 			if v.shouldExistInLocal && os.IsNotExist(err) {
 				missingFileOrFolder = localFile
 				continue Outer
@@ -101,7 +100,7 @@ Outer:
 				t.Fatal(err)
 			}
 
-			remoteData, err := ioutil.ReadFile(remoteFile)
+			remoteData, err := os.ReadFile(remoteFile)
 			if v.shouldExistInRemote && os.IsNotExist(err) {
 				missingFileOrFolder = remoteFile
 				continue Outer

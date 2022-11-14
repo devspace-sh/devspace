@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,7 +41,7 @@ func ProcessGroups(groups map[string]*Group) {
 			panic(err)
 		}
 
-		err = ioutil.WriteFile(group.File, []byte(groupFileContent), os.ModePerm)
+		err = os.WriteFile(group.File, []byte(groupFileContent), os.ModePerm)
 		if err != nil {
 			panic(err)
 		}

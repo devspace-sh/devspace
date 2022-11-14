@@ -14,7 +14,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
 	"io"
-	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -117,7 +117,7 @@ func applySetValues(ctx devspacecontext.Context, name, objName string, set, setS
 			continue
 		}
 
-		out, err := ioutil.ReadFile(f)
+		out, err := os.ReadFile(f)
 		if err != nil {
 			return nil, fmt.Errorf("read %s: %v", f, err)
 		}

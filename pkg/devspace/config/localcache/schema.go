@@ -3,7 +3,6 @@ package localcache
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -244,5 +243,5 @@ func (l *LocalCache) Save() error {
 		return err
 	}
 
-	return ioutil.WriteFile(l.cachePath, data, 0666)
+	return os.WriteFile(l.cachePath, data, 0666)
 }

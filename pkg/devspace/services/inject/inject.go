@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -188,7 +187,7 @@ func downloadSyncHelper(ctx context.Context, helperName, syncBinaryFolder, versi
 			return nil
 		}
 
-		shaHash, err := ioutil.ReadAll(resp.Body)
+		shaHash, err := io.ReadAll(resp.Body)
 		if err != nil {
 			log.Warnf("Couldn't read helper sha256 request: %v", err)
 			return nil

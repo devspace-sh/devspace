@@ -10,7 +10,6 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -94,14 +93,14 @@ func getHostKey() (string, error) {
 			return "", errors.Wrap(err, "generate host key")
 		}
 
-		err = ioutil.WriteFile(DevSpaceSSHHostKeyFile, []byte(privateKey), 0600)
+		err = os.WriteFile(DevSpaceSSHHostKeyFile, []byte(privateKey), 0600)
 		if err != nil {
 			return "", errors.Wrap(err, "write host key")
 		}
 	}
 
 	// read public key
-	out, err := ioutil.ReadFile(DevSpaceSSHHostKeyFile)
+	out, err := os.ReadFile(DevSpaceSSHHostKeyFile)
 	if err != nil {
 		return "", errors.Wrap(err, "read host ssh key")
 	}
@@ -129,19 +128,19 @@ func getPublicKey() (string, error) {
 			return "", errors.Wrap(err, "generate key pair")
 		}
 
-		err = ioutil.WriteFile(DevSpaceSSHPublicKeyFile, []byte(pubKey), 0644)
+		err = os.WriteFile(DevSpaceSSHPublicKeyFile, []byte(pubKey), 0644)
 		if err != nil {
 			return "", errors.Wrap(err, "write public ssh key")
 		}
 
-		err = ioutil.WriteFile(DevSpaceSSHPrivateKeyFile, []byte(privateKey), 0600)
+		err = os.WriteFile(DevSpaceSSHPrivateKeyFile, []byte(privateKey), 0600)
 		if err != nil {
 			return "", errors.Wrap(err, "write private ssh key")
 		}
 	}
 
 	// read public key
-	out, err := ioutil.ReadFile(DevSpaceSSHPublicKeyFile)
+	out, err := os.ReadFile(DevSpaceSSHPublicKeyFile)
 	if err != nil {
 		return "", errors.Wrap(err, "read public ssh key")
 	}

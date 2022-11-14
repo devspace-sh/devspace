@@ -15,7 +15,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -195,13 +194,18 @@ func (u *Upstream) Checksums(ctx context.Context, paths *remote.TouchPaths) (*re
 }
 
 func (u *Upstream) removeRecursive(absolutePath string) error {
-	files, err := ioutil.ReadDir(absolutePath)
+	files, err := os.ReadDir(absolutePath)
 	if err != nil {
 		return err
 	}
 
 	// Loop over directory contents and check if we should delete the contents
-	for _, f := range files {
+	for _, dirEntry := range files {
+		f, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
 		absoluteChildPath := filepath.Join(absolutePath, f.Name())
 		if fsutil.IsRecursiveSymlink(f, absoluteChildPath) {
 			continue

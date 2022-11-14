@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -514,7 +513,7 @@ func getImages(ctx context.Context, registryHost string) func() ([]string, error
 
 func readFile(name string) func() (string, error) {
 	return func() (string, error) {
-		out, err := ioutil.ReadFile(name)
+		out, err := os.ReadFile(name)
 		if err != nil {
 			if !os.IsNotExist(err) {
 				return "", err

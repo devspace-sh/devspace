@@ -3,7 +3,6 @@ package pipelines
 import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -122,28 +121,28 @@ var _ = DevSpaceDescribe("pipelines", func() {
 		framework.ExpectLocalFileContents("test2.yaml", "Hello World\n")
 
 		// make a change to a txt file
-		err = ioutil.WriteFile("test.txt", []byte("abc.txt"), 0777)
+		err = os.WriteFile("test.txt", []byte("abc.txt"), 0777)
 		framework.ExpectNoError(err)
-		err = ioutil.WriteFile("test2.txt", []byte("abc123.txt"), 0777)
+		err = os.WriteFile("test2.txt", []byte("abc123.txt"), 0777)
 		framework.ExpectNoError(err)
 		time.Sleep(time.Millisecond * 500)
-		err = ioutil.WriteFile("test3.txt", []byte("abc456.txt"), 0777)
+		err = os.WriteFile("test3.txt", []byte("abc456.txt"), 0777)
 		framework.ExpectNoError(err)
-		err = ioutil.WriteFile("test4.txt", []byte("abc789.txt"), 0777)
+		err = os.WriteFile("test4.txt", []byte("abc789.txt"), 0777)
 		framework.ExpectNoError(err)
 
 		framework.ExpectLocalFileContents("test.yaml", "Hello World\nHello World\n")
 		framework.ExpectLocalFileContents("test2.yaml", "Hello World\nHello World\n")
 
 		// make a change to a txt file
-		err = ioutil.WriteFile("test4.txt", []byte("abc.txt"), 0777)
+		err = os.WriteFile("test4.txt", []byte("abc.txt"), 0777)
 		framework.ExpectNoError(err)
-		err = ioutil.WriteFile("test5.txt", []byte("abc123.txt"), 0777)
+		err = os.WriteFile("test5.txt", []byte("abc123.txt"), 0777)
 		framework.ExpectNoError(err)
 		time.Sleep(time.Millisecond * 500)
-		err = ioutil.WriteFile("test6.txt", []byte("abc456.txt"), 0777)
+		err = os.WriteFile("test6.txt", []byte("abc456.txt"), 0777)
 		framework.ExpectNoError(err)
-		err = ioutil.WriteFile("test7.txt", []byte("abc789.txt"), 0777)
+		err = os.WriteFile("test7.txt", []byte("abc789.txt"), 0777)
 		framework.ExpectNoError(err)
 
 		framework.ExpectLocalFileContents("test.yaml", "Hello World\nHello World\nHello World\n")

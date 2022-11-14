@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/kill"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -303,12 +303,12 @@ func disableKlog() {
 	flagSet := &flag.FlagSet{}
 	klog.InitFlags(flagSet)
 	_ = flagSet.Set("logtostderr", "false")
-	klog.SetOutput(ioutil.Discard)
+	klog.SetOutput(io.Discard)
 
 	flagSet = &flag.FlagSet{}
 	klogv2.InitFlags(flagSet)
 	_ = flagSet.Set("logtostderr", "false")
-	klogv2.SetOutput(ioutil.Discard)
+	klogv2.SetOutput(io.Discard)
 }
 
 func parseConfig(f factory.Factory) (*RawConfig, error) {

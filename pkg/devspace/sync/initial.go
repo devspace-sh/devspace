@@ -6,7 +6,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -339,7 +338,7 @@ func (i *initialSyncer) CalculateLocalState(absPath string, localState map[strin
 
 func (i *initialSyncer) calculateLocalDirState(absPath string, stat os.FileInfo, localState map[string]*FileInformation, isSymlink, ignore bool) error {
 	relativePath := getRelativeFromFullPath(absPath, i.o.LocalPath)
-	files, err := ioutil.ReadDir(absPath)
+	files, err := os.ReadDir(absPath)
 	if err != nil {
 		i.o.Log.Infof("Couldn't read dir %s: %v", absPath, err)
 		return nil
@@ -359,13 +358,18 @@ func (i *initialSyncer) calculateLocalDirState(absPath string, stat os.FileInfo,
 		}
 	}
 
-	for _, f := range files {
+	for _, dirEntry := range files {
+		f, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
 		if fsutil.IsRecursiveSymlink(f, filepath.Join(absPath, f.Name())) {
 			i.o.Log.Debugf("Found recursive symlink at %v", filepath.Join(absPath, f.Name()))
 			continue
 		}
 
-		err := i.CalculateLocalState(filepath.Join(absPath, f.Name()), localState, ignore)
+		err = i.CalculateLocalState(filepath.Join(absPath, f.Name()), localState, ignore)
 		if err != nil {
 			return errors.Wrap(err, f.Name())
 		}

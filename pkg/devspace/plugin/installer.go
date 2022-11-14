@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,7 +42,7 @@ func (i *installer) DownloadBinary(metadataPath, version, binaryPath, outFile st
 		return i.downloadTo(binaryPath, outFile)
 	}
 
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return err
 	}
@@ -83,7 +82,7 @@ func (i *installer) downloadTo(binaryPath, outFile string) error {
 
 func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 	if isLocalReference(path) {
-		out, err := ioutil.ReadFile(path)
+		out, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +100,7 @@ func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 			return nil, err
 		}
 
-		out, err := ioutil.ReadAll(resp.Body)
+		out, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +114,7 @@ func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 		return metadata, nil
 	}
 
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +133,7 @@ func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 		return nil, err
 	}
 
-	out, err := ioutil.ReadFile(filepath.Join(tempDir, pluginYaml))
+	out, err := os.ReadFile(filepath.Join(tempDir, pluginYaml))
 	if err != nil {
 		return nil, err
 	}

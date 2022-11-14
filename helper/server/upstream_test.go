@@ -8,7 +8,6 @@ import (
 	"compress/gzip"
 	"context"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -73,7 +72,7 @@ var overwriteFileStructure = testFile{
 }
 
 func compareFiles(dir string, file testFile) error {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
@@ -90,7 +89,7 @@ func compareFiles(dir string, file testFile) error {
 					return errors.Errorf("child %s in dir %s: real isDir %v != expected isDir %v", childName, dir, f.IsDir(), child.Children != nil)
 				}
 				if child.Data != nil {
-					data, err := ioutil.ReadFile(filepath.Join(dir, f.Name()))
+					data, err := os.ReadFile(filepath.Join(dir, f.Name()))
 					if err != nil {
 						return err
 					}
@@ -131,7 +130,7 @@ func createFiles(dir string, file testFile) error {
 				return err
 			}
 		} else {
-			err := ioutil.WriteFile(filepath.Join(dir, name), child.Data, 0666)
+			err := os.WriteFile(filepath.Join(dir, name), child.Data, 0666)
 			if err != nil {
 				return err
 			}
@@ -256,7 +255,7 @@ func TestUpstreamServer(t *testing.T) {
 	}
 
 	// Check if toDir is empty
-	files, err := ioutil.ReadDir(toDir)
+	files, err := os.ReadDir(toDir)
 	if err != nil {
 		t.Fatal(err)
 	}

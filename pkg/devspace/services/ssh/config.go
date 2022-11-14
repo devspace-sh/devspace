@@ -6,7 +6,6 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -49,7 +48,7 @@ func configureSSHConfigSameFile(host, port string, log log.Logger) error {
 		log.Debugf("error creating ssh directory: %v", err)
 	}
 
-	err = ioutil.WriteFile(sshConfigPath, []byte(newFile), 0600)
+	err = os.WriteFile(sshConfigPath, []byte(newFile), 0600)
 	if err != nil {
 		return errors.Wrap(err, "write ssh config")
 	}
@@ -84,13 +83,13 @@ func configureSSHConfigSeparateFile(host, port string, log log.Logger) error {
 	}
 
 	if newSSHFile != "" {
-		err = ioutil.WriteFile(sshConfigPath, []byte(newSSHFile), 0600)
+		err = os.WriteFile(sshConfigPath, []byte(newSSHFile), 0600)
 		if err != nil {
 			return errors.Wrap(err, "write ssh config")
 		}
 	}
 
-	err = ioutil.WriteFile(devSpaceSSHConfigPath, []byte(newFile), 0600)
+	err = os.WriteFile(devSpaceSSHConfigPath, []byte(newFile), 0600)
 	if err != nil {
 		return errors.Wrap(err, "write devspace ssh config")
 	}

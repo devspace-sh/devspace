@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/mitchellh/go-homedir"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,7 +52,7 @@ func NewConfigureCmd() *cobra.Command {
 func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 	// try to load the old commands
 	oldCommands := []string{}
-	out, err := ioutil.ReadFile(proxyCommandsPath)
+	out, err := os.ReadFile(proxyCommandsPath)
 	if err == nil {
 		oldCommands = strings.Split(string(out), ",")
 	}
@@ -63,7 +62,7 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 		filePath := "/usr/local/bin/" + c
 		executeCommand := fmt.Sprintf(`#!/bin/sh
 /tmp/devspacehelper proxy-commands run %s "$@"`, c)
-		err := ioutil.WriteFile(filePath, []byte(executeCommand), 0777)
+		err := os.WriteFile(filePath, []byte(executeCommand), 0777)
 		if err != nil {
 			return fmt.Errorf("error writing command '%s': %v", filePath, err)
 		}
@@ -83,7 +82,7 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 			_ = os.Remove("/usr/local/bin/" + oldCommand)
 		}
 	}
-	err = ioutil.WriteFile(proxyCommandsPath, []byte(strings.Join(cmd.Commands, ",")), 0644)
+	err = os.WriteFile(proxyCommandsPath, []byte(strings.Join(cmd.Commands, ",")), 0644)
 	if err != nil {
 		stderrlog.Errorf("error writing %s: %v", proxyCommandsPath, err)
 	}
@@ -96,7 +95,7 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 			return errors.Wrap(err, "decode public key")
 		}
 
-		err = ioutil.WriteFile(sshPublicKeyPath, decodedPublicKey, 0644)
+		err = os.WriteFile(sshPublicKeyPath, decodedPublicKey, 0644)
 		if err != nil {
 			return errors.Wrap(err, "write public key")
 		}
@@ -107,7 +106,7 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 			return errors.Wrap(err, "decode private key")
 		}
 
-		err = ioutil.WriteFile(sshPrivateKeyPath, decodedPrivateKey, 0600)
+		err = os.WriteFile(sshPrivateKeyPath, decodedPrivateKey, 0600)
 		if err != nil {
 			return errors.Wrap(err, "write private key")
 		}
@@ -131,10 +130,10 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 		}
 
 		gitConfigPath := filepath.Join(homeDir, ".gitconfig")
-		out, err = ioutil.ReadFile(gitConfigPath)
+		out, err = os.ReadFile(gitConfigPath)
 		if err != nil || !strings.Contains(string(out), "helper = \"/tmp/devspacehelper proxy-commands git-credentials\"") {
 			content := string(out) + "\n" + "[credential]" + "\n" + "        helper = \"/tmp/devspacehelper proxy-commands git-credentials\"\n"
-			err = ioutil.WriteFile(gitConfigPath, []byte(content), 0644)
+			err = os.WriteFile(gitConfigPath, []byte(content), 0644)
 			if err != nil {
 				return errors.Wrap(err, "write git config")
 			}

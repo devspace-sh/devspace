@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -247,7 +246,7 @@ func (a *Archiver) AddToArchive(relativePath string) error {
 
 func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) error {
 	filePath := path.Join(a.basePath, target.Name)
-	files, err := ioutil.ReadDir(filePath)
+	files, err := os.ReadDir(filePath)
 	if err != nil {
 		// config.Logf("[Upstream] Couldn't read dir %s: %s\n", filepath, err.Error())
 		return nil
@@ -270,12 +269,17 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 		}
 	}
 
-	for _, f := range files {
+	for _, dirEntry := range files {
+		f, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
 		if fsutil.IsRecursiveSymlink(f, path.Join(filePath, f.Name())) {
 			continue
 		}
 
-		if err := a.AddToArchive(path.Join(target.Name, f.Name())); err != nil {
+		if err = a.AddToArchive(path.Join(target.Name, f.Name())); err != nil {
 			return errors.Wrap(err, "recursive tar "+f.Name())
 		}
 	}

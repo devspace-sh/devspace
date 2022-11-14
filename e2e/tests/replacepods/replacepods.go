@@ -2,7 +2,6 @@ package replacepods
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -75,7 +74,7 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectRemoteFileContents("ubuntu", ns, "/test.txt", "Hello World\n")
 
 		// upload a file and restart the container
-		err = ioutil.WriteFile("test1.txt", []byte("Hello World2!"), 0777)
+		err = os.WriteFile("test1.txt", []byte("Hello World2!"), 0777)
 		framework.ExpectNoError(err)
 
 		// wait for uploaded
@@ -133,11 +132,11 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectEqual(out, "test-statefulset-0")
 
 		// now make a change to the config
-		fileContents, err := ioutil.ReadFile("devspace.yaml")
+		fileContents, err := os.ReadFile("devspace.yaml")
 		framework.ExpectNoError(err)
 
 		newString := strings.ReplaceAll(string(fileContents), "ubuntu:18.04", "alpine:3.14")
-		err = ioutil.WriteFile("devspace.yaml", []byte(newString), 0666)
+		err = os.WriteFile("devspace.yaml", []byte(newString), 0666)
 		framework.ExpectNoError(err)
 
 		// rerun
@@ -235,11 +234,11 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectEqual(pods.Items[0].Spec.Containers[0].Image, "ubuntu:18.04")
 
 		// now make a change to the config
-		fileContents, err := ioutil.ReadFile("devspace.yaml")
+		fileContents, err := os.ReadFile("devspace.yaml")
 		framework.ExpectNoError(err)
 
 		newString := strings.ReplaceAll(string(fileContents), "ubuntu:18.04", "alpine:3.14")
-		err = ioutil.WriteFile("devspace.yaml", []byte(newString), 0666)
+		err = os.WriteFile("devspace.yaml", []byte(newString), 0666)
 		framework.ExpectNoError(err)
 
 		// rerun
