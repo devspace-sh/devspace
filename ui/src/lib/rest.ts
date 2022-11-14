@@ -7,3 +7,11 @@ export const ApiHostname = () => {
 
   return location.hostname + ':' + location.port;
 };
+
+export const ApiWebsocketProtocol = () => {
+  if (location.protocol === 'https:') {
+    return 'wss';
+  } else {
+    return 'ws';
+  }
+}

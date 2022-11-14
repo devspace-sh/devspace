@@ -7,7 +7,7 @@ import PlayIcon from 'images/play-icon.svg';
 import PauseIcon from 'images/pause-blue-icon.svg';
 import IconButton from 'components/basic/IconButton/IconButton';
 import CodeSnippet from 'components/basic/CodeSnippet/CodeSnippet';
-import { ApiHostname } from 'lib/rest';
+import { ApiHostname, ApiWebsocketProtocol } from 'lib/rest';
 import SimpleCodeLine from 'components/basic/CodeSnippet/SimpleCodeLine/SimpleCodeLine';
 
 interface Props extends DevSpaceConfigContext {
@@ -26,7 +26,7 @@ export const getURLByName = (name: string) => {
     return null;
   }
 
-  return `ws://${ApiHostname()}/api/command?name=${name}`;
+  return `${ApiWebsocketProtocol()}://${ApiHostname()}/api/command?name=${name}`;
 };
 
 class CommandsList extends React.PureComponent<Props, State> {
