@@ -1,7 +1,6 @@
 package upgrade
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -49,7 +48,7 @@ func TestUpgrade(t *testing.T) {
 		}
 	}()
 
-	logFile, err := ioutil.TempFile(dir, "log")
+	logFile, err := os.CreateTemp(dir, "log")
 	if err != nil {
 		t.Fatalf("Error creating temporary log file: %v", err)
 	}
@@ -73,7 +72,7 @@ func TestUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error closing temporary log file: %v", err)
 	}
-	logs, err := ioutil.ReadFile(logFile.Name())
+	logs, err := os.ReadFile(logFile.Name())
 	if err != nil {
 		t.Fatalf("Error reading temporary log file: %v", err)
 	}

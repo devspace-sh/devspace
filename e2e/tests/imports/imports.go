@@ -7,7 +7,6 @@ import (
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
-	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -112,7 +111,7 @@ var _ = DevSpaceDescribe("imports", func() {
 		framework.ExpectNoError(err)
 
 		// read temp folder
-		out, err := ioutil.ReadFile("temp.txt")
+		out, err := os.ReadFile("temp.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectLocalFileContentsWithoutSpaces("name.txt", "base")
 		framework.ExpectLocalFileContentsWithoutSpaces("dependency.txt", "import3")

@@ -3,7 +3,6 @@ package util
 import (
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/pkg/errors"
-	"io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -98,7 +97,7 @@ func inClusterNamespace() (string, error) {
 		return envNamespace, nil
 	}
 
-	namespace, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	namespace, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
 		return "", err
 	}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -69,7 +68,7 @@ func main() {
 		anchorName := function.Name
 		functionContent := importContent + "\n" + fmt.Sprintf(util.TemplateFunctionRef, flagContent != "", "", "### ", function.Name, function.Args, argEnum, function.Return, !function.IsGlobal, anchorName, function.Description, flagContent)
 
-		err = ioutil.WriteFile(functionFile, []byte(functionContent), os.ModePerm)
+		err = os.WriteFile(functionFile, []byte(functionContent), os.ModePerm)
 		if err != nil {
 			panic(err)
 		}
@@ -163,17 +162,17 @@ func main() {
 
 	util.ProcessGroups(groups)
 
-	err := ioutil.WriteFile(functionRefFile, []byte(functionRefContent), os.ModePerm)
+	err := os.WriteFile(functionRefFile, []byte(functionRefContent), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(globalFunctionRefFile, []byte(globalFunctionRefContent), os.ModePerm)
+	err = os.WriteFile(globalFunctionRefFile, []byte(globalFunctionRefContent), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(pipelineFunctionRefFile, []byte(pipelineFunctionRefContent), os.ModePerm)
+	err = os.WriteFile(pipelineFunctionRefFile, []byte(pipelineFunctionRefContent), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
@@ -210,7 +209,7 @@ func getFlagReference(functionName, functionFile string, flagRef reflect.Type, p
 			panic(err)
 		}
 
-		err = ioutil.WriteFile(flagFile, []byte(flagContent), os.ModePerm)
+		err = os.WriteFile(flagFile, []byte(flagContent), os.ModePerm)
 		if err != nil {
 			panic(err)
 		}

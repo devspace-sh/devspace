@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -110,12 +109,12 @@ func WriteYamlToFile(yamlData interface{}, filePath string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filePath, yamlString, os.ModePerm)
+	return os.WriteFile(filePath, yamlString, os.ModePerm)
 }
 
 // ReadYamlFromFile reads a yaml file
 func ReadYamlFromFile(filePath string, yamlTarget interface{}) error {
-	yamlFile, err := ioutil.ReadFile(filePath)
+	yamlFile, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}

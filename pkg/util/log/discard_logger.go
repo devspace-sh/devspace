@@ -2,7 +2,6 @@ package log
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/loft-sh/devspace/pkg/util/survey"
@@ -93,7 +92,7 @@ func (d *DiscardLogger) Write(message []byte) (int, error) {
 }
 
 func (d *DiscardLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
-	return &NopCloser{ioutil.Discard}
+	return &NopCloser{io.Discard}
 }
 
 // WriteString implements logger interface

@@ -3,7 +3,6 @@ package loader
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -589,7 +588,7 @@ func (l *configLoader) LoadRaw() (map[string]interface{}, error) {
 		return nil, errors.Errorf("Couldn't load '%s': %v", configPath, err)
 	}
 
-	fileContent, err := ioutil.ReadFile(configPath)
+	fileContent, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}

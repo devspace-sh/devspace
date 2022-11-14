@@ -6,7 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/loft-util/pkg/command"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -46,7 +46,7 @@ type client struct {
 }
 
 func (c *client) WriteValues(values map[string]interface{}) (string, error) {
-	f, err := ioutil.TempFile("", "")
+	f, err := os.CreateTemp("", "")
 	if err != nil {
 		return "", err
 	}

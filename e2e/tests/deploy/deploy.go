@@ -2,7 +2,6 @@ package deploy
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,13 +104,13 @@ var _ = DevSpaceDescribe("deploy", func() {
 
 		// exchange kube manifests
 		manifests := filepath.Join(tempDir, "kube", "service1.yaml")
-		out, err := ioutil.ReadFile(manifests)
+		out, err := os.ReadFile(manifests)
 		framework.ExpectNoError(err)
 
 		data := strings.ReplaceAll(string(out), "###NAMESPACE1###", ns)
 		data = strings.ReplaceAll(data, "###NAMESPACE2###", ns2)
 
-		err = ioutil.WriteFile(manifests, []byte(data), 0777)
+		err = os.WriteFile(manifests, []byte(data), 0777)
 		framework.ExpectNoError(err)
 
 		// create a new deploy command

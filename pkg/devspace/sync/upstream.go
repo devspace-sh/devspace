@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path"
@@ -539,7 +538,7 @@ func (u *upstream) evaluateChange(relativePath, fullPath string) ([]*FileInforma
 		return []*FileInformation{fileInfo}, nil
 	} else if stat.IsDir() {
 		// if the change is a directory we walk the directory for other potential changes
-		files, err := ioutil.ReadDir(fullPath)
+		files, err := os.ReadDir(fullPath)
 		if err != nil {
 			// Remove symlinks
 			u.RemoveSymlinks(fullPath)
@@ -558,7 +557,12 @@ func (u *upstream) evaluateChange(relativePath, fullPath string) ([]*FileInforma
 		}
 
 		changes := []*FileInformation{}
-		for _, f := range files {
+		for _, dirEntry := range files {
+			f, err := dirEntry.Info()
+			if err != nil {
+				continue
+			}
+
 			newFullPath := filepath.Join(fullPath, f.Name())
 			newRelativePath := path.Join(relativePath, f.Name())
 			if fsutil.IsRecursiveSymlink(f, newFullPath) {

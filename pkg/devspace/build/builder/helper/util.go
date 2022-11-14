@@ -6,7 +6,6 @@ import (
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -142,7 +141,7 @@ func InjectBuildScriptInContext(helperScript string, buildCtx io.ReadCloser) (io
 
 // OverwriteDockerfileInBuildContext will overwrite the dockerfile with the dockerfileCtx
 func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.ReadCloser, relDockerfile string) (io.ReadCloser, error) {
-	file, err := ioutil.ReadAll(dockerfileCtx)
+	file, err := io.ReadAll(dockerfileCtx)
 	dockerfileCtx.Close()
 	if err != nil {
 		return nil, err
@@ -178,7 +177,7 @@ func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, add
 	}
 
 	if injectHelper {
-		data, err := ioutil.ReadFile(dockerfile)
+		data, err := os.ReadFile(dockerfile)
 		if err != nil {
 			return "", err
 		}
@@ -217,13 +216,13 @@ func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, 
 		return "", errors.New("entrypoint, cmd & additional lines are empty")
 	}
 
-	data, err := ioutil.ReadFile(dockerfile)
+	data, err := os.ReadFile(dockerfile)
 	if err != nil {
 		return "", err
 	}
 
 	// Overwrite entrypoint and cmd
-	tmpDir, err := ioutil.TempDir("", "example")
+	tmpDir, err := os.MkdirTemp("", "example")
 	if err != nil {
 		return "", err
 	}
@@ -235,7 +234,7 @@ func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, 
 	}
 
 	tmpfn := filepath.Join(tmpDir, "Dockerfile")
-	if err := ioutil.WriteFile(tmpfn, []byte(newData), 0666); err != nil {
+	if err := os.WriteFile(tmpfn, []byte(newData), 0666); err != nil {
 		return "", err
 	}
 
@@ -250,7 +249,7 @@ func GetDockerfileTargets(dockerfile string) ([]string, error) {
 		dockerfile = DefaultDockerfilePath
 	}
 
-	data, err := ioutil.ReadFile(dockerfile)
+	data, err := os.ReadFile(dockerfile)
 	if err != nil {
 		return targets, err
 	}

@@ -2,10 +2,8 @@ package testing
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
-
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"io"
 
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	fakesurvey "github.com/loft-sh/devspace/pkg/util/survey/testing"
@@ -121,7 +119,7 @@ func (d *FakeLogger) SetAnswer(answer string) {
 }
 
 func (d *FakeLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
-	return log.WithNopCloser(ioutil.Discard)
+	return log.WithNopCloser(io.Discard)
 }
 
 func (d *FakeLogger) WithSink(log log.Logger) log.Logger {

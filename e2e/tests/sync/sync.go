@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"github.com/pkg/errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -232,7 +231,7 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "file3.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "file3.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 
 		// wait for sync
@@ -247,13 +246,13 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// check if file was downloaded through before hook
-		_, err = ioutil.ReadFile(filepath.Join(tempDir, "file4.txt"))
+		_, err = os.ReadFile(filepath.Join(tempDir, "file4.txt"))
 		framework.ExpectError(err)
 		framework.ExpectEqual(os.IsNotExist(err), true)
 
 		// check if file was downloaded through after hook
 		err = wait.PollImmediate(time.Second, time.Minute, func() (done bool, err error) {
-			out, err := ioutil.ReadFile(filepath.Join(tempDir, "file5.txt"))
+			out, err := os.ReadFile(filepath.Join(tempDir, "file5.txt"))
 			if err != nil {
 				if !os.IsNotExist(err) {
 					return false, err
@@ -332,7 +331,7 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload1 := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "/project1/app/file3.txt"), []byte(payload1), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "/project1/app/file3.txt"), []byte(payload1), 0666)
 		framework.ExpectNoError(err)
 
 		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
@@ -347,7 +346,7 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file to symlink path and check that it got synced
 		payload2 := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "/project2/file4.txt"), []byte(payload2), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "/project2/file4.txt"), []byte(payload2), 0666)
 		framework.ExpectNoError(err)
 
 		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
@@ -424,7 +423,7 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteFileContents("node", ns, "/watch/watching.txt", payload)
 
@@ -540,7 +539,7 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteContainerFileContents("e2e=sync-containers", "container2", ns, "/app2/watching.txt", payload)
 
@@ -607,7 +606,7 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteFileContents("alpine", ns, "/app/watching.txt", payload)
 
@@ -685,7 +684,7 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteFileContents("node", ns, "/app/watching.txt", payload)
 
@@ -750,9 +749,9 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "other-folder", "test.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "other-folder", "test.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "other-folder", "test123.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "other-folder", "test123.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteFileContents("alpine", ns, "/watch/test.txt", payload)
 		framework.ExpectRemoteFileNotFound("alpine", ns, "/watch/test123.txt")

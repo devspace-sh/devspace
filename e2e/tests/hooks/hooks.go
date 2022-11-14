@@ -2,7 +2,6 @@ package hooks
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"sync"
 	"time"
@@ -59,11 +58,11 @@ var _ = DevSpaceDescribe("hooks", func() {
 		framework.ExpectError(err)
 
 		// check if files are there
-		out, err := ioutil.ReadFile("before1.txt")
+		out, err := os.ReadFile("before1.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "before1")
 		framework.ExpectNoError(os.Remove("before1.txt"))
-		out, err = ioutil.ReadFile("error1.txt")
+		out, err = os.ReadFile("error1.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "error1")
 		framework.ExpectNoError(os.Remove("error1.txt"))
@@ -85,25 +84,25 @@ var _ = DevSpaceDescribe("hooks", func() {
 		framework.ExpectError(err)
 
 		// check if files are correctly created
-		out, err = ioutil.ReadFile("before1.txt")
+		out, err = os.ReadFile("before1.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "before1")
-		out, err = ioutil.ReadFile("after1.txt")
+		out, err = os.ReadFile("after1.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "after1")
-		out, err = ioutil.ReadFile("before2.txt")
+		out, err = os.ReadFile("before2.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "before2")
-		out, err = ioutil.ReadFile("error2.txt")
+		out, err = os.ReadFile("error2.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "error2")
-		out, err = ioutil.ReadFile("before3.txt")
+		out, err = os.ReadFile("before3.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "before3")
-		out, err = ioutil.ReadFile("error3.txt")
+		out, err = os.ReadFile("error3.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "error3")
-		out, err = ioutil.ReadFile("after3.txt")
+		out, err = os.ReadFile("after3.txt")
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(string(out), "after3")
 		_, err = os.Stat("after2.txt")

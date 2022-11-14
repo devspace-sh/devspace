@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -206,7 +205,7 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 					panic(err)
 				}
 
-				err = ioutil.WriteFile(fieldFile, []byte(fieldContent), os.ModePerm)
+				err = os.WriteFile(fieldFile, []byte(fieldContent), os.ModePerm)
 				if err != nil {
 					panic(err)
 				}
@@ -258,7 +257,7 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 
 	content = fmt.Sprintf("%s%s", importContent, content)
 
-	err := ioutil.WriteFile(pageFile, []byte(content), os.ModePerm)
+	err := os.WriteFile(pageFile, []byte(content), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}

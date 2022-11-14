@@ -1,7 +1,6 @@
 package compose
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +14,7 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	dirs, err := ioutil.ReadDir("testdata")
+	dirs, err := os.ReadDir("testdata")
 	if err != nil {
 		t.Error(err)
 	}
@@ -72,7 +71,7 @@ func testLoad(dir string, t *testing.T) {
 	actualError := loader.Load(log.Discard)
 
 	if actualError != nil {
-		expectedError, err := ioutil.ReadFile("error.txt")
+		expectedError, err := os.ReadFile("error.txt")
 		if err != nil {
 			t.Errorf("Unexpected error occurred loading the docker-compose.yaml: %s", err.Error())
 		}
@@ -81,7 +80,7 @@ func testLoad(dir string, t *testing.T) {
 	}
 
 	for path, actualConfig := range loader.Configs() {
-		data, err := ioutil.ReadFile(path)
+		data, err := os.ReadFile(path)
 		if err != nil {
 			t.Errorf("Please create the expected DevSpace configuration by creating a %s in the testdata/%s folder", path, dir)
 		}

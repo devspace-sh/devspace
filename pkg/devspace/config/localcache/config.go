@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -52,7 +52,7 @@ func (l *cacheLoader) Load(devSpaceFilePath string) (Cache, error) {
 	}
 
 	cachePath := cachePath(absPath)
-	data, readErr := ioutil.ReadFile(cachePath)
+	data, readErr := os.ReadFile(cachePath)
 	if readErr != nil {
 		loadedConfig = New(cachePath).(*LocalCache)
 	} else {

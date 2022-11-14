@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pkg/sftp"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -271,7 +270,7 @@ func exitWithError(s ssh.Session, err error) {
 }
 
 func SftpHandler(sess ssh.Session) {
-	debugStream := ioutil.Discard
+	debugStream := io.Discard
 	serverOptions := []sftp.ServerOption{
 		sftp.WithDebug(debugStream),
 	}

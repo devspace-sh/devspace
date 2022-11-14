@@ -3,7 +3,6 @@ package generator
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -209,12 +208,17 @@ func (cg *LanguageHandler) GetSupportedLanguages() ([]string, error) {
 	}
 
 	if len(cg.supportedLanguages) == 0 {
-		files, err := ioutil.ReadDir(cg.gitRepo.LocalPath)
+		files, err := os.ReadDir(cg.gitRepo.LocalPath)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, file := range files {
+		for _, dirEntry := range files {
+			file, err := dirEntry.Info()
+			if err != nil {
+				continue
+			}
+
 			fileName := file.Name()
 
 			if file.IsDir() && fileName[0] != '_' && fileName[0] != '.' && fileName != langFallback {

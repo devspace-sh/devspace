@@ -162,7 +162,7 @@ func TestBuild(t *testing.T) {
 
 func TestShouldRebuild(t *testing.T) {
 	//Create tempDir and go into it
-	dir, err := ioutil.TempDir("", "testDir")
+	dir, err := os.MkdirTemp("", "testDir")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}

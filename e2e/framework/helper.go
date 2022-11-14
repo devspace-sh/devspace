@@ -3,7 +3,6 @@ package framework
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -156,20 +155,20 @@ func ExpectRemoteContainerFileContents(labelSelector, container string, namespac
 }
 
 func ExpectLocalFileContentsImmediately(filePath string, contents string) {
-	out, err := ioutil.ReadFile(filePath)
+	out, err := os.ReadFile(filePath)
 	ExpectNoError(err)
 	gomega.ExpectWithOffset(1, string(out)).To(gomega.Equal(contents))
 }
 
 func ExpectLocalFileContainSubstringImmediately(filePath string, contents string) {
-	out, err := ioutil.ReadFile(filePath)
+	out, err := os.ReadFile(filePath)
 	ExpectNoError(err)
 	gomega.ExpectWithOffset(1, string(out)).To(gomega.ContainSubstring(contents))
 }
 
 func ExpectLocalFileContents(filePath string, contents string) {
 	err := wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
-		out, err := ioutil.ReadFile(filePath)
+		out, err := os.ReadFile(filePath)
 		if err != nil {
 			if !os.IsNotExist(err) {
 				return false, err
@@ -184,7 +183,7 @@ func ExpectLocalFileContents(filePath string, contents string) {
 }
 
 func ExpectLocalFileContentsWithoutSpaces(filePath string, contents string) {
-	out, err := ioutil.ReadFile(filePath)
+	out, err := os.ReadFile(filePath)
 	ExpectNoError(err)
 	gomega.ExpectWithOffset(1, strings.TrimSpace(string(out))).To(gomega.Equal(contents))
 }

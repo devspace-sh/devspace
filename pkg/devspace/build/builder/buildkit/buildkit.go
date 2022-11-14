@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -334,7 +333,7 @@ func ensureBuilder(ctx context.Context, workingDir string, environ expand.Enviro
 		}
 
 		// update the builder if necessary
-		b, err := ioutil.ReadFile(builderPath)
+		b, err := os.ReadFile(builderPath)
 		if err != nil {
 			log.Warnf("Error reading builder %s: %v", builderPath, err)
 			return name, nil
@@ -437,7 +436,7 @@ func tempKubeContextFromClient(kubeClient kubectl.Client) (string, error) {
 		return "", err
 	}
 
-	tempFile, err := ioutil.TempFile("", "")
+	tempFile, err := os.CreateTemp("", "")
 	if err != nil {
 		return "", err
 	}

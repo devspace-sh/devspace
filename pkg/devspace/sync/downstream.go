@@ -6,7 +6,6 @@ import (
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -445,13 +444,18 @@ func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*r
 
 	// Delete directory from fileMap
 	defer delete(d.sync.fileIndex.fileMap, relativePath)
-	files, err := ioutil.ReadDir(absolutePath)
+	files, err := os.ReadDir(absolutePath)
 	if err != nil {
 		return
 	}
 
 	// Loop over directory contents and check if we should delete the contents
-	for _, f := range files {
+	for _, dirEntry := range files {
+		f, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
 		if fsutil.IsRecursiveSymlink(f, path.Join(relativePath, f.Name())) {
 			continue
 		}

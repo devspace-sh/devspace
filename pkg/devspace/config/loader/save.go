@@ -2,7 +2,6 @@ package loader
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -22,7 +21,7 @@ func Save(path string, config *latest.Config) error {
 	}
 
 	// Path to save the configuration to
-	err = ioutil.WriteFile(path, buffer.Bytes(), os.ModePerm)
+	err = os.WriteFile(path, buffer.Bytes(), os.ModePerm)
 	if err != nil {
 		return err
 	}

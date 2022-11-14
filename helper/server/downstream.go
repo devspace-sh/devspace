@@ -8,7 +8,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -532,13 +531,18 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 }
 
 func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnoreParser, state map[string]*remote.Change, noRecursive bool, throttle time.Duration) {
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		// We ignore errors here
 		return
 	}
 
-	for _, f := range files {
+	for _, dirEntry := range files {
+		f, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
 		absolutePath := filepath.Join(path, f.Name())
 		if fsutil.IsRecursiveSymlink(f, absolutePath) {
 			continue

@@ -3,7 +3,6 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -110,7 +109,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		ic, _ := config.GetImageCache("app-test")
-		out, err := ioutil.ReadFile(filepath.Join(tempDir, "out0.txt"))
+		out, err := os.ReadFile(filepath.Join(tempDir, "out0.txt"))
 		framework.ExpectNoError(err)
 		gomega.Expect(string(out)).To(gomega.MatchRegexp("my-docker-username/helloworld2:" + ic.Tag))
 	})

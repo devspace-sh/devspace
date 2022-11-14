@@ -5,7 +5,6 @@ package util
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -43,7 +42,7 @@ func (*containerRestarter) RestartContainer() error {
 	}
 
 	// read current active process id
-	pgidBytes, err := ioutil.ReadFile(pidFilePath)
+	pgidBytes, err := os.ReadFile(pidFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil

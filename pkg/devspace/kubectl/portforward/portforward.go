@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
-	"io/ioutil"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -380,7 +379,7 @@ func (pf *PortForwarder) handleConnection(conn io.ReadWriteCloser, port Forwarde
 
 	errorChan := make(chan error)
 	go func() {
-		message, err := ioutil.ReadAll(errorStream)
+		message, err := io.ReadAll(errorStream)
 		switch {
 		case err != nil:
 			errorChan <- fmt.Errorf("error reading from error stream for port %d -> %d: %v", port.Local, port.Remote, err)

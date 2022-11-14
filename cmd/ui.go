@@ -8,7 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -108,7 +108,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 				}
 
 				defer response.Body.Close()
-				contents, err := ioutil.ReadAll(response.Body)
+				contents, err := io.ReadAll(response.Body)
 				if err != nil {
 					checkPort++
 					continue

@@ -7,7 +7,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"github.com/sirupsen/logrus"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
@@ -177,7 +176,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 					errorLog := ""
 					reader, _ := ctx.KubeClient().Logs(ctx.Context(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.InitContainers[0].Name, false, nil, false)
 					if reader != nil {
-						out, err := ioutil.ReadAll(reader)
+						out, err := io.ReadAll(reader)
 						if err == nil {
 							errorLog = string(out)
 						}
@@ -237,7 +236,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 		// Copy restart helper script
 		if b.helper.ImageConf.InjectRestartHelper {
-			tempDir, err := ioutil.TempDir("", "")
+			tempDir, err := os.MkdirTemp("", "")
 			if err != nil {
 				return err
 			}
@@ -251,7 +250,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 				return errors.Wrap(err, "load restart helper")
 			}
 
-			err = ioutil.WriteFile(scriptPath, []byte(helperScript), 0777)
+			err = os.WriteFile(scriptPath, []byte(helperScript), 0777)
 			if err != nil {
 				return errors.Wrap(err, "write restart helper script")
 			}
@@ -310,7 +309,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 					errorLog := ""
 					reader, _ := ctx.KubeClient().Logs(ctx.Context(), b.BuildNamespace, buildPodCreated.Name, status.Name, false, nil, false)
 					if reader != nil {
-						out, err := ioutil.ReadAll(reader)
+						out, err := io.ReadAll(reader)
 						if err == nil {
 							errorLog = string(out)
 						}

@@ -3,7 +3,6 @@ package fsutil
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,13 +31,13 @@ func WriteToFile(data []byte, filePath string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(filePath, data, 0666)
+	return os.WriteFile(filePath, data, 0666)
 }
 
 // ReadFile reads a file with a given limit
 func ReadFile(path string, limit int64) ([]byte, error) {
 	if limit <= 0 {
-		return ioutil.ReadFile(path)
+		return os.ReadFile(path)
 	}
 
 	f, err := os.Open(path)

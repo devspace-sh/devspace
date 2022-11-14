@@ -2,10 +2,8 @@ package kubectl
 
 import (
 	"context"
-	"io"
-	"io/ioutil"
-
 	"github.com/pkg/errors"
+	"io"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -17,7 +15,7 @@ func (client *client) ReadLogs(ctx context.Context, namespace, podName, containe
 		return "", err
 	}
 
-	logs, err := ioutil.ReadAll(readCloser)
+	logs, err := io.ReadAll(readCloser)
 	if err != nil {
 		return "", err
 	}

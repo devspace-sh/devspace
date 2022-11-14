@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
-	"io/ioutil"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"mvdan.cc/sh/v3/expand"
@@ -103,7 +102,7 @@ var useOldDryRun = func(ctx context.Context, environ expand.Environ, dir, path s
 }
 
 func (k *kubectlBuilder) Build(ctx context.Context, environ expand.Environ, dir, manifest string) ([]*unstructured.Unstructured, error) {
-	tempFile, err := ioutil.TempFile("", "")
+	tempFile, err := os.CreateTemp("", "")
 	if err != nil {
 		return nil, err
 	}

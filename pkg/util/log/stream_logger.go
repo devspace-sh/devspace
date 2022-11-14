@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -465,7 +464,7 @@ func (s *StreamLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
 	defer s.m.Unlock()
 
 	if s.level < level {
-		return &NopCloser{ioutil.Discard}
+		return &NopCloser{io.Discard}
 	}
 
 	reader, writer := io.Pipe()

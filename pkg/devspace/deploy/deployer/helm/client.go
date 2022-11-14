@@ -3,7 +3,6 @@ package helm
 import (
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -53,7 +52,7 @@ func New(helmClient helmtypes.Client, deployConfig *latest.DeploymentConfig) (de
 				}
 
 				// write file
-				err = ioutil.WriteFile(completePath, componentChartBytes, 0666)
+				err = os.WriteFile(completePath, componentChartBytes, 0666)
 				if err != nil {
 					return nil, fmt.Errorf("error writing component chart to file: %v", err)
 				}
