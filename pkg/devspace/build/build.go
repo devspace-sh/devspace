@@ -11,11 +11,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/pkg/errors"
 )
 
@@ -87,26 +87,50 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 	}
 
 	// Determine if we need to use the local registry to build any images.
-	kubeClient := ctx.KubeClient()
 	var localRegistry *registry.LocalRegistry
-	if registry.UseLocalRegistry(kubeClient, conf, options.SkipPush) {
-		ctx := ctx.WithLogger(ctx.Log().WithPrefix("local-registry: "))
-		for key, imageConf := range conf.Images {
-			imageName := imageConf.Image
-			imageConfigName := key
+	kubeClient := ctx.KubeClient()
+	builders := map[string]builder.Interface{}
+	tags := map[string][]string{}
 
-			// Update cache for non-local registry use by default
-			imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
-			imageCache.LocalRegistryImageName = ""
+	for imageConfigName, imageConf := range conf.Images {
+		imageName := imageConf.Image
 
-			// Determine whether the local registry is required / enabled
-			isLocalReqistryRequired := !registry.HasPushPermission(imageConf)
-			if isLocalReqistryRequired {
-				// Not able to deploy a local registry
+		// Get image tags
+		imageTags := []string{}
+		if len(options.Tags) > 0 {
+			imageTags = append(imageTags, options.Tags...)
+		} else if len(imageConf.Tags) > 0 {
+			imageTags = append(imageTags, imageConf.Tags...)
+		} else {
+			imageTags = append(imageTags, randutil.GenerateRandomString(7))
+		}
+
+		// replace the # in the tags
+		for i := range imageTags {
+			for strings.Contains(imageTags[i], "#") {
+				imageTags[i] = strings.Replace(imageTags[i], "#", randutil.GenerateRandomString(1), 1)
+			}
+		}
+
+		// Create new builder
+		builder, err := c.createBuilder(ctx, imageConfigName, imageConf, imageTags, options)
+		if err != nil {
+			return errors.Wrap(err, "create builder")
+		}
+
+		// Update cache for non local registry use by default
+		imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
+		imageCache.ImageName = imageName
+		imageCache.LocalRegistryImageName = ""
+
+		if registry.UseLocalRegistry(kubeClient, conf, options.SkipPush) && !registry.HasPushPermission(imageConf) {
+			if SupportsLocalRegistry(builder) {
+				// Not able to deploy a local registry without a valid kube context
 				if kubeClient == nil {
 					return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
 				}
 
+				// Create and start a local registry if one isn't already running
 				if localRegistry == nil {
 					localRegistry = registry.NewLocalRegistry(
 						registry.NewDefaultOptions().
@@ -114,23 +138,39 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 							WithLocalRegistryConfig(conf.LocalRegistry),
 					)
 
+					ctx := ctx.WithLogger(ctx.Log().WithPrefix("local-registry: "))
 					err := localRegistry.Start(ctx)
 					if err != nil {
 						return errors.Wrap(err, "start registry")
 					}
 				}
 
-				var err error
-				builtImageName, err := localRegistry.RewriteImage(imageName)
+				// Update cache for local registry use
+				imageCache.LocalRegistryImageName, err = localRegistry.RewriteImage(imageName)
 				if err != nil {
 					return errors.Wrap(err, "rewrite image")
 				}
+				ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 
-				// Update cache for local registry use
-				imageCache.LocalRegistryImageName = builtImageName
+				// Reset the builder for local registry usage
+				// TODO: refactor so this isn't necessary!
+				builder, err = c.createBuilder(ctx, imageConfigName, imageConf, imageTags, options)
+				if err != nil {
+					return errors.Wrap(err, "create builder")
+				}
+			} else {
+				ctx.Log().Warnf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
 			}
-			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 		}
+
+		// Save image cache
+		ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
+
+		// Save builder for later use
+		builders[imageConfigName] = builder
+
+		// Save image tags
+		tags[imageConfigName] = imageTags
 	}
 
 	// Execute before images build hook
@@ -152,34 +192,8 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		imageConfigName := key
 		imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
 		resolvedImage := imageCache.ResolveImage()
-
-		// Get image tags
-		imageTags := []string{}
-		if len(options.Tags) > 0 {
-			imageTags = append(imageTags, options.Tags...)
-		} else if len(imageConf.Tags) > 0 {
-			imageTags = append(imageTags, imageConf.Tags...)
-		} else {
-			imageTags = append(imageTags, randutil.GenerateRandomString(7))
-		}
-
-		// replace the # in the tags
-		for i := range imageTags {
-			for strings.Contains(imageTags[i], "#") {
-				imageTags[i] = strings.Replace(imageTags[i], "#", randutil.GenerateRandomString(1), 1)
-			}
-		}
-
-		// Create new builder
-		builder, err := c.createBuilder(ctx, imageConfigName, &cImageConf, imageTags, options)
-		if err != nil {
-			return errors.Wrap(err, "create builder")
-		}
-
-		// Check compatibility with local registry
-		if imageCache.IsLocalRegistryImage() && !SupportsLocalRegistry(builder) {
-			return fmt.Errorf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
-		}
+		imageTags := tags[imageConfigName]
+		builder := builders[imageConfigName]
 
 		// Execute before images build hook
 		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
