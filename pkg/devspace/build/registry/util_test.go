@@ -78,6 +78,16 @@ func TestUseLocalRegistry(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "Loft VCluster with KinD Cluster",
+			client: &kubectltesting.Client{
+				Context: "loft-vcluster_devspace-kind_vcluster-devspace-kind_kind-kind",
+			},
+			config: &latest.Config{
+				LocalRegistry: nil,
+			},
+			expected: false,
+		},
+		{
 			name: "Docker Desktop Cluster",
 			client: &kubectltesting.Client{
 				Context: "docker-desktop",
@@ -128,6 +138,16 @@ func TestUseLocalRegistry(t *testing.T) {
 			name: "VCluster with Docker Desktop Cluster",
 			client: &kubectltesting.Client{
 				Context: "vcluster_devspacehelper_deploy-example_docker-desktop",
+			},
+			config: &latest.Config{
+				LocalRegistry: nil,
+			},
+			expected: false,
+		},
+		{
+			name: "Loft VCluster with Docker Desktop Cluster",
+			client: &kubectltesting.Client{
+				Context: "loft-vcluster_devspacehelper_deploy-example_docker-desktop",
 			},
 			config: &latest.Config{
 				LocalRegistry: nil,
@@ -192,6 +212,16 @@ func TestUseLocalRegistry(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "Loft VCluster with Minikube Cluster",
+			client: &kubectltesting.Client{
+				Context: "loft-vcluster_devspace-minikube_vcluster-devspace-minikube_minikube",
+			},
+			config: &latest.Config{
+				LocalRegistry: nil,
+			},
+			expected: false,
+		},
+		{
 			name: "Remote Cluster",
 			client: &kubectltesting.Client{
 				Context: "arn:aws:eks:us-west-2:1234567890:cluster/remote-eks",
@@ -235,9 +265,30 @@ func TestUseLocalRegistry(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "Loft VCluster with Remote Cluster",
+			client: &kubectltesting.Client{
+				Context: "loft-vcluster_vcluster-eks_vcluster-vcluster-eks_arn:aws:eks:us-west-2:1234567890:cluster/remote-eks",
+			},
+			config: &latest.Config{
+				LocalRegistry: nil,
+			},
+			expected: true,
+		},
+		{
 			name: "VCluster with Remote Cluster skip push",
 			client: &kubectltesting.Client{
 				Context: "vcluster_vcluster-eks_vcluster-vcluster-eks_arn:aws:eks:us-west-2:1234567890:cluster/remote-eks",
+			},
+			config: &latest.Config{
+				LocalRegistry: nil,
+			},
+			skipPush: true,
+			expected: false,
+		},
+		{
+			name: "Loft VCluster with Remote Cluster skip push",
+			client: &kubectltesting.Client{
+				Context: "loft-vcluster_vcluster-eks_vcluster-vcluster-eks_arn:aws:eks:us-west-2:1234567890:cluster/remote-eks",
 			},
 			config: &latest.Config{
 				LocalRegistry: nil,

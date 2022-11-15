@@ -136,7 +136,7 @@ func UseLocalRegistry(client kubectl.Client, config *latest.Config, skipPush boo
 	context := client.CurrentContext()
 
 	// Determine if this is a vcluster
-	isVClusterContext := strings.HasPrefix(context, "vcluster_")
+	isVClusterContext := strings.Contains(context, "vcluster_")
 
 	// Determine if this is a local kubernetes cluster
 	isLocalKubernetes := kubectl.IsLocalKubernetes(context)

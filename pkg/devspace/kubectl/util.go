@@ -209,7 +209,7 @@ func IsLocalKubernetes(context string) bool {
 		context == dockerDesktopContext ||
 		context == dockerForDesktopContext {
 		return true
-	} else if strings.HasPrefix(context, "vcluster_") &&
+	} else if strings.Contains(context, "vcluster_") &&
 		(strings.HasSuffix(context, minikubeContext) ||
 			strings.HasSuffix(context, dockerDesktopContext) ||
 			strings.HasSuffix(context, dockerForDesktopContext) ||
