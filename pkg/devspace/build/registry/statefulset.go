@@ -1,6 +1,9 @@
 package registry
 
 import (
+	"context"
+	"time"
+
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -9,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/wait"
 	appsapplyv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 )
 
@@ -22,14 +26,33 @@ func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.
 		}
 	}
 
-	// Create if it does not exist
+	var existing *appsv1.StatefulSet
 	desired := r.getStatefulSet()
-	existing, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Get(ctx.Context(), r.options.Name, metav1.GetOptions{})
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			return ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Create(ctx.Context(), desired, metav1.CreateOptions{})
+	kubeClient := ctx.KubeClient()
+	err = wait.PollImmediateWithContext(ctx.Context(), time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
+		var err error
+
+		existing, err = kubeClient.KubeClient().AppsV1().StatefulSets(r.options.Namespace).Get(ctx, r.options.Name, metav1.GetOptions{})
+		if err == nil {
+			return true, nil
 		}
 
+		if kerrors.IsNotFound(err) {
+			existing, err = kubeClient.KubeClient().AppsV1().StatefulSets(r.options.Namespace).Create(ctx, desired, metav1.CreateOptions{})
+			if err == nil {
+				return true, nil
+			}
+
+			if kerrors.IsAlreadyExists(err) {
+				return false, nil
+			}
+
+			return false, err
+		}
+
+		return false, err
+	})
+	if err != nil {
 		return nil, err
 	}
 
