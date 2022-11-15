@@ -224,10 +224,13 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 
 	// Start sequentially
 	if options.Sequential {
+		ctx.Log().Debug("Deploying dependencies sequentially")
 		for _, dependency := range deployDependencies {
 			err := p.startNewDependency(ctx, dependency, options)
 			if err != nil {
 				return errors.Wrapf(err, "run dependency %s", dependency.Name())
+			} else {
+				ctx.Log().Debugf("Dependency '%s' deployed", dependency.Name())
 			}
 		}
 

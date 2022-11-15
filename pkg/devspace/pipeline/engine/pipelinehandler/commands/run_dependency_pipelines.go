@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/jessevdk/go-flags"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	types2 "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -9,7 +11,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 // RunDependencyPipelinesOptions describe how dependencies should get deployed

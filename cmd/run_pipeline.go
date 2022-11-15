@@ -3,6 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -30,8 +33,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"io"
-	"os"
 )
 
 // RunPipelineCmd holds the command flags
@@ -44,8 +45,9 @@ type RunPipelineCmd struct {
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
 
-	Dependency     []string
-	SkipDependency []string
+	Dependency             []string
+	SkipDependency         []string
+	SequentialDependencies bool
 
 	ForceBuild          bool
 	SkipBuild           bool
@@ -68,6 +70,7 @@ type RunPipelineCmd struct {
 func (cmd *RunPipelineCmd) AddPipelineFlags(f factory.Factory, command *cobra.Command, pipeline *latest.Pipeline) {
 	command.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", cmd.SkipDependency, "Skips the following dependencies for deployment")
 	command.Flags().StringSliceVar(&cmd.Dependency, "dependency", cmd.Dependency, "Deploys only the specified named dependencies")
+	command.Flags().BoolVar(&cmd.SequentialDependencies, "sequential-dependencies", false, "If set set true dependencies will run sequentially")
 
 	command.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", cmd.ForceBuild, "Forces to build every image")
 	command.Flags().BoolVar(&cmd.SkipBuild, "skip-build", cmd.SkipBuild, "Skips building of images")
@@ -413,8 +416,9 @@ func (cmd *RunPipelineCmd) BuildOptions(configOptions *loader.ConfigOptions) *Co
 				ForcePurge: cmd.ForcePurge,
 			},
 			DependencyOptions: types.DependencyOptions{
-				Exclude: cmd.SkipDependency,
-				Only:    cmd.Dependency,
+				Exclude:    cmd.SkipDependency,
+				Only:       cmd.Dependency,
+				Sequential: cmd.SequentialDependencies,
 			},
 		},
 		ConfigOptions: configOptions,
