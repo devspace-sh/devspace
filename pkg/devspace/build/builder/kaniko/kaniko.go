@@ -2,12 +2,13 @@ package kaniko
 
 import (
 	"fmt"
+	"io"
+	"strings"
+
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"github.com/sirupsen/logrus"
-	"io"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/docker/docker/pkg/idtools"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
-
 	"k8s.io/client-go/util/exec"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
@@ -108,6 +108,11 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 // BuildImage builds a dockerimage within a kaniko pod
 func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfilePath string, entrypoint []string, cmd []string) error {
 	var err error
+
+	contextPath, err = build.ResolveAndValidateContextPath(contextPath)
+	if err != nil {
+		return errors.Wrap(err, "resolve context path")
+	}
 
 	// build options
 	options := &types.ImageBuildOptions{}
