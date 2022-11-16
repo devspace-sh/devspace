@@ -87,7 +87,6 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 	}
 
 	// Determine if we need to use the local registry to build any images.
-	var localRegistry *registry.LocalRegistry
 	kubeClient := ctx.KubeClient()
 	builders := map[string]builder.Interface{}
 	tags := map[string][]string{}
@@ -130,19 +129,14 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 					return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
 				}
 
-				// Create and start a local registry if one isn't already running
-				if localRegistry == nil {
-					localRegistry = registry.NewLocalRegistry(
-						registry.NewDefaultOptions().
-							WithNamespace(kubeClient.Namespace()).
-							WithLocalRegistryConfig(conf.LocalRegistry),
-					)
+				registryOptions := registry.NewDefaultOptions().
+					WithNamespace(kubeClient.Namespace()).
+					WithLocalRegistryConfig(conf.LocalRegistry)
 
-					ctx := ctx.WithLogger(ctx.Log().WithPrefix("local-registry: "))
-					err := localRegistry.Start(ctx)
-					if err != nil {
-						return errors.Wrap(err, "start registry")
-					}
+				// Create and start a local registry if one isn't already running
+				localRegistry, err := registry.GetOrCreateLocalRegistry(ctx, registryOptions)
+				if err != nil {
+					return errors.Wrap(err, "get or create local registry")
 				}
 
 				// Update cache for local registry use

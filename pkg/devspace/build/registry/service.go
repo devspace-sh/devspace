@@ -21,13 +21,13 @@ func (r *LocalRegistry) ensureService(ctx devspacecontext.Context) (*corev1.Serv
 	err := wait.PollImmediateWithContext(ctx.Context(), time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
 		var err error
 
-		existing, err = kubeClient.KubeClient().CoreV1().Services(r.options.Namespace).Get(ctx, r.options.Name, metav1.GetOptions{})
+		existing, err = kubeClient.KubeClient().CoreV1().Services(r.Namespace).Get(ctx, r.Name, metav1.GetOptions{})
 		if err == nil {
 			return true, nil
 		}
 
 		if kerrors.IsNotFound(err) {
-			existing, err = kubeClient.KubeClient().CoreV1().Services(r.options.Namespace).Create(ctx, desired, metav1.CreateOptions{})
+			existing, err = kubeClient.KubeClient().CoreV1().Services(r.Namespace).Create(ctx, desired, metav1.CreateOptions{})
 			if err == nil {
 				return true, nil
 			}
@@ -51,7 +51,7 @@ func (r *LocalRegistry) ensureService(ctx devspacecontext.Context) (*corev1.Serv
 		return nil, err
 	}
 
-	return ctx.KubeClient().KubeClient().CoreV1().Services(r.options.Namespace).Apply(
+	return ctx.KubeClient().KubeClient().CoreV1().Services(r.Namespace).Apply(
 		ctx.Context(),
 		applyConfiguration,
 		metav1.ApplyOptions{
@@ -64,21 +64,21 @@ func (r *LocalRegistry) ensureService(ctx devspacecontext.Context) (*corev1.Serv
 func (r *LocalRegistry) getService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: r.options.Name,
+			Name: r.Name,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
 					Name:     "registry",
 					Protocol: corev1.ProtocolTCP,
-					Port:     int32(r.options.Port),
+					Port:     int32(r.Port),
 					TargetPort: intstr.IntOrString{
-						IntVal: int32(r.options.Port),
+						IntVal: int32(r.Port),
 					},
 				},
 			},
 			Selector: map[string]string{
-				"app": r.options.Name,
+				"app": r.Name,
 			},
 			Type: corev1.ServiceTypeNodePort,
 		},

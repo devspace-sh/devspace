@@ -18,9 +18,9 @@ import (
 
 func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.StatefulSet, error) {
 	// Switching from an unpersistent registry, delete the deployment.
-	_, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Get(ctx.Context(), r.options.Name, metav1.GetOptions{})
+	_, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.Namespace).Get(ctx.Context(), r.Name, metav1.GetOptions{})
 	if err == nil {
-		err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.options.Namespace).Delete(ctx.Context(), r.options.Name, metav1.DeleteOptions{})
+		err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.Namespace).Delete(ctx.Context(), r.Name, metav1.DeleteOptions{})
 		if err != nil && kerrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -32,13 +32,13 @@ func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.
 	err = wait.PollImmediateWithContext(ctx.Context(), time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
 		var err error
 
-		existing, err = kubeClient.KubeClient().AppsV1().StatefulSets(r.options.Namespace).Get(ctx, r.options.Name, metav1.GetOptions{})
+		existing, err = kubeClient.KubeClient().AppsV1().StatefulSets(r.Namespace).Get(ctx, r.Name, metav1.GetOptions{})
 		if err == nil {
 			return true, nil
 		}
 
 		if kerrors.IsNotFound(err) {
-			existing, err = kubeClient.KubeClient().AppsV1().StatefulSets(r.options.Namespace).Create(ctx, desired, metav1.CreateOptions{})
+			existing, err = kubeClient.KubeClient().AppsV1().StatefulSets(r.Namespace).Create(ctx, desired, metav1.CreateOptions{})
 			if err == nil {
 				return true, nil
 			}
@@ -61,7 +61,7 @@ func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.
 	if err != nil {
 		return nil, err
 	}
-	return ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.options.Namespace).Apply(
+	return ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.Namespace).Apply(
 		ctx.Context(),
 		applyConfiguration,
 		metav1.ApplyOptions{
@@ -73,23 +73,23 @@ func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.
 
 func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 	var storageClassName *string
-	if r.options.StorageClassName != "" {
-		storageClassName = &r.options.StorageClassName
+	if r.StorageClassName != "" {
+		storageClassName = &r.StorageClassName
 	}
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: r.options.Name,
+			Name: r.Name,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": r.options.Name,
+					"app": r.Name,
 				},
 			},
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: r.options.Name,
+						Name: r.Name,
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -97,7 +97,7 @@ func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse(r.options.StorageSize),
+								corev1.ResourceStorage: resource.MustParse(r.StorageSize),
 							},
 						},
 						StorageClassName: storageClassName,
@@ -107,7 +107,7 @@ func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": r.options.Name,
+						"app": r.Name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -115,12 +115,12 @@ func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 					Containers: []corev1.Container{
 						{
 							Name:  "registry",
-							Image: r.options.Image,
+							Image: r.Image,
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									TCPSocket: &corev1.TCPSocketAction{
 										Port: intstr.IntOrString{
-											IntVal: int32(r.options.Port),
+											IntVal: int32(r.Port),
 										},
 									},
 								},
@@ -134,7 +134,7 @@ func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 								ProbeHandler: corev1.ProbeHandler{
 									TCPSocket: &corev1.TCPSocketAction{
 										Port: intstr.IntOrString{
-											IntVal: int32(r.options.Port),
+											IntVal: int32(r.Port),
 										},
 									},
 								},
@@ -152,7 +152,7 @@ func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      r.options.Name,
+									Name:      r.Name,
 									MountPath: "/var/lib/registry",
 								},
 							},
