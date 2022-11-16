@@ -46,8 +46,8 @@ func TestNewTankaEnvironment(t *testing.T) {
 			want: &tankaEnvironmentImpl{
 				name:         "my-devspace-name",
 				namespace:    "my-devspace-namespace",
-				tkBinaryPath: "tk",
-				jbBinaryPath: "jb",
+				tkBinaryPath: tkDefaultCommand,
+				jbBinaryPath: jbDefaultCommand,
 				rootDir:      "my",
 				args: []string{
 					"my/tanka/environment",
@@ -70,7 +70,14 @@ func TestNewTankaEnvironment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := NewTankaEnvironment(tt.args.config); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf(cmp.Diff(got, tt.want, cmp.AllowUnexported(tankaEnvironmentImpl{})))
+				t.Errorf(
+					cmp.Diff(
+						got,
+						tt.want,
+						// os.File requires unexported fields for comparing on Windows
+						cmp.AllowUnexported(tankaEnvironmentImpl{}), cmp.AllowUnexported(os.File{}),
+					),
+				)
 			}
 		})
 	}

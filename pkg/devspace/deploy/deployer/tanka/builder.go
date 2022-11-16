@@ -63,11 +63,11 @@ func NewTankaEnvironment(config *latest.TankaConfig) TankaEnvironment {
 	}
 	tkPath := config.TankaBinaryPath
 	if tkPath == "" {
-		tkPath = "tk" // fallback to default binary; resolved by the OS
+		tkPath = tkDefaultCommand // fallback to default binary; resolved by the OS
 	}
 	jbPath := config.JsonnetBundlerBinaryPath
 	if jbPath == "" {
-		jbPath = "jb" // fallback to default binary; resolved by the OS
+		jbPath = jbDefaultCommand // fallback to default binary; resolved by the OS
 	}
 	return &tankaEnvironmentImpl{
 		tkBinaryPath: tkPath,
