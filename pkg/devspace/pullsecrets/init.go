@@ -199,6 +199,13 @@ func (r *client) createPullSecret(ctx devspacecontext.Context, dockerClient dock
 		if err != nil {
 			return err
 		}
+	} else {
+		if username == "" {
+			ctx.Log().Warnf("Couldn't retrieve username for registry %s from docker store", pullSecret.Registry)
+		}
+		if password == "" {
+			ctx.Log().Warnf("Couldn't retrieve password for registry %s from docker store", pullSecret.Registry)
+		}
 	}
 
 	return nil
