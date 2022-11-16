@@ -165,7 +165,7 @@ func (r *client) createPullSecret(ctx devspacecontext.Context, dockerClient dock
 	username := pullSecret.Username
 	password := pullSecret.Password
 	if username == "" && password == "" && dockerClient != nil {
-		authConfig, _ := dockerClient.GetAuthConfig(ctx.Context(), pullSecret.Registry, true)
+		authConfig, err := dockerClient.GetAuthConfig(ctx.Context(), pullSecret.Registry, true)
 		if authConfig != nil {
 			username = authConfig.Username
 			password = authConfig.Password
@@ -179,6 +179,8 @@ func (r *client) createPullSecret(ctx devspacecontext.Context, dockerClient dock
 			if username == "" && IsAzureContainerRegistry(authConfig.ServerAddress) {
 				username = AzureContainerRegistryUsername
 			}
+		} else if err != nil {
+			ctx.Log().Debugf("Error retrieving docker credentials for registry %s: %v", pullSecret.Registry, err)
 		}
 	}
 
@@ -198,6 +200,13 @@ func (r *client) createPullSecret(ctx devspacecontext.Context, dockerClient dock
 		})
 		if err != nil {
 			return err
+		}
+	} else {
+		if username == "" {
+			ctx.Log().Warnf("Couldn't retrieve username for registry %s from docker store", pullSecret.Registry)
+		}
+		if password == "" {
+			ctx.Log().Warnf("Couldn't retrieve password for registry %s from docker store", pullSecret.Registry)
 		}
 	}
 
