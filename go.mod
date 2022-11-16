@@ -9,9 +9,9 @@ require (
 	github.com/bmatcuk/doublestar v1.1.1
 	github.com/compose-spec/compose-go v1.2.2
 	github.com/creack/pty v1.1.17
-	github.com/docker/cli v20.10.17+incompatible
+	github.com/docker/cli v20.10.21+incompatible
 	github.com/docker/distribution v2.8.1+incompatible
-	github.com/docker/docker v20.10.17+incompatible
+	github.com/docker/docker v20.10.21+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/evanphx/json-patch v4.12.0+incompatible
 	github.com/evanphx/json-patch/v5 v5.1.0
