@@ -506,15 +506,17 @@ echo 'Anyone using this project can invoke it via "devspace run migrate-db"'`,
 	// Add pipeline: dev
 	config.Pipelines["dev"] = &latest.Pipeline{
 		Run: `run_dependencies --all       # 1. Deploy any projects this project needs (see "dependencies")
-create_deployments --all     # 2. Deploy Helm charts and manifests specfied as "deployments"
-start_dev ` + imageName + `                # 3. Start dev mode "` + imageName + `" (see "dev" section)`,
+ensure_pull_secrets --all    # 2. Ensure pull secrets
+create_deployments --all     # 3. Deploy Helm charts and manifests specfied as "deployments"
+start_dev ` + imageName + `                # 4. Start dev mode "` + imageName + `" (see "dev" section)`,
 	}
 
 	// Add pipeline: dev
 	config.Pipelines["deploy"] = &latest.Pipeline{
 		Run: `run_dependencies --all                            # 1. Deploy any projects this project needs (see "dependencies")
-build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
-create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"`,
+ensure_pull_secrets --all                         # 2. Ensure pull secrets
+build_images --all -t $(git describe --always)    # 3. Build, tag (git commit hash) and push all images (see "images")
+create_deployments --all                          # 4. Deploy Helm charts and manifests specfied as "deployments"`,
 	}
 
 	// Save config
@@ -663,19 +665,6 @@ func annotateConfig(configPath string) error {
 #     path: ./ui        # Path-based dependencies (for monorepos)
 `)...)
 
-	annotatedConfig = append(annotatedConfig, []byte(`
-# Customize local registry settings 
-# localRegistry:
-#   enabled: true                     # Always use local registry, remove to only use the local registry when required
-#   name: registry
-#   namespace: ${devspace.namespace}  # Uses the current kube context's namespace (can be removed)
-#   image: registry:2.8.1
-#   port: 5000
-#   persistence:
-#     enabled: false
-#     size: 5Gi
-`)...)
-
 	err = os.WriteFile(configPath, annotatedConfig, os.ModePerm)
 	if err != nil {
 		return err
@@ -784,7 +773,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 			Command: "helm",
 		},
 		{
-			Command: "git",
+			GitCredentials: true,
 		},
 	}...)
 

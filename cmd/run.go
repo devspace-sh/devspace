@@ -109,12 +109,6 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 
 	// Set config root
 	configOptions := cmd.ToConfigOptions()
-	configOptions.Vars = append([]string{
-		"devspace.namespace=" + cmd.Namespace,
-		"DEVSPACE_NAMESPACE=" + cmd.Namespace,
-		"devspace.context=" + cmd.KubeContext,
-		"DEVSPACE_CONTEXT=" + cmd.KubeContext,
-	}, configOptions.Vars...)
 	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
 	if err != nil {
 		return err
@@ -127,7 +121,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// load the config
-	ctx, err := LoadCommandsConfig(configLoader, configOptions, f.GetLog())
+	ctx, err := cmd.LoadCommandsConfig(f, configLoader, configOptions, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -241,21 +235,29 @@ func ParseArgs(cobraCmd *cobra.Command, globalFlags *flags.GlobalFlags, log log.
 }
 
 // LoadCommandsConfig loads the commands config
-func LoadCommandsConfig(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log log.Logger) (devspacecontext.Context, error) {
+func (cmd *RunCmd) LoadCommandsConfig(f factory.Factory, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log log.Logger) (devspacecontext.Context, error) {
 	// load generated
 	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
 		return nil, err
 	}
 
+	// try to load client
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
+	if err != nil {
+		log.Debugf("Unable to create new kubectl client: %v", err)
+		client = nil
+	}
+
 	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(context.Background(), localCache, nil, loader.NewCommandsParser(), configOptions, log)
+	commandsInterface, err := configLoader.LoadWithParser(context.Background(), localCache, client, loader.NewCommandsParser(), configOptions, log)
 	if err != nil {
 		return nil, err
 	}
 
 	// create context
 	return devspacecontext.NewContext(context.Background(), commandsInterface.Variables(), log).
+		WithKubeClient(client).
 		WithConfig(commandsInterface), nil
 }
 
