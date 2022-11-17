@@ -1,6 +1,8 @@
 package registry
 
 import (
+	"path"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
@@ -19,6 +21,10 @@ type Options struct {
 	StorageEnabled   bool
 	StorageSize      string
 	StorageClassName string
+}
+
+func getID(o Options) string {
+	return path.Join(o.Namespace, o.Name)
 }
 
 func NewDefaultOptions() Options {

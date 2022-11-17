@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -19,25 +20,49 @@ import (
 	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
+var (
+	localRegistries     = map[string]*LocalRegistry{}
+	localRegistriesLock sync.Mutex
+)
+
 const (
 	LastAppliedConfigurationAnnotation = "devspace.sh/last-applied-configuration"
 	ApplyFieldManager                  = "devspace"
 )
 
 type LocalRegistry struct {
-	options     Options
+	Options
 	host        string
 	servicePort *corev1.ServicePort
 }
 
-func NewLocalRegistry(options Options) *LocalRegistry {
-	return &LocalRegistry{
-		options: options,
+func GetOrCreateLocalRegistry(ctx devspacecontext.Context, options Options) (*LocalRegistry, error) {
+	localRegistriesLock.Lock()
+	defer localRegistriesLock.Unlock()
+
+	id := getID(options)
+	localRegistry := localRegistries[id]
+
+	if localRegistry == nil {
+		localRegistry = newLocalRegistry(options)
+		ctx := ctx.WithLogger(ctx.Log().
+			WithPrefix("local-registry: ")).
+			WithContext(context.Background())
+
+		err := localRegistry.Start(ctx)
+		if err != nil {
+			return nil, err
+		}
+		localRegistries[id] = localRegistry
 	}
+
+	return localRegistry, nil
 }
 
-func (r *LocalRegistry) IsStarted() bool {
-	return r.servicePort != nil
+func newLocalRegistry(options Options) *LocalRegistry {
+	return &LocalRegistry{
+		Options: options,
+	}
 }
 
 func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
@@ -47,7 +72,7 @@ func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
 		return errors.Wrap(err, "ensure namespace")
 	}
 
-	if r.options.StorageEnabled {
+	if r.StorageEnabled {
 		if _, err := r.ensureStatefulset(ctx); err != nil {
 			return errors.Wrap(err, "ensure statefulset")
 		}
@@ -124,7 +149,7 @@ func (r *LocalRegistry) RewriteImage(image string) (string, error) {
 func (r *LocalRegistry) ensureNamespace(ctx devspacecontext.Context) error {
 	applyConfiguration, err := applyv1.ExtractNamespace(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: r.options.Namespace,
+			Name: r.Namespace,
 		},
 	}, ApplyFieldManager)
 	if err != nil {
@@ -158,8 +183,8 @@ func (r *LocalRegistry) ping(ctx context.Context) (done bool, err error) {
 
 func (r *LocalRegistry) selectRegistryPod(ctx devspacecontext.Context) (*corev1.Pod, error) {
 	options := targetselector.NewEmptyOptions().
-		WithLabelSelector(fmt.Sprintf("app=%s", r.options.Name)).
-		WithNamespace(r.options.Namespace).
+		WithLabelSelector(fmt.Sprintf("app=%s", r.Name)).
+		WithNamespace(r.Namespace).
 		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 500)).
 		WithSkipInitContainers(true)
 	selector := targetselector.NewTargetSelector(options)
@@ -218,7 +243,7 @@ func (r *LocalRegistry) waitForNodePort(ctx devspacecontext.Context) (*corev1.Se
 
 	kubeClient := ctx.KubeClient().KubeClient()
 	err := wait.PollImmediateWithContext(ctx.Context(), time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
-		service, err := kubeClient.CoreV1().Services(r.options.Namespace).Get(ctx, r.options.Name, metav1.GetOptions{})
+		service, err := kubeClient.CoreV1().Services(r.Namespace).Get(ctx, r.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
