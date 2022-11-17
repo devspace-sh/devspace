@@ -2,16 +2,17 @@ package engine
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
-	"github.com/pkg/errors"
 	"io"
-	"mvdan.cc/sh/v3/expand"
-	"mvdan.cc/sh/v3/interp"
-	"mvdan.cc/sh/v3/syntax"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
+	"github.com/pkg/errors"
+	"mvdan.cc/sh/v3/expand"
+	"mvdan.cc/sh/v3/interp"
+	"mvdan.cc/sh/v3/syntax"
 )
 
 var replaceVariablesRegEx = regexp.MustCompile(`\$\{[a-zA-Z_.]+?\}`)

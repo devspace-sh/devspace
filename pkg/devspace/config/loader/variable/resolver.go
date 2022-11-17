@@ -353,7 +353,14 @@ func (r *resolver) resolve(ctx context.Context, name string, definition *latest.
 	// check if in vars already
 	v, ok := r.memoryCache[name]
 	if ok {
-		return v, nil
+		if s, k := v.(string); k {
+			if s != "" {
+				return v, nil
+			}
+		} else {
+			return v, nil
+		}
+
 	}
 
 	// is predefined variable?
@@ -461,7 +468,7 @@ func (r *resolver) fillVariableDefinition(ctx context.Context, definition *lates
 
 	// this converts the definition.Value to definition.Default
 	if definition.Value != nil {
-		if definition.Default != nil {
+		if definition.Default != nil && definition.Value != definition.Default {
 			return fmt.Errorf(".default cannot be used with .value together for variable ${%s}", definition.Name)
 		}
 
