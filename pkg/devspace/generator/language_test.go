@@ -2,6 +2,7 @@ package generator
 
 import (
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
@@ -52,12 +53,13 @@ func TestLanguageHandler(t *testing.T) {
 		t.Fatalf("Error reading Dockerfile. Maybe languageHandler.CreateDockerfile didn't create it? : %v", err)
 	}
 
-	assert.Equal(t, string(content), `ARG  TAG=17-alpine
-FROM node:${TAG}
+	match := regexp.MustCompile(`ARG  TAG=\d*-alpine
+FROM node:\$\{TAG\}
 
 # Set working directory
 WORKDIR /app
-`, "Created Dockerfile has wrong content")
+`)
+	assert.Assert(t, match.Match(content), "Created Dockerfile has wrong content")
 
 	//Test CreateDockerFile with unavailable language
 	err = languageHandler.CreateDockerfile("unavailableLanguage")
