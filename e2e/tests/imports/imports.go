@@ -1,14 +1,15 @@
 package imports
 
 import (
+	"os"
+	"strings"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
-	"os"
-	"strings"
 )
 
 var _ = DevSpaceDescribe("imports", func() {
@@ -82,6 +83,8 @@ var _ = DevSpaceDescribe("imports", func() {
 
 		// read temp folder
 		framework.ExpectLocalFileContentsWithoutSpaces("import1.txt", "import2")
+		framework.ExpectLocalFileContentsWithoutSpaces("message.txt", "Life is Good!")
+		framework.ExpectLocalFileContentsWithoutSpaces("hello.txt", "")
 	})
 
 	ginkgo.It("should import correctly", func() {
