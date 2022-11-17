@@ -123,16 +123,12 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 		return nil, err
 	}
 
+	// replace paths
 	if len(devPod.PersistPaths) > 0 {
-		// replace paths
 		err := persistPaths(name, devPod, podTemplate)
 		if err != nil {
 			return nil, err
 		}
-
-		// Change strategy to recreate to avoid multiple pods using the same PVC
-		deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
-		deployment.Spec.Strategy.RollingUpdate = nil
 	}
 
 	// reset the metadata

@@ -2,15 +2,18 @@ package podreplace
 
 import (
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	patch2 "github.com/loft-sh/devspace/pkg/util/patch"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"strconv"
-	"time"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -21,7 +24,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
@@ -231,8 +233,6 @@ func (p *replacer) replace(ctx devspacecontext.Context, deploymentName string, t
 }
 
 func updatePVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPod *latest.DevPod) error {
-	var err error
-
 	// create a pvc if needed
 	hasPersistPath := false
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
@@ -242,7 +242,31 @@ func updatePVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPo
 		}
 		return true
 	})
+
 	if hasPersistPath {
+		name := getClaimName(deployment, devPod)
+		existingPVC, err := ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Get(ctx.Context(), name, metav1.GetOptions{})
+		if existingPVC != nil {
+			replicaSets, err := ctx.KubeClient().KubeClient().AppsV1().ReplicaSets(deployment.Namespace).List(ctx.Context(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+			if err != nil {
+				return errors.Wrap(err, "list replica sets")
+			}
+
+			for _, rs := range replicaSets.Items {
+				for _, v := range rs.Spec.Template.Spec.Volumes {
+					if v.PersistentVolumeClaim != nil && v.PersistentVolumeClaim.ClaimName == name {
+						ctx.Log().Debugf("Scaled down ReplicaSet %s to release persistent volume claim", rs.Name)
+						err = scaleDownTarget(ctx, &rs)
+						if err != nil {
+							return errors.Wrap(err, "scale down persistent volume claim replica sets")
+						}
+					}
+				}
+			}
+		} else if err != nil && !kerrors.IsNotFound(err) {
+			return errors.Wrap(err, "get existing persistent volume claim")
+		}
+
 		err = createPVC(ctx, deployment, devPod)
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
@@ -294,10 +318,7 @@ func createPVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPo
 		}
 	}
 
-	name := deployment.Name
-	if devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Name != "" {
-		name = devPod.PersistenceOptions.Name
-	}
+	name := getClaimName(deployment, devPod)
 
 	_, err = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Create(ctx.Context(), &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -428,4 +449,13 @@ func scaleDownTarget(ctx devspacecontext.Context, obj runtime.Object) error {
 	}
 
 	return fmt.Errorf("unrecognized object")
+}
+
+func getClaimName(deployment *appsv1.Deployment, devPod *latest.DevPod) string {
+	name := deployment.Name
+	if devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Name != "" {
+		name = devPod.PersistenceOptions.Name
+	}
+
+	return name
 }
