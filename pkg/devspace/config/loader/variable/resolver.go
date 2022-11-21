@@ -117,7 +117,7 @@ func (r *resolver) replaceString(ctx context.Context, str string) (interface{}, 
 	})
 }
 
-func (r *resolver) findVariablesInclude(haystack interface{}, include []*regexp.Regexp) ([]*latest.Variable, error) {
+func (r *resolver) findVariables(haystack interface{}, skipUnused bool, include []*regexp.Regexp) ([]*latest.Variable, error) {
 	// find out what vars are really used
 	varsUsed := map[string]bool{}
 	switch t := haystack.(type) {
@@ -144,10 +144,13 @@ func (r *resolver) findVariablesInclude(haystack interface{}, include []*regexp.
 		}
 	}
 
-	// add always resolve variables
-	for _, v := range r.vars {
-		if v.AlwaysResolve == nil || *v.AlwaysResolve {
-			varsUsed[v.Name] = true
+	// add always resolve variables. If skip unused is true, we don't
+	// resolve by default and instead only resolve the actually found variables
+	if !skipUnused {
+		for _, v := range r.vars {
+			if v.AlwaysResolve == nil || *v.AlwaysResolve {
+				varsUsed[v.Name] = true
+			}
 		}
 	}
 
@@ -162,7 +165,7 @@ func (r *resolver) findVariablesInclude(haystack interface{}, include []*regexp.
 }
 
 func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, error) {
-	return r.findVariablesInclude(haystack, nil)
+	return r.findVariables(haystack, false, nil)
 }
 
 func (r *resolver) getVariableDefinition(name string) *latest.Variable {
@@ -223,6 +226,7 @@ func (r *resolver) orderVariables(vars map[string]bool) ([]*latest.Variable, err
 	for i, j := 0, len(retVars)-1; i < j; i, j = i+1, j-1 {
 		retVars[i], retVars[j] = retVars[j], retVars[i]
 	}
+
 	return retVars, nil
 }
 
@@ -257,7 +261,7 @@ func (r *resolver) insertVariableGraph(g *graph.Graph, node *latest.Variable) er
 	return nil
 }
 
-func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{}, includedPaths []string) (interface{}, error) {
+func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{}, skipUnused bool, includedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range includedPaths {
 		path = strings.ReplaceAll(path, "**", ".+")
@@ -272,7 +276,7 @@ func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{
 	}
 
 	// fill variables
-	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, nil, paths)
+	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, skipUnused, nil, paths)
 	if err != nil {
 		return nil, err
 	}
@@ -284,10 +288,10 @@ func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{
 	}
 
 	// fill in variables again
-	return r.findAndFillVariables(ctx, preparedConfigInterface, nil, paths)
+	return r.findAndFillVariables(ctx, preparedConfigInterface, skipUnused, nil, paths)
 }
 
-func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{}, excludedPaths []string) (interface{}, error) {
+func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{}, skipUnused bool, excludedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range excludedPaths {
 		path = strings.ReplaceAll(path, "**", ".+")
@@ -302,7 +306,7 @@ func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{
 	}
 
 	// fill variables
-	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, paths, nil)
+	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, skipUnused, paths, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -314,15 +318,15 @@ func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{
 	}
 
 	// fill in variables again
-	return r.findAndFillVariables(ctx, preparedConfigInterface, paths, nil)
+	return r.findAndFillVariables(ctx, preparedConfigInterface, skipUnused, paths, nil)
 }
 
-func (r *resolver) FillVariables(ctx context.Context, haystack interface{}) (interface{}, error) {
-	return r.FillVariablesExclude(ctx, haystack, nil)
+func (r *resolver) FillVariables(ctx context.Context, haystack interface{}, skipUnused bool) (interface{}, error) {
+	return r.FillVariablesExclude(ctx, haystack, skipUnused, nil)
 }
 
-func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{}, exclude, include []*regexp.Regexp) (interface{}, error) {
-	varsUsed, err := r.findVariablesInclude(haystack, include)
+func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{}, skipUnused bool, exclude, include []*regexp.Regexp) (interface{}, error) {
+	varsUsed, err := r.findVariables(haystack, skipUnused, include)
 	if err != nil {
 		return nil, err
 	}

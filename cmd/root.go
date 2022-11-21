@@ -402,7 +402,7 @@ func (r *RawConfig) GetEnv(name string) string {
 		}
 
 		varName := "${" + name + "}"
-		out, err := r.Resolver.FillVariables(r.Ctx, varName)
+		out, err := r.Resolver.FillVariables(r.Ctx, varName, true)
 		if err == nil {
 			value := fmt.Sprintf("%v", out)
 			if value != varName && value != "" {
