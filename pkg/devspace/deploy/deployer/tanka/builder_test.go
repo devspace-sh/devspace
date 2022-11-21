@@ -74,8 +74,15 @@ func TestNewTankaEnvironment(t *testing.T) {
 					cmp.Diff(
 						got,
 						tt.want,
-						// os.File requires unexported fields for comparing on Windows
-						cmp.AllowUnexported(tankaEnvironmentImpl{}), cmp.AllowUnexported(os.File{}),
+						cmp.Comparer(func(a tankaEnvironmentImpl, b tankaEnvironmentImpl) bool {
+							return a.name == b.name &&
+								a.namespace == b.namespace &&
+								a.tkBinaryPath == b.tkBinaryPath &&
+								a.jbBinaryPath == b.jbBinaryPath &&
+								cmp.Equal(a.args, b.args) &&
+								cmp.Equal(a.flags, b.flags)
+
+						}),
 					),
 				)
 			}
