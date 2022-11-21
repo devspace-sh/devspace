@@ -506,15 +506,6 @@ func prepareProfiles(ctx context.Context, config map[string]interface{}, resolve
 			profileMap["replace"] = replace
 		}
 
-		// Resolve strategicMerge field
-		if profileMap["strategicMerge"] != nil {
-			strategicMerge, err := resolve(ctx, profileMap["strategicMerge"], resolver)
-			if err != nil {
-				return nil, err
-			}
-			profileMap["strategicMerge"] = strategicMerge
-		}
-
 		// Validate that the profile doesn't use forbidden expressions
 		err = validateProfile(profileMap)
 		if err != nil {
@@ -536,7 +527,7 @@ func resolve(ctx context.Context, data interface{}, resolver variable.Resolver) 
 	}
 
 	// find and fill variables
-	return resolver.FillVariables(ctx, data)
+	return resolver.FillVariables(ctx, data, true)
 }
 
 func (l *configLoader) applyProfiles(ctx context.Context, data map[string]interface{}, options *ConfigOptions, resolver variable.Resolver, log log.Logger) (map[string]interface{}, error) {
