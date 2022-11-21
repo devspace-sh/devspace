@@ -349,7 +349,7 @@ func sanitizeMatchExpression(expression string) string {
 }
 
 func resolveVariableValue(ctx context.Context, name string, resolver variable.Resolver) (string, error) {
-	val, err := resolver.FillVariables(ctx, "${"+name+"}")
+	val, err := resolver.FillVariables(ctx, "${"+name+"}", true)
 	if err != nil {
 		return "", err
 	}
