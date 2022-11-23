@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sort"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -61,6 +62,7 @@ func NewTankaEnvironment(config *latest.TankaConfig) TankaEnvironment {
 	if config.Target != "" {
 		flags = append(flags, fmt.Sprintf("--target=%s", config.Target))
 	}
+	sort.Strings(flags)
 	tkPath := config.TankaBinaryPath
 	if tkPath == "" {
 		tkPath = tkDefaultCommand // fallback to default binary; resolved by the OS
