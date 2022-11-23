@@ -68,10 +68,6 @@ jobs:
           echo "::set-output name=release_version::$RELEASE_VERSION"
       - name: Check out code into the Go module directory
         uses: actions/checkout@v1
-      - name: install-go-bindata
-        run: go get -u github.com/go-bindata/go-bindata/...
-        env:
-          GOPATH: /Users/runner/work/devspace/go
       - name: Download ui tar
         uses: actions/download-artifact@v2
         with:
