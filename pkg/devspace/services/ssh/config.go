@@ -1,16 +1,17 @@
 package ssh
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/scanner"
-	"github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/scanner"
+	"github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 )
 
 var configLock sync.Mutex

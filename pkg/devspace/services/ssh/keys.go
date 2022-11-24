@@ -1,26 +1,28 @@
 package ssh
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh"
 )
 
 var (
 	DevSpaceSSHFolder         = "ssh"
-	DevSpaceSSHHostKeyFile    = "id_devspace_host_rsa"
-	DevSpaceSSHPrivateKeyFile = "id_devspace_rsa"
-	DevSpaceSSHPublicKeyFile  = "id_devspace_rsa.pub"
+	DevSpaceSSHHostKeyFile    = "id_devspace_host_ecdsa"
+	DevSpaceSSHPrivateKeyFile = "id_devspace_ecdsa"
+	DevSpaceSSHPublicKeyFile  = "id_devspace_ecdsa.pub"
 )
 
 func init() {
@@ -34,14 +36,18 @@ func init() {
 var keyLock sync.Mutex
 
 func MakeHostKey() (string, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return "", err
 	}
 
 	// generate and write private key as PEM
 	var privKeyBuf strings.Builder
-	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
+	privateKeyPEM, err := pemBlock(privateKey)
+	if err != nil {
+		return "", err
+	}
+
 	if err := pem.Encode(&privKeyBuf, privateKeyPEM); err != nil {
 		return "", err
 	}
@@ -50,14 +56,17 @@ func MakeHostKey() (string, error) {
 }
 
 func MakeSSHKeyPair() (string, string, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", "", err
+	}
+	// generate and write private key as PEM
+	var privKeyBuf strings.Builder
+	privateKeyPEM, err := pemBlock(privateKey)
 	if err != nil {
 		return "", "", err
 	}
 
-	// generate and write private key as PEM
-	var privKeyBuf strings.Builder
-	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
 	if err := pem.Encode(&privKeyBuf, privateKeyPEM); err != nil {
 		return "", "", err
 	}
@@ -146,4 +155,15 @@ func getPublicKey() (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(out), nil
+}
+
+func pemBlock(privateKey *ecdsa.PrivateKey) (*pem.Block, error) {
+	if b, err := x509.MarshalPKCS8PrivateKey(privateKey); err == nil {
+		return &pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: b,
+		}, nil
+	} else {
+		return nil, err
+	}
 }
