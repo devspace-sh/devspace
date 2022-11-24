@@ -3,6 +3,8 @@ package proxycommands
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
+
 	sshpkg "github.com/gliderlabs/ssh"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -13,7 +15,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 var DefaultRemotePort = 10567
