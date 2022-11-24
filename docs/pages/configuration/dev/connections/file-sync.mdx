@@ -140,6 +140,25 @@ This option is often useful if you want to download a dependency folder (e.g. `n
 :::
 
 
+## Start sync log
+By default the sync log is disabled but it can be enabled with option `printLogs: true`.
+
+```yaml {11-13}
+deployments:
+ app-backend:
+  helm:
+    values:
+      containers:
+      - image: ghcr.io/org/project/image
+
+dev:
+  my-dev:
+    imageSelector: ghcr.io/org/project/image
+    sync:
+    - path: ./
+      printLogs: true
+```
+
 ## Sync-Triggered Actions
 Sometimes it is useful to execute commands after the sync uploads files/directories between the local filesystem and the container.
 
@@ -407,7 +426,6 @@ Polling might increase CPU consumption of the container drastically, depending o
 
 ### Disable File Watchers
 If the `noWatch` option is specified, DevSpace will stop syncing after initially comparing and resolving differences. This is useful if you want a one-time sync, but then continue doing other steps in your pipeline.
-
 
 
 ## FAQ
