@@ -35,39 +35,40 @@ func init() {
 
 var keyLock sync.Mutex
 
-func MakeHostKey() (string, error) {
+func generatePrivateKey() (*ecdsa.PrivateKey, string, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
 	// generate and write private key as PEM
-	var privKeyBuf strings.Builder
-	privateKeyPEM, err := pemBlock(privateKey)
+	var privateKeyBuf strings.Builder
+	b, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		return nil, "", err
+	}
+	privateKeyPEM := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: b,
+	}
+	if err := pem.Encode(&privateKeyBuf, privateKeyPEM); err != nil {
+		return nil, "", err
+	}
+
+	return privateKey, privateKeyBuf.String(), nil
+}
+
+func MakeHostKey() (string, error) {
+	_, privKeyStr, err := generatePrivateKey()
 	if err != nil {
 		return "", err
 	}
-
-	if err := pem.Encode(&privKeyBuf, privateKeyPEM); err != nil {
-		return "", err
-	}
-
-	return privKeyBuf.String(), nil
+	return privKeyStr, nil
 }
 
 func MakeSSHKeyPair() (string, string, error) {
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	privateKey, privKeyStr, err := generatePrivateKey()
 	if err != nil {
-		return "", "", err
-	}
-	// generate and write private key as PEM
-	var privKeyBuf strings.Builder
-	privateKeyPEM, err := pemBlock(privateKey)
-	if err != nil {
-		return "", "", err
-	}
-
-	if err := pem.Encode(&privKeyBuf, privateKeyPEM); err != nil {
 		return "", "", err
 	}
 
@@ -79,7 +80,7 @@ func MakeSSHKeyPair() (string, string, error) {
 
 	var pubKeyBuf strings.Builder
 	pubKeyBuf.Write(ssh.MarshalAuthorizedKey(pub))
-	return pubKeyBuf.String(), privKeyBuf.String(), nil
+	return pubKeyBuf.String(), privKeyStr, nil
 }
 
 func getHostKey() (string, error) {
@@ -155,15 +156,4 @@ func getPublicKey() (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(out), nil
-}
-
-func pemBlock(privateKey *ecdsa.PrivateKey) (*pem.Block, error) {
-	if b, err := x509.MarshalPKCS8PrivateKey(privateKey); err == nil {
-		return &pem.Block{
-			Type:  "PRIVATE KEY",
-			Bytes: b,
-		}, nil
-	} else {
-		return nil, err
-	}
 }
