@@ -13,7 +13,6 @@ local k = (import 'k.libsonnet');
     nginx: std.extVar('IMAGE_NGINX'),
   },
 
-  ns: k.core.v1.namespace.new($._config.namespace),
 
   container::
     container.new('nginx', $._images.nginx)

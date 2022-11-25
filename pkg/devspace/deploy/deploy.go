@@ -340,7 +340,6 @@ func (c *controller) Purge(ctx devspacecontext.Context, deployments []string, op
 			err = helm.Delete(ctx, deploymentCache.Name)
 		} else if deploymentCache.Tanka != nil {
 			// Purge Tanka Deployment
-			ctx.Log().Error("been here")
 			err = tanka.Purge(ctx, deploymentCache.Name)
 		} else {
 			ctx.Log().Errorf("error purging: deployment %s has no deployment method", deploymentCache.Name)

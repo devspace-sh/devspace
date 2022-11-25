@@ -1,5 +1,5 @@
 version: v2beta1
-name: kaniko
+name: tanka
 
 vars:
   IMAGE_NGINX: nginx:alpine
