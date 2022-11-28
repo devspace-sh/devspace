@@ -44,6 +44,33 @@ docker push acc123456.dkr.ecr.us-east1.amazonaws.com/devspace-example-payments:s
 docker push acc123456.dkr.ecr.us-east1.amazonaws.com/devspace-example-payments:another-tag
 ```
 
+## Local Registry
+In many cases you will have push permission to a shared image registry and should proceed to the [authentication](#authentication) section. For cases where you do not have a shared image registry, DevSpace can automatically deploy an image registry to your cluster and modify your images to use this local cluster registry.
+
+```yaml title=devspace.yaml
+version: v2beta1
+images:
+  no-auth:
+    # highlight-start
+    image: loftsh/devspace-example-noauth  # Rewritten to localhost:XXXXX/loftsh/devspace-example-noauth
+    # highlight-end
+```
+
+The local registry is used as a fallback by default. DevSpace will try to push images to your cluster in this order:
+- Push to authenticated remote registry
+- Use `kind load docker-image` if using a local [KinD](https://kind.sigs.k8s.io/) cluster
+- Deploy and use local registry
+
+The local registry can be explicity enabled or disabled to change the default behavior. Changing `enabled` to `true` will force using the local registry instead of `kind load docker-image`
+```yaml title=devspace.yaml
+version: v2beta1
+localRegistry:
+  # highlight-start
+  enabled: false
+  # highlight-end
+```
+
+For complete configuration options for the local registry, see the [localRegistry](/docs/configuration/localRegistry/) section of the devspace.yaml [configuration reference](/docs/configuration/reference#localRegistry).
 
 ## Authentication
 DevSpace provides two options for authenticating with a registry:

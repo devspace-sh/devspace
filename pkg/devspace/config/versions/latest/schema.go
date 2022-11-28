@@ -120,7 +120,7 @@ type Config struct {
 	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty" jsonschema:"-"`
 
 	// LocalRegistry specifies the configuration for a local image registry
-	LocalRegistry *LocalRegistryConfig `yaml:"localRegistry,omitempty" json:"localRegistry,omitempty"  jsonschema:"-"`
+	LocalRegistry *LocalRegistryConfig `yaml:"localRegistry,omitempty" json:"localRegistry,omitempty"`
 }
 
 // Import specifies the source of the devspace config to merge
@@ -588,36 +588,36 @@ type CustomConfigCommand struct {
 // LocalRegistryConfig holds the configuration of the local image registry
 type LocalRegistryConfig struct {
 	// Enabled enables the local registry for pushing images.
-	// When unset the local registry will be used as a fall back if there are no push permissions for the registry.
-	// When true the local registry will always be used
-	// When false the local registry will never be used
+	// When unset the local registry will be used as a fallback if there are no push permissions for the registry.
+	// When `true` the local registry will always be used.
+	// When `false` the local registry will never be used.
 	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
-	// Namespace where the local registry is deployed
+	// Namespace where the local registry is deployed. Default is the current context's namespace
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
-	// Name of the deployment and service of the local registry
+	// Name of the deployment and service of the local registry. Default is `registry`
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
-	// Image of the local docker registry
+	// Image of the local registry. Default is `registry:2.8.1`
 	Image string `yaml:"image,omitempty" json:"image,omitempty"`
 
-	// Port that the registry image listens on
+	// Port that the registry image listens on. Default is `5000`
 	Port *int `yaml:"port,omitempty" json:"port,omitempty"`
 
-	// Persistence settings for the local docker registry
+	// Persistence settings for the local registry
 	Persistence *LocalRegistryPersistence `yaml:"persistence,omitempty" json:"persistence,omitempty"`
 }
 
-// LocalRegistryPersistence holds the persistence settings
+// LocalRegistryPersistence configures persistence settings for the local registry
 type LocalRegistryPersistence struct {
-	// Enable enables persistence for the local docker registry
+	// Enable enables persistence for the local registry
 	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
-	// Size of the persistent volume for local docker registry storage
+	// Size of the persistent volume for local docker registry storage. Default is `5Gi`
 	Size string `yaml:"size,omitempty" json:"size,omitempty"`
 
-	// StorageClassName of the persistent volume
+	// StorageClassName of the persistent volume. Default is your cluster's configured default storage class
 	StorageClassName string `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
 }
 
