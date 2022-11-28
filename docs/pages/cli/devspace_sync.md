@@ -14,18 +14,17 @@ devspace sync [flags]
 ```
 
 ```
-#######################################################
-################### devspace sync #####################
-#######################################################
-Starts a bi-directionaly sync between the target container
-and the current path:
+#############################################################################
+################### devspace sync ###########################################
+#############################################################################
+Starts a bi-directional(default) sync between the target container path
+and local path:
 
-devspace sync
-devspace sync --local-path=subfolder --container-path=/app
-devspace sync --exclude=node_modules --exclude=test
-devspace sync --pod=my-pod --container=my-container
-devspace sync --container-path=/my-path
-#######################################################
+devspace sync --path=.:/app # localPath is current dir and remotePath is /app
+devspace sync --path=.:/app --image-selector nginx:latest
+devspace sync --path=.:/app --exclude=node_modules,test
+devspace sync --path=.:/app --pod=my-pod --container=my-container
+#############################################################################`
 ```
 
 
@@ -66,4 +65,3 @@ devspace sync --container-path=/my-path
   -s, --switch-context               Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings                  Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
-
