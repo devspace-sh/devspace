@@ -55,7 +55,5 @@ spec:
           name: "container1"
         - image: image(app):tag(app)
           name: "container2"
-        - image: app
-          name: "container3"
       initContainers:
       volumes:

@@ -119,10 +119,6 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container2"), pollingDurationLong, pollingInterval).
 			Should(gomega.MatchRegexp(`^localhost`))
 
-		ginkgo.By("Checking deployment container3")
-		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container3"), pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
 		err = <-done
 		framework.ExpectNoError(err)
 	})
@@ -187,10 +183,6 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container2"), pollingDurationLong, pollingInterval).
 			Should(gomega.MatchRegexp(`^localhost`))
 
-		ginkgo.By("Checking deployment container3")
-		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container3"), pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
 		err = <-done
 		framework.ExpectNoError(err)
 	})
@@ -229,10 +221,6 @@ var _ = DevSpaceDescribe("localregistry", func() {
 
 		ginkgo.By("Checking deployment container2")
 		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container2"), pollingDurationLong, pollingInterval).
-			Should(gomega.MatchRegexp(`^localhost`))
-
-		ginkgo.By("Checking deployment container3")
-		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container3"), pollingDurationLong, pollingInterval).
 			Should(gomega.MatchRegexp(`^localhost`))
 
 		err = <-done

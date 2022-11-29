@@ -113,5 +113,12 @@ func Ensure(config Config) Config {
 		retConfig = NewConfig(retConfig.Raw(), retConfig.RawBeforeConversion(), retConfig.Config(), retConfig.LocalCache(), retConfig.RemoteCache(), map[string]interface{}{}, retConfig.Path())
 	}
 
+	if config != nil {
+		runtimeVars := config.ListRuntimeVariables()
+		for k, v := range runtimeVars {
+			retConfig.SetRuntimeVariable(k, v)
+		}
+	}
+
 	return retConfig
 }
