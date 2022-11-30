@@ -7,6 +7,7 @@ import (
 
 	buildtypes "github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 
@@ -92,9 +93,24 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 	// strip out images from cache that are not in the images conf anymore
 	imageCacheMap := config.LocalCache().ListImageCache()
 
+	// Find matching image in image cache
+	var imageCache *localcache.ImageCache
+	if tryImageKey {
+		if match, ok := imageCacheMap[value]; ok {
+			imageCache = &match
+		}
+	} else {
+		for _, match := range imageCacheMap {
+			if match.ImageName == value {
+				imageCache = &match
+				break
+			}
+		}
+	}
+
 	// strip original image name
 	originalImage := ""
-	if imageCache, ok := imageCacheMap[value]; ok {
+	if imageCache != nil {
 		strippedImage, _, err := dockerfile.GetStrippedDockerImageName(imageCache.ImageName)
 		if err != nil {
 			return false, false, "", nil
@@ -115,6 +131,23 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 			shouldRedeploy = true
 			break
 		}
+	}
+
+	// Found a match in the image cache
+	if imageCache != nil {
+		if onlyImage {
+			return true, shouldRedeploy, imageCache.ResolveImage(), nil
+		}
+
+		if onlyTag {
+			if imageCache.Tag == "" {
+				return true, shouldRedeploy, "latest", nil
+			}
+
+			return true, shouldRedeploy, imageCache.Tag, nil
+		}
+
+		return true, shouldRedeploy, imageCache.ResolveImage() + ":" + imageCache.Tag, nil
 	}
 
 	// config images
@@ -210,7 +243,8 @@ func Replace(value string, config config2.Config, dependencies []types.Dependenc
 		return shouldRedeploy, resolvedImage, nil
 	}
 
-	return ReplaceHelpers(value, config, dependencies)
+	helperShouldRedeploy, helperResolvedImage, err := ReplaceHelpers(value, config, dependencies)
+	return shouldRedeploy || helperShouldRedeploy, helperResolvedImage, err
 }
 
 func ReplaceHelpers(value string, config config2.Config, dependencies []types.Dependency) (bool, interface{}, error) {
