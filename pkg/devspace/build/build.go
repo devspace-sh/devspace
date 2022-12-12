@@ -93,6 +93,9 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 	for imageConfigName, imageConf := range conf.Images {
 		imageName := imageConf.Image
+		if len(images) > 0 && !stringutil.Contains(images, imageConfigName) {
+			continue
+		}
 
 		// Get image tags
 		imageTags := []string{}
