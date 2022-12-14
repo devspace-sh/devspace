@@ -1,5 +1,5 @@
 import React from 'react';
-import { V1Pod, ExtensionsV1beta1IngressList } from '@kubernetes/client-node';
+import { V1Pod, V1IngressList } from '@kubernetes/client-node';
 import styles from './Pod.module.scss';
 import StatusIconText from 'components/basic/IconText/StatusIconText/StatusIconText';
 import { GetPodStatus, GetContainerStatus, configToYAML, formatError } from 'lib/utils';
@@ -112,7 +112,7 @@ const openYAMLPopup = (props: Props) => {
 const startPortForwarding = async (props: Props) => {
   try {
     const ingressReponse = await authFetch(
-      `/api/resource?resource=ingresses&apiVersion=extensions/v1beta1&context=${
+      `/api/resource?resource=ingresses&apiVersion=networking.k8s.io/v1&context=${
         props.devSpaceConfig.kubeContext
       }&namespace=${props.devSpaceConfig.kubeNamespace}`
     );
@@ -120,7 +120,7 @@ const startPortForwarding = async (props: Props) => {
       throw new Error(await ingressReponse.text());
     }
 
-    const ingressList: ExtensionsV1beta1IngressList = await ingressReponse.json();
+    const ingressList: V1IngressList = await ingressReponse.json();
     const splittedService = props.service.split(':');
     if (ingressList && ingressList.items) {
       for (let i = 0; i < ingressList.items.length; i++) {
@@ -131,7 +131,7 @@ const startPortForwarding = async (props: Props) => {
             if (rule.http && rule.http.paths) {
               for (let x = 0; x < rule.http.paths.length; x++) {
                 const path = rule.http.paths[x];
-                if (path.backend && path.backend.serviceName === splittedService[0]) {
+                if (path.backend && path.backend.service && path.backend.service.name === splittedService[0]) {
                   let suffix = '';
                   if (path.path) {
                     suffix = path.path;

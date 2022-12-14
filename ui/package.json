@@ -7,7 +7,7 @@
     "@fortawesome/free-brands-svg-icons": "^5.7.2",
     "@fortawesome/free-solid-svg-icons": "^5.7.2",
     "@fortawesome/react-fontawesome": "^0.1.4",
-    "@kubernetes/client-node": "0.12.2",
+    "@kubernetes/client-node": "^0.17.1",
     "autoprefixer": "7.1.6",
     "babel-jest": "^25.0.0",
     "babel-loader": "7.1.2",
@@ -28,7 +28,7 @@
     "isomorphic-unfetch": "^3.0.0",
     "jest": "^26.0.0",
     "js-sha256": "^0.9.0",
-    "js-yaml": "^3.13.1",
+    "js-yaml": "^4.1.0",
     "moment": "^2.29.4",
     "sass": "^1.54.0",
     "sass-loader": "10.2.0",
@@ -74,6 +74,7 @@
   },
   "devDependencies": {
     "@types/jest": "^23.3.10",
+    "@types/js-yaml": "^4.0.5",
     "@types/node": "^10.12.12",
     "@types/react": "^16.8.2",
     "@types/react-dom": "^16.8.0",
@@ -85,7 +86,6 @@
     "nodemon": "^1.18.4",
     "react-hot-loader": "^4.6.5",
     "require-context.macro": "^1.1.0",
-    "sass-loader": "^8.0.0",
     "terser": "^4.8.1",
     "terser-webpack-plugin": "^1.4.1",
     "typescript": "3.5.3"
