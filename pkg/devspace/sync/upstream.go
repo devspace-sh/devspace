@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,20 +14,22 @@ import (
 	"sync"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
-
-	"github.com/bmatcuk/doublestar"
-	"github.com/juju/ratelimit"
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/loft-sh/devspace/helper/util/crc32"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+
 	"github.com/loft-sh/loft-util/pkg/command"
 	"github.com/loft-sh/notify"
+
+	"github.com/bmatcuk/doublestar"
+	"github.com/fujiwara/shapeio"
 	"github.com/pkg/errors"
+	"mvdan.cc/sh/v3/expand"
 )
 
 var (
@@ -72,10 +73,14 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 
 	// Apply limits if specified
 	if sync.Options.DownstreamLimit > 0 {
-		clientReader = ratelimit.Reader(reader, ratelimit.NewBucketWithRate(float64(sync.Options.DownstreamLimit), sync.Options.DownstreamLimit))
+		limitedReader := shapeio.NewReader(reader)
+		limitedReader.SetRateLimit(float64(sync.Options.DownstreamLimit))
+		clientReader = limitedReader
 	}
 	if sync.Options.UpstreamLimit > 0 {
-		clientWriter = ratelimit.Writer(writer, ratelimit.NewBucketWithRate(float64(sync.Options.UpstreamLimit), sync.Options.UpstreamLimit))
+		limitedWriter := shapeio.NewWriter(writer)
+		limitedWriter.SetRateLimit(float64(sync.Options.UpstreamLimit))
+		clientWriter = limitedWriter
 	}
 
 	// Create client

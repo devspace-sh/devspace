@@ -209,6 +209,9 @@ github.com/evanphx/json-patch/v5
 # github.com/fsnotify/fsnotify v1.5.1
 ## explicit; go 1.13
 github.com/fsnotify/fsnotify
+# github.com/fujiwara/shapeio v1.0.0
+## explicit; go 1.16
+github.com/fujiwara/shapeio
 # github.com/gertd/go-pluralize v0.2.0
 ## explicit; go 1.17
 github.com/gertd/go-pluralize
@@ -338,9 +341,6 @@ github.com/josharian/intern
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
-# github.com/juju/ratelimit v1.0.1
-## explicit
-github.com/juju/ratelimit
 # github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 ## explicit
 github.com/k0kubun/go-ansi
