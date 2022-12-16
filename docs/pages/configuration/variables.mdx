@@ -6,6 +6,7 @@ sidebar_label: ${VARIABLES}
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import ConfigPartial from './_partials/v2beta1/vars.mdx'
+import FragmentVarsForceString from '../_partials/vars-force-string.mdx';
 
 DevSpace allows you to make your configuration dynamic by using variables.
 
@@ -35,6 +36,8 @@ DevSpace lets you define custom varables inside `devspace.yaml` within the `vars
 :::tip Mix & Match Variable Types
 You can define several types of variables in the same config file, e.g. one `devspace.yaml` can contain static variables, env variables and more.
 :::
+
+<FragmentVarsForceString/>
 
 ### With Static Value
 To add variables with static value, just provide the value for the respective variable:
