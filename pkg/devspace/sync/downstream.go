@@ -3,8 +3,6 @@ package sync
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"os"
 	"path"
@@ -12,11 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/juju/ratelimit"
-	"github.com/pkg/errors"
-
 	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+
+	"github.com/fujiwara/shapeio"
+	"github.com/pkg/errors"
 )
 
 type downstream struct {
@@ -42,10 +42,14 @@ func newDownstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*do
 
 	// Apply limits if specified
 	if sync.Options.DownstreamLimit > 0 {
-		clientReader = ratelimit.Reader(reader, ratelimit.NewBucketWithRate(float64(sync.Options.DownstreamLimit), sync.Options.DownstreamLimit))
+		limitedReader := shapeio.NewReader(reader)
+		limitedReader.SetRateLimit(float64(sync.Options.DownstreamLimit))
+		clientReader = limitedReader
 	}
 	if sync.Options.UpstreamLimit > 0 {
-		clientWriter = ratelimit.Writer(writer, ratelimit.NewBucketWithRate(float64(sync.Options.UpstreamLimit), sync.Options.UpstreamLimit))
+		limitedWriter := shapeio.NewWriter(writer)
+		limitedWriter.SetRateLimit(float64(sync.Options.UpstreamLimit))
+		clientWriter = limitedWriter
 	}
 
 	// Create client connection

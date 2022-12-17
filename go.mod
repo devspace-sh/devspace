@@ -15,6 +15,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/evanphx/json-patch v4.12.0+incompatible
 	github.com/evanphx/json-patch/v5 v5.1.0
+	github.com/fujiwara/shapeio v1.0.0
 	github.com/gertd/go-pluralize v0.2.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/gliderlabs/ssh v0.3.5
@@ -26,7 +27,6 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/joho/godotenv v1.3.0
 	github.com/json-iterator/go v1.1.12
-	github.com/juju/ratelimit v1.0.1
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/loft-sh/loft-util v0.0.9-alpha
 	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
