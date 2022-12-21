@@ -62,6 +62,22 @@ const requestHeaders = {
 };
 let packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
 
+const sanitizeVersion = function(version) {
+  if (version == null) {
+    return "latest"
+  }
+
+  if (version === "") {
+    return "latest"
+  }
+
+  if (version.startsWith("v")) {
+    return version.slice(1)
+  }
+
+  return version
+}
+
 const getLatestVersion = function (callback) {
   const releasesURL = "https://github.com/loft-sh/devspace/releases/latest";
 
@@ -104,7 +120,7 @@ const getLatestVersion = function (callback) {
 };
 
 if (action === "update-version") {
-  packageJson.version = "" + process.env.RELEASE_VERSION;
+  packageJson.version = sanitizeVersion("" + process.env.RELEASE_VERSION);
 
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 4));
   process.exit(0);
@@ -120,7 +136,7 @@ if (action === "get-latest") {
 }
 
 if (action === "get-tag") {
-  let latestVersion = "" + process.env.RELEASE_VERSION;
+  let latestVersion = sanitizeVersion("" + process.env.RELEASE_VERSION);
   let tagRegex = /^.*-([a-z]*)(\.)?([0-9]*)?$/i
   let tag = "latest"
 
@@ -152,7 +168,7 @@ function rimraf(dir_path) {
 }
 
 let continueProcess = function (askRemoveGlobalFolder) {
-  let version = packageJson.version;
+  let version = sanitizeVersion("" + packageJson.version);
   let platform = PLATFORM_MAPPING[process.platform];
   let arch = ARCH_MAPPING[process.arch];
   let downloadExtension = ".dl";
