@@ -2,6 +2,8 @@ package build
 
 import (
 	"fmt"
+	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
@@ -92,6 +94,30 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 	tags := map[string][]string{}
 
 	for imageConfigName, imageConf := range conf.Images {
+		// create image pull secret if possible
+		if ctx.KubeClient() != nil && (imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret) {
+			registryURL, err := pullsecrets.GetRegistryFromImageName(imageConf.Image)
+			if err != nil {
+				return err
+			}
+
+			dockerClient, err := dockerclient.NewClient(ctx.Context(), ctx.Log())
+			if err == nil {
+				if imageConf.Kaniko != nil && imageConf.Kaniko.Namespace != "" && ctx.KubeClient().Namespace() != imageConf.Kaniko.Namespace {
+					err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, imageConf.Kaniko.Namespace, registryURL)
+					if err != nil {
+						ctx.Log().Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
+					}
+				}
+
+				err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, ctx.KubeClient().Namespace(), registryURL)
+				if err != nil {
+					ctx.Log().Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
+				}
+			}
+		}
+
+		// get image name and skip if we shouldn't build
 		imageName := imageConf.Image
 		if len(images) > 0 && !stringutil.Contains(images, imageConfigName) {
 			continue

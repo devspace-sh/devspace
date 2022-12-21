@@ -10,7 +10,6 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/pkg/errors"
 )
@@ -78,29 +77,6 @@ func (c *controller) createBuilder(ctx devspacecontext.Context, imageConfigName 
 		bldr, err = docker.NewBuilder(ctx, dockerClient, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker builder: %v", err)
-		}
-	}
-
-	// create image pull secret if possible
-	if ctx.KubeClient() != nil && (imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret) {
-		registryURL, err := pullsecrets.GetRegistryFromImageName(imageConf.Image)
-		if err != nil {
-			return nil, err
-		}
-
-		dockerClient, err := dockerclient.NewClient(ctx.Context(), ctx.Log())
-		if err == nil {
-			if imageConf.Kaniko != nil && imageConf.Kaniko.Namespace != "" && ctx.KubeClient().Namespace() != imageConf.Kaniko.Namespace {
-				err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, imageConf.Kaniko.Namespace, registryURL)
-				if err != nil {
-					ctx.Log().Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
-				}
-			}
-
-			err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, ctx.KubeClient().Namespace(), registryURL)
-			if err != nil {
-				ctx.Log().Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
-			}
 		}
 	}
 
