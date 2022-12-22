@@ -176,26 +176,37 @@ func (t *tankaEnvironmentImpl) Delete(ctx devspacecontext.Context) error {
 	return cmd.Run()
 }
 
+// those functions run in a per-execution global sync.Once, as the called binary modifies the file structure
+// and is not thread safe
+
 func (t *tankaEnvironmentImpl) Install(ctx devspacecontext.Context) error {
+	var err error = nil
 	installArgs := []string{"install"}
 
-	ctx.Log().Debugf("Jb install")
-	cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
-	cmd.Stdout = t.stdout
-	cmd.Stderr = t.stderr
-	cmd.Dir = t.rootDir
+	GetOnce("install", t.rootDir).Do(func() {
+		ctx.Log().Debugf("Jb install")
+		cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
+		cmd.Stdout = t.stdout
+		cmd.Stderr = t.stderr
+		cmd.Dir = t.rootDir
+		err = cmd.Run()
+	})
 
-	return cmd.Run()
+	return err
 }
 
 func (t *tankaEnvironmentImpl) Update(ctx devspacecontext.Context) error {
+	var err error = nil
 	installArgs := []string{"update"}
 
-	ctx.Log().Debugf("Jb update")
-	cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
-	cmd.Stdout = t.stdout
-	cmd.Stderr = t.stderr
-	cmd.Dir = t.rootDir
+	GetOnce("update", t.rootDir).Do(func() {
+		ctx.Log().Debugf("Jb update")
+		cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
+		cmd.Stdout = t.stdout
+		cmd.Stderr = t.stderr
+		cmd.Dir = t.rootDir
+		err = cmd.Run()
+	})
 
-	return cmd.Run()
+	return err
 }
