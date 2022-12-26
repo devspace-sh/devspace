@@ -22,8 +22,8 @@ func GetOnce(operation, path string) *sync.Once {
 	defer mutex.Unlock()
 
 	if once, ok = onceMap[fmt.Sprintf("%s-%s", operation, path)]; !ok {
-	} else {
 		once = &sync.Once{}
+		onceMap[fmt.Sprintf("%s-%s", operation, path)] = once
 	}
 	return once
 }

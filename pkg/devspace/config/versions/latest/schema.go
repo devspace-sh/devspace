@@ -832,10 +832,10 @@ type RollingUpdateConfig struct {
 type TankaConfig struct {
 	// Path is the (relative) path of the tanka environment, usually identified by jsonnetfile.json.
 	Path string `yaml:"path,omitempty" json:"path,omitempty"`
-	// RunJsonnetBundlerInstall indicates if the `jb install` command shall be run
-	RunJsonnetBundlerInstall bool `yaml:"runJsonnetBundlerInstall,omitempty" json:"runJsonnetBundlerInstall,omitempty"`
-	// RunJsonnetBundlerUpdate indicates if the `jb update` command shall be run
-	RunJsonnetBundlerUpdate bool `yaml:"runJsonnetBundlerUpdate,omitempty" json:"runJsonnetBundlerUpdate,omitempty"`
+	// RunJsonnetBundlerInstall indicates if the `jb install` command shall be run, default to true
+	RunJsonnetBundlerInstall *bool `yaml:"runJsonnetBundlerInstall,omitempty" json:"runJsonnetBundlerInstall,omitempty"`
+	// RunJsonnetBundlerUpdate indicates if the `jb update` command shall be run default to true
+	RunJsonnetBundlerUpdate *bool `yaml:"runJsonnetBundlerUpdate,omitempty" json:"runJsonnetBundlerUpdate,omitempty"`
 
 	// EnvironmentPath is the (relative) path to a specific tanka environment.
 	EnvironmentPath string `yaml:"environmentPath,omitempty" json:"environmentPath,omitempty"`
