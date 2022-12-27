@@ -432,6 +432,9 @@ type KanikoConfig struct {
 	// ServiceAccount the service account to use for the kaniko pod
 	ServiceAccount string `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
 
+	// GenerateName is the optional prefix that will be set to the generateName field of the build pod
+	GenerateName string `yaml:"generateName,omitempty" json:"generateName,omitempty"`
+
 	// Annotations are extra annotations that will be added to the build pod
 	Annotations map[string]string `yaml:"annotations,omitempty" json:"annotations,omitempty"`
 
