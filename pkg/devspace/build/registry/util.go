@@ -3,8 +3,11 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko"
 	"io"
 	"net/http"
+	"runtime"
 	"strings"
 
 	"github.com/docker/docker/pkg/jsonmessage"
@@ -120,22 +123,49 @@ func CopyImageToRemote(ctx context.Context, client dockerclient.Client, imageNam
 	return <-errChan
 }
 
-func UseLocalRegistry(client kubectl.Client, config *latest.Config, skipPush bool) bool {
+func UseLocalRegistry(client kubectl.Client, config *latest.Config, imageConfig *latest.Image, imageBuilder builder.Interface, skipPush bool) bool {
 	if skipPush {
 		return false
-	}
-
-	if client == nil {
+	} else if client == nil {
 		return false
 	}
 
+	// TODO: better check for arm64 architectures
+	if runtime.GOARCH != "amd64" {
+		return false
+	}
+
+	// check if builder is kaniko
+	if imageBuilder != nil {
+		_, ok := imageBuilder.(*kaniko.Builder)
+		if ok {
+			return false
+		}
+	}
+
+	// check if image looks weird like localhost / cluster.local
+	if imageConfig != nil {
+		if imageConfig.Kaniko != nil {
+			return false
+		} else if imageConfig.Custom != nil {
+			return false
+		} else if imageConfig.BuildKit != nil && imageConfig.BuildKit.InCluster != nil {
+			return false
+		}
+
+		imageWithoutPort := strings.Split(imageConfig.Image, ":")[0]
+		if imageWithoutPort == "" || imageWithoutPort == "localhost" || imageWithoutPort == "127.0.0.1" || strings.HasSuffix(imageWithoutPort, ".cluster.local") {
+			return false
+		}
+	}
+
+	// check if fallback
 	if !IsLocalRegistryFallback(config) {
 		return IsLocalRegistryEnabled(config)
 	}
 
-	context := client.CurrentContext()
-
 	// Determine if this is a vcluster
+	context := client.CurrentContext()
 	isVClusterContext := strings.Contains(context, "vcluster_")
 
 	// Determine if this is a local kubernetes cluster
