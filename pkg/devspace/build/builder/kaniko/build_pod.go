@@ -1,9 +1,10 @@
 package kaniko
 
 import (
+	"path/filepath"
+
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"path/filepath"
 
 	"github.com/docker/distribution/reference"
 	jsonyaml "github.com/ghodss/yaml"
@@ -37,6 +38,9 @@ const devspaceQuota = "devspace-quota"
 
 // DevspaceLimitRange is the limit range name of the space limit range in the devspace cloud
 const devspaceLimitRange = "devspace-limit-range"
+
+// The generateName string for the kaniko pod that we use by default
+const podGenerateName = "devspace-build-kaniko-"
 
 type availableResources struct {
 	CPU              resource.Quantity
@@ -72,6 +76,11 @@ func (b *Builder) getBuildPod(ctx devspacecontext.Context, buildID string, optio
 	kanikoInitImage := kanikoInitImage
 	if kanikoOptions.InitImage != "" {
 		kanikoInitImage = kanikoOptions.InitImage
+	}
+
+	kanikoPodGenerateName := podGenerateName
+	if kanikoOptions.GenerateName != "" {
+		kanikoPodGenerateName = kanikoOptions.GenerateName
 	}
 
 	// additional options to pass to kaniko
@@ -213,7 +222,7 @@ func (b *Builder) getBuildPod(ctx devspacecontext.Context, buildID string, optio
 	// create the build pod
 	pod := &k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "devspace-build-kaniko-",
+			GenerateName: kanikoPodGenerateName,
 			Annotations:  map[string]string{},
 			Labels: map[string]string{
 				"devspace-build":    "true",
