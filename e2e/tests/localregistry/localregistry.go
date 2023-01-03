@@ -424,9 +424,6 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		err = buildCmd.RunDefault(f)
 		framework.ExpectError(err)
 		gomega.Expect(output.String()).To(
-			gomega.ContainSubstring("unable to push image my-docker-username/helloworld-kaniko and only docker and buildkit builds support using a local registry"),
-		)
-		gomega.Expect(output.String()).To(
 			gomega.ContainSubstring("UNAUTHORIZED: authentication required"),
 		)
 	})

@@ -307,7 +307,7 @@ func TestUseLocalRegistry(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		actual := UseLocalRegistry(testCase.client, testCase.config, testCase.skipPush)
+		actual := UseLocalRegistry(testCase.client, testCase.config, nil, nil, testCase.skipPush)
 		assert.Equal(t, actual, testCase.expected, "Unexpected result in test case %s", testCase.name)
 	}
 }

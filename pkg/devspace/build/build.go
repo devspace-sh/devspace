@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/buildkit"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/build/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -151,38 +149,34 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		imageCache.ImageName = imageName
 		imageCache.LocalRegistryImageName = ""
 
-		if registry.UseLocalRegistry(kubeClient, conf, options.SkipPush) && !registry.HasPushPermission(imageConf) {
-			if SupportsLocalRegistry(builder) {
-				// Not able to deploy a local registry without a valid kube context
-				if kubeClient == nil {
-					return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
-				}
+		if registry.UseLocalRegistry(kubeClient, conf, imageConf, builder, options.SkipPush) && !registry.HasPushPermission(imageConf) {
+			// Not able to deploy a local registry without a valid kube context
+			if kubeClient == nil {
+				return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
+			}
 
-				registryOptions := registry.NewDefaultOptions().
-					WithNamespace(kubeClient.Namespace()).
-					WithLocalRegistryConfig(conf.LocalRegistry)
+			registryOptions := registry.NewDefaultOptions().
+				WithNamespace(kubeClient.Namespace()).
+				WithLocalRegistryConfig(conf.LocalRegistry)
 
-				// Create and start a local registry if one isn't already running
-				localRegistry, err := registry.GetOrCreateLocalRegistry(ctx, registryOptions)
-				if err != nil {
-					return errors.Wrap(err, "get or create local registry")
-				}
+			// Create and start a local registry if one isn't already running
+			localRegistry, err := registry.GetOrCreateLocalRegistry(ctx, registryOptions)
+			if err != nil {
+				return errors.Wrap(err, "get or create local registry")
+			}
 
-				// Update cache for local registry use
-				imageCache.LocalRegistryImageName, err = localRegistry.RewriteImage(imageName)
-				if err != nil {
-					return errors.Wrap(err, "rewrite image")
-				}
-				ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
+			// Update cache for local registry use
+			imageCache.LocalRegistryImageName, err = localRegistry.RewriteImage(imageName)
+			if err != nil {
+				return errors.Wrap(err, "rewrite image")
+			}
+			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 
-				// Reset the builder for local registry usage
-				// TODO: refactor so this isn't necessary!
-				builder, err = c.createBuilder(ctx, imageConfigName, imageConf, imageTags, options)
-				if err != nil {
-					return errors.Wrap(err, "create builder")
-				}
-			} else {
-				ctx.Log().Warnf("unable to push image %s and only docker and buildkit builds support using a local registry", imageConf.Image)
+			// Reset the builder for local registry usage
+			// TODO: refactor so this isn't necessary!
+			builder, err = c.createBuilder(ctx, imageConfigName, imageConf, imageTags, options)
+			if err != nil {
+				return errors.Wrap(err, "create builder")
 			}
 		}
 
@@ -429,15 +423,4 @@ func (c *controller) waitForBuild(ctx devspacecontext.Context, errChan <-chan er
 	}
 
 	return nil
-}
-
-func SupportsLocalRegistry(builder builder.Interface) bool {
-	switch builder.(type) {
-	case *buildkit.Builder:
-		return true
-	case *docker.Builder:
-		return true
-	default:
-		return false
-	}
 }
