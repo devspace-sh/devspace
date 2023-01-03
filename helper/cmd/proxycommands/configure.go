@@ -6,6 +6,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
@@ -17,12 +18,14 @@ var (
 	sshPrivateKeyPath = "/tmp/ssh_private_key"
 	sshPublicKeyPath  = "/tmp/ssh_public_key"
 	proxyCommandsPath = "/tmp/proxy_commands"
+	portPath          = "/tmp/port"
 )
 
 // ConfigureCmd holds the ssh cmd flags
 type ConfigureCmd struct {
 	PublicKey  string
 	PrivateKey string
+	Port       int
 	WorkingDir string
 
 	GitCredentials bool
@@ -42,6 +45,7 @@ func NewConfigureCmd() *cobra.Command {
 
 	configureCmd.Flags().StringVar(&cmd.PublicKey, "public-key", "", "Public key to use")
 	configureCmd.Flags().StringVar(&cmd.PrivateKey, "private-key", "", "Private key to use")
+	configureCmd.Flags().IntVar(&cmd.Port, "port", 0, "Port inside the container to connect to")
 	configureCmd.Flags().StringVar(&cmd.WorkingDir, "working-dir", "", "Working dir to use")
 	configureCmd.Flags().StringSliceVar(&cmd.Commands, "commands", []string{}, "Commands to overwrite")
 	configureCmd.Flags().BoolVar(&cmd.GitCredentials, "git-credentials", false, "If git credentials should get configured")
@@ -109,6 +113,14 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 		err = os.WriteFile(sshPrivateKeyPath, decodedPrivateKey, 0600)
 		if err != nil {
 			return errors.Wrap(err, "write private key")
+		}
+	}
+
+	// now configure the port
+	if cmd.Port > 0 {
+		err = os.WriteFile(portPath, []byte(strconv.Itoa(cmd.Port)), 0644)
+		if err != nil {
+			return errors.Wrap(err, "write port file")
 		}
 	}
 
