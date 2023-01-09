@@ -108,9 +108,10 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 	}
 
 	// Update dependencies if needed
-	stat, err := os.Stat(chartName)
+	chartPath := filepath.Join(ctx.WorkingDir(), chartName)
+	stat, err := os.Stat(chartPath)
 	if err == nil && stat.IsDir() {
-		_, err := c.genericHelm.Exec(ctx.WithWorkingDir(chartName), []string{"dependency", "update"})
+		_, err := c.genericHelm.Exec(ctx.WithWorkingDir(chartPath), []string{"dependency", "update"})
 		if err != nil {
 			ctx.Log().Warnf("error running helm dependency update: %v", err)
 		}
