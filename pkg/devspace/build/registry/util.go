@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko"
 	"io"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"runtime"
 	"strings"
@@ -130,9 +131,16 @@ func UseLocalRegistry(client kubectl.Client, config *latest.Config, imageConfig 
 		return false
 	}
 
-	// TODO: better check for arm64 architectures
+	// check if node architecture equals our architecture
 	if runtime.GOARCH != "amd64" {
-		return false
+		nodes, err := client.KubeClient().CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			return false
+		} else if len(nodes.Items) != 1 {
+			return false
+		} else if nodes.Items[0].Labels == nil || nodes.Items[0].Labels["kubernetes.io/arch"] != runtime.GOARCH {
+			return false
+		}
 	}
 
 	// check if builder is kaniko
@@ -154,7 +162,7 @@ func UseLocalRegistry(client kubectl.Client, config *latest.Config, imageConfig 
 		}
 
 		imageWithoutPort := strings.Split(imageConfig.Image, ":")[0]
-		if imageWithoutPort == "" || imageWithoutPort == "localhost" || imageWithoutPort == "127.0.0.1" || strings.HasSuffix(imageWithoutPort, ".cluster.local") {
+		if imageWithoutPort == "" || imageWithoutPort == "localhost" || imageWithoutPort == "127.0.0.1" || strings.HasSuffix(imageWithoutPort, ".local") || strings.HasSuffix(imageWithoutPort, ".localhost") {
 			return false
 		}
 	}
