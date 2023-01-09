@@ -232,7 +232,7 @@ func addHost(path, host, port string) (string, error) {
 	newLines = append(newLines, "  HostName localhost")
 	newLines = append(newLines, "  LogLevel error")
 	newLines = append(newLines, "  Port "+port)
-	newLines = append(newLines, "  IdentityFile "+DevSpaceSSHPrivateKeyFile)
+	newLines = append(newLines, "  IdentityFile \""+DevSpaceSSHPrivateKeyFile+"\"")
 	newLines = append(newLines, "  StrictHostKeyChecking no")
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
 	newLines = append(newLines, "  User devspace")

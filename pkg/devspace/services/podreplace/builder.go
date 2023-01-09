@@ -160,6 +160,9 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 		deployment.Spec.Selector.MatchExpressions = nil
 	}
 	deployment.Spec.Selector.MatchLabels[selector.ReplacedLabel] = "true"
+	deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.RecreateDeploymentStrategyType,
+	}
 
 	// make sure labels etc are there
 	if ctx.Log().GetLevel() == logrus.DebugLevel {
