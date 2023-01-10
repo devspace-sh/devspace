@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"context"
+	"github.com/onsi/ginkgo/v2"
 	"os"
 	"os/exec"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/onsi/ginkgo"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 

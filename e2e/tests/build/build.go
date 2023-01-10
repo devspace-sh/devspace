@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/onsi/ginkgo/v2"
 	"io"
 	"os"
 	"os/exec"
@@ -19,7 +20,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/onsi/ginkgo"
 )
 
 var _ = DevSpaceDescribe("build", func() {

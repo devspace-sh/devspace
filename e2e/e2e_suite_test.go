@@ -1,11 +1,11 @@
 package e2e
 
 import (
+	"github.com/onsi/ginkgo/v2"
 	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 
 	// Register tests

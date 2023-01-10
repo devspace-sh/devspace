@@ -2,6 +2,7 @@ package devspacehelper
 
 import (
 	"context"
+	"github.com/onsi/ginkgo/v2"
 	"os"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/onsi/ginkgo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"

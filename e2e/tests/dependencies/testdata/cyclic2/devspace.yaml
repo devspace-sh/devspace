@@ -1,0 +1,10 @@
+version: v2beta1
+name: main
+
+dependencies:
+  dep1:
+    path: ./dep1.yaml
+  dep2:
+    path: ./dep2.yaml
+  dep3:
+    path: ./dep3.yaml

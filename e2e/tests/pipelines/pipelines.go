@@ -3,6 +3,7 @@ package pipelines
 import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/onsi/ginkgo/v2"
 	"os"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/onsi/ginkgo"
 )
 
 var _ = DevSpaceDescribe("pipelines", func() {

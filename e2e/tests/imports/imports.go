@@ -1,6 +1,7 @@
 package imports
 
 import (
+	"github.com/onsi/ginkgo/v2"
 	"os"
 	"strings"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/onsi/ginkgo"
 )
 
 var _ = DevSpaceDescribe("imports", func() {

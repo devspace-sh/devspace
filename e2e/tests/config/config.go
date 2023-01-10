@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"github.com/onsi/ginkgo/v2"
 	"os"
 	"path/filepath"
 
@@ -20,7 +21,6 @@ import (
 
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
-	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 )
 

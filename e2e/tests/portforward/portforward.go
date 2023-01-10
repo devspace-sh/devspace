@@ -8,7 +8,7 @@ import (
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"net/http"
 	"os"
 )

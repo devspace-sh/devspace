@@ -1,0 +1,6 @@
+version: v2beta1
+name: dep3
+
+pipelines:
+  deploy: |-
+    echo "Dep3"

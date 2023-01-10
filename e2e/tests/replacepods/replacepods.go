@@ -2,6 +2,7 @@ package replacepods
 
 import (
 	"context"
+	"github.com/onsi/ginkgo/v2"
 	"os"
 	"strings"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/onsi/ginkgo"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

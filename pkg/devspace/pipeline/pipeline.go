@@ -52,7 +52,9 @@ type pipeline struct {
 
 	options types.Options
 
-	name               string
+	// name is the devspace config name, not the name of the pipeline
+	name string
+
 	devPodManager      devpod.Manager
 	dependencyRegistry registry.DependencyRegistry
 
@@ -98,11 +100,11 @@ func (p *pipeline) Exclude(ctx devspacecontext.Context) error {
 	}
 
 	// exclude ourselves
-	var couldExclude bool
-	couldExclude, p.excludedErr = p.dependencyRegistry.MarkDependencyExcluded(ctx, p.name, true)
+	var couldExclude map[string]registry.LockType
+	couldExclude, p.excludedErr = p.dependencyRegistry.TryLockDependencies(ctx, p.name, []string{p.name}, true)
 	if p.excludedErr != nil {
 		return p.excludedErr
-	} else if !couldExclude && ctx.KubeClient() != nil {
+	} else if couldExclude[p.name] != registry.Locked && ctx.KubeClient() != nil {
 		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace session for the project (%s) already running inside this namespace\n\n%s\n ", strings.Join(os.Args, " "), p.name, `You may want to use one of these commands instead:
 - devspace enter: opens a terminal session for a container
 - devspace attach: attaches to the PID 1 process (entrypoint) of a container
@@ -195,7 +197,7 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 		dependencyNames = append(dependencyNames, dependency.Name())
 	}
 
-	deployableDependencies, err := p.dependencyRegistry.MarkDependenciesExcluded(ctx, dependencyNames, false)
+	lockedDependencies, err := p.dependencyRegistry.TryLockDependencies(ctx, p.name, dependencyNames, false)
 	if err != nil {
 		return errors.Wrap(err, "check if dependencies can be deployed")
 	}
@@ -208,12 +210,14 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 		} else if stringutil.Contains(options.Exclude, dependency.Name()) {
 			ctx.Log().Debugf("Skipping dependency %s because it was excluded", dependency.Name())
 			continue
-		} else if !deployableDependencies[dependency.Name()] {
+		} else if lockedDependencies[dependency.Name()] != registry.Locked {
 			// search for dependency pipeline and wait
-			if p.dependencyRegistry.OwnedDependency(dependency.Name()) {
+			if lockedDependencies[dependency.Name()] == registry.InUse {
 				ctx.Log().Infof("Skipping dependency %s as it was already deployed", dependency.Name())
 				waitForDependency(ctx.Context(), p, dependency.Name(), ctx.Log())
-			} else {
+			} else if lockedDependencies[dependency.Name()] == registry.InUseCyclic {
+				ctx.Log().Infof("Skipping dependency %s as it was already deployed (cyclic)", dependency.Name())
+			} else if lockedDependencies[dependency.Name()] == registry.InUseByOtherInstance {
 				ctx.Log().Infof("Skipping dependency %s as it is currently in use by another DevSpace instance in the same namespace", dependency.Name())
 			}
 			continue
@@ -254,20 +258,9 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 }
 
 func waitForDependency(ctx context.Context, start types.Pipeline, dependencyName string, log log.Logger) {
-	// parents
-	parents := []string{start.Name()}
-
 	// get top level pipeline
 	for start.Parent() != nil {
 		start = start.Parent()
-		parents = append(parents, start.Name())
-	}
-
-	// if the dependency is cyclic and already executed
-	// as a parent, we skip waiting for it as this would
-	// result in a deadlock.
-	if stringutil.Contains(parents, dependencyName) {
-		return
 	}
 
 	// try to find the dependency

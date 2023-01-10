@@ -3,12 +3,22 @@ package registry
 import (
 	"context"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sync"
 	"time"
+)
+
+type LockType int
+
+const (
+	InUse                LockType = 0
+	InUseByOtherInstance LockType = 1
+	InUseCyclic          LockType = 2
+	Locked               LockType = 3
 )
 
 var (
@@ -21,29 +31,19 @@ type ownership struct {
 }
 
 type DependencyRegistry interface {
-	// ForceExclude will immediately exclude the dependency
-	ForceExclude(dependencyName string)
-
-	// MarkDependencyExcluded excludes the dependency if it wasn't already for the run
-	// and returns if the dependency was excluded before
-	MarkDependencyExcluded(ctx devspacecontext.Context, dependencyName string, forceLeader bool) (bool, error)
-
-	// MarkDependenciesExcluded same as MarkDependencyExcluded but for multiple dependencies
-	MarkDependenciesExcluded(ctx devspacecontext.Context, dependencyNames []string, forceLeader bool) (map[string]bool, error)
-
-	// OwnedDependency signals if we are the owner of the dependency
-	OwnedDependency(dependencyName string) bool
+	// TryLockDependencies tries to lock the given dependencies and returns the dependencies that were locked
+	TryLockDependencies(ctx devspacecontext.Context, fromDependency string, dependencyNames []string, forceLeader bool) (map[string]LockType, error)
 
 	// SetServer sets the target server
 	SetServer(server string)
 }
 
-func NewDependencyRegistry(mock bool) DependencyRegistry {
+func NewDependencyRegistry(name string, mock bool) DependencyRegistry {
 	return &dependencyRegistry{
-		mock:                 mock,
-		interProcess:         NewInterProcessCommunicator(),
-		excludedDependencies: map[string]bool{},
-		ownedDependencies:    map[string]bool{},
+		mock:               mock,
+		interProcess:       NewInterProcessCommunicator(),
+		dependencyGraph:    graph.NewGraph(graph.NewNode(name, nil)),
+		lockedDependencies: map[string]LockType{},
 	}
 }
 
@@ -52,91 +52,95 @@ type dependencyRegistry struct {
 	mock         bool
 	interProcess InterProcess
 
-	excludedDependenciesLock sync.Mutex
-	excludedDependencies     map[string]bool
-	ownedDependencies        map[string]bool
-}
+	// dependencyGraph is used to detect cyclic dependencies
+	dependencyGraph *graph.Graph
 
-func (d *dependencyRegistry) OwnedDependency(dependencyName string) bool {
-	d.excludedDependenciesLock.Lock()
-	defer d.excludedDependenciesLock.Unlock()
-
-	return d.ownedDependencies[dependencyName]
+	lockedDependenciesLock sync.Mutex
+	lockedDependencies     map[string]LockType
 }
 
 func (d *dependencyRegistry) SetServer(server string) {
-	d.excludedDependenciesLock.Lock()
-	defer d.excludedDependenciesLock.Unlock()
+	d.lockedDependenciesLock.Lock()
+	defer d.lockedDependenciesLock.Unlock()
 
 	d.server = server
 }
 
-func (d *dependencyRegistry) ForceExclude(dependencyName string) {
-	d.excludedDependenciesLock.Lock()
-	defer d.excludedDependenciesLock.Unlock()
-
-	d.excludedDependencies[dependencyName] = true
-}
-
-func (d *dependencyRegistry) MarkDependencyExcluded(ctx devspacecontext.Context, dependencyName string, forceLeader bool) (bool, error) {
-	excluded, err := d.MarkDependenciesExcluded(ctx, []string{dependencyName}, forceLeader)
-	if err != nil {
-		return false, err
-	}
-
-	return excluded[dependencyName], nil
-}
-
-func (d *dependencyRegistry) MarkDependenciesExcluded(ctx devspacecontext.Context, dependencyNames []string, forceLeader bool) (map[string]bool, error) {
-	d.excludedDependenciesLock.Lock()
-	defer d.excludedDependenciesLock.Unlock()
+func (d *dependencyRegistry) TryLockDependencies(ctx devspacecontext.Context, fromDependency string, dependencyNames []string, forceLeader bool) (lockedDependencies map[string]LockType, err error) {
+	d.lockedDependenciesLock.Lock()
+	defer d.lockedDependenciesLock.Unlock()
 
 	// was already excluded
-	filteredDependencyNames := []string{}
+	lockedDependencies = map[string]LockType{}
 	for _, dependencyName := range dependencyNames {
-		if !d.excludedDependencies[dependencyName] {
-			filteredDependencyNames = append(filteredDependencyNames, dependencyName)
+		// special case if we want to initialize the lock tree
+		if d.dependencyGraph.Root.ID == fromDependency && d.dependencyGraph.Root.ID == dependencyName && forceLeader {
+			lockType, ok := d.lockedDependencies[dependencyName]
+			if !ok {
+				lockedDependencies[dependencyName] = Locked
+			} else {
+				lockedDependencies[dependencyName] = lockType
+			}
+
+			continue
+		}
+
+		// would locking this dependency create a circle?
+		_, err := d.dependencyGraph.InsertNodeAt(fromDependency, dependencyName, nil)
+		if err != nil {
+			if _, ok := err.(*graph.CyclicError); !ok {
+				return nil, err
+			}
+
+			lockedDependencies[dependencyName] = InUseCyclic
+		} else {
+			lockType, ok := d.lockedDependencies[dependencyName]
+			if !ok {
+				lockedDependencies[dependencyName] = Locked
+			} else {
+				lockedDependencies[dependencyName] = lockType
+			}
 		}
 	}
 
-	// all dependencies were excluded already
-	if len(filteredDependencyNames) == 0 {
-		return map[string]bool{}, nil
-	}
-
 	// exclude the dependencies
-	retMap := map[string]bool{}
 	if !d.mock {
-		var err error
-		retMap, err = d.excludeDependencies(ctx, filteredDependencyNames, forceLeader, 4)
+		err = d.lockDependencies(ctx, lockedDependencies, forceLeader, 4)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// now exclude all dependencies
-	for _, dependencyName := range filteredDependencyNames {
-		if d.mock {
-			retMap[dependencyName] = true
+	// update lock map
+	for dependencyName, lockType := range lockedDependencies {
+		if lockType == Locked || lockType == InUseCyclic {
+			lockType = InUse
 		}
 
-		d.excludedDependencies[dependencyName] = true
+		d.lockedDependencies[dependencyName] = lockType
 	}
 
-	// now mark the dependencies we have excluded
-	for dependencyName := range retMap {
-		d.ownedDependencies[dependencyName] = true
-	}
-
-	return retMap, nil
+	return lockedDependencies, nil
 }
 
-func (d *dependencyRegistry) excludeDependencies(ctx devspacecontext.Context, dependencyNames []string, forceLeader bool, retries int) (map[string]bool, error) {
-	retMap := map[string]bool{}
-	if len(dependencyNames) == 0 || ctx.KubeClient() == nil {
-		return retMap, nil
+func (d *dependencyRegistry) lockDependencies(ctx devspacecontext.Context, lockedDependencies map[string]LockType, forceLeader bool, retries int) error {
+	if ctx.KubeClient() == nil {
+		return nil
 	}
 
+	// check if there is at least 1 locked dependency
+	found := false
+	for _, lockType := range lockedDependencies {
+		if lockType == Locked {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil
+	}
+
+	// encode server and run id
 	encoded, _ := yaml.Marshal(&ownership{
 		Server: d.server,
 		RunID:  ctx.RunID(),
@@ -146,7 +150,7 @@ func (d *dependencyRegistry) excludeDependencies(ctx devspacecontext.Context, de
 	configMap, err := ctx.KubeClient().KubeClient().CoreV1().ConfigMaps(ctx.KubeClient().Namespace()).Get(ctx.Context(), configMapName, metav1.GetOptions{})
 	if err != nil {
 		if !kerrors.IsNotFound(err) {
-			return nil, err
+			return err
 		}
 
 		configMap := &corev1.ConfigMap{
@@ -156,34 +160,40 @@ func (d *dependencyRegistry) excludeDependencies(ctx devspacecontext.Context, de
 			},
 			Data: map[string]string{},
 		}
-		for _, dependencyName := range dependencyNames {
+		for dependencyName, lockType := range lockedDependencies {
+			if lockType != Locked {
+				continue
+			}
+
 			configMap.Data[dependencyName] = string(encoded)
-			retMap[dependencyName] = true
 		}
 
 		_, err = ctx.KubeClient().KubeClient().CoreV1().ConfigMaps(ctx.KubeClient().Namespace()).Create(ctx.Context(), configMap, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				if retries == 0 {
-					return nil, err
+					return err
 				}
 
-				return d.excludeDependencies(ctx, dependencyNames, forceLeader, retries-1)
+				return d.lockDependencies(ctx, lockedDependencies, forceLeader, retries-1)
 			}
 
-			return nil, err
+			return err
 		}
 
-		return retMap, nil
+		return nil
 	}
 
 	// check which dependencies are taken by us vs. which we should take over
 	shouldUpdate := false
 	failedPings := map[string]bool{}
-	for _, dependencyName := range dependencyNames {
+	for dependencyName, lockType := range lockedDependencies {
+		if lockType != Locked {
+			continue
+		}
+
 		if configMap.Data == nil || configMap.Data[dependencyName] == "" {
 			configMap.Data[dependencyName] = string(encoded)
-			retMap[dependencyName] = true
 			shouldUpdate = true
 			continue
 		}
@@ -194,19 +204,18 @@ func (d *dependencyRegistry) excludeDependencies(ctx devspacecontext.Context, de
 		if err != nil {
 			ctx.Log().Debugf("error decoding ownership from configmap: %v", err)
 			configMap.Data[dependencyName] = string(encoded)
-			retMap[dependencyName] = true
 			shouldUpdate = true
 			continue
 		} else if payload.Server == "" || payload.RunID == "" {
 			ctx.Log().Debugf("server or run id missing in configmap payload")
 			configMap.Data[dependencyName] = string(encoded)
-			retMap[dependencyName] = true
 			shouldUpdate = true
 			continue
 		}
 
 		// check if we self have ownership of the dependency
 		if payload.RunID == ctx.RunID() {
+			lockedDependencies[dependencyName] = InUse
 			continue
 		}
 
@@ -214,7 +223,6 @@ func (d *dependencyRegistry) excludeDependencies(ctx devspacecontext.Context, de
 		// check ping cache
 		if failedPings[payload.Server] {
 			configMap.Data[dependencyName] = string(encoded)
-			retMap[dependencyName] = true
 			shouldUpdate = true
 			continue
 		}
@@ -231,7 +239,6 @@ func (d *dependencyRegistry) excludeDependencies(ctx devspacecontext.Context, de
 			}
 			failedPings[payload.Server] = true
 			configMap.Data[dependencyName] = string(encoded)
-			retMap[dependencyName] = true
 			shouldUpdate = true
 			continue
 		}
@@ -250,11 +257,13 @@ func (d *dependencyRegistry) excludeDependencies(ctx devspacecontext.Context, de
 				}
 
 				configMap.Data[dependencyName] = string(encoded)
-				retMap[dependencyName] = true
 				shouldUpdate = true
 				continue
 			}
 		}
+
+		// already in use
+		lockedDependencies[dependencyName] = InUseByOtherInstance
 	}
 
 	// check if we should update the configmap
@@ -263,15 +272,15 @@ func (d *dependencyRegistry) excludeDependencies(ctx devspacecontext.Context, de
 		if err != nil {
 			if kerrors.IsConflict(err) {
 				if retries == 0 {
-					return nil, err
+					return err
 				}
 
-				return d.excludeDependencies(ctx, dependencyNames, forceLeader, retries-1)
+				return d.lockDependencies(ctx, lockedDependencies, forceLeader, retries-1)
 			}
 
-			return nil, err
+			return err
 		}
 	}
 
-	return retMap, nil
+	return nil
 }

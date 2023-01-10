@@ -2,12 +2,12 @@ package command
 
 import (
 	"bytes"
+	"github.com/onsi/ginkgo/v2"
 	"os"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
-	"github.com/onsi/ginkgo"
 )
 
 var _ = DevSpaceDescribe("command", func() {
