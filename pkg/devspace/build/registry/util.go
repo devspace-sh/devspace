@@ -3,13 +3,14 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko"
 	"io"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"runtime"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -132,7 +133,7 @@ func UseLocalRegistry(client kubectl.Client, config *latest.Config, imageConfig 
 	}
 
 	// check if node architecture equals our architecture
-	if runtime.GOARCH != "amd64" {
+	if runtime.GOARCH != "amd64" && client.KubeClient() != nil {
 		nodes, err := client.KubeClient().CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return false
