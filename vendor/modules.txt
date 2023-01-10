@@ -291,9 +291,9 @@ github.com/google/go-containerregistry/pkg/v1/remote/transport
 github.com/google/go-containerregistry/pkg/v1/stream
 github.com/google/go-containerregistry/pkg/v1/tarball
 github.com/google/go-containerregistry/pkg/v1/types
-# github.com/google/go-github v17.0.0+incompatible
-## explicit
-github.com/google/go-github/github
+# github.com/google/go-github/v30 v30.1.0
+## explicit; go 1.13
+github.com/google/go-github/v30/github
 # github.com/google/go-querystring v1.0.0
 ## explicit
 github.com/google/go-querystring/query
@@ -362,6 +362,9 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/kr/fs v0.1.0
 ## explicit
 github.com/kr/fs
+# github.com/loft-sh/go-github-selfupdate v1.0.0
+## explicit; go 1.13
+github.com/loft-sh/go-github-selfupdate/selfupdate
 # github.com/loft-sh/loft-util v0.0.9-alpha
 ## explicit; go 1.19
 github.com/loft-sh/loft-util/pkg/command
@@ -517,9 +520,6 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/rhysd/go-github-selfupdate v0.0.0-20180520142321-41c1bbb0804a
-## explicit
-github.com/rhysd/go-github-selfupdate/selfupdate
 # github.com/russross/blackfriday/v2 v2.1.0
 ## explicit
 github.com/russross/blackfriday/v2
@@ -556,7 +556,7 @@ github.com/tcnksm/go-gitconfig
 # github.com/toqueteos/trie v1.0.0
 ## explicit
 github.com/toqueteos/trie
-# github.com/ulikunitz/xz v0.5.7
+# github.com/ulikunitz/xz v0.5.9
 ## explicit; go 1.12
 github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash

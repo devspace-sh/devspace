@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rhysd/go-github-selfupdate/selfupdate"
+	"github.com/loft-sh/go-github-selfupdate/selfupdate"
 
 	"gotest.tools/assert"
 )

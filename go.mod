@@ -28,6 +28,7 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/json-iterator/go v1.1.12
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
+	github.com/loft-sh/go-github-selfupdate v1.0.0
 	github.com/loft-sh/loft-util v0.0.9-alpha
 	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
@@ -40,7 +41,6 @@ require (
 	github.com/otiai10/copy v1.7.0
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/sftp v1.13.1
-	github.com/rhysd/go-github-selfupdate v0.0.0-20180520142321-41c1bbb0804a
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
 	github.com/sirupsen/logrus v1.9.0
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
@@ -106,7 +106,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
-	github.com/google/go-github v17.0.0+incompatible // indirect
+	github.com/google/go-github/v30 v30.1.0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
@@ -150,7 +150,7 @@ require (
 	github.com/syncthing/notify v0.0.0-20210616190510-c6b7342338d2 // indirect
 	github.com/tcnksm/go-gitconfig v0.1.2 // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
-	github.com/ulikunitz/xz v0.5.7 // indirect
+	github.com/ulikunitz/xz v0.5.9 // indirect
 	github.com/vbatts/tar-split v0.11.2 // indirect
 	github.com/xanzy/ssh-agent v0.2.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect

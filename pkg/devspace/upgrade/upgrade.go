@@ -12,7 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/blang/semver"
-	"github.com/rhysd/go-github-selfupdate/selfupdate"
+	"github.com/loft-sh/go-github-selfupdate/selfupdate"
 )
 
 // Version holds the current version tag
