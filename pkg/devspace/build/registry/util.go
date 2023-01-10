@@ -39,7 +39,7 @@ func IsLocalRegistryFallback(config *latest.Config) bool {
 }
 
 func IsLocalRegistryEnabled(config *latest.Config) bool {
-	return config.LocalRegistry != nil && (config.LocalRegistry.Enabled != nil && *config.LocalRegistry.Enabled)
+	return config.LocalRegistry != nil && config.LocalRegistry.Enabled != nil && *config.LocalRegistry.Enabled
 }
 
 func GetServicePort(service *corev1.Service) *corev1.ServicePort {
@@ -178,6 +178,5 @@ func UseLocalRegistry(client kubectl.Client, config *latest.Config, imageConfig 
 
 	// Determine if this is a local kubernetes cluster
 	isLocalKubernetes := kubectl.IsLocalKubernetes(context)
-
 	return !isLocalKubernetes && !(isVClusterContext && isLocalKubernetes)
 }

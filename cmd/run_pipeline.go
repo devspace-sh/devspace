@@ -460,7 +460,7 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	defer devPodManager.Close()
 
 	// create dependency registry
-	dependencyRegistry := registry.NewDependencyRegistry(options.DeployOptions.Render)
+	dependencyRegistry := registry.NewDependencyRegistry(ctx.Config().Config().Name, options.DeployOptions.Render)
 
 	// get deploy pipeline
 	pipe := pipeline.NewPipeline(ctx.Config().Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)

@@ -2,6 +2,7 @@ package render
 
 import (
 	"bytes"
+	"github.com/onsi/ginkgo/v2"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/onsi/ginkgo"
 )
 
 var _ = DevSpaceDescribe("build", func() {

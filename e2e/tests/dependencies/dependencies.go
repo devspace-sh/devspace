@@ -2,6 +2,7 @@ package dependencies
 
 import (
 	"context"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	"os"
 	"path/filepath"
 	"time"
@@ -21,7 +22,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
-	"github.com/onsi/ginkgo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,6 +40,31 @@ var _ = DevSpaceDescribe("dependencies", func() {
 	ginkgo.BeforeEach(func() {
 		f = framework.NewDefaultFactory()
 		kubeClient, err = kube.NewKubeHelper()
+	})
+
+	ginkgo.It("should execute cyclic dependencies correctly", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/cyclic2")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dependencies")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command and start it
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Pipeline: "dev",
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
 	})
 
 	ginkgo.It("should wait for dependencies", func() {

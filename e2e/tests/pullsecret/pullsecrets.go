@@ -3,6 +3,7 @@ package pullsecret
 import (
 	"context"
 	"encoding/base64"
+	"github.com/onsi/ginkgo/v2"
 	"os"
 	"sort"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/onsi/ginkgo"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
