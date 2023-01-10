@@ -11,11 +11,12 @@ import (
 )
 
 type useLocalRegistryTestCase struct {
-	name     string
-	client   kubectl.Client
-	config   *latest.Config
-	skipPush bool
-	expected bool
+	name        string
+	client      kubectl.Client
+	config      *latest.Config
+	imageConfig *latest.Image
+	skipPush    bool
+	expected    bool
 }
 
 func TestUseLocalRegistry(t *testing.T) {
@@ -304,10 +305,64 @@ func TestUseLocalRegistry(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "Remote Cluster BuildKit In Cluster Build Config",
+			client: &kubectltesting.Client{
+				Context: "arn:aws:eks:us-west-2:1234567890:cluster/remote-eks",
+			},
+			config: &latest.Config{
+				LocalRegistry: nil,
+			},
+			imageConfig: &latest.Image{
+				BuildKit: &latest.BuildKitConfig{
+					InCluster: &latest.BuildKitInClusterConfig{},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "Remote Cluster BuildKit Build Config",
+			client: &kubectltesting.Client{
+				Context: "arn:aws:eks:us-west-2:1234567890:cluster/remote-eks",
+			},
+			config: &latest.Config{
+				LocalRegistry: nil,
+			},
+			imageConfig: &latest.Image{
+				BuildKit: &latest.BuildKitConfig{},
+			},
+			expected: true,
+		},
+		{
+			name: "Remote Cluster Kaniko Build Config",
+			client: &kubectltesting.Client{
+				Context: "arn:aws:eks:us-west-2:1234567890:cluster/remote-eks",
+			},
+			config: &latest.Config{
+				LocalRegistry: nil,
+			},
+			imageConfig: &latest.Image{
+				Kaniko: &latest.KanikoConfig{},
+			},
+			expected: false,
+		},
+		{
+			name: "Remote Cluster Custom Build Config",
+			client: &kubectltesting.Client{
+				Context: "arn:aws:eks:us-west-2:1234567890:cluster/remote-eks",
+			},
+			config: &latest.Config{
+				LocalRegistry: nil,
+			},
+			imageConfig: &latest.Image{
+				Custom: &latest.CustomConfig{},
+			},
+			expected: false,
+		},
 	}
 
 	for _, testCase := range testCases {
-		actual := UseLocalRegistry(testCase.client, testCase.config, nil, nil, testCase.skipPush)
+		actual := UseLocalRegistry(testCase.client, testCase.config, testCase.imageConfig, nil, testCase.skipPush)
 		assert.Equal(t, actual, testCase.expected, "Unexpected result in test case %s", testCase.name)
 	}
 }

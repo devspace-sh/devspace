@@ -32,6 +32,17 @@ func HasPushPermission(image *latest.Image) bool {
 	}
 
 	pushErr := remote.CheckPushPermission(ref, authn.DefaultKeychain, http.DefaultTransport)
+
+	if isInsecureRegistry(pushErr) {
+		// Retry with insecure registry
+		ref, err := name.ParseReference(image.Image, name.Insecure)
+		if err != nil {
+			panic(err)
+		}
+
+		pushErr = remote.CheckPushPermission(ref, authn.DefaultKeychain, http.DefaultTransport)
+	}
+
 	return pushErr == nil
 }
 
@@ -161,11 +172,6 @@ func UseLocalRegistry(client kubectl.Client, config *latest.Config, imageConfig 
 		} else if imageConfig.BuildKit != nil && imageConfig.BuildKit.InCluster != nil {
 			return false
 		}
-
-		imageWithoutPort := strings.Split(imageConfig.Image, ":")[0]
-		if imageWithoutPort == "" || imageWithoutPort == "localhost" || imageWithoutPort == "127.0.0.1" || strings.HasSuffix(imageWithoutPort, ".local") || strings.HasSuffix(imageWithoutPort, ".localhost") {
-			return false
-		}
 	}
 
 	// check if fallback
@@ -180,4 +186,12 @@ func UseLocalRegistry(client kubectl.Client, config *latest.Config, imageConfig 
 	// Determine if this is a local kubernetes cluster
 	isLocalKubernetes := kubectl.IsLocalKubernetes(context)
 	return !isLocalKubernetes && !(isVClusterContext && isLocalKubernetes)
+}
+
+func isInsecureRegistry(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	return strings.Contains(err.Error(), "http: server gave HTTP response to HTTPS client")
 }
