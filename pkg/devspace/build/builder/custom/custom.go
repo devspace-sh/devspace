@@ -26,17 +26,15 @@ var (
 
 // Builder holds all the relevant information for a custom build
 type Builder struct {
-	imageConf       *latest.Image
-	imageConfigName string
-	imageTags       []string
+	imageConf *latest.Image
+	imageTags []string
 }
 
 // NewBuilder creates a new custom builder
-func NewBuilder(imageConfigName string, imageConf *latest.Image, imageTags []string) *Builder {
+func NewBuilder(imageConf *latest.Image, imageTags []string) *Builder {
 	return &Builder{
-		imageConfigName: imageConfigName,
-		imageConf:       imageConf,
-		imageTags:       imageTags,
+		imageConf: imageConf,
+		imageTags: imageTags,
 	}
 }
 
@@ -72,14 +70,14 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 	}
 	customFilesHash = hash.String(customFilesHash)
 
-	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.imageConfigName)
+	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.imageConf.Name)
 
 	// only rebuild Docker image when Dockerfile or context has changed since latest build
 	mustRebuild := forceRebuild || b.imageConf.RebuildStrategy == latest.RebuildStrategyAlways || imageCache.Tag == "" || imageCache.ImageConfigHash != imageConfigHash || imageCache.CustomFilesHash != customFilesHash
 
 	imageCache.ImageConfigHash = imageConfigHash
 	imageCache.CustomFilesHash = customFilesHash
-	ctx.Config().LocalCache().SetImageCache(b.imageConfigName, imageCache)
+	ctx.Config().LocalCache().SetImageCache(b.imageConf.Name, imageCache)
 
 	return mustRebuild, nil
 }
@@ -91,7 +89,7 @@ func (b *Builder) Build(ctx devspacecontext.Context) error {
 
 	// resolve command
 	if len(b.imageTags) > 0 {
-		key := fmt.Sprintf("images.%s", b.imageConfigName)
+		key := fmt.Sprintf("images.%s", b.imageConf.Name)
 		ctx.Config().SetRuntimeVariable(key, b.imageConf.Image+":"+b.imageTags[0])
 		ctx.Config().SetRuntimeVariable(key+".image", b.imageConf.Image)
 		ctx.Config().SetRuntimeVariable(key+".tag", b.imageTags[0])

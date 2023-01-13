@@ -19,7 +19,7 @@ var configDir = os.Getenv("DOCKER_CONFIG")
 
 var configDirOnce sync.Once
 
-func loadDockerConfig() (*configfile.ConfigFile, error) {
+func LoadDockerConfig() (*configfile.ConfigFile, error) {
 	configDirOnce.Do(func() {
 		if configDir == "" {
 			configDir = filepath.Join(homedir.Get(), dockerFileFolder)
@@ -31,7 +31,7 @@ func loadDockerConfig() (*configfile.ConfigFile, error) {
 
 // GetAllAuthConfigs returns every auth config found in the docker config
 func GetAllAuthConfigs() (map[string]types.AuthConfig, error) {
-	config, err := loadDockerConfig()
+	config, err := LoadDockerConfig()
 	if err != nil {
 		return nil, err
 	}

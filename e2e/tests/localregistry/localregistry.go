@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/build/localregistry"
 	"github.com/onsi/ginkgo/v2"
 	"os"
 	"time"
@@ -19,7 +20,6 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
-	"github.com/loft-sh/devspace/pkg/devspace/build/registry"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/onsi/gomega"
@@ -28,7 +28,6 @@ import (
 )
 
 var _ = DevSpaceDescribe("localregistry", func() {
-
 	initialDir, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -96,7 +95,7 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			}
 
 			if service != nil {
-				registryPort := registry.GetServicePort(service)
+				registryPort := localregistry.GetServicePort(service)
 				if registryPort.NodePort != 0 {
 					registryHost = fmt.Sprintf("localhost:%d", registryPort.NodePort)
 					return service, nil
@@ -160,7 +159,7 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			}
 
 			if service != nil {
-				registryPort := registry.GetServicePort(service)
+				registryPort := localregistry.GetServicePort(service)
 				if registryPort.NodePort != 0 {
 					registryHost = fmt.Sprintf("localhost:%d", registryPort.NodePort)
 					return service, nil

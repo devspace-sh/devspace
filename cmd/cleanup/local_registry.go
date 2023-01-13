@@ -2,9 +2,9 @@ package cleanup
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/build/localregistry"
 
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/build/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -90,7 +90,7 @@ func (cmd *localRegistryCmd) RunCleanupLocalRegistry(f factory.Factory, cobraCmd
 
 	// clean up registry according to options
 	config := configInterface.Config()
-	options := registry.NewDefaultOptions().
+	options := localregistry.NewDefaultOptions().
 		WithNamespace(client.Namespace()).
 		WithLocalRegistryConfig(config.LocalRegistry)
 

@@ -1,13 +1,11 @@
 package build
 
 import (
-	"fmt"
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
-	"github.com/loft-sh/devspace/pkg/devspace/build/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -87,7 +85,6 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 	}
 
 	// Determine if we need to use the local registry to build any images.
-	kubeClient := ctx.KubeClient()
 	builders := map[string]builder.Interface{}
 	tags := map[string][]string{}
 
@@ -116,7 +113,6 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		}
 
 		// get image name and skip if we shouldn't build
-		imageName := imageConf.Image
 		if len(images) > 0 && !stringutil.Contains(images, imageConfigName) {
 			continue
 		}
@@ -139,49 +135,10 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 		}
 
 		// Create new builder
-		builder, err := c.createBuilder(ctx, imageConfigName, imageConf, imageTags, options)
+		builder, err := c.createBuilder(ctx, imageConf, imageTags, options)
 		if err != nil {
 			return errors.Wrap(err, "create builder")
 		}
-
-		// Update cache for non local registry use by default
-		imageCache, _ := ctx.Config().LocalCache().GetImageCache(imageConfigName)
-		imageCache.ImageName = imageName
-		imageCache.LocalRegistryImageName = ""
-
-		if registry.UseLocalRegistry(kubeClient, conf, imageConf, builder, options.SkipPush) && !registry.HasPushPermission(imageConf) {
-			// Not able to deploy a local registry without a valid kube context
-			if kubeClient == nil {
-				return fmt.Errorf("unable to push image %s and a valid kube context is not available", imageConf.Image)
-			}
-
-			registryOptions := registry.NewDefaultOptions().
-				WithNamespace(kubeClient.Namespace()).
-				WithLocalRegistryConfig(conf.LocalRegistry)
-
-			// Create and start a local registry if one isn't already running
-			localRegistry, err := registry.GetOrCreateLocalRegistry(ctx, registryOptions)
-			if err != nil {
-				return errors.Wrap(err, "get or create local registry")
-			}
-
-			// Update cache for local registry use
-			imageCache.LocalRegistryImageName, err = localRegistry.RewriteImage(imageName)
-			if err != nil {
-				return errors.Wrap(err, "rewrite image")
-			}
-			ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
-
-			// Reset the builder for local registry usage
-			// TODO: refactor so this isn't necessary!
-			builder, err = c.createBuilder(ctx, imageConfigName, imageConf, imageTags, options)
-			if err != nil {
-				return errors.Wrap(err, "create builder")
-			}
-		}
-
-		// Save image cache
-		ctx.Config().LocalCache().SetImageCache(imageConfigName, imageCache)
 
 		// Save builder for later use
 		builders[imageConfigName] = builder

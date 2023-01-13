@@ -37,14 +37,23 @@ type (
 	loggerKey struct{}
 )
 
-// RFC3339NanoFixed is time.RFC3339Nano with nanoseconds padded using zeros to
-// ensure the formatted time is always the same number of characters.
-const RFC3339NanoFixed = "2006-01-02T15:04:05.000000000Z07:00"
+const (
+	// RFC3339NanoFixed is time.RFC3339Nano with nanoseconds padded using zeros to
+	// ensure the formatted time is always the same number of characters.
+	RFC3339NanoFixed = "2006-01-02T15:04:05.000000000Z07:00"
+
+	// TextFormat represents the text logging format
+	TextFormat = "text"
+
+	// JSONFormat represents the JSON logging format
+	JSONFormat = "json"
+)
 
 // WithLogger returns a new context with the provided logger. Use in
 // combination with logger.WithField(s) for great effect.
 func WithLogger(ctx context.Context, logger *logrus.Entry) context.Context {
-	return context.WithValue(ctx, loggerKey{}, logger)
+	e := logger.WithContext(ctx)
+	return context.WithValue(ctx, loggerKey{}, e)
 }
 
 // GetLogger retrieves the current logger from the context. If no logger is
@@ -53,7 +62,7 @@ func GetLogger(ctx context.Context) *logrus.Entry {
 	logger := ctx.Value(loggerKey{})
 
 	if logger == nil {
-		return L
+		return L.WithContext(ctx)
 	}
 
 	return logger.(*logrus.Entry)

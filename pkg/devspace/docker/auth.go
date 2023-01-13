@@ -76,7 +76,7 @@ func (c *client) Login(ctx context.Context, registryURL, user, password string, 
 	}
 
 	if saveAuthConfig {
-		configfile, err := loadDockerConfig()
+		configfile, err := LoadDockerConfig()
 		if err != nil {
 			return nil, err
 		}
@@ -129,7 +129,7 @@ func getDefaultAuthConfig(checkCredStore bool, serverAddress string, isDefaultRe
 	}
 
 	if checkCredStore {
-		configfile, err := loadDockerConfig()
+		configfile, err := LoadDockerConfig()
 		if configfile != nil && err == nil {
 			authconfigOrig, err := configfile.GetAuthConfig(serverAddress)
 			if err != nil {

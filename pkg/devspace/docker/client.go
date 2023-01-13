@@ -184,7 +184,7 @@ func (c *client) DockerAPIClient() dockerclient.CommonAPIClient {
 
 // ParseProxyConfig parses the proxy config from the ~/.docker/config.json
 func (c *client) ParseProxyConfig(buildArgs map[string]*string) map[string]*string {
-	dockerConfig, err := loadDockerConfig()
+	dockerConfig, err := LoadDockerConfig()
 	if err == nil {
 		buildArgs = dockerConfig.ParseProxyConfig(c.DaemonHost(), buildArgs)
 	}
