@@ -289,7 +289,7 @@ func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, aut
 	if !skipWakeUpPing {
 		err := wakeUpAndPing(context.TODO(), client, log)
 		if err != nil {
-			return nil, errors.Wrap(err, "wakeup environment")
+			return nil, err
 		}
 	}
 
