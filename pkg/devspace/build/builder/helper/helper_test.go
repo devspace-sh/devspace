@@ -45,10 +45,11 @@ func (c *fakeDockerAPIClient) ImageList(ctx context.Context, options types.Image
 func TestIsImageAvailableLocally(t *testing.T) {
 	ctx := context.Background()
 	helper := &BuildHelper{
-		DockerfilePath:  "Doesn'tExist",
-		ImageConf:       &latest.Image{},
-		Entrypoint:      []string{"echo"},
-		ImageConfigName: "ImageConf",
+		DockerfilePath: "Doesn'tExist",
+		ImageConf: &latest.Image{
+			Name: "ImageConf",
+		},
+		Entrypoint: []string{"echo"},
 	}
 
 	client := &fakeDockerClient{}

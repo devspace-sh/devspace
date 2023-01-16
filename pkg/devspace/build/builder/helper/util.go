@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/moby/patternmatcher"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/pkg/fileutils"
 	scanner2 "github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 
@@ -78,11 +78,11 @@ func ensureDockerIgnoreAndDockerFile(excludes []string, dockerfile, dockerignore
 		excludes = append(excludes, ".dockerignore")
 	} else {
 		_, dockerignorefile := filepath.Split(dockerignorefilepath)
-		if keep, _ := fileutils.Matches(dockerignorefile, excludes); keep {
+		if keep, _ := patternmatcher.MatchesOrParentMatches(dockerignorefile, excludes); keep {
 			excludes = append(excludes, "!"+dockerignorefile)
 		}
 	}
-	if keep, _ := fileutils.Matches(dockerfile, excludes); keep {
+	if keep, _ := patternmatcher.MatchesOrParentMatches(dockerfile, excludes); keep {
 		excludes = append(excludes, "!"+dockerfile)
 	}
 	excludes = append(excludes, ".devspace/")

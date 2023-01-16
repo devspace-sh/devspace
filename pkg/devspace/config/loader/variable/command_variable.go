@@ -59,7 +59,7 @@ func execCommand(ctx context.Context, varName string, definition *latest.Variabl
 	envVars = append(envVars, expression.DevSpaceSkipPreloadEnv+"=true")
 	envVars = append(envVars, os.Environ()...)
 	if args == nil {
-		err = engine.ExecuteSimpleShellCommand(ctx, dir, expand.ListEnviron(envVars...), writer, stdErrWriter, nil, cmd)
+		err = engine.ExecuteSimpleShellCommand(ctx, dir, expand.ListEnviron(envVars...), writer, stdErrWriter, nil, cmd, os.Args[1:]...)
 	} else {
 		err = command.Command(ctx, dir, expand.ListEnviron(envVars...), writer, stdErrWriter, nil, cmd, args...)
 	}
