@@ -1,0 +1,17 @@
+version: v2beta1
+
+deployments:
+  test:
+    kubectl:
+      inlineManifest: |-
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: pods-simple-pod-2
+        spec:
+          containers:
+            - command:
+                - sleep
+                - "3600"
+              image: busybox
+              name: pods-simple-container-2

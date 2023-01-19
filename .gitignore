@@ -19,6 +19,7 @@
 .DS_STORE
 .idea
 .devspace/
+tags
 
 # VS Code
 .vscode/ipch

@@ -256,8 +256,11 @@ func validateDeployments(config *latest.Config) error {
 		if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
 			return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 		}
-		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
-			return errors.Errorf("deployments[%s].kubectl.manifests is required", index)
+		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil && deployConfig.Kubectl.InlineManifest == "" {
+			return errors.Errorf("deployments[%s].kubectl.manifests or deployments[%s].kubectl.InlineManifest is required", index, index)
+		}
+		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests != nil && deployConfig.Kubectl.InlineManifest != "" {
+			return errors.Errorf("deployments[%s].kubectl.manifests and deployments[%s].kubectl.inlineManifest cannot be used together", index, index)
 		}
 		if deployConfig.Kubectl != nil && deployConfig.Helm != nil {
 			return errors.Errorf("deployments[%s].kubectl and deployments[%s].helm cannot be used together", index, index)

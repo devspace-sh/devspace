@@ -1,0 +1,66 @@
+version: v2beta1
+name: inline-manifest
+
+deployments:
+  quickstart:
+    kubectl:
+      inlineManifest: |-
+        kind: Deployment
+        apiVersion: apps/v1
+        metadata:
+          name: devspace
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app.kubernetes.io/component: default
+              app.kubernetes.io/name: devspace-app
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/component: default
+                app.kubernetes.io/name: devspace-app
+            spec:
+              containers:
+                - name: default
+                  # The correct image tag will be inserted during devspace dev / devspace deploy
+                  image: mydockeruser/quickstart
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          labels:
+            app.kubernetes.io/name: devspace-app
+          name: external
+        spec:
+          ports:
+          - name: port-0
+            port: 80
+            protocol: TCP
+            targetPort: 3000
+          selector:
+            app.kubernetes.io/component: default
+            app.kubernetes.io/name: devspace-app
+          type: ClusterIP
+
+dev:
+  my-dev:
+    imageSelector: mydockeruser/quickstart
+    # Use this image for development
+    devImage: loftsh/javascript:latest
+    # Start port forwarding
+    ports:
+    - port: 3000
+    # Start file sync
+    sync:
+    - path: ./
+      excludePaths:
+      - node_modules
+    # Open url as soon as ready
+    open:
+      - url: http://localhost:3000
+    # Start terminal forwarding with script entrypoint
+    terminal:
+      command: ./devspace_start.sh
+    # Start remote ssh server
+    ssh: {}
