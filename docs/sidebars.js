@@ -90,6 +90,7 @@ module.exports = {
               link: { type: 'doc', id: 'configuration/deployments/kubectl/README' },
               items: [
                 'configuration/deployments/kubectl/manifests',
+                'configuration/deployments/kubectl/inline_manifests',
                 'configuration/deployments/kubectl/kustomizations',
               ],
             },
