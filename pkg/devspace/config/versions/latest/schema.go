@@ -868,6 +868,8 @@ type KubectlConfig struct {
 	// KubectlBinaryPath is the optional path where to find the kubectl binary
 	KubectlBinaryPath string `yaml:"kubectlBinaryPath,omitempty" json:"kubectlBinaryPath,omitempty"`
 
+	// InlineManists is a block containing the manifest to deploy
+	InlineManifest string `yaml:"inlineManifest,omitempty" json:"inlineManifest,omitempty"`
 	// Kustomize can be used to enable kustomize instead of kubectl
 	Kustomize *bool `yaml:"kustomize,omitempty" json:"kustomize,omitempty" jsonschema_extras:"group=kustomize,group_name=Kustomize"`
 	// KustomizeArgs are extra arguments for `kustomize build` which will be run before `kubectl apply`

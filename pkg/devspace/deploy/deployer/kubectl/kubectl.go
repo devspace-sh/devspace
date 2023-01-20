@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"io"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"mvdan.cc/sh/v3/expand"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
@@ -30,14 +32,17 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/hash"
 )
 
+var Cachemanifest = "./.devspace/manifest-cache.yaml"
+
 // DeployConfig holds the necessary information for kubectl deployment
 type DeployConfig struct {
-	Name        string
-	CmdPath     string
-	Context     string
-	Namespace   string
-	IsInCluster bool
-	Manifests   []string
+	Name           string
+	CmdPath        string
+	Context        string
+	Namespace      string
+	IsInCluster    bool
+	InlineManifest string
+	Manifests      []string
 
 	DeploymentConfig *latest.DeploymentConfig
 }
@@ -46,7 +51,7 @@ type DeployConfig struct {
 func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (deployer.Interface, error) {
 	if deployConfig.Kubectl == nil {
 		return nil, errors.New("error creating kubectl deploy config: kubectl is nil")
-	} else if deployConfig.Kubectl.Manifests == nil {
+	} else if deployConfig.Kubectl.Manifests == nil && deployConfig.Kubectl.InlineManifest == "" {
 		return nil, errors.New("no manifests defined for kubectl deploy")
 	}
 
@@ -76,9 +81,10 @@ func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (de
 
 	if ctx.KubeClient() == nil {
 		return &DeployConfig{
-			Name:      deployConfig.Name,
-			CmdPath:   cmdPath,
-			Manifests: manifests,
+			Name:           deployConfig.Name,
+			CmdPath:        cmdPath,
+			InlineManifest: deployConfig.Kubectl.InlineManifest,
+			Manifests:      manifests,
 
 			DeploymentConfig: deployConfig,
 		}, nil
@@ -90,12 +96,13 @@ func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (de
 	}
 
 	return &DeployConfig{
-		Name:        deployConfig.Name,
-		CmdPath:     cmdPath,
-		Context:     ctx.KubeClient().CurrentContext(),
-		Namespace:   namespace,
-		Manifests:   manifests,
-		IsInCluster: ctx.KubeClient().IsInCluster(),
+		Name:           deployConfig.Name,
+		CmdPath:        cmdPath,
+		Context:        ctx.KubeClient().CurrentContext(),
+		Namespace:      namespace,
+		InlineManifest: deployConfig.Kubectl.InlineManifest,
+		Manifests:      manifests,
+		IsInCluster:    ctx.KubeClient().IsInCluster(),
 
 		DeploymentConfig: deployConfig,
 	}, nil
@@ -104,7 +111,7 @@ func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (de
 // Render writes the generated manifests to the out stream
 func (d *DeployConfig) Render(ctx devspacecontext.Context, out io.Writer) error {
 	for _, manifest := range d.Manifests {
-		_, replacedManifest, _, err := d.getReplacedManifest(ctx, manifest)
+		_, replacedManifest, _, err := d.getReplacedManifest(ctx, false, manifest)
 		if err != nil {
 			return errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
 		}
@@ -170,29 +177,25 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error)
 	ctx.Log().Info("Applying manifests with kubectl...")
 	wasDeployed := false
 	kubeObjects := []remotecache.KubectlObject{}
-	writer := ctx.Log().Writer(logrus.InfoLevel, false)
-	defer writer.Close()
 
 	for _, manifest := range d.Manifests {
-		shouldRedeploy, replacedManifest, parsedObjects, err := d.getReplacedManifest(ctx, manifest)
+		wasDeployed, kubeObjects, err = d.applyManifest(ctx, kubeObjects, forceDeploy, false, manifest)
 		if err != nil {
-			return false, errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
+			return false, err
 		}
+	}
 
-		kubeObjects = append(kubeObjects, parsedObjects...)
-		if shouldRedeploy || forceDeploy {
-			args := d.getCmdArgs("apply", "--force")
-			args = append(args, d.DeploymentConfig.Kubectl.ApplyArgs...)
-
-			stdErrBuffer := &bytes.Buffer{}
-			err = command.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writer, io.MultiWriter(writer, stdErrBuffer), strings.NewReader(replacedManifest), d.CmdPath, args...)
-			if err != nil {
-				return false, errors.Errorf("%v %v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", stdErrBuffer.String(), err, manifest)
-			}
-
-			wasDeployed = true
-		} else {
-			ctx.Log().Infof("Skipping manifest %s", manifest)
+	// Special case for inline manifests
+	if d.InlineManifest != "" {
+		// resolve the runtime variables in the yaml
+		resolvedInlineManifest, err := runtime.NewRuntimeResolver(ctx.WorkingDir(), false).FillRuntimeVariablesAsString(ctx.Context(), d.InlineManifest, ctx.Config(), ctx.Dependencies())
+		if err != nil {
+			return false, err
+		}
+		// proceed with regular apply
+		wasDeployed, kubeObjects, err = d.applyManifest(ctx, kubeObjects, forceDeploy, true, resolvedInlineManifest)
+		if err != nil {
+			return false, err
 		}
 	}
 
@@ -208,10 +211,46 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error)
 	return wasDeployed, nil
 }
 
-func (d *DeployConfig) getReplacedManifest(ctx devspacecontext.Context, manifest string) (bool, string, []remotecache.KubectlObject, error) {
-	objects, err := d.buildManifests(ctx, manifest)
+func (d *DeployConfig) applyManifest(ctx devspacecontext.Context, kubeObjects []remotecache.KubectlObject, forceDeploy, inline bool, manifest string) (bool, []remotecache.KubectlObject, error) {
+	shouldRedeploy, replacedManifest, parsedObjects, err := d.getReplacedManifest(ctx, inline, manifest)
 	if err != nil {
-		return false, "", nil, err
+		return false, nil, errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
+	}
+	writer := ctx.Log().Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
+	kubeObjects = append(kubeObjects, parsedObjects...)
+	if shouldRedeploy || forceDeploy {
+		args := d.getCmdArgs("apply", "--force")
+		args = append(args, d.DeploymentConfig.Kubectl.ApplyArgs...)
+
+		stdErrBuffer := &bytes.Buffer{}
+		err = command.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writer, io.MultiWriter(writer, stdErrBuffer), strings.NewReader(replacedManifest), d.CmdPath, args...)
+		if err != nil {
+			return false, nil, errors.Errorf("%v %v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", stdErrBuffer.String(), err, manifest)
+		}
+
+	} else {
+		ctx.Log().Infof("Skipping manifest %s", manifest)
+	}
+
+	return true, kubeObjects, nil
+}
+
+func (d *DeployConfig) getReplacedManifest(ctx devspacecontext.Context, inline bool, manifest string) (bool, string, []remotecache.KubectlObject, error) {
+	var objects []*unstructured.Unstructured
+	var err error
+
+	if !inline {
+		objects, err = d.buildManifests(ctx, manifest)
+		if err != nil {
+			return false, "", nil, err
+		}
+	} else {
+		objects, err = stringToUnstructuredArray(manifest)
+		if err != nil {
+			return false, "", nil, err
+		}
 	}
 
 	// Split output into the yamls

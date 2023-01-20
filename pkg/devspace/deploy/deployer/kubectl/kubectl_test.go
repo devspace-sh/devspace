@@ -87,6 +87,29 @@ func TestNew(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Inline Manifest",
+			deployConfig: &latest.DeploymentConfig{
+				Name: "someDeploy3",
+				Kubectl: &latest.KubectlConfig{
+					KubectlBinaryPath: "someCmdPath3",
+					InlineManifest:    "inline: manifest",
+				},
+			},
+			expectedDeployer: &DeployConfig{
+				Name:           "someDeploy3",
+				CmdPath:        "someCmdPath3",
+				InlineManifest: "inline: manifest",
+
+				DeploymentConfig: &latest.DeploymentConfig{
+					Name: "someDeploy3",
+					Kubectl: &latest.KubectlConfig{
+						KubectlBinaryPath: "someCmdPath3",
+						InlineManifest:    "inline: manifest",
+					},
+				},
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -487,7 +510,7 @@ func TestGetReplacedManifest(t *testing.T) {
 
 		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithConfig(conf)
 
-		shouldRedeploy, replacedManifest, _, err := deployer.getReplacedManifest(devCtx, testCase.manifest)
+		shouldRedeploy, replacedManifest, _, err := deployer.getReplacedManifest(devCtx, false, testCase.manifest)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

@@ -1469,16 +1469,16 @@ vars:
 version: v1beta7
 deployments:
 - name: test
-  kubectl: 
+  kubectl:
     manifests:
     - test.yaml
 - name: test2
-  kubectl: 
+  kubectl:
     manifests:
     - test.yaml
 profiles:
 - name: parent
-	replace: 
+	replace:
 		images:
 			test:
 				image: test
@@ -1543,6 +1543,50 @@ purge_deployments replaced2 test2 --sequential`,
 			},
 		},
 		{
+			name: "Inline manifest and normal manifest error",
+			in: &parseTestCaseInput{
+				config: `
+version: v2beta1
+name: inline-manifest
+
+deployments:
+	test:
+		kubectl:
+			manifests:
+				- test.yaml
+			inlineManifest: |-
+				kind: Deployment
+				apiVersion: apps/v1
+				metadata:
+					name: test
+				spec:
+					replicas: 1
+					selector:
+					matchLabels:
+						app.kubernetes.io/component: default
+						app.kubernetes.io/name: test
+					template:
+					metadata:
+						labels:
+						app.kubernetes.io/component: default
+						app.kubernetes.io/name: test
+					spec:
+						containers:
+						- name: default
+							image: test
+profiles:
+- name: test
+	replace:
+		images:
+			test:
+				image: test`,
+				options:         &ConfigOptions{Profiles: []string{"test"}},
+				generatedConfig: &localcache.LocalCache{Vars: map[string]string{}},
+			},
+			expectedErr: "deployments[test].kubectl.manifests and deployments[test].kubectl.inlineManifest cannot be used together",
+		},
+
+		{
 			name: "Profile loop error",
 			in: &parseTestCaseInput{
 				config: `
@@ -1553,7 +1597,7 @@ deployments:
 profiles:
 - name: parent
 	parent: test
-	replace: 
+	replace:
 		images:
 			test:
 				image: test

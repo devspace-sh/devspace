@@ -312,6 +312,37 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectNoError(err)
 	})
 
+	ginkgo.It("should deploy kubectl application with inline manifest", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/kubectl_inline_manifest")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// wait until nginx pod is reachable
+		out, err := kubeClient.ExecByImageSelector("busybox", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
+	})
+
 	ginkgo.It("should deploy helm chart from git repo", func() {
 		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_git")
 		framework.ExpectNoError(err)
