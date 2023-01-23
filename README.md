@@ -26,6 +26,9 @@
 ⭐️ <strong>Do you like DevSpace? Support the project with a star</strong> ⭐️
 </p>
 
+<br>
+
+DevSpace was created by [Loft Labs](https://loft.sh) and is a [Cloud Native Computing Foundation (CNCF) sandbox project](https://www.cncf.io/sandbox-projects/).
 
 <br>
 
