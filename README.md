@@ -154,6 +154,8 @@ This project is mainly written in Golang. If you want to contribute code:
 
 See [Contributing Guidelines](CONTRIBUTING.md) for more information.
 
+The DevSpace project follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/main/code-of-conduct.md).
+
 <br>
 
 ## FAQ
@@ -196,4 +198,12 @@ DevSpace is an open-source command-line tool that provides everything you need t
 <br>
 <br>
 
-You can use the DevSpace for any private or commercial projects because it is licensed under the Apache 2.0 open source license.
+## License
+
+DevSpace is released under the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.
+
+DevSpace is a [Cloud Native Computing Foundation (CNCF) sandbox project](https://www.cncf.io/sandbox-projects/) and was contributed by [Loft Labs](https://www.loft.sh).
+
+<div align="center">
+    <img src="https://raw.githubusercontent.com/cncf/artwork/master/other/cncf-sandbox/horizontal/color/cncf-sandbox-horizontal-color.svg" width="300" alt="CNCF Sandbox Project">
+</div>
