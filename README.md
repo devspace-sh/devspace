@@ -7,6 +7,7 @@
 ![License: Apache-2.0](https://img.shields.io/github/license/loft-sh/devspace?style=for-the-badge&color=%23007ec6)
 ![Total Downloads (GitHub Releases)](https://img.shields.io/github/downloads/loft-sh/devspace/total?style=for-the-badge&label=Total%20Downloads&color=%23007ec6)
 ![NPM Installs per Month](https://img.shields.io/npm/dm/devspace?label=NPM%20Installs&style=for-the-badge&color=%23007ec6)
+![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/6945/badge)
 
 [![Join us on Slack!](docs/static/img/slack.svg)](https://slack.loft.sh/)
 
