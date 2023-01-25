@@ -171,6 +171,7 @@ module.exports = {
         'configuration/localRegistry/README',
         'configuration/require/README',
         'configuration/variables',
+        'configuration/runtime-variables',
         'configuration/expressions',
       ],
     },

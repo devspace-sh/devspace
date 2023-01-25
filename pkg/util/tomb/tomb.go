@@ -58,8 +58,7 @@
 //
 // For background and a detailed example, see the following blog post:
 //
-//   http://blog.labix.org/2011/10/09/death-of-goroutines-under-control
-//
+//	http://blog.labix.org/2011/10/09/death-of-goroutines-under-control
 package tomb
 
 import (
