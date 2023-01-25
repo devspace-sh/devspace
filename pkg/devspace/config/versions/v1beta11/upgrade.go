@@ -5,6 +5,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
+
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
@@ -177,9 +179,10 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	// pull secrets
 	pullSecrets := []string{}
 	nextConfig.PullSecrets = map[string]*next.PullSecretConfig{}
+	pullSecretsByRegistry := map[string]*next.PullSecretConfig{}
 	for idx, pullSecret := range c.PullSecrets {
 		pullSecretName := fmt.Sprintf("pull-secret-%d", idx)
-		nextConfig.PullSecrets[pullSecretName] = &next.PullSecretConfig{
+		pullSecretConfig := &next.PullSecretConfig{
 			Name:            pullSecretName,
 			Registry:        pullSecret.Registry,
 			Username:        pullSecret.Username,
@@ -188,9 +191,46 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			Secret:          pullSecret.Secret,
 			ServiceAccounts: pullSecret.ServiceAccounts,
 		}
+		nextConfig.PullSecrets[pullSecretName] = pullSecretConfig
+		pullSecretsByRegistry[pullSecret.Registry] = pullSecretConfig
+
 		if pullSecret.Disabled {
 			continue
 		}
+
+		pullSecrets = append(pullSecrets, pullSecretName)
+	}
+
+	// Add pull secrets for images for backwards compatibility
+	for k, image := range c.Images {
+		registryURL, err := pullsecrets.GetRegistryFromImageName(image.Image)
+		if err != nil {
+			return nil, err
+		}
+
+		if registryURL == "" {
+			// Skip
+			continue
+		}
+
+		if image.CreatePullSecret != nil && !*image.CreatePullSecret {
+			// Disabled
+			continue
+		}
+
+		if pullSecretsByRegistry[registryURL] != nil {
+			// Already configured
+			continue
+		}
+
+		// Create a default pull secret config for images without pull secrets.
+		pullSecretName := encoding.Convert(k)
+		pullSecretConfig := &next.PullSecretConfig{
+			Name:     pullSecretName,
+			Registry: registryURL,
+		}
+		nextConfig.PullSecrets[pullSecretName] = pullSecretConfig
+		pullSecretsByRegistry[registryURL] = pullSecretConfig
 
 		pullSecrets = append(pullSecrets, pullSecretName)
 	}
