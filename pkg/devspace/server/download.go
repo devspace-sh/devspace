@@ -23,7 +23,7 @@ import (
 )
 
 // UIRepository is the repository containing the devspace UI
-const UIRepository = "https://github.com/loft-sh/devspace"
+const UIRepository = "https://github.com/devspace-sh/devspace"
 
 // UIDownloadBaseURL is the base url where to look for the ui
 const UIDownloadBaseURL = UIRepository + "/releases/download"

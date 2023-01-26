@@ -31,7 +31,7 @@ import (
 )
 
 // DevSpaceHelperRepository is the repository containing the devspace helper
-const DevSpaceHelperRepository = "https://github.com/loft-sh/devspace"
+const DevSpaceHelperRepository = "https://github.com/devspace-sh/devspace"
 
 // DevSpaceHelperBaseURL is the base url where to look for the sync helper
 const DevSpaceHelperBaseURL = DevSpaceHelperRepository + "/releases/download"
@@ -176,7 +176,7 @@ func downloadSyncHelper(ctx context.Context, helperName, syncBinaryFolder, versi
 		}
 
 		// download sha256 html
-		url := fmt.Sprintf("https://github.com/loft-sh/devspace/releases/download/%s/%s.sha256", version, helperName)
+		url := fmt.Sprintf("https://github.com/devspace-sh/devspace/releases/download/%s/%s.sha256", version, helperName)
 		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 		if err != nil {
 			return nil
