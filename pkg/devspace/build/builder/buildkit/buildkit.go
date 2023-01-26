@@ -35,13 +35,14 @@ const EngineName = "buildkit"
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
-	helper                    *helper.BuildHelper
-	skipPush                  bool
-	skipPushOnLocalKubernetes bool
+	helper                     *helper.BuildHelper
+	skipPush                   bool
+	skipPushOnLocalKubernetes  bool
+	skipPushOnKindControlPlane bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(ctx devspacecontext.Context, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
+func NewBuilder(ctx devspacecontext.Context, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes, skipPushOnKindControlPlane bool) (*Builder, error) {
 	// ensure namespace
 	if imageConf.BuildKit != nil && imageConf.BuildKit.InCluster != nil && imageConf.BuildKit.InCluster.Namespace != "" {
 		err := kubectl.EnsureNamespace(ctx.Context(), ctx.KubeClient(), imageConf.BuildKit.InCluster.Namespace, ctx.Log())
@@ -51,9 +52,10 @@ func NewBuilder(ctx devspacecontext.Context, imageConf *latest.Image, imageTags 
 	}
 
 	return &Builder{
-		helper:                    helper.NewBuildHelper(ctx, EngineName, imageConf, imageTags),
-		skipPush:                  skipPush,
-		skipPushOnLocalKubernetes: skipPushOnLocalKubernetes,
+		helper:                     helper.NewBuildHelper(ctx, EngineName, imageConf, imageTags),
+		skipPush:                   skipPush,
+		skipPushOnLocalKubernetes:  skipPushOnLocalKubernetes,
+		skipPushOnKindControlPlane: skipPushOnKindControlPlane,
 	}, nil
 }
 
@@ -121,10 +123,11 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 	// Should we build with cli?
 	skipPush := b.skipPush || b.helper.ImageConf.SkipPush
-	return buildWithCLI(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), body, writer, ctx.KubeClient(), builder, buildKitConfig, *buildOptions, useMinikubeDocker, skipPush, ctx.Log())
+	skipPushOnKindControlPlane := b.skipPushOnKindControlPlane || b.helper.ImageConf.SkipPushOnKindControlPlane
+	return buildWithCLI(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), body, writer, ctx.KubeClient(), builder, buildKitConfig, *buildOptions, useMinikubeDocker, skipPush, skipPushOnKindControlPlane, ctx.Log())
 }
 
-func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker, skipPush bool, log logpkg.Logger) error {
+func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker, skipPush, skipPushOnKindControlPlane bool, log logpkg.Logger) error {
 	command := []string{"docker", "buildx"}
 	if len(imageConf.Command) > 0 {
 		command = imageConf.Command
@@ -203,10 +206,17 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 
 	if skipPush && kubeClient != nil && kubectl.GetKindContext(kubeClient.CurrentContext()) != "" {
 		// Load image if it is a kind-context
+		kindWorkers := ""
+		if skipPushOnKindControlPlane {
+			kindWorkers, _ = kubectl.GetKindWorkerNodes(kubeClient.CurrentContext())
+		}
 		for _, tag := range options.Tags {
 			command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(kubeClient.CurrentContext()), tag}
 			completeArgs := []string{}
 			completeArgs = append(completeArgs, command[1:]...)
+			if kindWorkers != "" {
+				completeArgs = append(completeArgs, "--nodes", kindWorkers)
+			}
 			err = command2.Command(ctx, dir, env.NewVariableEnvProvider(environ, minikubeEnv), writer, writer, nil, command[0], completeArgs...)
 			if err != nil {
 				log.Info(errors.Errorf("error during image load to kind cluster: %v", err))

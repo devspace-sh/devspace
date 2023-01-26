@@ -1,9 +1,10 @@
 package build
 
 import (
+	"strings"
+
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
 	"github.com/loft-sh/devspace/pkg/devspace/build/types"
@@ -27,12 +28,13 @@ type imageNameAndTag struct {
 
 // Options describe how images should be build
 type Options struct {
-	Tags                      []string `long:"tag" short:"t" description:"If enabled will override the default tags"`
-	SkipBuild                 bool     `long:"skip" description:"If enabled will skip building"`
-	SkipPush                  bool     `long:"skip-push" description:"Skip pushing"`
-	SkipPushOnLocalKubernetes bool     `long:"skip-push-on-local-kubernetes" description:"Skip pushing"`
-	ForceRebuild              bool     `long:"force-rebuild" description:"Skip pushing"`
-	Sequential                bool     `long:"sequential" description:"Skip pushing"`
+	Tags                       []string `long:"tag" short:"t" description:"If enabled will override the default tags"`
+	SkipBuild                  bool     `long:"skip" description:"If enabled will skip building"`
+	SkipPush                   bool     `long:"skip-push" description:"Skip pushing"`
+	SkipPushOnLocalKubernetes  bool     `long:"skip-push-on-local-kubernetes" description:"Skip pushing"`
+	SkipPushOnKindControlPlane bool     `long:"skip-push-on-kind-control-plane" description:"Skip pushing"`
+	ForceRebuild               bool     `long:"force-rebuild" description:"Skip pushing"`
+	Sequential                 bool     `long:"sequential" description:"Skip pushing"`
 
 	MaxConcurrentBuilds int `long:"max-concurrent" description:"A pointer to an integer"`
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"io"
+
 	"github.com/docker/cli/cli/streams"
 	"github.com/docker/distribution/reference"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
@@ -13,7 +15,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	command2 "github.com/loft-sh/loft-util/pkg/command"
-	"io"
 
 	"github.com/docker/docker/api/types"
 	"github.com/pkg/errors"
@@ -28,19 +29,21 @@ const EngineName = "docker"
 type Builder struct {
 	helper *helper.BuildHelper
 
-	authConfig                *types.AuthConfig
-	client                    dockerclient.Client
-	skipPush                  bool
-	skipPushOnLocalKubernetes bool
+	authConfig                 *types.AuthConfig
+	client                     dockerclient.Client
+	skipPush                   bool
+	skipPushOnLocalKubernetes  bool
+	SkipPushOnKindControlPlane bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(ctx devspacecontext.Context, client dockerclient.Client, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
+func NewBuilder(ctx devspacecontext.Context, client dockerclient.Client, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes, skipPushOnKindControlPlane bool) (*Builder, error) {
 	return &Builder{
-		helper:                    helper.NewBuildHelper(ctx, EngineName, imageConf, imageTags),
-		client:                    client,
-		skipPush:                  skipPush,
-		skipPushOnLocalKubernetes: skipPushOnLocalKubernetes,
+		helper:                     helper.NewBuildHelper(ctx, EngineName, imageConf, imageTags),
+		client:                     client,
+		skipPush:                   skipPush,
+		skipPushOnLocalKubernetes:  skipPushOnLocalKubernetes,
+		SkipPushOnKindControlPlane: skipPushOnKindControlPlane,
 	}, nil
 }
 
@@ -161,10 +164,18 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 		}
 	} else if ctx.KubeClient() != nil && kubectl.GetKindContext(ctx.KubeClient().CurrentContext()) != "" {
 		// Load image if it is a kind-context
+		kindWorkers := ""
+		if b.SkipPushOnKindControlPlane || b.helper.ImageConf.SkipPushOnKindControlPlane {
+			kindWorkers, _ = kubectl.GetKindWorkerNodes(ctx.KubeClient().CurrentContext())
+			ctx.Log().Info("Will only push on %s", kindWorkers)
+		}
 		for _, tag := range buildOptions.Tags {
 			command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(ctx.KubeClient().CurrentContext()), tag}
 			completeArgs := []string{}
 			completeArgs = append(completeArgs, command[1:]...)
+			if kindWorkers != "" {
+				completeArgs = append(completeArgs, "--nodes", kindWorkers)
+			}
 			err = command2.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writer, writer, nil, command[0], completeArgs...)
 			if err != nil {
 				ctx.Log().Info(errors.Errorf("error during image load to kind cluster: %v", err))

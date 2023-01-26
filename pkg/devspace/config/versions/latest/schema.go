@@ -286,6 +286,9 @@ type Image struct {
 	// as build method
 	SkipPush bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty" jsonschema_extras:"group=pushPull,group_name=Push & Pull"`
 
+	// SkipPushOnKindControlPlane will not load the image on control plane node if a Kind cluster is used Only works if docker or buildkit is chosen
+	SkipPushOnKindControlPlane bool `yaml:"skipPushOnKindControlPlane,omitempty" json:"skipPushOnKindControlPlane,omitempty" jsonschema_extras:"group=pushPull,group_name=Push & Pull"`
+
 	// CreatePullSecret specifies if a pull secret should be created for this image in the
 	// target namespace. Defaults to true
 	CreatePullSecret *bool `yaml:"createPullSecret,omitempty" json:"createPullSecret,omitempty" jsonschema:"required" jsonschema_extras:"group=pushPull"`

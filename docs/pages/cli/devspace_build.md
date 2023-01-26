@@ -40,6 +40,7 @@ Builds all defined images and pushes them
       --skip-deploy                 If enabled will skip deploying
       --skip-push                   Skips image pushing, useful for minikube deployment
       --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected
+      --skip-push-local-kube        Skips image pushing on kind control plane node
   -t, --tag strings                 Use the given tag for all built images
 ```
 

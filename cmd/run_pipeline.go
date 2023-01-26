@@ -39,11 +39,12 @@ import (
 type RunPipelineCmd struct {
 	*flags.GlobalFlags
 
-	Tags                    []string
-	Render                  bool
-	Pipeline                string
-	SkipPush                bool
-	SkipPushLocalKubernetes bool
+	Tags                     []string
+	Render                   bool
+	Pipeline                 string
+	SkipPush                 bool
+	SkipPushLocalKubernetes  bool
+	SkipPushKindControlPlane bool
 
 	Dependency             []string
 	SkipDependency         []string
@@ -86,7 +87,7 @@ func (cmd *RunPipelineCmd) AddPipelineFlags(f factory.Factory, command *cobra.Co
 	command.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", cmd.Tags, "Use the given tag for all built images")
 	command.Flags().BoolVar(&cmd.SkipPush, "skip-push", cmd.SkipPush, "Skips image pushing, useful for minikube deployment")
 	command.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", cmd.SkipPushLocalKubernetes, "Skips image pushing, if a local kubernetes environment is detected")
-
+	command.Flags().BoolVar(&cmd.SkipPushKindControlPlane, "skip-push-kind-control-plan", cmd.SkipPushKindControlPlane, "Skips image pushing on kind control plane node")
 	command.Flags().BoolVar(&cmd.ShowUI, "show-ui", cmd.ShowUI, "Shows the ui server")
 
 	if pipeline != nil {
@@ -398,13 +399,14 @@ func (cmd *RunPipelineCmd) BuildOptions(configOptions *loader.ConfigOptions) *Co
 		GlobalFlags: *cmd.GlobalFlags,
 		Options: types.Options{
 			BuildOptions: build.Options{
-				Tags:                      cmd.Tags,
-				SkipBuild:                 cmd.SkipBuild,
-				SkipPush:                  cmd.SkipPush,
-				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
-				ForceRebuild:              cmd.ForceBuild,
-				Sequential:                cmd.BuildSequential,
-				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+				Tags:                       cmd.Tags,
+				SkipBuild:                  cmd.SkipBuild,
+				SkipPush:                   cmd.SkipPush,
+				SkipPushOnLocalKubernetes:  cmd.SkipPushLocalKubernetes,
+				SkipPushOnKindControlPlane: cmd.SkipPushKindControlPlane,
+				ForceRebuild:               cmd.ForceBuild,
+				Sequential:                 cmd.BuildSequential,
+				MaxConcurrentBuilds:        cmd.MaxConcurrentBuilds,
 			},
 			DeployOptions: deploy.Options{
 				ForceDeploy:  cmd.ForceDeploy,
