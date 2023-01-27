@@ -671,7 +671,7 @@ type ChartConfig struct {
 	Git      *GitSource `yaml:"git,omitempty" json:"git,omitempty"`
 }
 
-//GitSource defines the git repository options
+// GitSource defines the git repository options
 type GitSource struct {
 	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
 	CloneArgs []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty"`

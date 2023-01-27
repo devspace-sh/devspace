@@ -1,0 +1,174 @@
+---
+title: Runtime Variables
+sidebar_label: ${runtime.variables}
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Runtime variables are special variables that are only available in certain config areas and are filled during runtime. Those variables are useful to access certain runtime information, such as hook output or image tags.
+
+<Tabs
+defaultValue="var1"
+values={[
+    { label: 'Separate Repo & Tag', value: 'var1', },
+    { label: 'Customize Helm Values', value: 'var2', },
+    { label: 'Customize Kubernetes Manifests', value: 'var3', },
+    { label: 'Dependency', value: 'var4', },
+]
+}>
+<TabItem value="var1">
+
+```yaml
+images:
+  app:
+    image: registry.url/repo/image
+deployments:
+  backend:
+    helm:
+      chart:
+        name: chart-name
+        repo: https://my-charts.company.tld/
+      values:
+        # If registry.url/repo/image was found under images as well, will be
+        # rewritten to registry.url/repo/image:generated_tag
+        imageWithTag: registry.url/repo/image
+        # If registry.url/repo/image was found under images.app as well, will be
+        # rewritten to registry.url/repo/image
+        imageWithoutTag: ${runtime.images.app.image}
+        # If registry.url/repo/image was found under images.app as well, will be
+        # rewritten to generated_tag
+        onlyTag: ${runtime.images.app.tag}
+```
+
+</TabItem>
+<TabItem value="var2">
+
+```yaml
+images:
+  app:
+    image: myuser/image
+hooks:
+  - name: "image-digest"
+    events: ["after:build:app"]
+    command: |
+      # This command prints the image digest
+      echo $(docker inspect ${runtime.images.app.image}:${runtime.images.app.tag} --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
+deployments:
+  checkout:
+    helm:
+      chart:
+        name: ./kubernetes/helm/app
+      values:
+        app:
+          image:
+            digest: ${runtime.hooks.image-digest.stdout}
+```
+
+</TabItem>
+<TabItem value="var3">
+
+```yaml
+
+images:
+  your-image:
+    image: localhost:5000/my/customalpine
+    kaniko:
+      insecure: true
+      skipPullSecretMount: true
+
+deployments:
+  quickstart:
+    kubectl:
+      inlineManifest: |-
+        kind: Deployment
+        apiVersion: apps/v1
+        metadata:
+          name: devspace
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app.kubernetes.io/component: default
+              app.kubernetes.io/name: devspace-app
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/component: default
+                app.kubernetes.io/name: devspace-app
+            spec:
+              containers:
+                - name: default
+                  # The correct image tag will be inserted during devspace dev / devspace deploy
+                  image: ${runtime.images.your-image}
+
+```
+
+</TabItem>
+<TabItem value="var4">
+
+```yaml
+dependencies:
+  dep1:
+    source:
+      path: dep1
+dev:
+  my-dev:
+    imageSelector: ${runtime.dependencies.dep1.images.image1}
+    terminal: {}
+```
+
+</TabItem>
+</Tabs>
+    
+Runtime variables can be used in the following DevSpace config sections:
+
+```
+/images/*/build/custom/command
+/images/*/build/custom/commands/*/command
+/images/*/build/custom/args/**
+/images/*/build/custom/appendArgs/**
+/deployments/*/helm/values/**
+/deployments/*/kubectl/inlineManifest/**
+/hooks/*/command
+/hooks/*/args/*
+/hooks/*/container/imageSelector
+/dev/*/imageSelector
+/dev/*/replaceImage
+/dev/*/devImage
+/dev/*/containers/*/replaceImage
+/dev/*/containers/*/devImage
+/pipelines/*
+/pipelines/*/flags/**
+/pipelines/*/run
+/commands/*
+/commands/*/command
+/functions/**
+/imports/**
+```
+
+:::info
+If you try to use a runtime variable in a different config section, DevSpace will print an error and fail.
+:::
+
+The following runtime variables exist:
+
+- **`runtime.images.IMAGE_NAME`**: Holds the image name (defined at `images.*.image`) and tag that was built by DevSpace (e.g. `my-repo.com/image:latest`)
+- **`runtime.images.IMAGE_NAME.tag`**: Holds the image tag that was built by DevSpace (e.g. `asdHTR` or `latest`)
+- **`runtime.images.IMAGE_NAME.image`**: Holds the image name (defined at `images.*.image`) that was used for building (e.g. `my-repo.com/image`)
+
+## Accessing runtime variables of dependencies
+
+You can also access runtime variables of an executed dependency by using `runtime.dependencies.DEPENDENCY_NAME...`. 
+
+For example:
+```yaml
+dependencies:
+  dep1:
+    source:
+      path: dep1
+dev:
+  my-dev:
+    imageSelector: ${runtime.dependencies.dep1.images.image1}
+    terminal: {}
+```
