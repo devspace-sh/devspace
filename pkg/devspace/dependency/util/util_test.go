@@ -7,8 +7,8 @@ import (
 )
 
 func TestSwitchURLType(t *testing.T) {
-	httpURL := "https://github.com/loft-sh/devspace.git"
-	sshURL := "git@github.com:loft-sh/devspace.git"
+	httpURL := "https://github.com/devspace-sh/devspace.git"
+	sshURL := "git@github.com:devspace-sh/devspace.git"
 
 	assert.Equal(t, sshURL, switchURLType(httpURL))
 	assert.Equal(t, httpURL, switchURLType(sshURL))

@@ -1,0 +1,9 @@
+version: v1beta11
+name: pullsecrets-upgrade
+images:
+  app:
+    image: registry1.example.com/username/image1
+  skip:
+    image: registry2.example.com/username/image2
+    build:
+      disabled: true
