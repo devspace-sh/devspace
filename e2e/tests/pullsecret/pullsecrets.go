@@ -1,9 +1,12 @@
 package pullsecret
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/onsi/ginkgo/v2"
+	"gopkg.in/yaml.v3"
 	"os"
 	"sort"
 
@@ -95,5 +98,29 @@ var _ = DevSpaceDescribe("pullsecret", func() {
 		framework.ExpectEqual(serviceAccount.ImagePullSecrets[0].Name, "devspace-pull-secrets")
 		framework.ExpectEqual(serviceAccount.ImagePullSecrets[1].Name, "merged-secret")
 		framework.ExpectEqual(serviceAccount.ImagePullSecrets[2].Name, "test-secret")
+	})
+
+	ginkgo.It("should create pullsecrets for v1beta11 images", func() {
+		tempDir, err := framework.CopyToTempDir("tests/pullsecret/testdata/v1-upgrade")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// create a new print command
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{},
+			Out:         configBuffer,
+			SkipInfo:    true,
+		}
+
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(len(latestConfig.PullSecrets), 2)
+		framework.ExpectEqual(latestConfig.PullSecrets["app"].Registry, "registry1.example.com")
+		framework.ExpectEqual(latestConfig.PullSecrets["skip"].Registry, "registry2.example.com")
 	})
 })
