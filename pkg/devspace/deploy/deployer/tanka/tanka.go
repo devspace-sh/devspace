@@ -115,7 +115,7 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error)
 	}
 	ctx.Config().RemoteCache().SetDeployment(d.name, deployCache)
 
-	// Check if we need to run jb install
+	// Check if we need to run jb install (the default option is true)
 	if d.tankaConfig.RunJsonnetBundlerInstall == nil || *d.tankaConfig.RunJsonnetBundlerInstall {
 		err = d.tankaEnv.Install(ctx)
 		if err != nil {
@@ -124,7 +124,8 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error)
 
 	}
 
-	if d.tankaConfig.RunJsonnetBundlerUpdate == nil || *d.tankaConfig.RunJsonnetBundlerUpdate {
+  // Check if we need to run jb update (the default option is false)
+	if d.tankaConfig.RunJsonnetBundlerUpdate != nil && *d.tankaConfig.RunJsonnetBundlerUpdate {
 		err = d.tankaEnv.Update(ctx)
 		if err != nil {
 			return false, err

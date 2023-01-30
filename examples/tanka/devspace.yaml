@@ -10,8 +10,6 @@ deployments:
   # Define a tanka deployment
   nginx-test:
     tanka:
-      runJsonnetBundlerInstall: true
-      runJsonnetBundlerUpdate: true
       path: ${TANKA_PATH}
       environmentPath: environments/default
       externalStringVariables:

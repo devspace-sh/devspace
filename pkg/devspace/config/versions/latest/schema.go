@@ -834,7 +834,7 @@ type TankaConfig struct {
 	Path string `yaml:"path,omitempty" json:"path,omitempty"`
 	// RunJsonnetBundlerInstall indicates if the `jb install` command shall be run, default to true
 	RunJsonnetBundlerInstall *bool `yaml:"runJsonnetBundlerInstall,omitempty" json:"runJsonnetBundlerInstall,omitempty"`
-	// RunJsonnetBundlerUpdate indicates if the `jb update` command shall be run default to true
+	// RunJsonnetBundlerUpdate indicates if the `jb update` command shall be run default to false
 	RunJsonnetBundlerUpdate *bool `yaml:"runJsonnetBundlerUpdate,omitempty" json:"runJsonnetBundlerUpdate,omitempty"`
 
 	// EnvironmentPath is the (relative) path to a specific tanka environment.
