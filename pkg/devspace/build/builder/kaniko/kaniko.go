@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
+	"github.com/loft-sh/devspace/pkg/util/progressreader"
 
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
@@ -222,6 +223,9 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 		if err != nil {
 			return err
 		}
+
+		// Wrap it with our custom io.ReadCloser in order to show progress.
+		buildCtx = &progressreader.ProgressReader{ReadCloser: buildCtx, Ctx: ctx}
 
 		// Copy complete context
 		_, stderr, err := ctx.KubeClient().ExecBuffered(ctx.Context(), buildPod, buildPod.Spec.InitContainers[0].Name, []string{"tar", "xp", "-C", kanikoContextPath + "/."}, buildCtx)
