@@ -256,7 +256,7 @@ func validateDeployments(config *latest.Config) error {
 			return fmt.Errorf("deployments.%s has to match the following regex: %v", index, encoding.UnsafeNameRegEx.String())
 		}
 		if deployConfig.Helm == nil && deployConfig.Kubectl == nil && deployConfig.Tanka == nil {
-			return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
+			return errors.Errorf("Please specify either helm, kubectl or tanka as deployment type in deployment %s", deployConfig.Name)
 		}
 		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil && deployConfig.Kubectl.InlineManifest == "" {
 			return errors.Errorf("deployments[%s].kubectl.manifests or deployments[%s].kubectl.InlineManifest is required", index, index)

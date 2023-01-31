@@ -329,7 +329,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 	return nil
 }
 
-// AddKubectlDeployment adds a new kubectl deployment to the provided config
+// AddTankaDeployment adds a new tanka deployment to the provided config
 func (m *manager) AddTankaDeployment(deploymentName string) error {
 	question := "Please enter the path to your tanka environment [Enter to abort]"
 
@@ -353,7 +353,7 @@ func (m *manager) AddTankaDeployment(deploymentName string) error {
 	if m.config.Deployments == nil {
 		m.config.Deployments = map[string]*latest.DeploymentConfig{}
 	}
-	// TANKA TODO ask for additional questoins
+	// TANKA TODO ask for additional questions
 	m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
 		Name: deploymentName,
 		Tanka: &latest.TankaConfig{
