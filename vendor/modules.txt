@@ -150,7 +150,6 @@ github.com/docker/docker/builder/remotecontext/git
 github.com/docker/docker/client
 github.com/docker/docker/errdefs
 github.com/docker/docker/pkg/archive
-github.com/docker/docker/pkg/fileutils
 github.com/docker/docker/pkg/homedir
 github.com/docker/docker/pkg/idtools
 github.com/docker/docker/pkg/ioutils
