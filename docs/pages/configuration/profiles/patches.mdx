@@ -64,21 +64,21 @@ The `name` option is mandatory and expects a string defining the name of the pro
 ### `patches`
 The `patches` option expects an array of patch objects which consists of the following properties:
 - `op` stating the patch operation (possible values: `replace`, `add`, `remove`)
-- `path` stating a jsonpath or a xpath within the config (e.g. `images.backend.image`, `deployments.name=backend.helm.values.containers[1]`)
+- `path` stating a jsonpath or a xpath within the config (e.g. `images.backend.image`, `deployments.backend.helm.values.containers.name=backend`)
 - `value` stating an arbitrary value used by the operation (e.g. a string, an integer, a boolean, a yaml object)
 
 :::warning `op: add` only for arrays
-Using `op: add` only works as expected when `path` points to an array value. Using `op: add` to add properties to an object (e.g. `deployments[*].helm.values`) will **not** work and instead replace all existing properties.
+Using `op: add` only works as expected when `path` points to an array value. Using `op: add` to add properties to an object (e.g. `deployments.*.helm.values`) will **not** work and instead replace all existing properties.
 :::
 
 :::tip Array Paths
-When you want to define a `path` that contains an array (e.g. `deployments`), you have several options:
+When you want to define a `path` that contains an array (e.g. `hooks`), you have several options:
 
-1. Use the index of the array item you want to patch, e.g. `deployments[0]`, `deployments/0`
-2. Use a property selector matching the array item(s) you want to patch, e.g. `deployments.name=backend`
-3. Use a wildcard selector to match all array item(s), e.g. `deployments.*`,`deployments[*]` or `deployments/*`
-4. Use a comparison selector matching the array item(s) you want to patch, e.g. `deployments[?(@.helm.timeout=='1000s')]`
-5. Use a regular expression selector matching the array item(s) you want to patch, e.g. `deployments[?(@.name=~/^production/)]`
+1. Use the index of the array item you want to patch, e.g. `hooks[0]`, `hooks/0`
+2. Use a property selector matching the array item(s) you want to patch, e.g. `hooks.name=backend`
+3. Use a wildcard selector to match all array item(s), e.g. `hooks.*`,`hooks[*]` or `hooks/*`
+4. Use a comparison selector matching the array item(s) you want to patch, e.g. `hooks[?(@.events=='before:build')]`
+5. Use a regular expression selector matching the array item(s) you want to patch, e.g. `hooks[?(@.name=~/^production/)]`
 
 Using a selector rather than the array index is often better because it is more resilient and will not cause any issues even if the order of an array's items is changed later on. A selector is also able to select multiple array items if all of them have the same value for this property.
 :::
