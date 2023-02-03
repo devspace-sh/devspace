@@ -247,7 +247,7 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 
 	// set command in context
 	if cobraCmd != nil {
-		cmd.Ctx = values.WithFlags(cmd.Ctx, cobraCmd.Flags())
+		cmd.Ctx = values.WithCommandFlags(cmd.Ctx, cobraCmd.Flags())
 	}
 	options := cmd.BuildOptions(cmd.ToConfigOptions())
 	ctx, err := initialize(cmd.Ctx, f, options, cmd.Log)

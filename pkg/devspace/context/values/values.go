@@ -17,6 +17,7 @@ const (
 	rootNameKey
 	devContextKey
 	flagsKey
+	commandFlagsKey
 )
 
 // WithFlagsMap creates a new context with the given flags
@@ -25,7 +26,7 @@ func WithFlagsMap(parent context.Context, flagsMap map[string]string) context.Co
 }
 
 // WithFlags creates a new context with the given flags
-func WithFlags(parent context.Context, flagSet *flag.FlagSet) context.Context {
+func WithCommandFlags(parent context.Context, flagSet *flag.FlagSet) context.Context {
 	flagsMap := map[string]string{}
 	flagSet.VisitAll(func(f *flag.Flag) {
 		sliceType, ok := f.Value.(flag.SliceValue)
@@ -36,13 +37,15 @@ func WithFlags(parent context.Context, flagSet *flag.FlagSet) context.Context {
 		}
 	})
 
-	return WithFlagsMap(parent, flagsMap)
+	gfc := WithValue(parent, commandFlagsKey, flagsMap)
+	return WithValue(gfc, flagsKey, flagsMap)
 }
 
 // FlagsFrom returns a context used to start and stop dev configurations
 func FlagsFrom(ctx context.Context) (map[string]string, bool) {
-	flags, ok := ctx.Value(flagsKey).(map[string]string)
-	return flags, ok
+	flags, fOk := ctx.Value(flagsKey).(map[string]string)
+	commandFlags, cOk := ctx.Value(commandFlagsKey).(map[string]string)
+	return mergeFlags(commandFlags, flags), fOk && cOk
 }
 
 // WithDevContext creates a new context with the dev context
@@ -101,4 +104,14 @@ func WithDependency(parent context.Context, dependency bool) context.Context {
 func IsDependencyFrom(ctx context.Context) (bool, bool) {
 	isDependency, ok := ctx.Value(dependencyKey).(bool)
 	return isDependency, ok
+}
+
+func mergeFlags(maps ...map[string]string) map[string]string {
+	merged := map[string]string{}
+	for _, m := range maps {
+		for k, v := range m {
+			merged[k] = v
+		}
+	}
+	return merged
 }

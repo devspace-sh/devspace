@@ -19,6 +19,7 @@ pipelines:
       echo $(get_flag other) > dep1-other.txt
       echo $(get_flag other2) > dep1-other2.txt
       echo $(get_flag other3) > dep1-other3.txt
+      echo $(get_flag profile) > dep1-other-profile.txt
 
   dev:
     flags:
@@ -32,4 +33,5 @@ pipelines:
         exit 1
       fi
       echo $(get_flag test3) > dep1-test2.txt
+      echo $(get_flag profile) > dep1-dev-profile.txt
       run_pipelines other --set-flag other2=false

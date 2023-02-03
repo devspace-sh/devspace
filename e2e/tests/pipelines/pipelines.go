@@ -42,30 +42,41 @@ var _ = DevSpaceDescribe("pipelines", func() {
 		framework.ExpectNoError(err)
 		defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
+		rootCmd := cmd.NewRootCmd(f)
+		persistentFlags := rootCmd.PersistentFlags()
+		globalFlags := flags.SetGlobalFlags(persistentFlags)
+		globalFlags.NoWarn = true
+		globalFlags.Namespace = ns
+		globalFlags.Profiles = []string{"profile1"}
+
+		cmdCtx := values.WithCommandFlags(context.Background(), globalFlags.Flags)
+		cmdCtx = values.WithFlagsMap(cmdCtx, map[string]string{
+			"test":  "test",
+			"test2": "",
+		})
+
 		devCmd := &cmd.RunPipelineCmd{
-			GlobalFlags: &flags.GlobalFlags{
-				NoWarn:    true,
-				Namespace: ns,
-			},
-			Pipeline: "dev",
-			Ctx: values.WithFlagsMap(context.Background(), map[string]string{
-				"test":  "test",
-				"test2": "",
-			}),
+			GlobalFlags: globalFlags,
+			Pipeline:    "dev",
+			Ctx:         cmdCtx,
 		}
 		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
 		framework.ExpectLocalFileContentsImmediately("test.txt", "test\n")
 		framework.ExpectLocalFileContentsImmediately("test2.txt", "\n")
+		framework.ExpectLocalFileContentsImmediately("dev-profile.txt", "profile1\n")
 		framework.ExpectLocalFileContentsImmediately("other.txt", "test\n")
 		framework.ExpectLocalFileContentsImmediately("other2.txt", "false\n")
 		framework.ExpectLocalFileContentsImmediately("other3.txt", "true\n")
+		framework.ExpectLocalFileContentsImmediately("other-profile.txt", "profile1\n")
 		framework.ExpectLocalFileContentsImmediately("dep1-test.txt", "test\n")
 		framework.ExpectLocalFileContentsImmediately("dep1-test2.txt", "true\n")
+		framework.ExpectLocalFileContentsImmediately("dep1-dev-profile.txt", "profile1\n")
 		framework.ExpectLocalFileContentsImmediately("dep1-other.txt", "test\n")
 		framework.ExpectLocalFileContentsImmediately("dep1-other2.txt", "false\n")
 		framework.ExpectLocalFileContentsImmediately("dep1-other3.txt", "false\n")
+		framework.ExpectLocalFileContentsImmediately("dep1-other-profile.txt", "profile1\n")
 	})
 
 	ginkgo.It("should exec container", func() {
