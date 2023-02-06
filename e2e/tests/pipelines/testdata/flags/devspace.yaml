@@ -23,6 +23,7 @@ pipelines:
       echo $(get_flag other) > other.txt
       echo $(get_flag other2) > other2.txt
       echo $(get_flag other3) > other3.txt
+      echo $(get_flag profile) > other-profile.txt
 
   dev:
     flags:
@@ -33,11 +34,19 @@ pipelines:
     run: |-
       echo "$(get_flag test)" > test.txt
       echo "$(get_flag test2)" > test2.txt
+      echo "$(get_flag profile)" > dev-profile.txt
       
       run_pipelines other --set-flag other2=false
       run_dependencies dep1 --set-flag test3=true --pipeline dev
       
-      
-      
+profiles:
+  - name: profile1
+    patches:
+      - op: add
+        path: pipelines
+        value:
+          noop:
+            run: |-
+              echo "noop"
 
 
