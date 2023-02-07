@@ -33,7 +33,7 @@ type Builder struct {
 	client                     dockerclient.Client
 	skipPush                   bool
 	skipPushOnLocalKubernetes  bool
-	SkipPushOnKindControlPlane bool
+	skipPushOnKindControlPlane bool
 }
 
 // NewBuilder creates a new docker Builder instance
@@ -43,7 +43,7 @@ func NewBuilder(ctx devspacecontext.Context, client dockerclient.Client, imageCo
 		client:                     client,
 		skipPush:                   skipPush,
 		skipPushOnLocalKubernetes:  skipPushOnLocalKubernetes,
-		SkipPushOnKindControlPlane: skipPushOnKindControlPlane,
+		skipPushOnKindControlPlane: skipPushOnKindControlPlane,
 	}, nil
 }
 
@@ -165,7 +165,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	} else if ctx.KubeClient() != nil && kubectl.GetKindContext(ctx.KubeClient().CurrentContext()) != "" {
 		// Load image if it is a kind-context
 		kindWorkers := ""
-		if b.SkipPushOnKindControlPlane || b.helper.ImageConf.SkipPushOnKindControlPlane {
+		if b.skipPushOnKindControlPlane || b.helper.ImageConf.SkipPushOnKindControlPlane {
 			kindWorkers, _ = kubectl.GetKindWorkerNodes(ctx.KubeClient().CurrentContext())
 			ctx.Log().Info("Will only push on %s", kindWorkers)
 		}
