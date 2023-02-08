@@ -331,15 +331,20 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 
 // AddTankaDeployment adds a new tanka deployment to the provided config
 func (m *manager) AddTankaDeployment(deploymentName string) error {
-	question := "Please enter the path to your tanka environment [Enter to abort]"
 
-	path, err := m.log.Question(&survey.QuestionOptions{
-		Question: question,
+	tankaPath, err := m.log.Question(&survey.QuestionOptions{
+		Question:       "Please enter the path to your tanka root [Enter to abort]",
 		ValidationFunc: func(value string) error {
 			if value == "" {
 				return nil
 			}
-			// TANKA TODO CHECK IF DIRECTORY EXIST
+			stat, err := os.Stat(value)
+			if err != nil {
+				return fmt.Errorf("path `%s` does not exist", value)
+			}
+			if !stat.IsDir() {
+				return fmt.Errorf("path `%s` is not a directory", value)
+			}
 			return nil
 		},
 	})
@@ -347,17 +352,42 @@ func (m *manager) AddTankaDeployment(deploymentName string) error {
 		return err
 	}
 
-	if path == "" {
+	if tankaPath == "" {
 		return fmt.Errorf("adding tanka deployment aborted")
 	}
 	if m.config.Deployments == nil {
 		m.config.Deployments = map[string]*latest.DeploymentConfig{}
 	}
-	// TANKA TODO ask for additional questions
+
+	environmentPath, err := m.log.Question(&survey.QuestionOptions{
+		Question:       "Please enter Tanka's environment path (relative to Tanka's path) [Enter to abort]",
+		ValidationFunc: func(value string) error {
+			if value == "" {
+				return nil
+			}
+			stat, err := os.Stat(path.Join(tankaPath, value))
+			if err != nil {
+				return fmt.Errorf("environment path `%s` does not exist", value)
+			}
+			if !stat.IsDir() {
+				return fmt.Errorf("environment path `%s` is not a directory", value)
+			}
+			return nil
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	if environmentPath == "" {
+		return fmt.Errorf("adding tanka deployment aborted")
+	}
+
 	m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
 		Name: deploymentName,
 		Tanka: &latest.TankaConfig{
-			Path: path,
+			Path:            tankaPath,
+			EnvironmentPath: environmentPath,
 		},
 	}
 
