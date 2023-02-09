@@ -3,6 +3,7 @@ package configure
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 	"mvdan.cc/sh/v3/expand"
 	"os"
@@ -115,14 +116,13 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 	}
 
 	if image == "" && buildMethod != skip {
-		// Ignore error as context may not be a Space
-		kubeContext, err := m.factory.NewKubeConfigLoader().GetCurrentContext()
+		kubeClient, err := kubectl.NewDefaultClient()
 		if err != nil {
 			return err
 		}
 
 		// Get docker client
-		dockerClient, err := m.factory.NewDockerClientWithMinikube(context.TODO(), kubeContext, true, m.log)
+		dockerClient, err := m.factory.NewDockerClientWithMinikube(context.TODO(), kubeClient, true, m.log)
 		if err != nil {
 			return errors.Errorf("Cannot create docker client: %v", err)
 		}

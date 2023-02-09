@@ -98,7 +98,7 @@ func (f *Factory) NewDockerClient(ctx context.Context, log log.Logger) (docker.C
 }
 
 // NewDockerClientWithMinikube implements interface
-func (f *Factory) NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
+func (f *Factory) NewDockerClientWithMinikube(ctx context.Context, kubeClient kubectl.Client, preferMinikube bool, log log.Logger) (docker.Client, error) {
 	return f.DockerClient, nil
 }
 

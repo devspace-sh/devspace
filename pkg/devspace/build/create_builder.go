@@ -13,7 +13,6 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/pkg/errors"
 )
 
@@ -61,17 +60,7 @@ func (c *controller) createBuilder(ctx devspacecontext.Context, imageConf *lates
 			preferMinikube = *imageConf.Docker.PreferMinikube
 		}
 
-		kubeContext := ""
-		if ctx.KubeClient() == nil {
-			kubeContext, err = kubeconfig.NewLoader().GetCurrentContext()
-			if err != nil {
-				return nil, errors.Wrap(err, "get current context")
-			}
-		} else {
-			kubeContext = ctx.KubeClient().CurrentContext()
-		}
-
-		dockerClient, err := dockerclient.NewClientWithMinikube(ctx.Context(), kubeContext, preferMinikube, ctx.Log())
+		dockerClient, err := dockerclient.NewClientWithMinikube(ctx.Context(), ctx.KubeClient(), preferMinikube, ctx.Log())
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker client: %v", err)
 		}
