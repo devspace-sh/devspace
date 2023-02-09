@@ -175,7 +175,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 
 		// try to find the tag for the image
 		tag := originalTag
-		if imageCache.Tag != "" {
+		if tag == "" && imageCache.Tag != "" {
 			tag = imageCache.Tag
 		}
 
