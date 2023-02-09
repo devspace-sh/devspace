@@ -605,6 +605,9 @@ type LocalRegistryConfig struct {
 	// Image of the local registry. Default is `registry:2.8.1`
 	Image string `yaml:"image,omitempty" json:"image,omitempty"`
 
+	// BuildKitImage of the buildkit sidecar. Default is `moby/buildkit:master-rootless`
+	BuildKitImage string `yaml:"buildKitImage,omitempty" json:"buildKitImage,omitempty"`
+
 	// Port that the registry image listens on. Default is `5000`
 	Port *int `yaml:"port,omitempty" json:"port,omitempty"`
 
@@ -868,7 +871,7 @@ type KubectlConfig struct {
 	// KubectlBinaryPath is the optional path where to find the kubectl binary
 	KubectlBinaryPath string `yaml:"kubectlBinaryPath,omitempty" json:"kubectlBinaryPath,omitempty"`
 
-	// InlineManists is a block containing the manifest to deploy
+	// InlineManifests is a block containing the manifest to deploy
 	InlineManifest string `yaml:"inlineManifest,omitempty" json:"inlineManifest,omitempty"`
 	// Kustomize can be used to enable kustomize instead of kubectl
 	Kustomize *bool `yaml:"kustomize,omitempty" json:"kustomize,omitempty" jsonschema_extras:"group=kustomize,group_name=Kustomize"`

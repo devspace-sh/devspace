@@ -1099,6 +1099,10 @@
                 "type": "string",
                 "description": "ServiceAccount the service account to use for the kaniko pod"
               },
+              "generateName": {
+                "type": "string",
+                "description": "GenerateName is the optional prefix that will be set to the generateName field of the build pod"
+              },
               "annotations": {
                 "patternProperties": {
                   ".*": {
@@ -1168,10 +1172,6 @@
                 "type": "array",
                 "description": "Manifests is a list of files or folders that will be deployed by DevSpace using kubectl\nor kustomize"
               },
-              "inlineManifest": {
-                "type": "string",
-                "description": "InlineManifest is a block containing the yaml that  will be deployed by DevSpace using kubectl"
-              },
               "applyArgs": {
                 "items": {
                   "type": "string"
@@ -1189,6 +1189,10 @@
               "kubectlBinaryPath": {
                 "type": "string",
                 "description": "KubectlBinaryPath is the optional path where to find the kubectl binary"
+              },
+              "inlineManifest": {
+                "type": "string",
+                "description": "InlineManists is a block containing the manifest to deploy"
               },
               "kustomize": {
                 "type": "boolean",
@@ -1230,6 +1234,10 @@
               "image": {
                 "type": "string",
                 "description": "Image of the local registry. Default is `registry:2.8.1`"
+              },
+              "buildKitImage": {
+                "type": "string",
+                "description": "BuildKitImage of the buildkit sidecar. Default is `moby/buildkit:master-rootless`"
               },
               "port": {
                 "type": "integer",
