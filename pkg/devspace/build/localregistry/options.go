@@ -66,6 +66,14 @@ func (o Options) WithImage(image string) Options {
 	return newOptions
 }
 
+func (o Options) WithBuildKitImage(image string) Options {
+	newOptions := o
+	if image != "" {
+		newOptions.BuildKitImage = image
+	}
+	return newOptions
+}
+
 func (o Options) WithPort(port *int) Options {
 	newOptions := o
 	if port != nil {
@@ -103,6 +111,7 @@ func (o Options) WithLocalRegistryConfig(config *latest.LocalRegistryConfig) Opt
 			WithName(config.Name).
 			WithNamespace(config.Namespace).
 			WithImage(config.Image).
+			WithBuildKitImage(config.BuildKitImage).
 			WithPort(config.Port)
 
 		if config.Persistence != nil && config.Persistence.Enabled != nil && *config.Persistence.Enabled {
