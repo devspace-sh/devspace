@@ -112,7 +112,6 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 	if err == nil && stat.IsDir() {
 		args = append(args, "--dependency-update")
 	}
-
 	// Upgrade options
 	args = append(args, helmConfig.UpgradeArgs...)
 	output, err := c.genericHelm.Exec(ctx, args)
@@ -194,7 +193,6 @@ func (c *client) Template(ctx devspacecontext.Context, releaseName, releaseNames
 	if err == nil && stat.IsDir() {
 		args = append(args, "--dependency-update")
 	}
-
 	args = append(args, helmConfig.TemplateArgs...)
 	result, err := c.genericHelm.Exec(ctx, args)
 	if err != nil {

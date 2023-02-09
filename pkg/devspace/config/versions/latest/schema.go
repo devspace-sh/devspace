@@ -840,6 +840,9 @@ type HelmConfig struct {
 	UpgradeArgs []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
 	// TemplateArgs are additional arguments to pass to `helm template`
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
+
+	// DisableDependencyUpdate disables helm dependencies update, default to false
+	DisableDependencyUpdate *bool `yaml:"disableDependencyUpdate" json:"disableDependencyUpdate"`
 }
 
 // ChartConfig defines the helm chart options
