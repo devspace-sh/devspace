@@ -71,8 +71,8 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 
 	// Check if image is present in local docker daemon
 	if !rebuild && err == nil && b.helper.ImageConf.BuildKit.InCluster == nil {
-		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
-			dockerClient, err := dockerpkg.NewClientWithMinikube(ctx.Context(), ctx.KubeClient().CurrentContext(), b.helper.ImageConf.BuildKit.PreferMinikube == nil || *b.helper.ImageConf.BuildKit.PreferMinikube, ctx.Log())
+		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient()) {
+			dockerClient, err := dockerpkg.NewClientWithMinikube(ctx.Context(), ctx.KubeClient(), b.helper.ImageConf.BuildKit.PreferMinikube == nil || *b.helper.ImageConf.BuildKit.PreferMinikube, ctx.Log())
 			if err != nil {
 				return false, err
 			}
@@ -108,14 +108,14 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}
 
 	// We skip pushing when it is the minikube client
-	usingLocalKubernetes := ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext())
+	usingLocalKubernetes := ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient())
 	if b.skipPushOnLocalKubernetes && usingLocalKubernetes {
 		b.skipPush = true
 	}
 
 	// Should we use the minikube docker daemon?
 	useMinikubeDocker := false
-	if ctx.KubeClient() != nil && kubectl.IsMinikubeKubernetes(ctx.KubeClient().CurrentContext()) && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube) {
+	if ctx.KubeClient() != nil && kubectl.IsMinikubeKubernetes(ctx.KubeClient()) && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube) {
 		useMinikubeDocker = true
 	}
 
@@ -191,7 +191,7 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 		err         error
 	)
 	if useMinikubeDocker {
-		minikubeEnv, err = dockerpkg.GetMinikubeEnvironment(ctx)
+		minikubeEnv, err = dockerpkg.GetMinikubeEnvironment(ctx, kubeClient.CurrentContext())
 		if err != nil {
 			return fmt.Errorf("error retrieving minikube environment with 'minikube docker-env --shell none'. Try setting the option preferMinikube to false: %v", err)
 		}

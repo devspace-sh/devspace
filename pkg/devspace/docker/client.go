@@ -53,16 +53,16 @@ type client struct {
 
 // NewClient retrieves a new docker client
 func NewClient(ctx context.Context, log log.Logger) (Client, error) {
-	return NewClientWithMinikube(ctx, "", false, log)
+	return NewClientWithMinikube(ctx, nil, false, log)
 }
 
 // NewClientWithMinikube creates a new docker client with optionally from the minikube vm
-func NewClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (Client, error) {
+func NewClientWithMinikube(ctx context.Context, kubectlClient kubectl.Client, preferMinikube bool, log log.Logger) (Client, error) {
 	var cli Client
 	var err error
 
 	if preferMinikube {
-		cli, err = newDockerClientFromMinikube(ctx, currentKubeContext)
+		cli, err = newDockerClientFromMinikube(ctx, kubectlClient)
 		if err != nil && err != errNotMinikube {
 			log.Warnf("Error creating minikube docker client: %v", err)
 		}
@@ -108,12 +108,12 @@ func newDockerClientFromEnvironment() (Client, error) {
 	}, nil
 }
 
-func newDockerClientFromMinikube(ctx context.Context, currentKubeContext string) (Client, error) {
-	if !kubectl.IsMinikubeKubernetes(currentKubeContext) {
+func newDockerClientFromMinikube(ctx context.Context, kubectlClient kubectl.Client) (Client, error) {
+	if !kubectl.IsMinikubeKubernetes(kubectlClient) {
 		return nil, errNotMinikube
 	}
 
-	env, err := GetMinikubeEnvironment(ctx)
+	env, err := GetMinikubeEnvironment(ctx, kubectlClient.CurrentContext())
 	if err != nil {
 		return nil, errors.Errorf("can't retrieve minikube docker environment due to error: %v", err)
 	}
@@ -155,8 +155,8 @@ func newDockerClientFromMinikube(ctx context.Context, currentKubeContext string)
 	}, nil
 }
 
-func GetMinikubeEnvironment(ctx context.Context) (map[string]string, error) {
-	out, err := command.Output(ctx, "", expand.ListEnviron(os.Environ()...), "minikube", "docker-env", "--shell", "none")
+func GetMinikubeEnvironment(ctx context.Context, kubeContext string) (map[string]string, error) {
+	out, err := command.Output(ctx, "", expand.ListEnviron(os.Environ()...), "minikube", "docker-env", "--shell", "none", "--profile", kubeContext)
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			out = ee.Stderr

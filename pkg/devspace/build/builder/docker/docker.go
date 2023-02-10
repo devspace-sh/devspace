@@ -58,7 +58,7 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 
 	// Check if image is present in local docker daemon
 	if !rebuild && err == nil {
-		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient()) {
 			found, err := b.helper.IsImageAvailableLocally(ctx, b.client)
 			if !found && err == nil {
 				ctx.Log().Infof("Rebuild image %s because it was not found in local docker daemon", imageName)
@@ -88,7 +88,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient().CurrentContext()) {
+	if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient()) {
 		b.skipPush = true
 	}
 

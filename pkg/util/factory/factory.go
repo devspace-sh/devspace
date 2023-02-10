@@ -40,7 +40,7 @@ type Factory interface {
 
 	// NewDockerClient creates a new docker API client
 	NewDockerClient(ctx context.Context, log log.Logger) (docker.Client, error)
-	NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
+	NewDockerClientWithMinikube(ctx context.Context, client kubectl.Client, preferMinikube bool, log log.Logger) (docker.Client, error)
 
 	// NewBuildController & NewDeployController
 	NewBuildController() build.Controller
@@ -118,8 +118,8 @@ func (f *DefaultFactoryImpl) NewDockerClient(ctx context.Context, log log.Logger
 }
 
 // NewDockerClientWithMinikube implements interface
-func (f *DefaultFactoryImpl) NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
-	return docker.NewClientWithMinikube(ctx, currentKubeContext, preferMinikube, log)
+func (f *DefaultFactoryImpl) NewDockerClientWithMinikube(ctx context.Context, kubectlClient kubectl.Client, preferMinikube bool, log log.Logger) (docker.Client, error) {
+	return docker.NewClientWithMinikube(ctx, kubectlClient, preferMinikube, log)
 }
 
 // NewKubeDefaultClient implements interface

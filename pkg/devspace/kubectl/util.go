@@ -3,6 +3,7 @@ package kubectl
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
 	"net"
 	"net/http"
 	"strings"
@@ -19,6 +20,7 @@ import (
 
 const (
 	minikubeContext         = "minikube"
+	minikubeProvider        = "minikube.sigs.k8s.io"
 	dockerDesktopContext    = "docker-desktop"
 	dockerForDesktopContext = "docker-for-desktop"
 )
@@ -203,15 +205,22 @@ func NewPortForwarder(client Client, pod *corev1.Pod, ports []string, addresses 
 }
 
 // IsLocalKubernetes returns true if the context belongs to a local Kubernetes cluster
-func IsLocalKubernetes(context string) bool {
-	if context == minikubeContext ||
-		strings.HasPrefix(context, "kind-") ||
+func IsLocalKubernetes(kubeClient Client) bool {
+	if kubeClient == nil {
+		return false
+	}
+
+	if IsMinikubeKubernetes(kubeClient) {
+		return true
+	}
+
+	context := kubeClient.CurrentContext()
+	if strings.HasPrefix(context, "kind-") ||
 		context == dockerDesktopContext ||
 		context == dockerForDesktopContext {
 		return true
 	} else if strings.Contains(context, "vcluster_") &&
-		(strings.HasSuffix(context, minikubeContext) ||
-			strings.HasSuffix(context, dockerDesktopContext) ||
+		(strings.HasSuffix(context, dockerDesktopContext) ||
 			strings.HasSuffix(context, dockerForDesktopContext) ||
 			strings.Contains(context, "kind-")) {
 		return true
@@ -220,13 +229,35 @@ func IsLocalKubernetes(context string) bool {
 	return false
 }
 
-func IsMinikubeKubernetes(context string) bool {
-	if context == minikubeContext {
+func IsMinikubeKubernetes(kubeClient Client) bool {
+	if kubeClient == nil {
+		return false
+	}
+
+	if kubeClient.CurrentContext() == minikubeContext {
 		return true
 	}
 
-	if strings.HasPrefix(context, "vcluster_") && strings.HasSuffix(context, minikubeContext) {
+	if strings.Contains(kubeClient.CurrentContext(), "vcluster_") && strings.HasSuffix(kubeClient.CurrentContext(), minikubeContext) {
 		return true
+	}
+
+	if kubeClient.ClientConfig() == nil {
+		return false
+	}
+
+	if rawConfig, err := kubeClient.ClientConfig().RawConfig(); err == nil {
+		clusters := rawConfig.Clusters[rawConfig.Contexts[rawConfig.CurrentContext].Cluster]
+		for _, extension := range clusters.Extensions {
+			ext, err := runtime.DefaultUnstructuredConverter.ToUnstructured(extension)
+			if err == nil {
+				if provider, ok := ext["provider"].(string); ok {
+					if provider == minikubeProvider {
+						return true
+					}
+				}
+			}
+		}
 	}
 
 	return false

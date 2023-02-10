@@ -2,9 +2,9 @@ package cleanup
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/docker"
 
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
 
@@ -48,31 +48,23 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 	if err != nil {
 		return err
 	}
-	kubeConfigLoader := f.NewKubeConfigLoader()
+
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
+
 	if !configExists {
 		return errors.New(message.ConfigNotFound)
 	}
 
-	// Get active context
-	kubeContext, err := kubeConfigLoader.GetCurrentContext()
-	if err != nil {
-		return err
-	}
-	if cmd.KubeContext != "" {
-		kubeContext = cmd.KubeContext
-	}
-
-	kubeClient, err := f.NewKubeDefaultClient()
+	kubeClient, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}
 
 	// Create docker client
-	client, err := docker.NewClientWithMinikube(ctx, kubeContext, true, log)
+	client, err := docker.NewClientWithMinikube(ctx, kubeClient, true, log)
 	if err != nil {
 		return err
 	}

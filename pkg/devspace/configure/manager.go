@@ -2,6 +2,7 @@ package configure
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -21,7 +22,7 @@ type Manager interface {
 
 // Factory defines the factory methods needed by the configure manager to create new configuration
 type Factory interface {
-	NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
+	NewDockerClientWithMinikube(ctx context.Context, client kubectl.Client, preferMinikube bool, log log.Logger) (docker.Client, error)
 	NewKubeConfigLoader() kubeconfig.Loader
 }
 
