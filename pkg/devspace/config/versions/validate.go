@@ -2,7 +2,9 @@ package versions
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
+	"unicode"
 
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/pkg/errors"
@@ -365,13 +367,13 @@ func validateDev(config *latest.Config) error {
 			return errors.Errorf("dev.%s: image selector and label selector cannot be used together", devPodName)
 		}
 
-		err := validateDevContainer(fmt.Sprintf("dev.%s", devPodName), &devPod.DevContainer, false)
+		err := validateDevContainer(fmt.Sprintf("dev.%s", devPodName), &devPod.DevContainer, devPod, false)
 		if err != nil {
 			return err
 		}
 		if len(devPod.Containers) > 0 {
 			for i, c := range devPod.Containers {
-				err := validateDevContainer(fmt.Sprintf("dev.%s.containers[%s]", devPodName, i), c, true)
+				err := validateDevContainer(fmt.Sprintf("dev.%s.containers[%s]", devPodName, i), c, devPod, true)
 				if err != nil {
 					return err
 				}
@@ -382,7 +384,7 @@ func validateDev(config *latest.Config) error {
 	return nil
 }
 
-func validateDevContainer(path string, devContainer *latest.DevContainer, nameRequired bool) error {
+func validateDevContainer(path string, devContainer *latest.DevContainer, devPod *latest.DevPod, nameRequired bool) error {
 	if nameRequired && devContainer.Container == "" {
 		return errors.Errorf("%s.container is required", path)
 	}
@@ -390,6 +392,13 @@ func validateDevContainer(path string, devContainer *latest.DevContainer, nameRe
 	if !ValidContainerArch(devContainer.Arch) {
 		return errors.Errorf("%s.arch is not valid '%s'", path, devContainer.Arch)
 	}
+
+	// check if there are values from devContainers that are overwriting values from devPod
+	err := validatePodContainerDuplicates(path, devContainer, devPod)
+	if err != nil {
+		return err
+	}
+
 	for index, sync := range devContainer.Sync {
 		// Validate initial sync strategy
 		if !ValidInitialSyncStrategy(sync.InitialSync) {
@@ -426,6 +435,39 @@ func validateDevContainer(path string, devContainer *latest.DevContainer, nameRe
 	for j, p := range devContainer.PersistPaths {
 		if p.Path == "" {
 			return errors.Errorf("%s.persistPaths[%d].path is required", path, j)
+		}
+	}
+
+	return nil
+}
+
+func validatePodContainerDuplicates(path string, devContainer *latest.DevContainer, devPod *latest.DevPod) error {
+	if devContainer.Container == "" {
+		return nil
+	}
+
+	// Extract list of fields from DevContainer struct
+	fields := reflect.VisibleFields(reflect.TypeOf(struct{ latest.DevContainer }{}))
+
+	// Make possible to retrieve fields from struct programmatically
+	devContainerField := reflect.ValueOf(*devContainer)
+	devPodField := reflect.ValueOf(*devPod)
+
+	// iterate trough fields, if a devContainer field is set in devPod,
+	// then report error about overwriting
+	for _, field := range fields {
+		// skip the DevContainer field, check then if a field is valid and set
+		if field.Name != "DevContainer" && field.Name != "Container" &&
+			devPodField.FieldByName(field.Name).IsValid() && !devPodField.FieldByName(field.Name).IsZero() &&
+			!reflect.DeepEqual(devPodField.FieldByName(field.Name).Interface(), devContainerField.FieldByName(field.Name).Interface()) {
+
+			// get DevPod path
+			fieldName := string(unicode.ToLower(rune(field.Name[0]))) + field.Name[1:]
+			pathFields := strings.Split(path, ".")
+			pathFields = pathFields[:len(pathFields)-1]
+			sourcepath := strings.Join(pathFields, ".")
+
+			return errors.Errorf("%s.%s will be overwritten by %s, please specify %s.%s instead", sourcepath, fieldName, path, path, fieldName)
 		}
 	}
 

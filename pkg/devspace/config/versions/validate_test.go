@@ -140,4 +140,36 @@ func TestValidateDev(t *testing.T) {
 
 	err = validateDev(config)
 	assert.Error(t, err, "dev.test: image selector and label selector are nil")
+
+	// test devpod overwritten by devcontainer
+	config = &latest.Config{
+		Dev: map[string]*latest.DevPod{
+			"somename": {
+				Name: "somename",
+				LabelSelector: map[string]string{
+					"app": "MeApp",
+				},
+				DevContainer: latest.DevContainer{
+					ReversePorts: []*latest.PortMapping{
+						{
+							Port: fmt.Sprintf("%v:%v", 8080, 8080),
+						},
+					},
+				},
+				Containers: map[string]*latest.DevContainer{
+					"test": {
+						Container: "test",
+						ReversePorts: []*latest.PortMapping{
+							{
+								Port: fmt.Sprintf("%v:%v", 8081, 8081),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err = validateDev(config)
+	assert.Error(t, err, "dev.somename.reversePorts will be overwritten by dev.somename.containers[test], please specify dev.somename.containers[test].reversePorts instead")
 }

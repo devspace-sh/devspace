@@ -34,7 +34,7 @@ func (r *ProgressReader) Read(p []byte) (int, error) {
 		if r.transferStep.IsZero() || time.Now().Second() >= (r.transferStep.Second()+3) {
 			r.transferStep = time.Now()
 
-			r.Ctx.Log().Info("Uploaded " + toHumanReadable(r.total) + " " + r.Rate()+ "\r")
+			r.Ctx.Log().Info("Uploaded " + toHumanReadable(r.total) + " " + r.Rate() + "\r")
 		}
 	}
 
@@ -51,7 +51,7 @@ func (r *ProgressReader) Rate() string {
 	if end.IsZero() {
 		end = time.Now()
 	}
-	return toHumanReadable(int64((float64(r.total)/(end.Sub(r.transferStart).Seconds())))) + "/s"
+	return toHumanReadable(int64((float64(r.total) / (end.Sub(r.transferStart).Seconds())))) + "/s"
 }
 
 // convert bytes input to a human readable format (Gb,Mb,Kb,b)
