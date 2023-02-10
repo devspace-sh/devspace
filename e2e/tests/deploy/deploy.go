@@ -272,6 +272,70 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectEqual(out, "test")
 	})
 
+	ginkgo.It("should deploy helm application with local source config name", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm-local-source")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: filepath.Join(tempDir, "devspace-name.yaml"),
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// wait until nginx pod is reachable
+		out, err := kubeClient.ExecByImageSelector("nginx", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
+	})
+
+	ginkgo.It("should deploy helm application with local source config path", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm-local-source")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: filepath.Join(tempDir, "devspace-path.yaml"),
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// wait until nginx pod is reachable
+		out, err := kubeClient.ExecByImageSelector("nginx", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
+	})
+
 	ginkgo.It("should deploy kubectl application", func() {
 		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/kubectl")
 		framework.ExpectNoError(err)
