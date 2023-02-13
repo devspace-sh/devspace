@@ -57,6 +57,31 @@ spec:
 EOF
 ```
 
+You can also use variables:
+
+```yaml
+vars:
+  CONTAINER_NAME: $(cat my-example.txt)
+
+deployments:
+  backend:
+    kubectl:
+      inlineManifest: |-
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: busybox-sleep
+        spec:
+          containers:
+          - name: ${CONTAINER_NAME}
+            # name: $(cat my-example.txt) won't work!
+            image: busybox:1.28
+            args:
+            - sleep
+            - "1000000"
+      createArgs:
+      - "--recursive"
+```
 
 ## Update Image Tags
 
