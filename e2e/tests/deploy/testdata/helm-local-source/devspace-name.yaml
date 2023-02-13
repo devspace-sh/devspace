@@ -1,0 +1,6 @@
+version: v2beta1
+deployments:
+  test:
+    helm:
+      chart:
+        name: local-source

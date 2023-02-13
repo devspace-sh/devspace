@@ -1,0 +1,7 @@
+version: v2beta1
+deployments:
+  test:
+    helm:
+      chart:
+        name: test
+        path: ./local-source
