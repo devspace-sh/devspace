@@ -22,7 +22,7 @@ pipelines:
 deployments:
   backend:
     kubectl:
-      inlineManifest:
+      inlineManifest: |-
         apiVersion: v1
         kind: Pod
         metadata:
@@ -79,7 +79,7 @@ The `createArgs` option expects an array of strings stating additional arguments
 deployments:
   backend:
     kubectl:
-      inlineManifest:
+      inlineManifest: |-
         apiVersion: v1
         kind: Pod
         metadata:
