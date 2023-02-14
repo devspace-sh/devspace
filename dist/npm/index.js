@@ -224,7 +224,8 @@ let continueProcess = function (askRemoveGlobalFolder) {
 
     if (npmLinkExists || !globalDir || packageDir.startsWith(npmGlobalDir)) {
       try {
-        globalDir = normalizePath(execSync('npm bin -g').toString());
+        const nodeDir = normalizePath(execSync('npm config get prefix').toString());
+        globalDir = path.join(nodeDir, 'bin')
         globalInstall = true;
       } catch (e) {
         console.error(e);
