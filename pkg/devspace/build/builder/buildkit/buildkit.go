@@ -207,6 +207,7 @@ func buildWithCLI(ctx context.Context, dir string, environ expand.Environ, conte
 		kindWorkers := ""
 		if skipPushOnKindControlPlane {
 			kindWorkers, _ = kubectl.GetKindWorkerNodes(kubeClient.CurrentContext())
+			log.Infof("Will only push on %s", kindWorkers)
 		}
 		for _, tag := range options.Tags {
 			command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(kubeClient.CurrentContext()), tag}

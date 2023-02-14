@@ -165,7 +165,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 		kindWorkers := ""
 		if b.helper.ImageConf.SkipPushOnKindControlPlane {
 			kindWorkers, _ = kubectl.GetKindWorkerNodes(ctx.KubeClient().CurrentContext())
-			ctx.Log().Info("Will only push on %s", kindWorkers)
+			ctx.Log().Infof("Will only push on %s", kindWorkers)
 		}
 		for _, tag := range buildOptions.Tags {
 			command := []string{"kind", "load", "docker-image", "--name", kubectl.GetKindContext(ctx.KubeClient().CurrentContext()), tag}
