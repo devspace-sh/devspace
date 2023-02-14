@@ -2,6 +2,7 @@ package list
 
 import (
 	"context"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -57,8 +58,7 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 	portForwards := make([][]string, 0)
 	for _, dev := range config.Dev {
 		if dev.Ports == nil || len(dev.Ports) == 0 {
-			logger.Info("No ports are forwarded.\n")
-			return nil
+			continue
 		}
 		selector := ""
 		for k, v := range dev.LabelSelector {
@@ -76,7 +76,10 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 			})
 		}
 	}
-
+	if len(portForwards) == 0 {
+		logger.Info("No ports are forwarded.\n")
+		return nil
+	}
 	headerColumnNames := []string{
 		"ImageSelector",
 		"LabelSelector",
