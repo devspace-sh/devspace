@@ -136,7 +136,7 @@ func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, paren
 		)
 		if n, ok := r.DependencyGraph.Nodes[dependencyConfig.Name]; ok {
 			child = n.Data.(*Dependency)
-			if child != nil && child.Config() != nil && child.Config().Path() != dependencyConfigPath {
+			if child != nil && child.Config() != nil && child.Config().Path() != dependencyConfigPath && !child.Root() {
 				ctx.Log().Warnf("Seems like you have multiple dependencies with name %s, but they use different source settings (%s != %s). This can lead to unexpected results and you should make sure that the devspace.yaml name is unique across your dependencies or that you use the dependencies.overrideName option", child.name, child.Config().Path(), dependencyConfigPath)
 			}
 

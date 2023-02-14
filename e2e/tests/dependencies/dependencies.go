@@ -1,8 +1,11 @@
 package dependencies
 
 import (
+	"bytes"
 	"context"
 	ginkgo "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"time"
@@ -55,6 +58,7 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		}()
 
 		// create a new dev command and start it
+		output := &bytes.Buffer{}
 		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:     true,
@@ -62,9 +66,15 @@ var _ = DevSpaceDescribe("dependencies", func() {
 				ConfigPath: "devspace.yaml",
 			},
 			Pipeline: "dev",
+			Log:      log.NewStreamLogger(output, output, logrus.DebugLevel),
 		}
 		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
+
+		// Expect no multiple dependency warning
+		gomega.Expect(output.String()).NotTo(
+			gomega.ContainSubstring("Seems like you have multiple dependencies with name"),
+		)
 	})
 
 	ginkgo.It("should wait for dependencies", func() {
@@ -478,7 +488,7 @@ dep2dep2wait
 		framework.ExpectEqual(len(list.Items), 0)
 	})
 
-	ginkgo.It("should resolve and deploy cyclic dependencies", func() {
+	ginkgo.It("should resolve and deploy cyclic git dependencies", func() {
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/cyclic")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -499,17 +509,24 @@ dep2dep2wait
 		framework.ExpectEqual(dependencies[0].Name(), "dependency")
 
 		// create a new deploy command
+		output := &bytes.Buffer{}
 		deployCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
 			Pipeline: "deploy",
+			Log:      log.NewStreamLogger(output, output, logrus.DebugLevel),
 		}
 
 		// run the command
 		err = deployCmd.RunDefault(f)
 		framework.ExpectNoError(err)
+
+		// Expect no multiple dependency warning
+		gomega.Expect(output.String()).NotTo(
+			gomega.ContainSubstring("Seems like you have multiple dependencies with name"),
+		)
 
 		// expect single deployment
 		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "nginx", metav1.GetOptions{})
