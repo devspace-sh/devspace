@@ -35,14 +35,13 @@ const EngineName = "buildkit"
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
-	helper                     *helper.BuildHelper
-	skipPush                   bool
-	skipPushOnLocalKubernetes  bool
-	skipPushOnKindControlPlane bool
+	helper                    *helper.BuildHelper
+	skipPush                  bool
+	skipPushOnLocalKubernetes bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(ctx devspacecontext.Context, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes, skipPushOnKindControlPlane bool) (*Builder, error) {
+func NewBuilder(ctx devspacecontext.Context, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	// ensure namespace
 	if imageConf.BuildKit != nil && imageConf.BuildKit.InCluster != nil && imageConf.BuildKit.InCluster.Namespace != "" {
 		err := kubectl.EnsureNamespace(ctx.Context(), ctx.KubeClient(), imageConf.BuildKit.InCluster.Namespace, ctx.Log())
@@ -52,10 +51,9 @@ func NewBuilder(ctx devspacecontext.Context, imageConf *latest.Image, imageTags 
 	}
 
 	return &Builder{
-		helper:                     helper.NewBuildHelper(ctx, EngineName, imageConf, imageTags),
-		skipPush:                   skipPush,
-		skipPushOnLocalKubernetes:  skipPushOnLocalKubernetes,
-		skipPushOnKindControlPlane: skipPushOnKindControlPlane,
+		helper:                    helper.NewBuildHelper(ctx, EngineName, imageConf, imageTags),
+		skipPush:                  skipPush,
+		skipPushOnLocalKubernetes: skipPushOnLocalKubernetes,
 	}, nil
 }
 
@@ -123,7 +121,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 	// Should we build with cli?
 	skipPush := b.skipPush || b.helper.ImageConf.SkipPush
-	skipPushOnKindControlPlane := b.skipPushOnKindControlPlane || b.helper.ImageConf.SkipPushOnKindControlPlane
+	skipPushOnKindControlPlane := b.helper.ImageConf.SkipPushOnKindControlPlane
 	return buildWithCLI(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), body, writer, ctx.KubeClient(), builder, buildKitConfig, *buildOptions, useMinikubeDocker, skipPush, skipPushOnKindControlPlane, ctx.Log())
 }
 

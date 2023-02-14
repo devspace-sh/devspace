@@ -37,7 +37,7 @@ func (c *controller) createBuilder(ctx devspacecontext.Context, imageConf *lates
 	if imageConf.Custom != nil {
 		bldr = custom.NewBuilder(imageConf, imageTags)
 	} else if imageConf.BuildKit != nil {
-		bldr, err = buildkit.NewBuilder(ctx, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes, options.SkipPushOnKindControlPlane)
+		bldr, err = buildkit.NewBuilder(ctx, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
@@ -89,7 +89,7 @@ func (c *controller) createBuilder(ctx devspacecontext.Context, imageConf *lates
 			return localRegistryBuilder(ctx, imageConf, imageTags, options)
 		}
 
-		bldr, err = docker.NewBuilder(ctx, dockerClient, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes, options.SkipPushOnKindControlPlane)
+		bldr, err = docker.NewBuilder(ctx, dockerClient, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker builder: %v", err)
 		}

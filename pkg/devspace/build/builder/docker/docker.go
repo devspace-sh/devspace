@@ -29,21 +29,19 @@ const EngineName = "docker"
 type Builder struct {
 	helper *helper.BuildHelper
 
-	authConfig                 *types.AuthConfig
-	client                     dockerclient.Client
-	skipPush                   bool
-	skipPushOnLocalKubernetes  bool
-	skipPushOnKindControlPlane bool
+	authConfig                *types.AuthConfig
+	client                    dockerclient.Client
+	skipPush                  bool
+	skipPushOnLocalKubernetes bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(ctx devspacecontext.Context, client dockerclient.Client, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes, skipPushOnKindControlPlane bool) (*Builder, error) {
+func NewBuilder(ctx devspacecontext.Context, client dockerclient.Client, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	return &Builder{
-		helper:                     helper.NewBuildHelper(ctx, EngineName, imageConf, imageTags),
-		client:                     client,
-		skipPush:                   skipPush,
-		skipPushOnLocalKubernetes:  skipPushOnLocalKubernetes,
-		skipPushOnKindControlPlane: skipPushOnKindControlPlane,
+		helper:                    helper.NewBuildHelper(ctx, EngineName, imageConf, imageTags),
+		client:                    client,
+		skipPush:                  skipPush,
+		skipPushOnLocalKubernetes: skipPushOnLocalKubernetes,
 	}, nil
 }
 
@@ -165,7 +163,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	} else if ctx.KubeClient() != nil && kubectl.GetKindContext(ctx.KubeClient().CurrentContext()) != "" {
 		// Load image if it is a kind-context
 		kindWorkers := ""
-		if b.skipPushOnKindControlPlane || b.helper.ImageConf.SkipPushOnKindControlPlane {
+		if b.helper.ImageConf.SkipPushOnKindControlPlane {
 			kindWorkers, _ = kubectl.GetKindWorkerNodes(ctx.KubeClient().CurrentContext())
 			ctx.Log().Info("Will only push on %s", kindWorkers)
 		}
