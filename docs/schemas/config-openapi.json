@@ -752,6 +752,10 @@
                 },
                 "type": "array",
                 "description": "TemplateArgs are additional arguments to pass to `helm template`"
+              },
+              "disableDependencyUpdate" : {
+                "type": "boolean",
+                "description" : "DisableDependencyUpdate disables helm dependencies update"
               }
             },
             "type": "object",
