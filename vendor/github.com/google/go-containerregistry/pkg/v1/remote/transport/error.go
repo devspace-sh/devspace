@@ -19,10 +19,26 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
-
-	"github.com/google/go-containerregistry/internal/redact"
 )
+
+// The set of query string keys that we expect to send as part of the registry
+// protocol. Anything else is potentially dangerous to leak, as it's probably
+// from a redirect. These redirects often included tokens or signed URLs.
+var paramAllowlist = map[string]struct{}{
+	// Token exchange
+	"scope":   {},
+	"service": {},
+	// Cross-repo mounting
+	"mount": {},
+	"from":  {},
+	// Layer PUT
+	"digest": {},
+	// Listing tags and catalog
+	"n":    {},
+	"last": {},
+}
 
 // Error implements error to support the following error specification:
 // https://github.com/docker/distribution/blob/master/docs/spec/api.md#errors
@@ -43,7 +59,7 @@ var _ error = (*Error)(nil)
 func (e *Error) Error() string {
 	prefix := ""
 	if e.Request != nil {
-		prefix = fmt.Sprintf("%s %s: ", e.Request.Method, redact.URL(e.Request.URL))
+		prefix = fmt.Sprintf("%s %s: ", e.Request.Method, redactURL(e.Request.URL))
 	}
 	return prefix + e.responseErr()
 }
@@ -82,6 +98,22 @@ func (e *Error) Temporary() bool {
 		}
 	}
 	return true
+}
+
+// TODO(jonjohnsonjr): Consider moving to internal/redact.
+func redactURL(original *url.URL) *url.URL {
+	qs := original.Query()
+	for k, v := range qs {
+		for i := range v {
+			if _, ok := paramAllowlist[k]; !ok {
+				// key is not in the Allowlist
+				v[i] = "REDACTED"
+			}
+		}
+	}
+	redacted := *original
+	redacted.RawQuery = qs.Encode()
+	return &redacted
 }
 
 // Diagnostic represents a single error returned by a Docker registry interaction.
@@ -123,10 +155,6 @@ const (
 	UnsupportedErrorCode         ErrorCode = "UNSUPPORTED"
 	TooManyRequestsErrorCode     ErrorCode = "TOOMANYREQUESTS"
 	UnknownErrorCode             ErrorCode = "UNKNOWN"
-
-	// This isn't defined by either docker or OCI spec, but is defined by docker/distribution:
-	// https://github.com/distribution/distribution/blob/6a977a5a754baa213041443f841705888107362a/registry/api/errcode/register.go#L60
-	UnavailableErrorCode ErrorCode = "UNAVAILABLE"
 )
 
 // TODO: Include other error types.
@@ -134,7 +162,6 @@ var temporaryErrorCodes = map[ErrorCode]struct{}{
 	BlobUploadInvalidErrorCode: {},
 	TooManyRequestsErrorCode:   {},
 	UnknownErrorCode:           {},
-	UnavailableErrorCode:       {},
 }
 
 var temporaryStatusCodes = map[int]struct{}{

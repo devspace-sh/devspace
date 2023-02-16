@@ -59,7 +59,7 @@ type Backoff = retry.Backoff
 var defaultRetryPredicate retry.Predicate = func(err error) bool {
 	// Various failure modes here, as we're often reading from and writing to
 	// the network.
-	if retry.IsTemporary(err) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF) || errors.Is(err, syscall.EPIPE) {
+	if retry.IsTemporary(err) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, syscall.EPIPE) {
 		logs.Warn.Printf("retrying %v", err)
 		return true
 	}
@@ -102,6 +102,7 @@ var DefaultTransport = &http.Transport{
 
 func makeOptions(target authn.Resource, opts ...Option) (*options, error) {
 	o := &options{
+		auth:           authn.Anonymous,
 		transport:      DefaultTransport,
 		platform:       defaultPlatform,
 		context:        context.Background(),
@@ -117,19 +118,12 @@ func makeOptions(target authn.Resource, opts ...Option) (*options, error) {
 		}
 	}
 
-	switch {
-	case o.auth != nil && o.keychain != nil:
-		// It is a better experience to explicitly tell a caller their auth is misconfigured
-		// than potentially fail silently when the correct auth is overridden by option misuse.
-		return nil, errors.New("provide an option for either authn.Authenticator or authn.Keychain, not both")
-	case o.keychain != nil:
+	if o.keychain != nil {
 		auth, err := o.keychain.Resolve(target)
 		if err != nil {
 			return nil, err
 		}
 		o.auth = auth
-	case o.auth == nil:
-		o.auth = authn.Anonymous
 	}
 
 	// transport.Wrapper is a signal that consumers are opt-ing into providing their own transport without any additional wrapping.
@@ -169,7 +163,6 @@ func WithTransport(t http.RoundTripper) Option {
 
 // WithAuth is a functional option for overriding the default authenticator
 // for remote operations.
-// It is an error to use both WithAuth and WithAuthFromKeychain in the same Option set.
 //
 // The default authenticator is authn.Anonymous.
 func WithAuth(auth authn.Authenticator) Option {
@@ -182,7 +175,6 @@ func WithAuth(auth authn.Authenticator) Option {
 // WithAuthFromKeychain is a functional option for overriding the default
 // authenticator for remote operations, using an authn.Keychain to find
 // credentials.
-// It is an error to use both WithAuth and WithAuthFromKeychain in the same Option set.
 //
 // The default authenticator is authn.Anonymous.
 func WithAuthFromKeychain(keys authn.Keychain) Option {

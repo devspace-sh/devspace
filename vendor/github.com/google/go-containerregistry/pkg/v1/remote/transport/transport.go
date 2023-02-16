@@ -27,24 +27,15 @@ import (
 // setup to authenticate with the remote registry "reg", in the capacity
 // laid out by the specified scopes.
 //
-// Deprecated: Use NewWithContext.
+// TODO(jonjohnsonjr): Deprecate this.
 func New(reg name.Registry, auth authn.Authenticator, t http.RoundTripper, scopes []string) (http.RoundTripper, error) {
 	return NewWithContext(context.Background(), reg, auth, t, scopes)
 }
 
 // NewWithContext returns a new RoundTripper based on the provided RoundTripper that has been
-// set up to authenticate with the remote registry "reg", in the capacity
+// setup to authenticate with the remote registry "reg", in the capacity
 // laid out by the specified scopes.
-// In case the RoundTripper is already of the type Wrapper it assumes
-// authentication was already done prior to this call, so it just returns
-// the provided RoundTripper without further action
 func NewWithContext(ctx context.Context, reg name.Registry, auth authn.Authenticator, t http.RoundTripper, scopes []string) (http.RoundTripper, error) {
-	// When the transport provided is of the type Wrapper this function assumes that the caller already
-	// executed the necessary login and check.
-	switch t.(type) {
-	case *Wrapper:
-		return t, nil
-	}
 	// The handshake:
 	//  1. Use "t" to ping() the registry for the authentication challenge.
 	//
@@ -77,7 +68,9 @@ func NewWithContext(ctx context.Context, reg name.Registry, auth authn.Authentic
 	}
 
 	switch pr.challenge.Canonical() {
-	case anonymous, basic:
+	case anonymous:
+		return &Wrapper{t}, nil
+	case basic:
 		return &Wrapper{&basicTransport{inner: t, auth: auth, target: reg.RegistryStr()}}, nil
 	case bearer:
 		// We require the realm, which tells us where to send our Basic auth to turn it into Bearer auth.
@@ -85,7 +78,12 @@ func NewWithContext(ctx context.Context, reg name.Registry, auth authn.Authentic
 		if !ok {
 			return nil, fmt.Errorf("malformed www-authenticate, missing realm: %v", pr.parameters)
 		}
-		service := pr.parameters["service"]
+		service, ok := pr.parameters["service"]
+		if !ok {
+			// If the service parameter is not specified, then default it to the registry
+			// with which we are talking.
+			service = reg.String()
+		}
 		bt := &bearerTransport{
 			inner:    t,
 			basic:    auth,
