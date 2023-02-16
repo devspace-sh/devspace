@@ -41,7 +41,7 @@ dev:
 
 Under the hood DevSpace will replace the running pod and apply the following changes, before actually starting a terminal to it:
 - Remove `readinessProbes`, `startupProbes` & `livenessProbes`
-- Change the entrypoint of the container to `sleep 100000` only if `dev.*.command` and `dev.*.args` are not specified, otherwise it will respsect these configs
+- Change the entrypoint of the container to `sleep 100000` only if `dev.*.command` and `dev.*.args` are not specified, otherwise it will respect these configs
 
 :::info POD REPLACE
 If you do not want DevSpace to replace the pod with a modified version, use `disableReplace: true`
