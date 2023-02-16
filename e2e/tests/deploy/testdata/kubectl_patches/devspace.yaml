@@ -1,0 +1,52 @@
+version: v2beta1
+name: nginx-k8s
+
+deployments:
+  example:
+    kubectl:
+      manifests:
+        - ./deployment.yaml
+      patches:
+        # match specific container
+        - target:
+            apiVersion: apps/v1 # Optional
+            kind: Deployment    # Optional
+            name: nginx-deployment # Required
+          op: replace
+          path: spec.template.spec.containers[0].image
+          value: nginx:1.23.3
+        - target:
+            apiVersion: apps/v1         # Optional
+            kind: Deployment    # Optional
+            name: nginx-deployment # Required
+          op: remove
+          path: spec.replicas
+        - target:
+            apiVersion: apps/v1         # Optional
+            kind: Deployment    # Optional
+            name: nginx-deployment # Required
+          op: add
+          path: spec.template.metadata.labels.test
+          value: test123
+        - target:
+            apiVersion: v1 # Optional
+            kind: Service    # Optional
+            name: nginx-deployment # Required
+          op: replace
+          path: spec.ports[0].port
+          value: 8080
+        - target:
+            apiVersion: v1 # Optional
+            kind: Service    # Optional
+            name: nginx-deployment # Required
+          op: add
+          path: metadata.labels.test
+          value: test234
+        # wildcard match
+        - target:
+            apiVersion: apps/v1 # Optional
+            kind: Deployment    # Optional
+            name: nginx-deployment # Required
+          op: add
+          path: spec.template.spec.containers[*].env
+          value: [{"name": "test", "value": "test123"}]

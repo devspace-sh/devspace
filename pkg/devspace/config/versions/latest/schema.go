@@ -882,6 +882,9 @@ type KubectlConfig struct {
 	KustomizeArgs []string `yaml:"kustomizeArgs,omitempty" json:"kustomizeArgs,omitempty" jsonschema_extras:"group=kustomize"`
 	// KustomizeBinaryPath is the optional path where to find the kustomize binary
 	KustomizeBinaryPath string `yaml:"kustomizeBinaryPath,omitempty" json:"kustomizeBinaryPath,omitempty" jsonschema_extras:"group=kustomize"`
+
+	// Patches are additional changes to the pod spec that should be applied
+	Patches []*PatchTarget `yaml:"patches,omitempty" json:"patches,omitempty" jsonschema_extras:"group=modifications"`
 }
 
 // DevPod holds configurations for selecting a pod and starting dev services for that pod
@@ -1710,6 +1713,19 @@ type ProfileActivation struct {
 	// Vars defines key/value pairs where the key is the name of the variable and the value is a regular expression used to match the variable's value.
 	// When multiple keys are specified, they must all evaluate to true to activate the profile.
 	Vars map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
+}
+
+// PatchTarget describes a config patch and how it should be applied
+type PatchTarget struct {
+	Target      `yaml:"target" json:"target"`
+	PatchConfig `yaml:",inline" json:",inline"`
+}
+
+// Target describes where to apply a config patch
+type Target struct {
+	APIVersion string `yaml:"apiVersion" json:"apiVersion,omitempty"`
+	Kind    string `yaml:"kind" json:"kind,omitempty"`
+	Name    string `yaml:"name" json:"name"  jsonschema:"required"`
 }
 
 // PatchConfig describes a config patch and how it should be applied

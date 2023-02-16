@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"regexp"
-	"strings"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/patch"
@@ -243,7 +241,7 @@ func ApplyPatchesOnObject(data map[string]interface{}, configPatches []*latest.P
 
 		newPatch := patch.Operation{
 			Op:   patch.Op(patchConfig.Operation),
-			Path: patch.OpPath(transformPath(patchConfig.Path)),
+			Path: patch.OpPath(patch.TransformPath(patchConfig.Path)),
 		}
 
 		if patchConfig.Value != nil {
@@ -303,48 +301,6 @@ func findPath(path *patch.OpPath, doc *yaml.Node) (interface{}, error) {
 	}
 
 	return nil, nil
-}
-
-var legacyExtendedSyntaxRegEx = regexp.MustCompile(`(?i)([^\=]+)=([^\.\=\>\<\~]+)`)
-var hasFilterRegEx = regexp.MustCompile(`(?i)\[\?.*\)\]`)
-var indexXPathRegEx = regexp.MustCompile(`\/(\d+|\*)\/`)
-var trailingIndexXPathRegEx = regexp.MustCompile(`\/(\d+|\*)$`)
-var rootXPathRegEx = regexp.MustCompile(`^\/`)
-var numeric = regexp.MustCompile(`^\d+$`)
-
-func transformPath(path string) string {
-	if path == "" {
-		return path
-	}
-
-	rewrittenPath := path
-
-	if legacyExtendedSyntaxRegEx.MatchString(path) {
-		// Using property=value selectors
-		rewriteTokens := []string{}
-		tokens := strings.Split(path, ".")
-		for _, token := range tokens {
-			rewriteToken := token
-			if legacyExtendedSyntaxRegEx.MatchString(token) {
-				filterTokens := legacyExtendedSyntaxRegEx.FindStringSubmatch(token)
-				if numeric.MatchString((filterTokens[2])) {
-					rewriteToken = fmt.Sprintf("[?(@.%s=='%s' || @.%s==%s)]", filterTokens[1], filterTokens[2], filterTokens[1], filterTokens[2])
-				} else {
-					rewriteToken = fmt.Sprintf("[?(@.%s=='%s')]", filterTokens[1], filterTokens[2])
-				}
-			}
-			rewriteTokens = append(rewriteTokens, rewriteToken)
-		}
-		rewrittenPath = strings.Join(rewriteTokens, ".")
-		rewrittenPath = strings.ReplaceAll(rewrittenPath, ".[?", "[?")
-	} else if strings.Contains(path, "/") && !hasFilterRegEx.MatchString(path) {
-		// Is XPath
-		rewrittenPath = indexXPathRegEx.ReplaceAllString(path, "[$1].")
-		rewrittenPath = trailingIndexXPathRegEx.ReplaceAllString(rewrittenPath, "[$1]")
-		rewrittenPath = rootXPathRegEx.ReplaceAllLiteralString(rewrittenPath, "$.")
-	}
-
-	return rewrittenPath
 }
 
 type PatchMetaFromStruct struct {

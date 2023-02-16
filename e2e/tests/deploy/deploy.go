@@ -2,10 +2,11 @@ package deploy
 
 import (
 	"context"
-	"github.com/onsi/ginkgo/v2"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/onsi/ginkgo/v2"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -13,6 +14,7 @@ import (
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/factory"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -437,6 +439,109 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(out, "test")
 	})
+
+	//nolint:dupl
+	ginkgo.It("should deploy kubectl application with patches", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/kubectl_patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if services are there
+		service, err := kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "nginx-deployment", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		// check if patches are correctly applied to service
+		framework.ExpectEqual(service.Labels["test"], "test234")
+		framework.ExpectEqual(service.Spec.Ports[0].Port, int32(8080))
+
+		// check that container is correctly deployed
+		out, err := kubeClient.ExecByImageSelector("nginx", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
+
+		deployment, err := kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "nginx-deployment", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[0].Name, "nginx")
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[0].Image, "nginx:1.23.3")
+		framework.ExpectEqual(deployment.Spec.Template.GetObjectMeta().GetLabels(), map[string]string {"app": "nginx", "test": "test123"})
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[1].Name, "busybox")
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[2].Name, "alpine")
+		// Ensure the wildcard works
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[0].Env[0], v1.EnvVar{Name: "test", Value: "test123"})
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[1].Env[0], v1.EnvVar{Name: "test", Value: "test123"})
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[2].Env[0], v1.EnvVar{Name: "test", Value: "test123"})
+	})
+
+	//nolint:dupl
+	ginkgo.It("should deploy kubectl inline manifest application with patches", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/kubectl_inline_manifest_patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "deploy",
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if services are there
+		service, err := kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "nginx-inline-deployment", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		// check if patches are correctly applied to service
+		framework.ExpectEqual(service.Labels["test"], "test234")
+		framework.ExpectEqual(service.Spec.Ports[0].Port, int32(8080))
+
+		// check that container is correctly deployed
+		out, err := kubeClient.ExecByImageSelector("nginx", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
+
+		deployment, err := kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "nginx-inline-deployment", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[0].Name, "nginx")
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[0].Image, "nginx:1.23.3")
+		framework.ExpectEqual(deployment.Spec.Template.GetObjectMeta().GetLabels(), map[string]string {"app": "nginx", "test": "test123"})
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[1].Name, "busybox")
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[2].Name, "alpine")
+		// Ensure the wildcard works
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[0].Env[0], v1.EnvVar{Name: "test", Value: "test123"})
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[1].Env[0], v1.EnvVar{Name: "test", Value: "test123"})
+		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[2].Env[0], v1.EnvVar{Name: "test", Value: "test123"})
+	})
+
 
 	ginkgo.It("should deploy helm chart from specific branch in git repo", func() {
 		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_git_branch")

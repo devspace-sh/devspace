@@ -267,6 +267,23 @@ func validateDeployments(config *latest.Config) error {
 		if deployConfig.Kubectl != nil && deployConfig.Helm != nil {
 			return errors.Errorf("deployments[%s].kubectl and deployments[%s].helm cannot be used together", index, index)
 		}
+		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Patches != nil {
+			for patch := range deployConfig.Kubectl.Patches {
+				if deployConfig.Kubectl.Patches[patch].Name == "" {
+					return errors.Errorf("deployments[%s].kubectl.patches[%d].target.name is required", index, patch)
+				}
+				if deployConfig.Kubectl.Patches[patch].Operation == "" {
+					return errors.Errorf("deployments[%s].kubectl.patches[%d].op is required", index, patch)
+				}
+				if deployConfig.Kubectl.Patches[patch].Path == "" {
+					return errors.Errorf("deployments[%s].kubectl.patches[%d].path is required", index, patch)
+				}
+				if deployConfig.Kubectl.Patches[patch].Operation != "remove" &&
+					deployConfig.Kubectl.Patches[patch].Value == nil {
+					return errors.Errorf("deployments[%s].kubectl.patches[%d].value is required", index, patch)
+				}
+			}
+		}
 	}
 
 	return nil
