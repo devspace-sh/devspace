@@ -1717,15 +1717,19 @@ type ProfileActivation struct {
 
 // PatchTarget describes a config patch and how it should be applied
 type PatchTarget struct {
-	Target      `yaml:"target" json:"target"`
+	// Target describes where to apply a config patch
+	Target      Target `yaml:"target" json:"target"`
 	PatchConfig `yaml:",inline" json:",inline"`
 }
 
 // Target describes where to apply a config patch
 type Target struct {
+	// ApiVersion is the Kubernetes api of the target resource
 	APIVersion string `yaml:"apiVersion" json:"apiVersion,omitempty"`
-	Kind    string `yaml:"kind" json:"kind,omitempty"`
-	Name    string `yaml:"name" json:"name"  jsonschema:"required"`
+	// Kind is the kind of the target resource (eg: Deployment, Service ...)
+	Kind string `yaml:"kind" json:"kind,omitempty"`
+	// Name is the name of the target resource
+	Name string `yaml:"name" json:"name"  jsonschema:"required"`
 }
 
 // PatchConfig describes a config patch and how it should be applied

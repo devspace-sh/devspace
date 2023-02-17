@@ -269,7 +269,7 @@ func validateDeployments(config *latest.Config) error {
 		}
 		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Patches != nil {
 			for patch := range deployConfig.Kubectl.Patches {
-				if deployConfig.Kubectl.Patches[patch].Name == "" {
+				if deployConfig.Kubectl.Patches[patch].Target.Name == "" {
 					return errors.Errorf("deployments[%s].kubectl.patches[%d].target.name is required", index, patch)
 				}
 				if deployConfig.Kubectl.Patches[patch].Operation == "" {

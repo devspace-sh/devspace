@@ -359,7 +359,7 @@ func (d *DeployConfig) applyDeployPatches(ctx devspacecontext.Context, resource 
 			Path: patch.OpPath(patch.TransformPath(kubepatch.Path)),
 		}
 
-		if kubepatch.Name != resource.GetName() {
+		if kubepatch.Target.Name != resource.GetName() {
 			continue
 		}
 
@@ -384,7 +384,7 @@ func (d *DeployConfig) applyDeployPatches(ctx devspacecontext.Context, resource 
 		}
 
 		// TODO Maybe log here that we're indeed applying a patch?
-		ctx.Log().Debugf("applying patch: %s.%s", kubepatch.Name, kubepatch.Path)
+		ctx.Log().Debugf("applying patch: %s.%s", kubepatch.Target.Name, kubepatch.Path)
 		patches = append(patches, newPatch)
 	}
 
