@@ -3,7 +3,6 @@ package kubectl
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"mvdan.cc/sh/v3/expand"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/patch"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
@@ -264,6 +264,7 @@ func (d *DeployConfig) getReplacedManifest(ctx devspacecontext.Context, inline b
 		if resource.Object == nil {
 			continue
 		}
+
 		if resource.GetNamespace() == "" {
 			resource.SetNamespace(d.Namespace)
 		}
@@ -282,6 +283,12 @@ func (d *DeployConfig) getReplacedManifest(ctx devspacecontext.Context, inline b
 			} else if redeploy {
 				shouldRedeploy = true
 			}
+		}
+
+		resource, err := d.applyDeployPatches(ctx, resource)
+		if err != nil {
+			// we're skipping a patch
+			ctx.Log().Warn(err)
 		}
 
 		replacedManifest, err := yaml.Marshal(resource)
@@ -323,7 +330,7 @@ func (d *DeployConfig) buildManifests(ctx devspacecontext.Context, manifest stri
 
 	raw, err := ctx.KubeClient().KubeConfigLoader().LoadRawConfig()
 	if err != nil {
-		return nil, fmt.Errorf("get raw config")
+		return nil, errors.Errorf("get raw config")
 	}
 	copied := raw.DeepCopy()
 	for key := range copied.Contexts {
@@ -337,4 +344,61 @@ func (d *DeployConfig) buildManifests(ctx devspacecontext.Context, manifest stri
 func (d *DeployConfig) isKustomizeInstalled(ctx context.Context, dir, path string) bool {
 	err := command.Command(ctx, dir, expand.ListEnviron(os.Environ()...), nil, nil, nil, path, "version")
 	return err == nil
+}
+
+func (d *DeployConfig) applyDeployPatches(ctx devspacecontext.Context, resource *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	out, err := yaml.Marshal(resource)
+	if err != nil {
+		return resource, err
+	}
+
+	patches := patch.Patch{}
+	for idx, kubepatch := range d.DeploymentConfig.Kubectl.Patches {
+		newPatch := patch.Operation{
+			Op:   patch.Op(kubepatch.Operation),
+			Path: patch.OpPath(patch.TransformPath(kubepatch.Path)),
+		}
+
+		if kubepatch.Target.Name != resource.GetName() {
+			continue
+		}
+
+		// non-mandatory field, check only if defined
+		if kubepatch.Target.Kind != "" && resource.GetKind() != kubepatch.Target.Kind {
+			ctx.Log().Debugf("skipping patch, resource kind match: %s - %s", kubepatch.Target.Kind, resource.GetKind())
+			continue
+		}
+
+		// non-mandatory field, check only if defined
+		if kubepatch.Target.APIVersion != "" && resource.GetAPIVersion() != kubepatch.Target.APIVersion {
+			ctx.Log().Debugf("skipping patch, resource api mismatch: %s - %s", kubepatch.Target.APIVersion, resource.GetAPIVersion())
+			continue
+		}
+
+		if kubepatch.Value != nil {
+			value, err := patch.NewNode(&kubepatch.Value)
+			if err != nil {
+				return resource, errors.Errorf("value %d is invalid", idx)
+			}
+			newPatch.Value = value
+		}
+
+		// TODO Maybe log here that we're indeed applying a patch?
+		ctx.Log().Debugf("applying patch: %s.%s", kubepatch.Target.Name, kubepatch.Path)
+		patches = append(patches, newPatch)
+	}
+
+	out, err = patches.Apply(out)
+	if err != nil {
+		return resource, errors.Wrap(err, "apply patches")
+	}
+
+	// transform resource back to unstructured
+	var result unstructured.Unstructured
+	err = yaml.Unmarshal(out, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }

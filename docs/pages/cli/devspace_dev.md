@@ -34,6 +34,7 @@ Starts your project in development mode
       --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
       --pipeline string             The pipeline to execute (default "dev")
       --render                      If true will render manifests and print them instead of actually deploying them
+      --sequential-dependencies     If set set true dependencies will run sequentially
       --show-ui                     Shows the ui server
       --skip-build                  Skips building of images
       --skip-dependency strings     Skips the following dependencies for deployment

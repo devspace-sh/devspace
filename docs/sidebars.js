@@ -89,8 +89,17 @@ module.exports = {
               collapsible: false,
               link: { type: 'doc', id: 'configuration/deployments/kubectl/README' },
               items: [
-                'configuration/deployments/kubectl/manifests',
-                'configuration/deployments/kubectl/inline_manifests',
+                {
+                  type: 'category',
+                  label: 'Manifests',
+                  collapsible: false,
+                  link: { type: 'doc', id: 'configuration/deployments/kubectl/README' },
+                  items: [
+                    'configuration/deployments/kubectl/manifests',
+                    'configuration/deployments/kubectl/inline_manifests',
+                    'configuration/deployments/kubectl/patches',
+                  ],
+                },
                 'configuration/deployments/kubectl/kustomizations',
               ],
             },

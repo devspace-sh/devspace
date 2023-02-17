@@ -34,12 +34,13 @@ Builds all defined images and pushes them
       --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
       --pipeline string             The pipeline to execute (default "build")
       --render                      If true will render manifests and print them instead of actually deploying them
+      --sequential-dependencies     If set set true dependencies will run sequentially
       --show-ui                     Shows the ui server
       --skip-build                  Skips building of images
       --skip-dependency strings     Skips the following dependencies for deployment
       --skip-deploy                 If enabled will skip deploying
       --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected
+      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
   -t, --tag strings                 Use the given tag for all built images
 ```
 

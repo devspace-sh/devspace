@@ -24,7 +24,7 @@ devspace sync --path=.:/app # localPath is current dir and remotePath is /app
 devspace sync --path=.:/app --image-selector nginx:latest
 devspace sync --path=.:/app --exclude=node_modules,test
 devspace sync --path=.:/app --pod=my-pod --container=my-container
-#############################################################################`
+#############################################################################
 ```
 
 
@@ -65,3 +65,4 @@ devspace sync --path=.:/app --pod=my-pod --container=my-container
   -s, --switch-context               Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings                  Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+
