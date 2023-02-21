@@ -12,7 +12,6 @@ func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *R
 	cmd := &RunPipelineCmd{
 		GlobalFlags:             globalFlags,
 		Pipeline:                "build",
-		ForceBuild:              true,
 		SkipPushLocalKubernetes: true,
 	}
 
