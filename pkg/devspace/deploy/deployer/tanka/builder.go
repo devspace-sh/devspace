@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"sort"
 
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 )
@@ -88,6 +89,24 @@ func NewTankaEnvironment(config *latest.TankaConfig) TankaEnvironment {
 	}
 }
 
+// Build arguments with Runtime vars
+func (t *tankaEnvironmentImpl) BuildArgs(ctx devspacecontext.Context, arguments []string) []string {
+	var newArgs []string
+	resolver := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), true)
+
+	for _, arg := range arguments {
+		_, newArg, err := resolver.FillRuntimeVariablesWithRebuild(ctx.Context(), arg, ctx.Config(), ctx.Dependencies())
+		if err != nil {
+			ctx.Log().Errorf("Error resolving variables: %v", err)
+			newArgs = append(newArgs, arg)
+		} else {
+			newArgs = append(newArgs, fmt.Sprint(newArg))
+		}
+
+	}
+	return newArgs
+}
+
 // Apply implements TankaEnvironment.
 func (t *tankaEnvironmentImpl) Apply(ctx devspacecontext.Context) error {
 	var err error
@@ -97,6 +116,8 @@ func (t *tankaEnvironmentImpl) Apply(ctx devspacecontext.Context) error {
 	applyArgs := append([]string{"apply"}, t.args...)
 	applyArgs = append(applyArgs, t.flags...)
 	applyArgs = append(applyArgs, "--auto-approve=always")
+
+	applyArgs = t.BuildArgs(ctx, applyArgs)
 
 	ctx.Log().Debugf("Tanka apply arguments: %v", applyArgs)
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, applyArgs...)
@@ -122,6 +143,8 @@ func (t *tankaEnvironmentImpl) Diff(ctx devspacecontext.Context) (string, error)
 	diffArgs := append([]string{"diff"}, t.args...)
 	diffArgs = append(diffArgs, t.flags...)
 	diffArgs = append(diffArgs, []string{"--exit-zero", "--summarize"}...)
+	diffArgs = t.BuildArgs(ctx, diffArgs)
+
 	ctx.Log().Debugf("Tanka diff arguments: %v", diffArgs)
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, diffArgs...)
 	cmd.Dir = t.rootDir
@@ -136,6 +159,7 @@ func (t *tankaEnvironmentImpl) Show(ctx devspacecontext.Context, out io.Writer) 
 	showArgs := append([]string{"show"}, t.args...)
 	showArgs = append(showArgs, t.flags...)
 	showArgs = append(showArgs, "--dangerous-allow-redirect")
+	showArgs = t.BuildArgs(ctx, showArgs)
 
 	ctx.Log().Debugf("Tanka show arguments: %v", showArgs)
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, showArgs...)
@@ -151,6 +175,7 @@ func (t *tankaEnvironmentImpl) Prune(ctx devspacecontext.Context) error {
 	pruneArgs := append([]string{"prune"}, t.args...)
 	pruneArgs = append(pruneArgs, "--auto-approve=always")
 	pruneArgs = append(pruneArgs, t.flags...)
+	pruneArgs = t.BuildArgs(ctx, pruneArgs)
 
 	ctx.Log().Debugf("Tanka prune arguments: %v", pruneArgs)
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, pruneArgs...)
@@ -166,6 +191,7 @@ func (t *tankaEnvironmentImpl) Delete(ctx devspacecontext.Context) error {
 	deleteArgs := append([]string{"delete"}, t.args...)
 	deleteArgs = append(deleteArgs, "--auto-approve=always")
 	deleteArgs = append(deleteArgs, t.flags...)
+	deleteArgs = t.BuildArgs(ctx, deleteArgs)
 
 	ctx.Log().Debugf("Tanka delete arguments: %v", deleteArgs)
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, deleteArgs...)
