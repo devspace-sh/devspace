@@ -1,6 +1,7 @@
 package tanka
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -21,8 +22,8 @@ const (
 // DeployConfig holds the necessary information for tanka deployment
 type DeployConfig struct {
 	// TODO JsonnetBundlerBinaryPath string
-	name   string
-	target string
+	name    string
+	targets []string
 
 	tankaEnv TankaEnvironment
 
@@ -65,7 +66,7 @@ func New(ctx devspacecontext.Context, deployConfig *latest.DeploymentConfig) (de
 
 	cfg := &DeployConfig{
 		name:        deployConfig.Name,
-		target:      deployConfig.Tanka.Target,
+		targets:     deployConfig.Tanka.Targets,
 		tankaEnv:    NewTankaEnvironment(deployConfig.Tanka),
 		tankaConfig: deployConfig.Tanka,
 	}
@@ -88,14 +89,14 @@ func (d *DeployConfig) Status(ctx devspacecontext.Context) (*deployer.StatusResu
 		return &deployer.StatusResult{
 			Name:   d.name,
 			Type:   "Tanka",
-			Target: d.target,
+			Target: fmt.Sprint(d.targets),
 			Status: "no diff",
 		}, nil
 	}
 	return &deployer.StatusResult{
 		Name:   d.name,
 		Type:   "Tanka",
-		Target: d.target,
+		Target: fmt.Sprint(d.targets),
 		Status: diff,
 	}, nil
 
@@ -124,7 +125,7 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error)
 
 	}
 
-  // Check if we need to run jb update (the default option is false)
+	// Check if we need to run jb update (the default option is false)
 	if d.tankaConfig.RunJsonnetBundlerUpdate != nil && *d.tankaConfig.RunJsonnetBundlerUpdate {
 		err = d.tankaEnv.Update(ctx)
 		if err != nil {

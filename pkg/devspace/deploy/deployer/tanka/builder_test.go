@@ -40,7 +40,7 @@ func TestNewTankaEnvironment(t *testing.T) {
 					},
 					TopLevelCode:   []string{"true"},
 					TopLevelString: []string{"my-tla-string"},
-					Target:         "*",
+					Targets:        []string{"*"},
 				},
 			},
 			want: &tankaEnvironmentImpl{

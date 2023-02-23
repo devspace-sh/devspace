@@ -30,6 +30,7 @@ type tankaEnvironmentImpl struct {
 	jbBinaryPath string
 	args         []string
 	flags        []string
+	targetFlags  []string
 	rootDir      string
 	stdout       io.Writer
 	stderr       io.Writer
@@ -39,6 +40,7 @@ type tankaEnvironmentImpl struct {
 func NewTankaEnvironment(config *latest.TankaConfig) TankaEnvironment {
 	args := []string{}
 	flags := []string{}
+	targetFlags := []string{}
 	// Map configuration to CLI arguments and flags
 	if config.EnvironmentPath != "" {
 		args = append(args, config.EnvironmentPath)
@@ -60,8 +62,8 @@ func NewTankaEnvironment(config *latest.TankaConfig) TankaEnvironment {
 	for _, v := range config.TopLevelString {
 		flags = append(flags, fmt.Sprintf("--tla-str=%s", v))
 	}
-	if config.Target != "" {
-		flags = append(flags, fmt.Sprintf("--target=%s", config.Target))
+	for _, v := range config.Targets {
+		targetFlags = append(targetFlags, fmt.Sprintf("--target=%s", v))
 	}
 	sort.Strings(flags)
 	tkPath := config.TankaBinaryPath
@@ -77,6 +79,7 @@ func NewTankaEnvironment(config *latest.TankaConfig) TankaEnvironment {
 		jbBinaryPath: jbPath,
 		args:         args,
 		flags:        flags,
+		targetFlags:  targetFlags,
 		rootDir:      config.Path,
 
 		// Extract those fields from the wellknown configuration
@@ -115,6 +118,7 @@ func (t *tankaEnvironmentImpl) Apply(ctx devspacecontext.Context) error {
 
 	applyArgs := append([]string{"apply"}, t.args...)
 	applyArgs = append(applyArgs, t.flags...)
+	applyArgs = append(applyArgs, t.targetFlags...)
 	applyArgs = append(applyArgs, "--auto-approve=always")
 
 	applyArgs = t.BuildArgs(ctx, applyArgs)
@@ -142,6 +146,7 @@ func (t *tankaEnvironmentImpl) Apply(ctx devspacecontext.Context) error {
 func (t *tankaEnvironmentImpl) Diff(ctx devspacecontext.Context) (string, error) {
 	diffArgs := append([]string{"diff"}, t.args...)
 	diffArgs = append(diffArgs, t.flags...)
+	diffArgs = append(diffArgs, t.targetFlags...)
 	diffArgs = append(diffArgs, []string{"--exit-zero", "--summarize"}...)
 	diffArgs = t.BuildArgs(ctx, diffArgs)
 
@@ -158,6 +163,7 @@ func (t *tankaEnvironmentImpl) Diff(ctx devspacecontext.Context) (string, error)
 func (t *tankaEnvironmentImpl) Show(ctx devspacecontext.Context, out io.Writer) error {
 	showArgs := append([]string{"show"}, t.args...)
 	showArgs = append(showArgs, t.flags...)
+	showArgs = append(showArgs, t.targetFlags...)
 	showArgs = append(showArgs, "--dangerous-allow-redirect")
 	showArgs = t.BuildArgs(ctx, showArgs)
 
@@ -191,6 +197,7 @@ func (t *tankaEnvironmentImpl) Delete(ctx devspacecontext.Context) error {
 	deleteArgs := append([]string{"delete"}, t.args...)
 	deleteArgs = append(deleteArgs, "--auto-approve=always")
 	deleteArgs = append(deleteArgs, t.flags...)
+	deleteArgs = append(deleteArgs, t.targetFlags...)
 	deleteArgs = t.BuildArgs(ctx, deleteArgs)
 
 	ctx.Log().Debugf("Tanka delete arguments: %v", deleteArgs)

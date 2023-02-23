@@ -852,7 +852,7 @@ type TankaConfig struct {
 	TopLevelString []string `yaml:"topLevelString,omitempty" json:"topLevelString,omitempty"`
 
 	// Maps to the option `--target` argument and allows filtering for specific resources.
-	Target string `yaml:"target,omitempty" json:"target,omitempty"`
+	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
 
 	// JsonBundlerBinaryPath allows overriding the `jb` binary used.
 	JsonnetBundlerBinaryPath string `yaml:"jsonnetBundlerBinaryPath,omitempty" json:"jsonnetBundlerBinaryPath,omitempty"`
