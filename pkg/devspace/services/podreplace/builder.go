@@ -204,6 +204,11 @@ func modifyDevContainer(ctx devspacecontext.Context, devPod *latest.DevPod, devC
 		return errors.Wrap(err, "replace working dir")
 	}
 
+	err = replaceSecurityContext(ctx, devPod, devContainer, podTemplate)
+	if err != nil {
+		return errors.Wrap(err, "replace securitycontext")
+	}
+
 	err = replaceResources(ctx, devPod, devContainer, podTemplate)
 	if err != nil {
 		return errors.Wrap(err, "replace resources")
@@ -253,6 +258,23 @@ func replaceWorkingDir(ctx devspacecontext.Context, devPod *latest.DevPod, devCo
 	container.StartupProbe = nil
 	container.WorkingDir = devContainer.WorkingDir
 	podTemplate.Spec.Containers[index] = *container
+	return nil
+}
+
+func replaceSecurityContext(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+	if devContainer.Sync == nil {
+		return nil
+	}
+
+	index, container, err := getPodTemplateContainer(ctx, devPod, devContainer, podTemplate)
+	if err != nil {
+		return err
+	}
+
+	if container.SecurityContext != nil {
+		container.SecurityContext.ReadOnlyRootFilesystem = nil
+		podTemplate.Spec.Containers[index] = *container
+	}
 	return nil
 }
 

@@ -25,7 +25,8 @@ Lists the port forwarding configurations
 ## Flags
 
 ```
-  -h, --help   help for ports
+  -h, --help            help for ports
+  -o, --output string   The output format of the command. Can be either empty or json
 ```
 
 
