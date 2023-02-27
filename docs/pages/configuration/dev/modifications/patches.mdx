@@ -62,7 +62,8 @@ DevSpace adds certain modifications and patches in-memory if certain conditions 
   <tr>
 <td>
 
-`terminal` enabled
+`terminal` enabled or  
+`attach` enabled
 
 </td>
 <td>
@@ -83,6 +84,24 @@ dev:
 
 </td>
   </tr>
+<td>
+
+`sync` enabled
+
+</td>
+<td>
+
+```yaml title=devspace.yaml
+dev:
+  $name:
+    command: ["sleep"]
+    args: ["1000000000"]
+    patches:
+    - op: remove
+      path: spec.containers[].securityContext.readOnlyRootFilesystem
+```
+
+</td>
 </tbody>
 </table>
 
