@@ -5,7 +5,7 @@ on:
 
 jobs:
 
-  check-changes:
+  check_changes:
     runs-on: ubuntu-latest
     outputs:
       docs_changes: ${{ steps.check_file_changed.outputs.changed }}
