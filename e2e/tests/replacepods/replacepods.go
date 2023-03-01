@@ -68,20 +68,20 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		}()
 
 		// check if file is there
-		framework.ExpectRemoteFileContents("ubuntu", ns, "/app/test2.txt", "Hello World 123")
+		framework.ExpectRemoteFileContents("alpine", ns, "/app/test2.txt", "Hello World 123")
 
 		// check if file is there
-		framework.ExpectRemoteFileContents("ubuntu", ns, "/test.txt", "Hello World\n")
+		framework.ExpectRemoteFileContents("alpine", ns, "/test.txt", "Hello World\n")
 
 		// upload a file and restart the container
 		err = os.WriteFile("test1.txt", []byte("Hello World2!"), 0777)
 		framework.ExpectNoError(err)
 
 		// wait for uploaded
-		framework.ExpectRemoteFileContents("ubuntu", ns, "/app/test1.txt", "Hello World2!")
+		framework.ExpectRemoteFileContents("alpine", ns, "/app/test1.txt", "Hello World2!")
 
 		// wait for restarted
-		framework.ExpectRemoteFileContents("ubuntu", ns, "/test.txt", "Hello World\nHello World\n")
+		framework.ExpectRemoteFileContents("alpine", ns, "/test.txt", "Hello World\nHello World\n")
 
 		cancel()
 		err = <-done
