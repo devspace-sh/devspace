@@ -15,6 +15,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
+
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/mgutz/ansi"
 )
 
 var (
@@ -92,11 +96,38 @@ func (r *LocalRegistry) Start(ctx devspacecontext.Context) error {
 	// Save registry host for rewriting images
 	r.host = fmt.Sprintf("localhost:%d", r.servicePort.NodePort)
 
+	// Check if local registry is already available
+	ctx.Log().Debug("Check for running local registry")
+	isRegistryAvailable, err := r.ping(ctx.Context())
+	if err != nil {
+		return errors.Wrap(err, "ping local registry")
+	}
+
 	// Select the registry pod
 	ctx.Log().Debug("Wait for running local registry pod...")
-	_, err = r.SelectRegistryPod(ctx)
+	imageRegistryPod, err := r.SelectRegistryPod(ctx)
 	if err != nil {
 		return errors.Wrap(err, "select registry pod")
+	}
+
+	if r.LocalBuild {
+		// In case of local builds, we'll need to start registry port forwarding
+		// in order to push images from local builds to cluster's registry
+		if !isRegistryAvailable {
+			// Start port forwarding
+			ctx.Log().Debug("Starting local registry port forwarding")
+			if err := r.startPortForwarding(ctx, imageRegistryPod); err != nil {
+				return errors.Wrap(err, "start port forwarding")
+			}
+		} else {
+			ctx.Log().Debug("Skip local registry port forwarding")
+		}
+
+		// Wait for registry to be responsive
+		ctx.Log().Debug("Waiting for local registry to become ready...")
+		if err := r.waitForRegistry(ctx.Context()); err != nil {
+			return errors.Wrap(err, "wait for registry")
+		}
 	}
 
 	return nil
@@ -178,4 +209,78 @@ func (r *LocalRegistry) waitForNodePort(ctx devspacecontext.Context) (*corev1.Se
 	})
 
 	return servicePort, err
+}
+
+// GetRegistryURL returns the host:port of the current registry
+func (r *LocalRegistry) GetRegistryURL() string {
+	return r.host
+}
+
+// startPortForwarding will forward container's port into localhost in order to access registry's container in
+// the cluster, locally, to push the built image afterwards
+func (r *LocalRegistry) startPortForwarding(ctx devspacecontext.Context, imageRegistryPod *corev1.Pod) error {
+	localPort := r.servicePort.NodePort
+	remotePort := r.servicePort.TargetPort.IntVal
+	ports := []string{fmt.Sprintf("%d:%d", localPort, remotePort)}
+	addresses := []string{"localhost"}
+	portsFormatted := ansi.Color(fmt.Sprintf("%d -> %d", int(localPort), int(remotePort)), "white+b")
+	readyChan := make(chan struct{})
+	errorChan := make(chan error, 1)
+	pf, err := kubectl.NewPortForwarder(
+		ctx.KubeClient(),
+		imageRegistryPod,
+		ports,
+		addresses,
+		make(chan struct{}),
+		readyChan,
+		errorChan,
+	)
+	if err != nil {
+		return errors.Errorf("Error starting port forwarding: %v", err)
+	}
+
+	go func() {
+		err := pf.ForwardPorts(ctx.Context())
+		if err != nil {
+			errorChan <- err
+		}
+	}()
+
+	select {
+	case <-ctx.Context().Done():
+		ctx.Log().Donef("Port forwarding to local registry stopped")
+		return nil
+	case <-readyChan:
+		ctx.Log().Donef("Port forwarding to local registry started on: %s", portsFormatted)
+	case err := <-errorChan:
+		if ctx.IsDone() {
+			return nil
+		}
+
+		return errors.Wrap(err, "forward ports")
+	case <-time.After(20 * time.Second):
+		return errors.Errorf("Timeout waiting for port forwarding to start")
+	}
+
+	return nil
+}
+
+func (r *LocalRegistry) waitForRegistry(ctx context.Context) error {
+	return wait.PollImmediateWithContext(ctx, time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
+		return r.ping(ctx)
+	})
+}
+
+func (r *LocalRegistry) ping(ctx context.Context) (done bool, err error) {
+	registry, err := name.NewRegistry(r.host)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = remote.Catalog(ctx, registry)
+	if err != nil {
+		return false, nil
+	}
+
+	return true, nil
 }

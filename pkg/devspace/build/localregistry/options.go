@@ -17,6 +17,7 @@ var (
 type Options struct {
 	Name             string
 	Namespace        string
+	LocalBuild       bool
 	RegistryImage    string
 	BuildKitImage    string
 	Port             int
@@ -33,6 +34,7 @@ func NewDefaultOptions() Options {
 	return Options{
 		Name:             RegistryName,
 		Namespace:        "",
+		LocalBuild:       false,
 		RegistryImage:    RegistryImage,
 		BuildKitImage:    BuildKitImage,
 		Port:             RegistryPort,
@@ -82,6 +84,13 @@ func (o Options) WithPort(port *int) Options {
 	return newOptions
 }
 
+func (o Options) WithLocalBuild(localbuild bool) Options {
+	newOptions := o
+	newOptions.LocalBuild = localbuild
+
+	return newOptions
+}
+
 func (o Options) EnableStorage() Options {
 	newOptions := o
 	newOptions.StorageEnabled = true
@@ -112,7 +121,8 @@ func (o Options) WithLocalRegistryConfig(config *latest.LocalRegistryConfig) Opt
 			WithNamespace(config.Namespace).
 			WithImage(config.Image).
 			WithBuildKitImage(config.BuildKitImage).
-			WithPort(config.Port)
+			WithPort(config.Port).
+			WithLocalBuild(config.LocalBuild)
 
 		if config.Persistence != nil && config.Persistence.Enabled != nil && *config.Persistence.Enabled {
 			newOptions = newOptions.

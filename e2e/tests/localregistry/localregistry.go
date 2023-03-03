@@ -3,10 +3,14 @@ package localregistry
 import (
 	"bytes"
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/build/localregistry"
-	"github.com/onsi/ginkgo/v2"
+	"fmt"
 	"os"
 	"time"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/loft-sh/devspace/pkg/devspace/build/localregistry"
+	"github.com/onsi/ginkgo/v2"
 
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -83,6 +87,7 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			done <- devCmd.RunDefault(f)
 		}()
 
+		var registryHost string
 		ginkgo.By("Waiting for registry service node port")
 		gomega.Eventually(func() (*corev1.Service, error) {
 			service, err := getRegistryService(ctx, kubeClient, ns)
@@ -93,6 +98,7 @@ var _ = DevSpaceDescribe("localregistry", func() {
 			if service != nil {
 				registryPort := localregistry.GetServicePort(service)
 				if registryPort.NodePort != 0 {
+					registryHost = fmt.Sprintf("localhost:%d", registryPort.NodePort)
 					return service, nil
 				}
 			}
@@ -108,6 +114,11 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		ginkgo.By("Checking deployment container2")
 		gomega.Eventually(selectContainerImage(kubeClient, ns, "app", "container2"), pollingDurationLong, pollingInterval).
 			Should(gomega.MatchRegexp(`^localhost`))
+
+		// make sure we've pushed the image correctly
+		ginkgo.By("Checking registry for pushed image")
+		gomega.Eventually(getImages(ctx, registryHost), pollingDurationLong, pollingInterval).
+			Should(gomega.ContainElement("my-docker-username/helloworld"))
 
 		err = <-done
 		framework.ExpectNoError(err)
@@ -478,5 +489,20 @@ func readFile(name string) func() (string, error) {
 			return "", nil
 		}
 		return string(out), nil
+	}
+}
+func getImages(ctx context.Context, registryHost string) func() ([]string, error) {
+	return func() ([]string, error) {
+		registry, err := name.NewRegistry(registryHost)
+		if err != nil {
+			return nil, err
+		}
+
+		images, err := remote.Catalog(ctx, registry)
+		if err != nil {
+			return nil, err
+		}
+
+		return images, nil
 	}
 }

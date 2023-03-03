@@ -2,14 +2,22 @@ package localregistry
 
 import (
 	"context"
-	"github.com/docker/docker/api/types"
-	"github.com/loft-sh/devspace/pkg/devspace/build/localregistry"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/docker"
-	"github.com/pkg/errors"
+	"fmt"
 	"io"
 	"net"
 	"strings"
+
+	"github.com/docker/docker/api/types"
+	"github.com/loft-sh/devspace/pkg/devspace/build/localregistry"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/pkg/errors"
+
+	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 
 	buildkit "github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/session"
@@ -32,7 +40,7 @@ func RemoteBuild(ctx devspacecontext.Context, podName, namespace string, buildCo
 	}
 	defer client.Close()
 
-	dockerConfig, err := docker.LoadDockerConfig()
+	dockerConfig, err := dockerclient.LoadDockerConfig()
 	if err != nil {
 		return err
 	}
@@ -77,4 +85,105 @@ func RemoteBuild(ctx devspacecontext.Context, podName, namespace string, buildCo
 	}
 
 	return nil
+}
+
+// LocalBuild builds a dockerimage with the docker cli
+// contextPath is the absolute path to the context path
+// dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
+func LocalBuild(ctx devspacecontext.Context, contextPath, dockerfilePath string, entrypoint []string, cmd []string, b *Builder) error {
+	// create context stream
+	body, writer, outStream, buildOptions, err := b.helper.CreateContextStream(contextPath, dockerfilePath, entrypoint, cmd, ctx.Log())
+	defer writer.Close()
+	if err != nil {
+		return err
+	}
+
+	dockerClient, err := dockerclient.NewClient(ctx.Context(), ctx.Log())
+	if err != nil {
+		return nil
+	}
+
+	// make sure to use the correct proxy configuration
+	buildOptions.BuildArgs = dockerClient.ParseProxyConfig(buildOptions.BuildArgs)
+
+	response, err := dockerClient.ImageBuild(ctx.Context(), body, *buildOptions)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	err = jsonmessage.DisplayJSONMessagesStream(response.Body, outStream, outStream.FD(), outStream.IsTerminal(), nil)
+	if err != nil {
+		return err
+	}
+
+	for _, tag := range buildOptions.Tags {
+		ctx.Log().Info("The push refers to repository [" + tag + "]")
+		err := CopyImageToRemote(ctx.Context(), dockerClient, tag, writer, b)
+		if err != nil {
+			return errors.Errorf("error during local registry image push: %v", err)
+		}
+
+		ctx.Log().Info("Image pushed to local registry")
+	}
+
+	return nil
+}
+
+// CopyImageToRemote will extract an image from a local registry and stream it to a remote registry
+func CopyImageToRemote(ctx context.Context, client dockerclient.Client, imageName string, writer io.Writer, b *Builder) error {
+	// get local registry data
+	localRef, err := name.ParseReference(imageName)
+	if err != nil {
+		return err
+	}
+	// get remote registry data
+	remoteRef, err := name.ParseReference(imageName, name.WithDefaultRegistry(b.localRegistry.GetRegistryURL()))
+	if err != nil {
+		return err
+	}
+	// get image data from local registry
+	image, err := daemon.Image(localRef, daemon.WithContext(ctx), daemon.WithClient(client.DockerAPIClient()))
+	if err != nil {
+		return err
+	}
+
+	progressChan := make(chan v1.Update, 200)
+	errChan := make(chan error, 1)
+	// push image to remote registry
+	go func() {
+		errChan <- remote.Write(
+			remoteRef,
+			image,
+			remote.WithContext(ctx),
+			remote.WithProgress(progressChan),
+		)
+	}()
+
+	for update := range progressChan {
+		if update.Error != nil {
+			return err
+		}
+
+		status := "Pushing"
+		if update.Complete == update.Total {
+			status = "Pushed"
+		}
+
+		jm := &jsonmessage.JSONMessage{
+			ID:     localRef.Identifier(),
+			Status: status,
+			Progress: &jsonmessage.JSONProgress{
+				Current: update.Complete,
+				Total:   update.Total,
+			},
+		}
+
+		_, err := fmt.Fprintf(writer, "%s %s\n", jm.Status, jm.Progress.String())
+		if err != nil {
+			return err
+		}
+	}
+
+	return <-errChan
 }

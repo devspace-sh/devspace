@@ -596,6 +596,9 @@ type LocalRegistryConfig struct {
 	// When `false` the local registry will never be used.
 	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
+	// LocalBuild enables use of local docker builder instead of building in the cluster
+	LocalBuild bool `yaml:"localbuild,omitempty" json:"localbuild,omitempty"`
+
 	// Namespace where the local registry is deployed. Default is the current context's namespace
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 

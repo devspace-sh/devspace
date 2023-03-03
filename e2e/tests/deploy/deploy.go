@@ -482,7 +482,7 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[0].Name, "nginx")
 		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[0].Image, "nginx:1.23.3")
-		framework.ExpectEqual(deployment.Spec.Template.GetObjectMeta().GetLabels(), map[string]string {"app": "nginx", "test": "test123"})
+		framework.ExpectEqual(deployment.Spec.Template.GetObjectMeta().GetLabels(), map[string]string{"app": "nginx", "test": "test123"})
 		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[1].Name, "busybox")
 		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[2].Name, "alpine")
 		// Ensure the wildcard works
@@ -533,7 +533,7 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[0].Name, "nginx")
 		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[0].Image, "nginx:1.23.3")
-		framework.ExpectEqual(deployment.Spec.Template.GetObjectMeta().GetLabels(), map[string]string {"app": "nginx", "test": "test123"})
+		framework.ExpectEqual(deployment.Spec.Template.GetObjectMeta().GetLabels(), map[string]string{"app": "nginx", "test": "test123"})
 		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[1].Name, "busybox")
 		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[2].Name, "alpine")
 		// Ensure the wildcard works
@@ -541,7 +541,6 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[1].Env[0], v1.EnvVar{Name: "test", Value: "test123"})
 		framework.ExpectEqual(deployment.Spec.Template.Spec.Containers[2].Env[0], v1.EnvVar{Name: "test", Value: "test123"})
 	})
-
 
 	ginkgo.It("should deploy helm chart from specific branch in git repo", func() {
 		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_git_branch")

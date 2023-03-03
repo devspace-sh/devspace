@@ -89,13 +89,11 @@ func (r *LocalRegistry) getDeployment() *appsv1.Deployment {
 					Labels: map[string]string{
 						"app": r.Name,
 					},
-					Annotations: map[string]string{
-						"container.apparmor.security.beta.kubernetes.io/buildkitd": "unconfined",
-					},
+					Annotations: getAnnotations(r.LocalBuild),
 				},
 				Spec: corev1.PodSpec{
 					EnableServiceLinks: new(bool),
-					Containers:         getContainers(r.RegistryImage, r.BuildKitImage, "registry", int32(r.Port)),
+					Containers:         getContainers(r.RegistryImage, r.BuildKitImage, "registry", int32(r.Port), r.LocalBuild),
 					Volumes: []corev1.Volume{
 						{
 							VolumeSource: corev1.VolumeSource{
@@ -116,8 +114,25 @@ func (r *LocalRegistry) getDeployment() *appsv1.Deployment {
 	}
 }
 
-func getContainers(registryImage, buildKitImage, volume string, port int32) []corev1.Container {
-	return []corev1.Container{
+func getAnnotations(localbuild bool) map[string]string {
+	if !localbuild {
+		return map[string]string{
+			"container.apparmor.security.beta.kubernetes.io/buildkitd": "unconfined",
+		}
+	}
+	return map[string]string{}
+}
+
+// this returns a different deployment, if we're using a local docker build or not.
+func getContainers(registryImage, buildKitImage, volume string, port int32, localbuild bool) []corev1.Container {
+	buildContainers := getRegistryContainers(registryImage, buildKitImage, volume, port)
+	if localbuild {
+		// in case we're using local builds just return the deployment with only the
+		// registry container inside
+		return buildContainers
+	}
+
+	buildKitContainer := []corev1.Container{
 		{
 			Name:  BuildKitContainer,
 			Image: buildKitImage,
@@ -164,6 +179,15 @@ func getContainers(registryImage, buildKitImage, volume string, port int32) []co
 				},
 			},
 		},
+	}
+
+	// in case we're using remote builds, we add the buildkit container to the
+	// deployment
+	return append(buildKitContainer, buildContainers...)
+}
+
+func getRegistryContainers(registryImage, buildKitImage, volume string, port int32) []corev1.Container {
+	return []corev1.Container{
 		{
 			Name:  "registry",
 			Image: registryImage,
