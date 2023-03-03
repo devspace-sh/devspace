@@ -54,11 +54,11 @@ quit() {
   if [ -f "$pidFile" ]; then
     pidToKill="$(cat $pidFile)"
     kill -2 $((0-$pidToKill)) >/dev/null 2>&1
-    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+    timeout 5 sh -c "while [ -e /proc/$pidToKill ]; do sleep 1; done"
     kill -15 $((0-$pidToKill)) >/dev/null 2>&1
-    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+    timeout 5 sh -c "while [ -e /proc/$pidToKill ]; do sleep 1; done"
     kill -9 $((0-$pidToKill)) >/dev/null 2>&1
-    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+    timeout 5 sh -c "while [ -e /proc/$pidToKill ]; do sleep 1; done"
   fi
 
   if [ -f "$ppidFile" ]; then
@@ -104,7 +104,16 @@ while $restart; do
     pid="$(cat $pidFile)"
 
     screen -q -S "${sid}" -X colon "logfile flush 1^M"
-    tail --pid=$pid -f "$screenLogFile"
+
+    tail -f "$screenLogFile" &
+    tailPid=$!
+    # This is a workaround on tail --pid not supported in all
+	# minimal shells
+    while [ -e /proc/$pid ]; do
+		# Until $pid exist, let's wait
+        sleep 1
+    done
+    kill $tailPid
   else
     setsid "$@" &
     pid=$!
