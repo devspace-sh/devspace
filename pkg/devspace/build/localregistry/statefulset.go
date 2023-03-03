@@ -113,7 +113,7 @@ func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 				},
 				Spec: corev1.PodSpec{
 					EnableServiceLinks: new(bool),
-					Containers:         getContainers(r.RegistryImage, r.BuildKitImage, r.Name, int32(r.Port)),
+					Containers:         getContainers(r.RegistryImage, r.BuildKitImage, r.Name, int32(r.Port), r.LocalBuild),
 					Volumes: []corev1.Volume{
 						{
 							VolumeSource: corev1.VolumeSource{

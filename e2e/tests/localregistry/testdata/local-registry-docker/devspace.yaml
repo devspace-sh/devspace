@@ -1,7 +1,8 @@
 version: v2beta1
 name: local-registry
-localRegistry: 
+localRegistry:
   enabled: true
+  localbuild: true
 images:
   app:
     image: my-docker-username/helloworld

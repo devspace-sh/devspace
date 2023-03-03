@@ -1230,6 +1230,10 @@
           "type": "boolean",
           "description": "Enabled enables the local registry for pushing images.\nWhen unset the local registry will be used as a fallback if there are no push permissions for the registry.\nWhen `true` the local registry will always be used.\nWhen `false` the local registry will never be used."
         },
+        "localbuild": {
+          "type": "boolean",
+          "description": "LocalBuild enables use of local docker builder instead of building in the cluster"
+        },
         "namespace": {
           "type": "string",
           "description": "Namespace where the local registry is deployed. Default is the current context's namespace"

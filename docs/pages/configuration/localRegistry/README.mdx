@@ -17,6 +17,7 @@ Local registry configuration is defined in the `localRegistry` section of the `d
     defaultValue="default"
     values={[
         { label: 'Defaults', value: 'default', },
+        { label: 'Build locally with Docker/Podman', value: 'localbuild', },
         { label: 'Force Local Registry', value: 'force', },
         { label: 'Persistence', value: 'persistence', },
     ]
@@ -30,8 +31,19 @@ Local registry configuration is defined in the `localRegistry` section of the `d
 # localRegistry:
 #   name: registry
 #   namespace: [KUBE CONTEXT NAMESPACE]
+#   localbuild: false
 #   image: registry:2.8.1
 #   port: 5000
+```
+
+</TabItem>
+<TabItem value="localbuild">
+
+```yaml
+# The local registry will not use buildkit on the cluster, but your docker/podman daemon
+# and then push it to the local registry in the cluster
+localRegistry:
+  localbuild: true
 ```
 
 </TabItem>
