@@ -1,11 +1,13 @@
 package kubectl
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
 	"net"
 	"net/http"
+	"os/exec"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
@@ -270,4 +272,16 @@ func GetKindContext(context string) string {
 	}
 
 	return strings.TrimPrefix(context, "kind-")
+}
+
+func GetKindWorkerNodes(context string) (string, error) {
+	cmd := exec.Command("docker", "ps", "-f", fmt.Sprintf("label=io.x-k8s.kind.cluster=%s", GetKindContext(context)), "-f", "label=io.x-k8s.kind.role=worker", "--format", "{{.Names}}")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+	nodes := strings.Trim(strings.Replace(out.String(), "\n", ",", -1), ",")
+	return nodes, nil
 }

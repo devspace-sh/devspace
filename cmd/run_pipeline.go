@@ -86,7 +86,6 @@ func (cmd *RunPipelineCmd) AddPipelineFlags(f factory.Factory, command *cobra.Co
 	command.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", cmd.Tags, "Use the given tag for all built images")
 	command.Flags().BoolVar(&cmd.SkipPush, "skip-push", cmd.SkipPush, "Skips image pushing, useful for minikube deployment")
 	command.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", cmd.SkipPushLocalKubernetes, "Skips image pushing, if a local kubernetes environment is detected")
-
 	command.Flags().BoolVar(&cmd.ShowUI, "show-ui", cmd.ShowUI, "Shows the ui server")
 
 	if pipeline != nil {
