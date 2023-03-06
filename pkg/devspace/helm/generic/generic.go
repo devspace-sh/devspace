@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/loft-util/pkg/command"
+	"github.com/loft-sh/utils/pkg/command"
 	"os"
 	"strings"
 
@@ -13,9 +13,9 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/loft-util/pkg/downloader"
-	"github.com/loft-sh/loft-util/pkg/downloader/commands"
-	"github.com/loft-sh/loft-util/pkg/extract"
+	"github.com/loft-sh/utils/pkg/downloader"
+	"github.com/loft-sh/utils/pkg/downloader/commands"
+	"github.com/loft-sh/utils/pkg/extract"
 
 	"github.com/pkg/errors"
 )

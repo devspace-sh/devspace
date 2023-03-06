@@ -678,6 +678,8 @@ github.com/loft-sh/loft-util v0.0.9-alpha h1:kGcyTQWxWHWy7bbjhS8Hsq/JRdlSztAU++a
 github.com/loft-sh/loft-util v0.0.9-alpha/go.mod h1:lsjG5Exh5iEf7Z/87nqwkxx3GRQTizFRLGuS1knF6Cg=
 github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee h1:hZ79+pKEbCBrH1dVmgZ4jtFrrDPxgM4zqEP1lHlSnvI=
 github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee/go.mod h1:pq83B8lgfCY7tKdegTTXU6DZxGQkcWMowUTOTpTQmqk=
+github.com/loft-sh/utils v0.0.16 h1:XnD6Sb6gRWIHgM34U94dHcQ5MtxN5kAGZQ5eddAxC+c=
+github.com/loft-sh/utils v0.0.16/go.mod h1:n2L3X4i7d8kb2NF+q5duKa41N+N6fBde6XY2AolgSBI=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.5/go.mod h1:y3VJvCyxH9uVvJTWEGAELF3aiYNyPKd5NZ3oSwXrF60=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=

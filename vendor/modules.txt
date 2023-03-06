@@ -364,13 +364,16 @@ github.com/loft-sh/go-github-selfupdate/selfupdate
 # github.com/loft-sh/loft-util v0.0.9-alpha
 ## explicit; go 1.19
 github.com/loft-sh/loft-util/pkg/command
-github.com/loft-sh/loft-util/pkg/downloader
-github.com/loft-sh/loft-util/pkg/downloader/commands
-github.com/loft-sh/loft-util/pkg/extract
-github.com/loft-sh/loft-util/pkg/logger
 # github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 ## explicit; go 1.11
 github.com/loft-sh/notify
+# github.com/loft-sh/utils v0.0.16
+## explicit; go 1.19
+github.com/loft-sh/utils/pkg/command
+github.com/loft-sh/utils/pkg/downloader
+github.com/loft-sh/utils/pkg/downloader/commands
+github.com/loft-sh/utils/pkg/extract
+github.com/loft-sh/utils/pkg/log
 # github.com/mailru/easyjson v0.7.6
 ## explicit; go 1.12
 github.com/mailru/easyjson/buffer

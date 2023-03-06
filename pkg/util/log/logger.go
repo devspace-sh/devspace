@@ -2,7 +2,7 @@ package log
 
 import (
 	"github.com/loft-sh/devspace/pkg/util/survey"
-	log "github.com/loft-sh/loft-util/pkg/logger"
+	log "github.com/loft-sh/utils/pkg/log"
 	"github.com/sirupsen/logrus"
 	"io"
 )
