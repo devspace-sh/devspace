@@ -3,7 +3,7 @@ package docker
 import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
-	"github.com/loft-sh/loft-util/pkg/command"
+	"github.com/loft-sh/utils/pkg/command"
 	"io"
 	"mvdan.cc/sh/v3/expand"
 	"strings"

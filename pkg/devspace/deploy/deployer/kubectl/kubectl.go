@@ -17,11 +17,11 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
-	"github.com/loft-sh/loft-util/pkg/command"
+	"github.com/loft-sh/utils/pkg/command"
 	"github.com/sirupsen/logrus"
 
-	"github.com/loft-sh/loft-util/pkg/downloader"
-	"github.com/loft-sh/loft-util/pkg/downloader/commands"
+	"github.com/loft-sh/utils/pkg/downloader"
+	"github.com/loft-sh/utils/pkg/downloader/commands"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/ghodss/yaml"

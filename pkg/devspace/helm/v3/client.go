@@ -17,7 +17,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/loft-util/pkg/downloader/commands"
+	"github.com/loft-sh/utils/pkg/downloader/commands"
 )
 
 type client struct {

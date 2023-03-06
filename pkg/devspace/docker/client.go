@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/loft-sh/loft-util/pkg/command"
+	"github.com/loft-sh/utils/pkg/command"
 	"mvdan.cc/sh/v3/expand"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"

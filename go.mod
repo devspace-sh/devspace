@@ -21,7 +21,6 @@ require (
 	github.com/gliderlabs/ssh v0.3.5
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/go-containerregistry v0.13.0
-	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/invopop/jsonschema v0.3.0
@@ -32,6 +31,7 @@ require (
 	github.com/loft-sh/go-github-selfupdate v1.0.0
 	github.com/loft-sh/loft-util v0.0.9-alpha
 	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
+	github.com/loft-sh/utils v0.0.16
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.11.0

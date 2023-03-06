@@ -13,7 +13,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/loft-util/pkg/command"
+	"github.com/loft-sh/utils/pkg/command"
 
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"

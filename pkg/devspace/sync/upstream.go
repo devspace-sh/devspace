@@ -23,7 +23,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 
-	"github.com/loft-sh/loft-util/pkg/command"
+	"github.com/loft-sh/utils/pkg/command"
 	"github.com/loft-sh/notify"
 
 	"github.com/bmatcuk/doublestar"

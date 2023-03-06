@@ -12,7 +12,7 @@ import (
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
-	command2 "github.com/loft-sh/loft-util/pkg/command"
+	command2 "github.com/loft-sh/utils/pkg/command"
 	"io"
 
 	"github.com/docker/docker/api/types"
