@@ -737,6 +737,10 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		Path: "./",
 	}
 
+	if _, err := os.Stat("node_modules"); err == nil {
+		syncConfig.UploadExcludePaths = append(syncConfig.UploadExcludePaths, "node_modules")
+	}
+
 	if _, err := os.Stat(".dockerignore"); err == nil {
 		syncConfig.UploadExcludeFile = ".dockerignore"
 	}
