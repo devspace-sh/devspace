@@ -759,9 +759,6 @@
               }
             },
             "type": "object",
-            "required": [
-              "disableDependencyUpdate"
-            ],
             "description": "HelmConfig defines the specific helm options used during deployment"
           },
           "Image": {

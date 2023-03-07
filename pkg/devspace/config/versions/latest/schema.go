@@ -845,7 +845,7 @@ type HelmConfig struct {
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
 
 	// DisableDependencyUpdate disables helm dependencies update, default to false
-	DisableDependencyUpdate *bool `yaml:"disableDependencyUpdate" json:"disableDependencyUpdate"`
+	DisableDependencyUpdate *bool `yaml:"disableDependencyUpdate,omitempty" json:"disableDependencyUpdate,omitempty"`
 }
 
 // ChartConfig defines the helm chart options
