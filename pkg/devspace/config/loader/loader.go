@@ -269,7 +269,7 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 			return errors.Wrapf(err, "parsing require.commands[%d].version", index)
 		}
 
-		out, err := command.Output(ctx, filepath.Dir(l.absConfigPath), expand.ListEnviron(os.Environ()...), c.Name, versionArgs...)
+		out, err := command.CombinedOutput(ctx, filepath.Dir(l.absConfigPath), expand.ListEnviron(os.Environ()...), c.Name, versionArgs...)
 		if err != nil {
 			aggregatedErrors = append(aggregatedErrors, fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version))
 			continue
