@@ -249,10 +249,6 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 	}
 
 	for index, c := range config.Require.Commands {
-		if c.Version == "" && c.ExecuteRegEx == "" {
-			return fmt.Errorf("Neither of require.commands[%d].version or require.commands[%d].executeArgs where defined. At least 1 of them must be defined", index, index)
-		}
-
 		if c.Version != "" {
 			regExString := c.VersionRegEx
 			if regExString == "" {
