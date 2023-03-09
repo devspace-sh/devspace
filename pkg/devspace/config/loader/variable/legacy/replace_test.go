@@ -83,6 +83,35 @@ func TestReplaceContainerNames(t *testing.T) {
 			},
 		},
 		{
+			name: "Image in cache replaces explicit tag",
+			overwriteValues: map[string]interface{}{
+				"": "myimage:master",
+			},
+			imagesConf: map[string]*latest.Image{
+				"test": {
+					Image: "myimage",
+				},
+			},
+			cache: &localcache.LocalCache{
+				Images: map[string]localcache.ImageCache{
+					"test": {
+						ImageName: "myimage",
+						Tag:       "someTag",
+					},
+				},
+			},
+			builtImages: map[string]buildtypes.ImageNameTag{
+				"test": {
+					ImageName: "myimage",
+					ImageTag:  "someTag",
+				},
+			},
+			expectedShouldRedeploy: true,
+			expectedOverwriteValues: map[string]interface{}{
+				"": "myimage:someTag",
+			},
+		},
+		{
 			name: "Replace image & tag helpers",
 			overwriteValues: map[string]interface{}{
 				"": "image(test):tag(test)",
