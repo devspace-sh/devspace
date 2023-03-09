@@ -71,7 +71,7 @@ func TestDeploy(t *testing.T) {
 				Deployments: []remotecache.DeploymentCache{
 					{
 						Name:                 "deploy2",
-						DeploymentConfigHash: "a5047fb615f1b300af8aebdcb2d806c51ff5c00d68653727c5386c40760cbc42",
+						DeploymentConfigHash: "038007a9e5018dcf8ffbabad39c1fdc08251e583d7b19e74b765b815d5302444",
 						Helm: &remotecache.HelmCache{
 							Release:          "deploy2",
 							ReleaseNamespace: "testNamespace",
