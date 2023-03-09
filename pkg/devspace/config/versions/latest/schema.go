@@ -231,6 +231,12 @@ type RequireCommand struct {
 
 	// Version constraint of the command that should be installed
 	Version string `yaml:"version,omitempty" json:"version,omitempty"`
+
+	// ExecuteArgs are the arguments to execute the command with
+	ExecuteArgs []string `yaml:"executeArgs,omitempty" json:"executeArgs,omitempty"`
+
+	// ExecuteRegEx is the regex that is used to parse the version
+	ExecuteRegEx string `yaml:"executeRegEx,omitempty" json:"executeRegEx,omitempty"`
 }
 
 // Image defines the image specification

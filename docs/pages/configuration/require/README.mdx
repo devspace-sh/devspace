@@ -11,7 +11,7 @@ DevSpace allows you to define certain requirements that must be met to use DevSp
 
 - **DevSpace Version** (`require.devspace`): You can define a required DevSpace version 
 - **Installed Plugins** (`require.plugins`): You can define required plugins and their version
-- **Installed Commands** (`require.commands`): You can define arbitrary commands such as `kubectl` or `helm` that need to be present locally in a specific version or range
+- **Installed Commands** (`require.commands`): You can define arbitrary commands such as `kubectl` or `helm` that need to be present locally. You can require a specific version or range of versions, or require that the command exists, can be executed and that outputs a string that matches a regex.
 
 Requirements are defined in the `require` section of the `devspace.yaml`.
 
@@ -49,8 +49,11 @@ require:
 
 ```yaml
 require:
-  # By default devspace will try to call the command 'NAME version' 
+  # Either 'version', 'executeRegEx' or both, need to be defined per each command
+  # If option is defined: by default devspace will try to call the command 'NAME version'
   # and use the regex '(v\\d+\\.\\d+\\.\\d+)' to find the version
+  # If executeRegEx is defined: devspace will run the command as 'NAME executeArgs'
+  # and use the regex to check its output
   commands:
   - name: helm
     version: '> 3.0.0'
@@ -60,6 +63,9 @@ require:
     # Override the default reg ex
     versionRegEx: "Version: (v?\\d+\\.\\d+\\.\\d+)"
     version: '4.6.7'
+  - name: kubectl
+    executeRegEx: "^kubectl controls the Kubernetes cluster manager.$"
+    executeArgs: ["help"]
 ```
 
 </TabItem>

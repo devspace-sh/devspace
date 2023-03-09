@@ -249,44 +249,65 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 	}
 
 	for index, c := range config.Require.Commands {
-		regExString := c.VersionRegEx
-		if regExString == "" {
-			regExString = DefaultCommandVersionRegEx
+		if c.Version == "" && c.ExecuteRegEx == "" {
+			return fmt.Errorf("Neither of require.commands[%d].version or require.commands[%d].executeArgs where defined. At least 1 of them must be defined", index, index)
 		}
 
-		versionArgs := c.VersionArgs
-		if c.VersionArgs == nil {
-			versionArgs = []string{"version"}
+		if c.Version != "" {
+			regExString := c.VersionRegEx
+			if regExString == "" {
+				regExString = DefaultCommandVersionRegEx
+			}
+
+			versionArgs := c.VersionArgs
+			if c.VersionArgs == nil {
+				versionArgs = []string{"version"}
+			}
+
+			regEx, err := regexp.Compile(regExString)
+			if err != nil {
+				return errors.Wrapf(err, "parsing require.commands[%d].versionRegEx", index)
+			}
+
+			parsedConstraint, err := constraint.NewConstraint(c.Version)
+			if err != nil {
+				return errors.Wrapf(err, "parsing require.commands[%d].version", index)
+			}
+
+			out, err := command.Output(ctx, filepath.Dir(l.absConfigPath), expand.ListEnviron(os.Environ()...), c.Name, versionArgs...)
+			if err != nil {
+				aggregatedErrors = append(aggregatedErrors, fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version))
+				continue
+			}
+
+			matches := regEx.FindStringSubmatch(string(out))
+			if len(matches) != 2 {
+				return fmt.Errorf("command %s %s output does not match the provided regex '%s', however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(versionArgs, " "), regExString, c.Name, c.Version)
+			}
+
+			v, err := constraint.NewSemver(matches[1])
+			if err != nil {
+				return fmt.Errorf("command %s %s output does not return a semver version, however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(versionArgs, " "), c.Name, c.Version)
+			}
+
+			if !parsedConstraint.Check(v) {
+				aggregatedErrors = append(aggregatedErrors, fmt.Errorf("command '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have correctly installed '%s' with version %s", c.Name, matches[1], c.Version, c.Name, c.Version))
+			}
 		}
 
-		regEx, err := regexp.Compile(regExString)
-		if err != nil {
-			return errors.Wrapf(err, "parsing require.commands[%d].versionRegEx", index)
-		}
+		if c.ExecuteRegEx != "" {
+			regEx, err := regexp.Compile(c.ExecuteRegEx)
 
-		parsedConstraint, err := constraint.NewConstraint(c.Version)
-		if err != nil {
-			return errors.Wrapf(err, "parsing require.commands[%d].version", index)
-		}
+			out, err := command.Output(ctx, filepath.Dir(l.absConfigPath), expand.ListEnviron(os.Environ()...), c.Name, c.ExecuteArgs...)
+			if err != nil {
+				aggregatedErrors = append(aggregatedErrors, fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s'", c.Name, err, c.Name))
+				continue
+			}
 
-		out, err := command.Output(ctx, filepath.Dir(l.absConfigPath), expand.ListEnviron(os.Environ()...), c.Name, versionArgs...)
-		if err != nil {
-			aggregatedErrors = append(aggregatedErrors, fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version))
-			continue
-		}
-
-		matches := regEx.FindStringSubmatch(string(out))
-		if len(matches) != 2 {
-			return fmt.Errorf("command %s %s output does not match the provided regex '%s', however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(versionArgs, " "), regExString, c.Name, c.Version)
-		}
-
-		v, err := constraint.NewSemver(matches[1])
-		if err != nil {
-			return fmt.Errorf("command %s %s output does not return a semver version, however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(versionArgs, " "), c.Name, c.Version)
-		}
-
-		if !parsedConstraint.Check(v) {
-			aggregatedErrors = append(aggregatedErrors, fmt.Errorf("command '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have correctly installed '%s' with version %s", c.Name, matches[1], c.Version, c.Name, c.Version))
+			matches := regEx.FindStringSubmatch(string(out))
+			if len(matches) == 0 {
+				return fmt.Errorf("command %s %s output does not match the provided regex '%s', however the command is required by the config. Please make sure you have correctly installed '%s'", c.Name, strings.Join(c.ExecuteArgs, " "), c.ExecuteRegEx, c.Name)
+			}
 		}
 	}
 

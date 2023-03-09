@@ -148,8 +148,8 @@ func validateRequire(config *latest.Config) error {
 		if command.Name == "" {
 			return errors.Errorf("require.commands[%d].name is required", index)
 		}
-		if command.Version == "" {
-			return errors.Errorf("require.commands[%d].version is required", index)
+		if command.Version == "" && command.ExecuteRegEx == "" {
+			return errors.Errorf("At least one of require.commands[%d].version and require.commands[%d].executeRegEx is required", index, index)
 		}
 	}
 
