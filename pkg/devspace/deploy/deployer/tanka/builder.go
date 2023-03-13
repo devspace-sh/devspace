@@ -126,9 +126,10 @@ func (t *tankaEnvironmentImpl) Apply(ctx devspacecontext.Context) error {
 
 	t.Show(ctx, out)
 	if out.String() == "" {
-		ctx.Log().Warnf("No manifests detected, skipping apply: %v", applyArgs)
+		ctx.Log().Warnf("Warning: No manifests detected. Skipping apply: %v", applyArgs)
 		return nil
 	}
+	out.Reset()
 
 	ctx.Log().Debugf("Tanka apply arguments: %v", applyArgs)
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, applyArgs...)
