@@ -23,8 +23,11 @@ This project is mainly written in Golang. To contribute code,
 8. Build devspacehelper using below command
    ```
    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags=-static" -o ~/.devspace/devspacehelper/latest/devspacehelper helper/main.go
+   CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-extldflags=-static" -o ~/.devspace/devspacehelper/latest/devspacehelper-arm64 helper/main.go
    chmod +x ~/.devspace/devspacehelper/latest/devspacehelper
+   chmod +x ~/.devspace/devspacehelper/latest/devspacehelper-arm64
    ```
+   
    The above command is required to be executed as sometimes you may observe below error,
    ```
    start_dev: error setting up proxy commands in container:   Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "38d5fc79b8a7c63d38ba5f99237d80df186871fa4b43987a83a926628d1c47e1": OCI runtime exec failed: exec failed: unable to start container process: exec /tmp/devspacehelper: text file busy: unknown
