@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"sort"
 
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
@@ -123,11 +124,17 @@ func (t *tankaEnvironmentImpl) Apply(ctx devspacecontext.Context) error {
 
 	applyArgs = t.BuildArgs(ctx, applyArgs)
 
+	t.Show(ctx, out)
+	if out.String() == "" {
+		ctx.Log().Warnf("No manifests detected, skipping apply: %v", applyArgs)
+		return nil
+	}
+
 	ctx.Log().Debugf("Tanka apply arguments: %v", applyArgs)
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, applyArgs...)
 	cmd.Stderr = out
 	cmd.Stdout = out
-	cmd.Dir = t.rootDir
+	cmd.Dir = path.Join(ctx.WorkingDir(), t.rootDir)
 
 	err = cmd.Run()
 
@@ -152,7 +159,7 @@ func (t *tankaEnvironmentImpl) Diff(ctx devspacecontext.Context) (string, error)
 
 	ctx.Log().Debugf("Tanka diff arguments: %v", diffArgs)
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, diffArgs...)
-	cmd.Dir = t.rootDir
+	cmd.Dir = path.Join(ctx.WorkingDir(), t.rootDir)
 
 	out, err := cmd.CombinedOutput()
 
@@ -171,7 +178,7 @@ func (t *tankaEnvironmentImpl) Show(ctx devspacecontext.Context, out io.Writer) 
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, showArgs...)
 	cmd.Stdout = out
 	cmd.Stderr = out
-	cmd.Dir = t.rootDir
+	cmd.Dir = path.Join(ctx.WorkingDir(), t.rootDir)
 
 	return cmd.Run()
 }
@@ -187,7 +194,7 @@ func (t *tankaEnvironmentImpl) Prune(ctx devspacecontext.Context) error {
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, pruneArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
-	cmd.Dir = t.rootDir
+	cmd.Dir = path.Join(ctx.WorkingDir(), t.rootDir)
 
 	return cmd.Run()
 }
@@ -204,7 +211,7 @@ func (t *tankaEnvironmentImpl) Delete(ctx devspacecontext.Context) error {
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, deleteArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
-	cmd.Dir = t.rootDir
+	cmd.Dir = path.Join(ctx.WorkingDir(), t.rootDir)
 
 	return cmd.Run()
 }
@@ -221,7 +228,7 @@ func (t *tankaEnvironmentImpl) Install(ctx devspacecontext.Context) error {
 		cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
 		cmd.Stdout = t.stdout
 		cmd.Stderr = t.stderr
-		cmd.Dir = t.rootDir
+		cmd.Dir = path.Join(ctx.WorkingDir(), t.rootDir)
 		err = cmd.Run()
 	})
 
@@ -237,7 +244,7 @@ func (t *tankaEnvironmentImpl) Update(ctx devspacecontext.Context) error {
 		cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
 		cmd.Stdout = t.stdout
 		cmd.Stderr = t.stderr
-		cmd.Dir = t.rootDir
+		cmd.Dir = path.Join(ctx.WorkingDir(), t.rootDir)
 		err = cmd.Run()
 	})
 
