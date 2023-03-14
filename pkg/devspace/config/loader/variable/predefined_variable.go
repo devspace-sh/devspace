@@ -138,6 +138,9 @@ func init() {
 	predefinedVars["devspace.git.commit"] = predefinedVars["DEVSPACE_GIT_COMMIT"]
 	predefinedVars["devspace.context"] = predefinedVars["DEVSPACE_CONTEXT"]
 	predefinedVars["devspace.namespace"] = predefinedVars["DEVSPACE_NAMESPACE"]
+
+	// support migrating DevSpace Cloud users
+	predefinedVars["DEVSPACE_SPACE"] = predefinedVars["DEVSPACE_NAMESPACE"]
 }
 
 func IsPredefinedVariable(name string) bool {

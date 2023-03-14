@@ -14,6 +14,7 @@ deployments:
 hooks:
   - command: |
       echo -n $DEVSPACE_NAMESPACE > namespace.txt
+      echo -n $DEVSPACE_SPACE > space.txt
     events: ["after:deploy"]
   - command: |
       mkdir -p /app

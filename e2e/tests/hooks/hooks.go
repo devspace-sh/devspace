@@ -221,6 +221,9 @@ var _ = DevSpaceDescribe("hooks", func() {
 		// check namespace hook
 		framework.ExpectLocalFileContentsImmediately("namespace.txt", ns)
 
+		// check space hook
+		framework.ExpectLocalFileContentsImmediately("space.txt", ns)
+
 		// stop second command
 		cancel2()
 
