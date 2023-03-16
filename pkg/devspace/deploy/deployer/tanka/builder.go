@@ -224,7 +224,7 @@ func (t *tankaEnvironmentImpl) Install(ctx devspacecontext.Context) error {
 	var err error = nil
 	installArgs := []string{"install"}
 
-	GetOnce("install", t.rootDir).Do(func() {
+	GetOnce("install", path.Join(ctx.WorkingDir(), t.rootDir)).Do(func() {
 		ctx.Log().Debugf("Jb install")
 		cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
 		cmd.Stdout = t.stdout
@@ -240,7 +240,7 @@ func (t *tankaEnvironmentImpl) Update(ctx devspacecontext.Context) error {
 	var err error = nil
 	installArgs := []string{"update"}
 
-	GetOnce("update", t.rootDir).Do(func() {
+	GetOnce("update", path.Join(ctx.WorkingDir(), t.rootDir)).Do(func() {
 		ctx.Log().Debugf("Jb update")
 		cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
 		cmd.Stdout = t.stdout
