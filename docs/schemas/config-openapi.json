@@ -367,6 +367,10 @@
                 "$ref": "#/definitions/Config/$defs/KubectlConfig",
                 "description": "Kubectl tells DevSpace to deploy this deployment via kubectl or kustomize"
               },
+              "tanka": {
+                "$ref": "#/definitions/Config/$defs/TankaConfig",
+                "description": "Tanka tells DevSpace to deployment via Tanka"
+              },
               "updateImageTags": {
                 "type": "boolean",
                 "description": "UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the\nimages section with their most recent built tag."
@@ -1855,6 +1859,79 @@
             },
             "type": "object",
             "description": "SyncOnUpload defines the struct for the command that should be executed when files / folders are uploaded"
+          },
+          "TankaConfig": {
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Path is the (relative) path of the tanka environment, usually identified by jsonnetfile.json."
+              },
+              "runJsonnetBundlerInstall": {
+                "type": "boolean",
+                "description": "RunJsonnetBundlerInstall indicates if the `jb install` command shall be run, default to true"
+              },
+              "runJsonnetBundlerUpdate": {
+                "type": "boolean",
+                "description": "RunJsonnetBundlerUpdate indicates if the `jb update` command shall be run default to false"
+              },
+              "environmentPath": {
+                "type": "string",
+                "description": "EnvironmentPath is the (relative) path to a specific tanka environment."
+              },
+              "environmentName": {
+                "type": "string",
+                "description": "When using environment auto-discovery, this maps to the `--name` parameter"
+              },
+              "externalCodeVariables": {
+                "patternProperties": {
+                  ".*": {
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "description": "Maps to --ext-code cli argument."
+              },
+              "externalStringVariables": {
+                "patternProperties": {
+                  ".*": {
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "description": "Maps to --ext-str cli argument."
+              },
+              "topLevelCode": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "description": "Maps to --tla-code argument."
+              },
+              "topLevelString": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "description": "Maps to --tla-string argument."
+              },
+              "targets": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "description": "Maps to the option `--target` argument and allows filtering for specific resources."
+              },
+              "jsonnetBundlerBinaryPath": {
+                "type": "string",
+                "description": "JsonBundlerBinaryPath allows overriding the `jb` binary used."
+              },
+              "tankaBinaryPath": {
+                "type": "string",
+                "description": "JsonBundlerBinaryPath allows overriding the `tanka` binary used."
+              }
+            },
+            "type": "object",
+            "description": "TankaConfig defines the specific tanka options used during deployment."
           },
           "Target": {
             "properties": {
