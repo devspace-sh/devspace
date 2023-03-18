@@ -8,6 +8,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -48,6 +52,7 @@ func TestNewTankaEnvironment(t *testing.T) {
 				namespace:    "my-devspace-namespace",
 				tkBinaryPath: tkDefaultCommand,
 				jbBinaryPath: jbDefaultCommand,
+				targetFlags:  []string{"--target=*"},
 				rootDir:      "my",
 				args: []string{
 					"my/tanka/environment",
@@ -58,7 +63,6 @@ func TestNewTankaEnvironment(t *testing.T) {
 					"--ext-str=DEVSPACE_NAMESPACE=my-devspace-namespace",
 					"--ext-str=MY_STR_ARG=my-ext-var-string",
 					"--name=my-env-name",
-					"--target=*",
 					"--tla-code=true",
 					"--tla-str=my-tla-string",
 				},
@@ -91,7 +95,17 @@ func TestNewTankaEnvironment(t *testing.T) {
 }
 
 func getCtx() devspacecontext.Context {
-	return devspacecontext.NewContext(context.Background(), nil, &log.DiscardLogger{})
+	cache := localcache.New(constants.DefaultCacheFolder)
+
+	conf := config.NewConfig(map[string]interface{}{},
+		map[string]interface{}{},
+		&latest.Config{},
+		cache,
+		&remotecache.RemoteCache{},
+		map[string]interface{}{},
+		constants.DefaultConfigPath)
+
+	return devspacecontext.NewContext(context.Background(), nil, &log.DiscardLogger{}).WithConfig(conf)
 }
 
 func newEchoTankaEnv() (*tankaEnvironmentImpl, *bytes.Buffer) {

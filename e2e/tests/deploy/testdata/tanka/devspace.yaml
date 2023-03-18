@@ -2,8 +2,6 @@ version: v2beta1
 name: tanka-deploy
 vars:
   IMAGE_NGINX: nginx:alpine
-  TANKA_PATH:
-    command: pwd
 
 deployments:
   # Define a tanka deployment
@@ -11,7 +9,7 @@ deployments:
     tanka:
       runJsonnetBundlerInstall: true
       runJsonnetBundlerUpdate: true
-      path: ${TANKA_PATH}
+      path: .
       environmentPath: environments/default
       externalStringVariables:
         IMAGE_NGINX: ${IMAGE_NGINX}
