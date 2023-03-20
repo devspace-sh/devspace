@@ -8,7 +8,6 @@ deployments:
   # Define a tanka deployment
   nginx:
     tanka:
-      path: .
       environmentPath: environments/default
       externalStringVariables:
         IMAGE_NGINX: ${IMAGE_NGINX}
@@ -16,4 +15,4 @@ deployments:
 dev:
   nginx:
     imageSelector: ${IMAGE_NGINX}
-    devImage: nginx:perl  
+    devImage: nginx:perl

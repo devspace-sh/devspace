@@ -23,7 +23,7 @@ func Test_validateConfig(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "path not defined",
+			name: "path and environmentPath not defined",
 			args: args{
 				cfg: &latest.DeploymentConfig{Tanka: &latest.TankaConfig{
 					EnvironmentName: "test",
@@ -41,7 +41,7 @@ func Test_validateConfig(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "welldefined with environmentName",
+			name: "welldefined with path and environmentName",
 			args: args{
 				cfg: &latest.DeploymentConfig{Tanka: &latest.TankaConfig{
 					Path:            "./kubernetes/",
@@ -51,20 +51,30 @@ func Test_validateConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "welldefined with environmentPath",
+			name: "welldefined with path and environmentPath",
 			args: args{
 				cfg: &latest.DeploymentConfig{Tanka: &latest.TankaConfig{
 					Path:            "./kubernetes/",
-					EnvironmentPath: "./kubernetes/environments/devspace",
+					EnvironmentPath: "environments/devspace",
 				}},
 			},
 			wantErr: false,
 		},
 		{
-			name: "welldefined with environmentPath and name",
+			name: "welldefined with path, environmentPath and name",
 			args: args{
 				cfg: &latest.DeploymentConfig{Tanka: &latest.TankaConfig{
 					Path:            "./kubernetes/",
+					EnvironmentPath: "environments/production",
+					EnvironmentName: "devspace/my-demo-app",
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "welldefined with environmentPath and name and no path",
+			args: args{
+				cfg: &latest.DeploymentConfig{Tanka: &latest.TankaConfig{
 					EnvironmentPath: "./kubernetes/environments/production",
 					EnvironmentName: "devspace/my-demo-app",
 				}},

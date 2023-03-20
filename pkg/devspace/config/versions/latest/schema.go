@@ -831,6 +831,7 @@ type RollingUpdateConfig struct {
 // TankaConfig defines the specific tanka options used during deployment.
 type TankaConfig struct {
 	// Path is the (relative) path of the tanka environment, usually identified by jsonnetfile.json.
+	// It can be omitted if environmentPath is set and is also relative to the working directory (Tanka's project directory tree). If omitted, Devspace will traverse in reverse environmentPath looking for jsonnetfile.json, when found, that will be set as Path. Otherwise will throw an error.
 	Path string `yaml:"path,omitempty" json:"path,omitempty"`
 	// RunJsonnetBundlerInstall indicates if the `jb install` command shall be run, default to true
 	RunJsonnetBundlerInstall *bool `yaml:"runJsonnetBundlerInstall,omitempty" json:"runJsonnetBundlerInstall,omitempty"`
@@ -838,6 +839,7 @@ type TankaConfig struct {
 	RunJsonnetBundlerUpdate *bool `yaml:"runJsonnetBundlerUpdate,omitempty" json:"runJsonnetBundlerUpdate,omitempty"`
 
 	// EnvironmentPath is the (relative) path to a specific tanka environment.
+	// In case Path is omitted it will be used to discover Tanka project's root. Look at Path parameter for more details.
 	EnvironmentPath string `yaml:"environmentPath,omitempty" json:"environmentPath,omitempty"`
 	// When using environment auto-discovery, this maps to the `--name` parameter
 	EnvironmentName string `yaml:"environmentName,omitempty" json:"environmentName,omitempty"`

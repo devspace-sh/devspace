@@ -13,8 +13,8 @@ func validateConfig(cfg *latest.DeploymentConfig) error {
 
 	if cfg.Tanka == nil {
 		errors = append(errors, "tanka is nil")
-	} else if cfg.Tanka.Path == "" {
-		errors = append(errors, "tanka.path is not defined")
+	} else if cfg.Tanka.Path == "" && cfg.Tanka.EnvironmentPath == "" {
+		errors = append(errors, "neither tanka.path nor tanka.environmentPath is configured")
 	} else if cfg.Tanka.EnvironmentName == "" && cfg.Tanka.EnvironmentPath == "" {
 		errors = append(errors, "neither tanka.environmentName nor tanka.environmentPath is configured")
 	}

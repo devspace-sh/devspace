@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"sort"
 
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
@@ -43,6 +44,23 @@ func NewTankaEnvironment(config *latest.TankaConfig) TankaEnvironment {
 	flags := []string{}
 	targetFlags := []string{}
 	// Map configuration to CLI arguments and flags
+	if config.Path == "" {
+		newPath, err := searchTankaRootDir(config.EnvironmentPath)
+		if err != nil {
+			log.Fatalf("Error while building tanka.path from `%v`: %v", config.EnvironmentPath, err)
+		}
+
+		relPath, err := filepath.Rel(config.EnvironmentPath, newPath)
+		if err != nil {
+			log.Fatalf("Error getting relative path for %v with base %v: %v", config.EnvironmentPath, newPath, err)
+		}
+
+		config.Path = filepath.Join(config.EnvironmentPath, relPath)
+		config.EnvironmentPath, err = filepath.Rel(newPath, config.EnvironmentPath)
+		if err != nil {
+			log.Fatalf("Error getting relative path for %v with base %v: %v", newPath, config.EnvironmentPath, err)
+		}
+	}
 	if config.EnvironmentPath != "" {
 		args = append(args, config.EnvironmentPath)
 	} else {
@@ -93,6 +111,29 @@ func NewTankaEnvironment(config *latest.TankaConfig) TankaEnvironment {
 	}
 }
 
+// Given a tkPath, look for the root of Tanka project based on jsonnetfile.json file existence
+func searchTankaRootDir(tkPath string) (string, error) {
+	files, err := os.ReadDir(tkPath)
+	if err != nil {
+		log.Fatalf("Error reading %v: %v", tkPath, err)
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && file.Name() == "jsonnetfile.json" {
+			return tkPath, nil
+		}
+	}
+
+	tkPathAbs, err := filepath.Abs(tkPath)
+	if err != nil {
+		log.Fatalf("Error getting absolute path for %v: %v", tkPath, err)
+	}
+	if filepath.Join(tkPathAbs, "..") == tkPathAbs { // Reached the root of the filesystem
+		return "", fmt.Errorf("could not find root of Tanka project looking for a 'jsonnetfile.json' file")
+	}
+	return searchTankaRootDir(filepath.Join(tkPath, ".."))
+}
+
 func eval(ctx devspacecontext.Context, arg string) string {
 	resolver := runtimevar.NewRuntimeResolver(ctx.WorkingDir(), true)
 	_, newArg, err := resolver.FillRuntimeVariablesWithRebuild(ctx.Context(), arg, ctx.Config(), ctx.Dependencies())
@@ -141,7 +182,7 @@ func (t *tankaEnvironmentImpl) Apply(ctx devspacecontext.Context) error {
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, applyArgs...)
 	cmd.Stderr = out
 	cmd.Stdout = out
-	cmd.Dir = path.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
+	cmd.Dir = filepath.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
 
 	err = cmd.Run()
 
@@ -166,7 +207,7 @@ func (t *tankaEnvironmentImpl) Diff(ctx devspacecontext.Context) (string, error)
 
 	ctx.Log().Debugf("Tanka diff arguments: %v", diffArgs)
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, diffArgs...)
-	cmd.Dir = path.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
+	cmd.Dir = filepath.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
 
 	out, err := cmd.CombinedOutput()
 
@@ -185,7 +226,7 @@ func (t *tankaEnvironmentImpl) Show(ctx devspacecontext.Context, out io.Writer) 
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, showArgs...)
 	cmd.Stdout = out
 	cmd.Stderr = out
-	cmd.Dir = path.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
+	cmd.Dir = filepath.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
 
 	return cmd.Run()
 }
@@ -201,7 +242,7 @@ func (t *tankaEnvironmentImpl) Prune(ctx devspacecontext.Context) error {
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, pruneArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
-	cmd.Dir = path.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
+	cmd.Dir = filepath.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
 
 	return cmd.Run()
 }
@@ -218,7 +259,7 @@ func (t *tankaEnvironmentImpl) Delete(ctx devspacecontext.Context) error {
 	cmd := exec.CommandContext(ctx.Context(), t.tkBinaryPath, deleteArgs...)
 	cmd.Stdout = t.stdout
 	cmd.Stderr = t.stderr
-	cmd.Dir = path.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
+	cmd.Dir = filepath.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
 
 	return cmd.Run()
 }
@@ -230,12 +271,12 @@ func (t *tankaEnvironmentImpl) Install(ctx devspacecontext.Context) error {
 	var err error = nil
 	installArgs := []string{"install"}
 
-	GetOnce("install", path.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))).Do(func() {
+	GetOnce("install", filepath.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))).Do(func() {
 		ctx.Log().Debugf("Jb install")
 		cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
 		cmd.Stdout = t.stdout
 		cmd.Stderr = t.stderr
-		cmd.Dir = path.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
+		cmd.Dir = filepath.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
 		err = cmd.Run()
 	})
 
@@ -246,12 +287,12 @@ func (t *tankaEnvironmentImpl) Update(ctx devspacecontext.Context) error {
 	var err error = nil
 	installArgs := []string{"update"}
 
-	GetOnce("update", path.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))).Do(func() {
+	GetOnce("update", filepath.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))).Do(func() {
 		ctx.Log().Debugf("Jb update")
 		cmd := exec.CommandContext(ctx.Context(), t.jbBinaryPath, installArgs...)
 		cmd.Stdout = t.stdout
 		cmd.Stderr = t.stderr
-		cmd.Dir = path.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
+		cmd.Dir = filepath.Join(ctx.WorkingDir(), eval(ctx, t.rootDir))
 		err = cmd.Run()
 	})
 
