@@ -15,4 +15,4 @@ deployments:
 dev:
   nginx:
     imageSelector: ${IMAGE_NGINX}
-    devImage: nginx:perl
+    devImage: nginx:perl  

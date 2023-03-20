@@ -1864,7 +1864,7 @@
             "properties": {
               "path": {
                 "type": "string",
-                "description": "Path is the (relative) path of the tanka environment, usually identified by jsonnetfile.json."
+                "description": "Path is the (relative) path of the tanka environment, usually identified by jsonnetfile.json.\nIt can be omitted if environmentPath is set and is also relative to the working directory (Tanka's project directory tree). If omitted, Devspace will traverse in reverse environmentPath looking for jsonnetfile.json, when found, that will be set as Path. Otherwise will throw an error."
               },
               "runJsonnetBundlerInstall": {
                 "type": "boolean",
@@ -1876,7 +1876,7 @@
               },
               "environmentPath": {
                 "type": "string",
-                "description": "EnvironmentPath is the (relative) path to a specific tanka environment."
+                "description": "EnvironmentPath is the (relative) path to a specific tanka environment.\nIn case Path is omitted it will be used to discover Tanka project's root. Look at Path parameter for more details."
               },
               "environmentName": {
                 "type": "string",
