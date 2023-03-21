@@ -2,11 +2,12 @@ package render
 
 import (
 	"bytes"
-	"github.com/onsi/ginkgo/v2"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/onsi/ginkgo/v2"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -49,7 +50,11 @@ var _ = DevSpaceDescribe("build", func() {
 		err = renderCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 		content := strings.TrimSpace(stdout.String()) + "\n"
-		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "rendered.txt"), content)
+
+		framework.ExpectLocalFileContentsImmediately(
+			filepath.Join(tempDir, "rendered.txt"),
+			content,
+		)
 	})
 
 	ginkgo.It("should render kubectl deployments", func() {
@@ -71,7 +76,10 @@ var _ = DevSpaceDescribe("build", func() {
 		err = renderCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 		content := strings.TrimSpace(stdout.String()) + "\n"
-		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "rendered.txt"), content)
+		framework.ExpectLocalFileContentsImmediately(
+			filepath.Join(tempDir, "rendered.txt"),
+			content,
+		)
 	})
 })
 

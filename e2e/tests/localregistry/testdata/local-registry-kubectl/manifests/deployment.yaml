@@ -7,7 +7,7 @@ metadata:
     "app.kubernetes.io/component": "app"
     "app.kubernetes.io/managed-by": "Helm"
   annotations:
-    "helm.sh/chart": "component-chart-0.8.5"
+    "helm.sh/chart": "component-chart-0.8.6"
 spec:
   replicas: 1
   strategy:
@@ -24,7 +24,7 @@ spec:
         "app.kubernetes.io/component": "app"
         "app.kubernetes.io/managed-by": "Helm"
       annotations:
-        "helm.sh/chart": "component-chart-0.8.5"
+        "helm.sh/chart": "component-chart-0.8.6"
     spec:
       imagePullSecrets:
       nodeSelector:
