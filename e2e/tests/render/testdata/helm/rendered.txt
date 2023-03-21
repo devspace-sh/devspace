@@ -9,7 +9,7 @@ metadata:
     "app.kubernetes.io/component": "test"
     "app.kubernetes.io/managed-by": "Helm"
   annotations:
-    "helm.sh/chart": "component-chart-0.8.5"
+    "helm.sh/chart": "component-chart-0.8.6"
 spec:
   replicas: 1
   strategy:
@@ -26,7 +26,7 @@ spec:
         "app.kubernetes.io/component": "test"
         "app.kubernetes.io/managed-by": "Helm"
       annotations:
-        "helm.sh/chart": "component-chart-0.8.5"
+        "helm.sh/chart": "component-chart-0.8.6"
     spec:
       imagePullSecrets:
       nodeSelector:
@@ -82,3 +82,6 @@ spec:
 ---
 # Source: component-chart/templates/deployment.yaml
 # Create headless service for StatefulSet
+---
+# Source: component-chart/templates/ingress.yaml
+#
