@@ -16,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/mgutz/ansi"
@@ -36,7 +38,10 @@ type LocalRegistry struct {
 	servicePort *corev1.ServicePort
 }
 
-func GetOrCreateLocalRegistry(ctx devspacecontext.Context, options Options) (*LocalRegistry, error) {
+func GetOrCreateLocalRegistry(
+	ctx devspacecontext.Context,
+	options Options,
+) (*LocalRegistry, error) {
 	localRegistriesLock.Lock()
 	defer localRegistriesLock.Unlock()
 
@@ -164,6 +169,30 @@ func (r *LocalRegistry) RewriteImageForBuilder(image string) (string, error) {
 }
 
 func (r *LocalRegistry) ensureNamespace(ctx devspacecontext.Context) error {
+	// If localregistry namespace is the same as devspace, we don't have
+	// anything to do.
+	if r.Namespace == ctx.KubeClient().Namespace() {
+		ctx.Log().Debugf("Namespace %s is the default Devspace namespace", r.Namespace)
+		return nil
+	}
+
+	// Try to get the namespace we need
+	_, err := ctx.KubeClient().
+		KubeClient().
+		CoreV1().
+		Namespaces().
+		Get(ctx.Context(), r.Namespace, metav1.GetOptions{})
+	// Ignore not found errors, but if we have any other type or error, report it
+	if err != nil && !kerrors.IsNotFound(err) {
+		return err
+	}
+	// And if we don't have errors, it means the namespace already exists.
+	if err == nil {
+		ctx.Log().Debugf("Namespace %s already exists, skipping creation", r.Namespace)
+		return nil
+	}
+
+	ctx.Log().Debugf("Namespace %s doesn't exist, attempting creation", r.Namespace)
 	applyConfiguration, err := applyv1.ExtractNamespace(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: r.Namespace,
@@ -198,15 +227,22 @@ func (r *LocalRegistry) waitForNodePort(ctx devspacecontext.Context) (*corev1.Se
 	var servicePort *corev1.ServicePort
 
 	kubeClient := ctx.KubeClient().KubeClient()
-	err := wait.PollImmediateWithContext(ctx.Context(), time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
-		service, err := kubeClient.CoreV1().Services(r.Namespace).Get(ctx, r.Name, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
+	err := wait.PollImmediateWithContext(
+		ctx.Context(),
+		time.Second,
+		30*time.Second,
+		func(ctx context.Context) (done bool, err error) {
+			service, err := kubeClient.CoreV1().
+				Services(r.Namespace).
+				Get(ctx, r.Name, metav1.GetOptions{})
+			if err != nil {
+				return false, err
+			}
 
-		servicePort = GetServicePort(service)
-		return servicePort.NodePort != 0, nil
-	})
+			servicePort = GetServicePort(service)
+			return servicePort.NodePort != 0, nil
+		},
+	)
 
 	return servicePort, err
 }
@@ -218,12 +254,18 @@ func (r *LocalRegistry) GetRegistryURL() string {
 
 // startPortForwarding will forward container's port into localhost in order to access registry's container in
 // the cluster, locally, to push the built image afterwards
-func (r *LocalRegistry) startPortForwarding(ctx devspacecontext.Context, imageRegistryPod *corev1.Pod) error {
+func (r *LocalRegistry) startPortForwarding(
+	ctx devspacecontext.Context,
+	imageRegistryPod *corev1.Pod,
+) error {
 	localPort := r.servicePort.NodePort
 	remotePort := r.servicePort.TargetPort.IntVal
 	ports := []string{fmt.Sprintf("%d:%d", localPort, remotePort)}
 	addresses := []string{"localhost"}
-	portsFormatted := ansi.Color(fmt.Sprintf("%d -> %d", int(localPort), int(remotePort)), "white+b")
+	portsFormatted := ansi.Color(
+		fmt.Sprintf("%d -> %d", int(localPort), int(remotePort)),
+		"white+b",
+	)
 	readyChan := make(chan struct{})
 	errorChan := make(chan error, 1)
 	pf, err := kubectl.NewPortForwarder(
@@ -266,9 +308,14 @@ func (r *LocalRegistry) startPortForwarding(ctx devspacecontext.Context, imageRe
 }
 
 func (r *LocalRegistry) waitForRegistry(ctx context.Context) error {
-	return wait.PollImmediateWithContext(ctx, time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
-		return r.ping(ctx)
-	})
+	return wait.PollImmediateWithContext(
+		ctx,
+		time.Second,
+		30*time.Second,
+		func(ctx context.Context) (done bool, err error) {
+			return r.ping(ctx)
+		},
+	)
 }
 
 func (r *LocalRegistry) ping(ctx context.Context) (done bool, err error) {
