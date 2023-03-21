@@ -16,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/mgutz/ansi"
@@ -170,26 +172,24 @@ func (r *LocalRegistry) ensureNamespace(ctx devspacecontext.Context) error {
 	// If localregistry namespace is the same as devspace, we don't have
 	// anything to do.
 	if r.Namespace == ctx.KubeClient().Namespace() {
+		ctx.Log().Debugf("Namespace %s is the default Devspace namespace", r.Namespace)
 		return nil
 	}
 
-	// List all namespaces, this will already return an error in case of
-	// user's permissions problems.
-	namespaces, err := ctx.KubeClient().
+	// Try to get the namespace we need
+	_, err := ctx.KubeClient().
 		KubeClient().
 		CoreV1().
 		Namespaces().
-		List(ctx.Context(), metav1.ListOptions{})
-	if err != nil {
+		Get(ctx.Context(), r.Namespace, metav1.GetOptions{})
+	// Ignore not found errors, but if we have any other type or error, report it
+	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-
-	// Check if the namespace already is there, if not we'll try to create it.
-	for _, namespace := range namespaces.Items {
-		if r.Namespace == namespace.Name {
-			ctx.Log().Debugf("Namespace %s already exists, skipping creation", r.Namespace)
-			return nil
-		}
+	// And if we don't have errors, it means the namespace already exists.
+	if err == nil {
+		ctx.Log().Debugf("Namespace %s already exists, skipping creation", r.Namespace)
+		return nil
 	}
 
 	ctx.Log().Debugf("Namespace %s doesn't exist, attempting creation", r.Namespace)
