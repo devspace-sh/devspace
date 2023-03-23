@@ -223,6 +223,10 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 			continue
 		}
 
+		err := ensureNamespace(ctx, dependency.DependencyConfig().Namespace)
+		if err != nil {
+			return errors.Wrapf(err, "cannot run dependency %s", dependency.Name())
+		}
 		deployDependencies = append(deployDependencies, dependency)
 	}
 
@@ -255,6 +259,17 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 	})
 
 	return t.Wait()
+}
+
+func ensureNamespace(ctx devspacecontext.Context, namespace string) error {
+	// If localregistry namespace is the same as devspace, we don't have
+	// anything to do.
+	if namespace == ctx.KubeClient().Namespace() {
+		ctx.Log().Debugf("Namespace %s is the default Devspace namespace", namespace)
+		return nil
+	}
+
+	return kubectl.EnsureNamespace(ctx.Context(), ctx.KubeClient(), namespace, ctx.Log())
 }
 
 func waitForDependency(ctx context.Context, start types.Pipeline, dependencyName string, log log.Logger) {
