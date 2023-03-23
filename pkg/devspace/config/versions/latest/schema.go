@@ -309,6 +309,11 @@ type Image struct {
 	// dockerfile for this image, otherwise devspace will fail.
 	InjectRestartHelper bool `yaml:"injectRestartHelper,omitempty" json:"injectRestartHelper,omitempty" jsonschema:"-"`
 
+	// InjectLegacyRestartHelper instructs DevSpace to use the pre version 6 restart helper when upgrading from v1beta11
+	// and prior schemas. This allows containers to start without the /.devspace/start file being written to the
+	// container, which is a post version 6 feature.
+	InjectLegacyRestartHelper bool `yaml:"injectLegacyRestartHelper,omitempty" json:"injectLegacyRestartHelper,omitempty" jsonschema:"-"`
+
 	// RestartHelperPath will load the restart helper from this location instead of using the bundled
 	// one within DevSpace. Can be either a local path or an URL where to find the restart helper.
 	RestartHelperPath string `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty" jsonschema:"-"`

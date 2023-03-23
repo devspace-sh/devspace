@@ -128,8 +128,9 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}
 
 	// Check if we should overwrite entrypoint
-	if len(entrypoint) > 0 || len(cmd) > 0 || b.helper.ImageConf.InjectRestartHelper || len(b.helper.ImageConf.AppendDockerfileInstructions) > 0 {
-		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, b.helper.ImageConf.AppendDockerfileInstructions, options.Target, b.helper.ImageConf.InjectRestartHelper, ctx.Log())
+	injectRestartHelper := b.helper.ImageConf.InjectRestartHelper || b.helper.ImageConf.InjectLegacyRestartHelper
+	if len(entrypoint) > 0 || len(cmd) > 0 || injectRestartHelper || len(b.helper.ImageConf.AppendDockerfileInstructions) > 0 {
+		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, b.helper.ImageConf.AppendDockerfileInstructions, options.Target, injectRestartHelper, ctx.Log())
 		if err != nil {
 			return err
 		}
@@ -244,7 +245,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 		}
 
 		// Copy restart helper script
-		if b.helper.ImageConf.InjectRestartHelper {
+		if injectRestartHelper {
 			tempDir, err := os.MkdirTemp("", "")
 			if err != nil {
 				return err
@@ -254,9 +255,18 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 			scriptPath := filepath.Join(tempDir, restart.ScriptName)
 			remoteFolder := filepath.ToSlash(filepath.Join(kanikoContextPath, ".devspace", ".devspace"))
-			helperScript, err := restart.LoadRestartHelper(b.helper.ImageConf.RestartHelperPath)
-			if err != nil {
-				return errors.Wrap(err, "load restart helper")
+
+			var helperScript string
+			if b.helper.ImageConf.InjectRestartHelper {
+				helperScript, err = restart.LoadRestartHelper(b.helper.ImageConf.RestartHelperPath)
+				if err != nil {
+					return errors.Wrap(err, "load restart helper")
+				}
+			} else if b.helper.ImageConf.InjectLegacyRestartHelper {
+				helperScript, err = restart.LoadLegacyRestartHelper(b.helper.ImageConf.RestartHelperPath)
+				if err != nil {
+					return errors.Wrap(err, "load legacy restart helper")
+				}
 			}
 
 			err = os.WriteFile(scriptPath, []byte(helperScript), 0777)

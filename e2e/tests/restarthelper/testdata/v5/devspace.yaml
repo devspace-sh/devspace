@@ -1,0 +1,23 @@
+version: v1beta11
+
+images:
+  restart-helper:
+    image: john/devbackend
+    injectRestartHelper: true
+
+deployments:
+  - name: restart-helper
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: image(restart-helper):tag(restart-helper)
+
+dev:
+  logs:
+    selectors:
+      - imageSelector: image(restart-helper):tag(restart-helper)
+  ports:
+    - imageSelector: image(restart-helper):tag(restart-helper)
+      forward:
+        - port: 8080

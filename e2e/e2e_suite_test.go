@@ -25,6 +25,7 @@ import (
 	_ "github.com/loft-sh/devspace/e2e/tests/pullsecret"
 	_ "github.com/loft-sh/devspace/e2e/tests/render"
 	_ "github.com/loft-sh/devspace/e2e/tests/replacepods"
+	_ "github.com/loft-sh/devspace/e2e/tests/restarthelper"
 	_ "github.com/loft-sh/devspace/e2e/tests/ssh"
 	_ "github.com/loft-sh/devspace/e2e/tests/sync"
 	_ "github.com/loft-sh/devspace/e2e/tests/terminal"
