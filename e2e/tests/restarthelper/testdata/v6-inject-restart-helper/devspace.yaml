@@ -4,6 +4,7 @@ images:
   restart-helper:
     image: john/devbackend
     injectRestartHelper: true
+    skipPush: true
 
 deployments:
   restart-helper:
@@ -19,7 +20,7 @@ dev:
     command:
       - sh
       - -c
-      - echo 'Started with restart helper' && tail -f /dev/null
+      - echo 'Started with dev command entrypoint' && tail -f /dev/null
     ports:
       - port: 8080
     sync:

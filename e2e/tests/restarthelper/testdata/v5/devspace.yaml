@@ -4,6 +4,9 @@ images:
   restart-helper:
     image: john/devbackend
     injectRestartHelper: true
+    build:
+      docker:
+        skipPush: true
 
 deployments:
   - name: restart-helper

@@ -109,10 +109,6 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 				}
 			}
 
-			if waitSeen && !hasWaitingMessage {
-				break
-			}
-
 			if waitCount > waitMax {
 				break
 			}
@@ -172,7 +168,7 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 		waitCount := 0
 		waitMax := 3
 		waitingMessage := "(Still waiting...)"
-		startedMessage := "Started with restart helper"
+		startedMessage := "Started with dev command entrypoint"
 		startedSeen := false
 
 		for scanner.Scan() {
@@ -192,10 +188,6 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 				if waitSeen {
 					waitCount++
 				}
-			}
-
-			if waitSeen && !hasWaitingMessage {
-				break
 			}
 
 			if waitCount > waitMax {
@@ -257,9 +249,9 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 		waitCount := 0
 		waitMax := 3
 		waitingMessage := "(Still waiting...)"
-		startedMessage := "Started with restart helper"
+		startedMessage := "Started with dev command entrypoint"
 		startedSeen := false
-		legacyStartedMessage := "Started with restart helper"
+		legacyStartedMessage := "Started with legacy restart helper"
 		legacyStartedSeen := false
 
 		for scanner.Scan() {
@@ -285,10 +277,6 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 				if waitSeen {
 					waitCount++
 				}
-			}
-
-			if waitSeen && !hasWaitingMessage {
-				break
 			}
 
 			if waitCount > waitMax {
@@ -371,10 +359,6 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 				if waitSeen {
 					waitCount++
 				}
-			}
-
-			if waitSeen && !hasWaitingMessage {
-				break
 			}
 
 			if waitCount > waitMax {
