@@ -3,6 +3,11 @@ package restarthelper
 import (
 	"bufio"
 	"context"
+	"io"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
@@ -13,9 +18,6 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-	"os"
-	"strings"
-	"time"
 )
 
 var _ = DevSpaceDescribe("restarthelper", func() {
@@ -55,6 +57,10 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 		reader, writer, err := os.Pipe()
 		framework.ExpectNoError(err)
 
+		teeReader := io.TeeReader(reader, os.Stdout)
+		scanner := bufio.NewScanner(teeReader)
+		scanner.Split(scanner2.ScanLines)
+
 		//output := &bytes.Buffer{}
 		log := logpkg.NewStreamLogger(writer, writer, logrus.DebugLevel)
 
@@ -63,6 +69,7 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
+					Debug:     true,
 				},
 				Pipeline: "dev",
 				SkipPush: true,
@@ -75,9 +82,6 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 			}
 			done <- err
 		}()
-
-		scanner := bufio.NewScanner(reader)
-		scanner.Split(scanner2.ScanLines)
 
 		waitSeen := false
 		waitCount := 0
@@ -138,6 +142,10 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 		reader, writer, err := os.Pipe()
 		framework.ExpectNoError(err)
 
+		teeReader := io.TeeReader(reader, os.Stdout)
+		scanner := bufio.NewScanner(teeReader)
+		scanner.Split(scanner2.ScanLines)
+
 		//output := &bytes.Buffer{}
 		log := logpkg.NewStreamLogger(writer, writer, logrus.DebugLevel)
 
@@ -146,6 +154,7 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
+					Debug:     true,
 				},
 				Pipeline: "dev",
 				SkipPush: true,
@@ -158,9 +167,6 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 			}
 			done <- err
 		}()
-
-		scanner := bufio.NewScanner(reader)
-		scanner.Split(scanner2.ScanLines)
 
 		waitSeen := false
 		waitCount := 0
@@ -221,6 +227,10 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 		reader, writer, err := os.Pipe()
 		framework.ExpectNoError(err)
 
+		teeReader := io.TeeReader(reader, os.Stdout)
+		scanner := bufio.NewScanner(teeReader)
+		scanner.Split(scanner2.ScanLines)
+
 		//output := &bytes.Buffer{}
 		log := logpkg.NewStreamLogger(writer, writer, logrus.DebugLevel)
 
@@ -229,6 +239,7 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
+					Debug:     true,
 				},
 				Pipeline: "dev",
 				SkipPush: true,
@@ -241,9 +252,6 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 			}
 			done <- err
 		}()
-
-		scanner := bufio.NewScanner(reader)
-		scanner.Split(scanner2.ScanLines)
 
 		waitSeen := false
 		waitCount := 0
@@ -313,6 +321,10 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 		reader, writer, err := os.Pipe()
 		framework.ExpectNoError(err)
 
+		teeReader := io.TeeReader(reader, os.Stdout)
+		scanner := bufio.NewScanner(teeReader)
+		scanner.Split(scanner2.ScanLines)
+
 		//output := &bytes.Buffer{}
 		log := logpkg.NewStreamLogger(writer, writer, logrus.DebugLevel)
 
@@ -321,6 +333,7 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 				GlobalFlags: &flags.GlobalFlags{
 					NoWarn:    true,
 					Namespace: ns,
+					Debug:     true,
 				},
 				Pipeline: "dev",
 				SkipPush: true,
@@ -333,9 +346,6 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 			}
 			done <- err
 		}()
-
-		scanner := bufio.NewScanner(reader)
-		scanner.Split(scanner2.ScanLines)
 
 		waitSeen := false
 		waitCount := 0
