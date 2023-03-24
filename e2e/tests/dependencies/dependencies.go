@@ -214,12 +214,14 @@ dep2dep2wait
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
+		depNamespace := "custon"
+
 		ns, err := kubeClient.CreateNamespace("dependencies")
 		framework.ExpectNoError(err)
 		defer func() {
 			err := kubeClient.DeleteNamespace(ns)
 			framework.ExpectNoError(err)
-			err = kubeClient.DeleteNamespace("custom")
+			err = kubeClient.DeleteNamespace(depNamespace)
 			framework.ExpectNoError(err)
 		}()
 
@@ -227,6 +229,8 @@ dep2dep2wait
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		os.Setenv("DEP1_NAMESPACE", depNamespace)
+		defer os.Unsetenv("DEP1_NAMESPACE")
 		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
@@ -240,7 +244,7 @@ dep2dep2wait
 		cancel()
 
 		// now check if nonExistentNs got created
-		framework.ExpectNamespace("custom")
+		framework.ExpectNamespace(depNamespace)
 
 		framework.ExpectNoError(err)
 

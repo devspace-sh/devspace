@@ -1,12 +1,16 @@
 version: v2beta1
+vars:
+  DEP1_NAMESPACE:
+    source: env
+    default: false
 deployments:
   nginx:
     helm:
       values:
         containers:
-        - image: nginx
+          - image: nginx
 
 dependencies:
   test-dependency:
     path: ./dep1.yaml
-    namespace: custom
+    namespace: ${DEP1_NAMESPACE}
