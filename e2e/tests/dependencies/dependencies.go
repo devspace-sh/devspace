@@ -3,12 +3,13 @@ package dependencies
 import (
 	"bytes"
 	"context"
-	ginkgo "github.com/onsi/ginkgo/v2"
-	"github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"time"
+
+	ginkgo "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
@@ -206,6 +207,43 @@ dep2dep2wait
 		list, err = kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 0)
+	})
+
+	ginkgo.It("should deploy dependency in custom namespace", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/namespace")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dependencies")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+			err = kubeClient.DeleteNamespace("custom")
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command and start it
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+		cancel()
+
+		// now check if nonExistentNs got created
+		framework.ExpectNamespace("custom")
+
+		framework.ExpectNoError(err)
+
 	})
 
 	ginkgo.It("should deploy git dependency", func() {
