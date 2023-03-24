@@ -223,10 +223,6 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 			continue
 		}
 
-		err := ensureNamespace(ctx, dependency.DependencyConfig().Namespace)
-		if err != nil {
-			return errors.Wrapf(err, "cannot run dependency %s", dependency.Name())
-		}
 		deployDependencies = append(deployDependencies, dependency)
 	}
 
@@ -388,6 +384,13 @@ func (p *pipeline) startNewDependency(ctx devspacecontext.Context, dependency ty
 		pipelineConfig *latest.Pipeline
 		err            error
 	)
+
+	// Ensure dependency namespace exists
+	err = ensureNamespace(ctx, dependency.DependencyConfig().Namespace)
+	if err != nil {
+		return errors.Wrapf(err, "cannot run dependency %s", dependency.Name())
+	}
+
 	if dependency.Config().Config().Pipelines == nil || dependency.Config().Config().Pipelines[executePipeline] == nil {
 		pipelineConfig, err = types.GetDefaultPipeline(executePipeline)
 		if err != nil {
