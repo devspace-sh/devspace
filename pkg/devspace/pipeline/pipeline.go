@@ -260,7 +260,7 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 func ensureNamespace(ctx devspacecontext.Context, namespace string) error {
 	// If localregistry namespace is the same as devspace, we don't have
 	// anything to do.
-	if namespace == ctx.KubeClient().Namespace() {
+	if namespace == ctx.KubeClient().Namespace() || namespace == "" {
 		ctx.Log().Debugf("Namespace %s is the default Devspace namespace", namespace)
 		return nil
 	}
