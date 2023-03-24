@@ -1,0 +1,27 @@
+version: v2beta1
+
+images:
+  restart-helper:
+    image: john/devbackend
+
+deployments:
+  restart-helper:
+    helm:
+      values:
+        containers:
+          - image: image(restart-helper):tag(restart-helper)
+
+dev:
+  restart-helper:
+    imageSelector: image(restart-helper):tag(restart-helper)
+    workingDir: /app
+    command:
+      - sh
+      - -c
+      - echo 'Started with restart helper' && tail -f /dev/null
+    ports:
+      - port: 8080
+    sync:
+      - path: ./
+        startContainer: true
+    logs: {}

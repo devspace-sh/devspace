@@ -317,8 +317,9 @@ func (b *BuildHelper) CreateContextStream(contextPath, dockerfilePath string, en
 	}
 
 	// Check if we should overwrite entrypoint
-	if len(entrypoint) > 0 || len(cmd) > 0 || b.ImageConf.InjectRestartHelper || len(b.ImageConf.AppendDockerfileInstructions) > 0 {
-		dockerfilePath, err = RewriteDockerfile(dockerfilePath, entrypoint, cmd, b.ImageConf.AppendDockerfileInstructions, options.Target, b.ImageConf.InjectRestartHelper, log)
+	injectRestartHelper := b.ImageConf.InjectRestartHelper || b.ImageConf.InjectLegacyRestartHelper
+	if len(entrypoint) > 0 || len(cmd) > 0 || injectRestartHelper || len(b.ImageConf.AppendDockerfileInstructions) > 0 {
+		dockerfilePath, err = RewriteDockerfile(dockerfilePath, entrypoint, cmd, b.ImageConf.AppendDockerfileInstructions, options.Target, injectRestartHelper, log)
 		if err != nil {
 			return nil, writer, nil, nil, err
 		}
@@ -348,10 +349,20 @@ func (b *BuildHelper) CreateContextStream(contextPath, dockerfilePath string, en
 		defer os.RemoveAll(filepath.Dir(dockerfilePath))
 
 		// inject the build script
-		if b.ImageConf.InjectRestartHelper {
-			helperScript, err := restart.LoadRestartHelper(b.ImageConf.RestartHelperPath)
-			if err != nil {
-				return nil, writer, nil, nil, errors.Wrap(err, "load restart helper")
+		if injectRestartHelper {
+			var helperScript string
+			var err error
+
+			if b.ImageConf.InjectRestartHelper {
+				helperScript, err = restart.LoadRestartHelper(b.ImageConf.RestartHelperPath)
+				if err != nil {
+					return nil, writer, nil, nil, errors.Wrap(err, "load restart helper")
+				}
+			} else if b.ImageConf.InjectLegacyRestartHelper {
+				helperScript, err = restart.LoadLegacyRestartHelper(b.ImageConf.RestartHelperPath)
+				if err != nil {
+					return nil, writer, nil, nil, errors.Wrap(err, "load legacy restart helper")
+				}
 			}
 
 			buildCtx, err = InjectBuildScriptInContext(helperScript, buildCtx)

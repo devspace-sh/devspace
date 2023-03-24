@@ -133,12 +133,51 @@ while $restart; do
 done
 `
 
+const LegacyRestartHelperScript = `#!/bin/sh
+#
+# A process wrapper script to simulate a container restart. This file was injected with devspace during the build process
+#
+set -e
+pid=""
+trap quit TERM INT
+quit() {
+  if [ -n "$pid" ]; then
+    kill $pid
+  fi
+}
+while true; do
+  setsid "$@" &
+  pid=$!
+  echo "$pid" > /.devspace/devspace-pid
+  set +e
+  wait $pid
+  exit_code=$?
+  if [ -f /.devspace/devspace-pid ]; then
+    rm -f /.devspace/devspace-pid 	
+    printf "\nContainer exited with $exit_code. Will restart in 7 seconds...\n"
+    sleep 7
+  fi
+  set -e
+  printf "\n\n############### Restart container ###############\n\n"
+done
+`
+
 // LoadRestartHelper loads the restart helper script from either
 // a path or returns the bundled version of it.
 func LoadRestartHelper(path string) (string, error) {
+	return loadRestartHelper(path, HelperScript)
+}
+
+// LoadLegacyRestartHelper loads the legacy restart helper script from either
+// a path or returns the bundled version of it.
+func LoadLegacyRestartHelper(path string) (string, error) {
+	return loadRestartHelper(path, LegacyRestartHelperScript)
+}
+
+func loadRestartHelper(path, defaultScript string) (string, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
-		return HelperScript, nil
+		return defaultScript, nil
 	} else if isRemoteHTTP(path) {
 		resp, err := http.Get(path)
 		if err != nil {
