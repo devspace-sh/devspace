@@ -3,11 +3,12 @@ package generic
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/utils/pkg/command"
-	"os"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -76,7 +77,7 @@ func (c *client) Exec(ctx devspacecontext.Context, args []string) ([]byte, error
 
 	// disable log for list, because it prints same command multiple times if we've multiple deployments.
 	if args[0] != "list" && args[0] != "registry" && (len(args) == 1 || args[1] != "login") {
-		c.log.Debugf("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
+		c.log.Debugf("Execute '%s %s' in directory %s", c.helmPath, strings.Join(args, " "), ctx.WorkingDir())
 	}
 
 	result, err := command.Output(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), c.helmPath, args...)
