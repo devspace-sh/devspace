@@ -257,6 +257,17 @@ func (p *pipeline) StartNewDependencies(ctx devspacecontext.Context, dependencie
 	return t.Wait()
 }
 
+func ensureNamespace(ctx devspacecontext.Context, namespace string) error {
+	// If localregistry namespace is the same as devspace, we don't have
+	// anything to do.
+	if namespace == ctx.KubeClient().Namespace() || namespace == "" {
+		ctx.Log().Debugf("Namespace %s is the default Devspace namespace", namespace)
+		return nil
+	}
+
+	return kubectl.EnsureNamespace(ctx.Context(), ctx.KubeClient(), namespace, ctx.Log())
+}
+
 func waitForDependency(ctx context.Context, start types.Pipeline, dependencyName string, log log.Logger) {
 	// get top level pipeline
 	for start.Parent() != nil {
@@ -373,6 +384,13 @@ func (p *pipeline) startNewDependency(ctx devspacecontext.Context, dependency ty
 		pipelineConfig *latest.Pipeline
 		err            error
 	)
+
+	// Ensure dependency namespace exists
+	err = ensureNamespace(ctx, dependency.DependencyConfig().Namespace)
+	if err != nil {
+		return errors.Wrapf(err, "cannot run dependency %s", dependency.Name())
+	}
+
 	if dependency.Config().Config().Pipelines == nil || dependency.Config().Config().Pipelines[executePipeline] == nil {
 		pipelineConfig, err = types.GetDefaultPipeline(executePipeline)
 		if err != nil {

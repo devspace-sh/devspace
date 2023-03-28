@@ -14,9 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
-
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -176,41 +173,7 @@ func (r *LocalRegistry) ensureNamespace(ctx devspacecontext.Context) error {
 		return nil
 	}
 
-	// Try to get the namespace we need
-	_, err := ctx.KubeClient().
-		KubeClient().
-		CoreV1().
-		Namespaces().
-		Get(ctx.Context(), r.Namespace, metav1.GetOptions{})
-	// Ignore not found errors, but if we have any other type or error, report it
-	if err != nil && !kerrors.IsNotFound(err) {
-		return err
-	}
-	// And if we don't have errors, it means the namespace already exists.
-	if err == nil {
-		ctx.Log().Debugf("Namespace %s already exists, skipping creation", r.Namespace)
-		return nil
-	}
-
-	ctx.Log().Debugf("Namespace %s doesn't exist, attempting creation", r.Namespace)
-	applyConfiguration, err := applyv1.ExtractNamespace(&corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: r.Namespace,
-		},
-	}, ApplyFieldManager)
-	if err != nil {
-		return err
-	}
-
-	_, err = ctx.KubeClient().KubeClient().CoreV1().Namespaces().Apply(
-		ctx.Context(),
-		applyConfiguration,
-		metav1.ApplyOptions{
-			FieldManager: ApplyFieldManager,
-			Force:        true,
-		},
-	)
-	return err
+	return kubectl.EnsureNamespace(ctx.Context(), ctx.KubeClient(), r.Namespace, ctx.Log())
 }
 
 func (r *LocalRegistry) SelectRegistryPod(ctx devspacecontext.Context) (*corev1.Pod, error) {
