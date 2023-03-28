@@ -1,10 +1,15 @@
 package deploy
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 
 	"github.com/onsi/ginkgo/v2"
 
@@ -678,5 +683,73 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectEqual(out, "test")
 		framework.ExpectEqual(out2, "test")
 		framework.ExpectEqual(out3, "test")
+	})
+
+	ginkgo.It("should run helm dependency update on dependency's local chart name", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_git_dependency_with_local_chart")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		output := &bytes.Buffer{}
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace-name.yaml",
+			},
+			Pipeline: "deploy",
+			Log:      log.NewStreamLogger(output, output, logrus.DebugLevel),
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// Expect helm dependency update to be run.
+		gomega.Expect(output.String()).To(
+			gomega.ContainSubstring("helm dependency update"),
+		)
+	})
+
+	ginkgo.It("should run helm dependency update on dependency's local chart name and path", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_git_dependency_with_local_chart")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		output := &bytes.Buffer{}
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace-path.yaml",
+			},
+			Pipeline: "deploy",
+			Log:      log.NewStreamLogger(output, output, logrus.DebugLevel),
+		}
+
+		// run the command
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// Expect helm dependency update to be run.
+		gomega.Expect(output.String()).To(
+			gomega.ContainSubstring("helm dependency update"),
+		)
 	})
 })
