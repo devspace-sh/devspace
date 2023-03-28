@@ -1,0 +1,6 @@
+version: v2beta1
+
+dependencies:
+  dependency:
+    git: https://github.com/loft-sh/e2e-test-dependency.git
+    branch: helm-with-local-chart

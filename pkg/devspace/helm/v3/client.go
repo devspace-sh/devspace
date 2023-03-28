@@ -111,7 +111,12 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 	if helmConfig.DisableDependencyUpdate == nil || (helmConfig.DisableDependencyUpdate != nil && !*helmConfig.DisableDependencyUpdate) {
 		stat, err := os.Stat(chartPath)
 		if err == nil && stat.IsDir() {
-			args = append(args, "--dependency-update")
+			// Do not use --dependency-update because it will not update dependencies when the Chart.yaml is updated:
+			// https://github.com/helm/helm/issues/9545
+			_, err := c.genericHelm.Exec(ctx.WithWorkingDir(chartPath), []string{"dependency", "update"})
+			if err != nil {
+				ctx.Log().Warnf("error running helm dependency update: %v", err)
+			}
 		}
 	}
 	// Upgrade options
@@ -194,7 +199,12 @@ func (c *client) Template(ctx devspacecontext.Context, releaseName, releaseNames
 	if helmConfig.DisableDependencyUpdate == nil || (helmConfig.DisableDependencyUpdate != nil && !*helmConfig.DisableDependencyUpdate) {
 		stat, err := os.Stat(chartPath)
 		if err == nil && stat.IsDir() {
-			args = append(args, "--dependency-update")
+			// Do not use --dependency-update because it will not update dependencies when the Chart.yaml is updated:
+			// https://github.com/helm/helm/issues/9545
+			_, err := c.genericHelm.Exec(ctx.WithWorkingDir(chartPath), []string{"dependency", "update"})
+			if err != nil {
+				ctx.Log().Warnf("error running helm dependency update: %v", err)
+			}
 		}
 	}
 	args = append(args, helmConfig.TemplateArgs...)
