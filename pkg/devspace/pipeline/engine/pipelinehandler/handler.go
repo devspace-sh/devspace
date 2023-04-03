@@ -31,6 +31,9 @@ var PipelineCommands = map[string]func(devCtx devspacecontext.Context, pipeline 
 	"get_image": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.GetImage(devCtx, args)
 	},
+	"get_runtime_variable": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.GetRuntimeVariable(devCtx, args)
+	},
 	"run_default_pipeline": func(devCtx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunDefaultPipeline(devCtx, pipeline, args, NewPipelineExecHandler)
 	},

@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"path/filepath"
 )
 
 type Config interface {
@@ -34,9 +35,43 @@ type Config interface {
 	Path() string
 }
 
-func NewConfig(raw map[string]interface{}, rawBeforeConversion map[string]interface{}, parsed *latest.Config, localCache localcache.Cache, remoteCache remotecache.Cache, resolvedVariables map[string]interface{}, path string) Config {
+func NewConfig(
+	raw map[string]interface{},
+	rawBeforeConversion map[string]interface{},
+	parsed *latest.Config,
+	localCache localcache.Cache,
+	remoteCache remotecache.Cache,
+	resolvedVariables map[string]interface{},
+	path string,
+) Config {
+	runtimeVariables := NewRuntimeVariables()
+	return NewConfigWithRuntimeVariables(
+		raw,
+		rawBeforeConversion,
+		parsed,
+		localCache,
+		remoteCache,
+		resolvedVariables,
+		path,
+		runtimeVariables,
+	)
+}
+
+func NewConfigWithRuntimeVariables(
+	raw map[string]interface{},
+	rawBeforeConversion map[string]interface{},
+	parsed *latest.Config,
+	localCache localcache.Cache,
+	remoteCache remotecache.Cache,
+	resolvedVariables map[string]interface{},
+	path string,
+	runtimeVariables RuntimeVariables,
+) Config {
+	runtimeVariables.SetRuntimeVariable("config", path)
+	runtimeVariables.SetRuntimeVariable("path", filepath.Dir(path))
+
 	return &config{
-		RuntimeVariables:    newRuntimeVariables(),
+		RuntimeVariables:    runtimeVariables,
 		rawConfig:           raw,
 		rawBeforeConversion: rawBeforeConversion,
 		parsedConfig:        parsed,

@@ -1940,8 +1940,10 @@ deployments:
 			&remotecache.RemoteCache{},
 			&fakekubectl.Client{},
 			NewDefaultParser(),
+			config2.NewRuntimeVariables(),
 			testCase.in.options,
-			log.Discard)
+			log.Discard,
+		)
 
 		if testCase.expectedErr != "" {
 			if err == nil {

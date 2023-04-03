@@ -3,6 +3,7 @@ package loader
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
@@ -29,7 +30,14 @@ var ImportSections = []string{
 	"hooks",
 }
 
-func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath string, rawData map[string]interface{}, log log.Logger) (map[string]interface{}, error) {
+func ResolveImports(
+	ctx context.Context,
+	resolver variable.Resolver,
+	basePath string,
+	rawData map[string]interface{},
+	runtimeVariables config.RuntimeVariables,
+	log log.Logger,
+) (map[string]interface{}, error) {
 	// initially reload variables
 	err := reloadVariables(resolver, rawData, log)
 	if err != nil {
@@ -64,7 +72,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 	}
 
 	// load imports
-	for _, i := range imports.Imports {
+	for idx, i := range imports.Imports {
 		if i.Enabled != nil && !*i.Enabled {
 			continue
 		}
@@ -72,6 +80,12 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		configPath, err := dependencyutil.DownloadDependency(ctx, basePath, &i.SourceConfig, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "resolve import")
+		}
+
+		// Referring to nested imports are not supported
+		if runtimeVariables != nil {
+			runtimeVariables.SetRuntimeVariable(fmt.Sprintf("imports[%d].config", idx), configPath)
+			runtimeVariables.SetRuntimeVariable(fmt.Sprintf("imports[%d].path", idx), filepath.Dir(configPath))
 		}
 
 		fileContent, err := os.ReadFile(configPath)
@@ -133,7 +147,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		}
 
 		// resolve imports
-		mergedMap, err = ResolveImports(ctx, resolver, filepath.Dir(configPath), mergedMap, log)
+		mergedMap, err = ResolveImports(ctx, resolver, filepath.Dir(configPath), mergedMap, nil, log)
 		if err != nil {
 			return nil, err
 		}

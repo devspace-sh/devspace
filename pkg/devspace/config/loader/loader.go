@@ -173,7 +173,8 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 		}
 	}
 
-	parsedConfig, rawBeforeConversion, resolver, err := l.parseConfig(ctx, data, localCache, remoteCache, client, parser, options, log)
+	runtimeVariables := config.NewRuntimeVariables()
+	parsedConfig, rawBeforeConversion, resolver, err := l.parseConfig(ctx, data, localCache, remoteCache, client, parser, runtimeVariables, options, log)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +184,7 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 		return nil, errors.Wrap(err, "require versions")
 	}
 
-	c := config.NewConfig(data, rawBeforeConversion, parsedConfig, localCache, remoteCache, resolver.ResolvedVariables(), l.absConfigPath)
+	c := config.NewConfigWithRuntimeVariables(data, rawBeforeConversion, parsedConfig, localCache, remoteCache, resolver.ResolvedVariables(), l.absConfigPath, runtimeVariables)
 	pluginErr = plugin.ExecutePluginHookWithContext(map[string]interface{}{
 		"LOAD_PATH":     l.absConfigPath,
 		"LOADED_CONFIG": c.Config(),
@@ -300,6 +301,7 @@ func (l *configLoader) parseConfig(
 	remoteCache remotecache.Cache,
 	client kubectl.Client,
 	parser Parser,
+	runtimeVariables config.RuntimeVariables,
 	options *ConfigOptions,
 	log log.Logger,
 ) (*latest.Config, map[string]interface{}, variable.Resolver, error) {
@@ -314,7 +316,7 @@ func (l *configLoader) parseConfig(
 	}
 
 	// copy raw config
-	copiedRawConfig, err := ResolveImports(ctx, resolver, filepath.Dir(l.absConfigPath), rawConfig, log)
+	copiedRawConfig, err := ResolveImports(ctx, resolver, filepath.Dir(l.absConfigPath), rawConfig, runtimeVariables, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}

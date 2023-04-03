@@ -13,7 +13,7 @@ type RuntimeVariables interface {
 	SetRuntimeVariable(key string, value interface{})
 }
 
-func newRuntimeVariables() RuntimeVariables {
+func NewRuntimeVariables() RuntimeVariables {
 	return &runtimeVariables{
 		runtimeVariables: make(map[string]interface{}),
 	}
