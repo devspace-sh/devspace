@@ -269,10 +269,10 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 			ValidationRegexPattern: "^[^A-Z\\s]+\\.[^A-Z\\s]+$",
 			ValidationMessage:      "Error parsing registry username: must only include lowercase letters.",
 		})
+
 		if err != nil {
 			return "", err
 		}
-
 		if registryUsername != "" {
 			registryPassword, err = m.log.Question(&survey.QuestionOptions{
 				Question:               passwordQuestion,
