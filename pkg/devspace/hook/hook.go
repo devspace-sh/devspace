@@ -200,7 +200,7 @@ func executeHook(ctx devspacecontext.Context, hookConfig *latest.HookConfig, hoo
 	err := hook.Execute(ctx.WithLogger(hookLog), hookConfig, extraEnv)
 	if err != nil {
 		if hookConfig.Silent {
-			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(logpkg.NopCloser).Writer.(*bytes.Buffer).String())
+			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*logpkg.NopCloser).Writer.(*bytes.Buffer).String())
 		}
 		return errors.Wrapf(err, "in hook '%s'", ansi.Color(hookName(hookConfig), "white+b"))
 	}
