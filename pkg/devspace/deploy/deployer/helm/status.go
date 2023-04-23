@@ -3,6 +3,7 @@ package helm
 import (
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
@@ -44,7 +45,7 @@ func (d *DeployConfig) Status(ctx devspacecontext.Context) (*deployer.StatusResu
 	}
 
 	for _, release := range releases {
-		if release.Name == d.DeploymentConfig.Name {
+		if d.matchesRelease(release) {
 			if release.Status != "DEPLOYED" {
 				return &deployer.StatusResult{
 					Name:   d.DeploymentConfig.Name,
@@ -82,4 +83,13 @@ func (d *DeployConfig) getDeployTarget() string {
 	}
 
 	return retString
+}
+func (d *DeployConfig) matchesRelease(release *types.Release) bool {
+	if d.DeploymentConfig.Name == release.Name {
+		return true
+	}
+	if d.DeploymentConfig.Helm != nil && d.DeploymentConfig.Helm.ReleaseName == release.Name {
+		return true
+	}
+	return false
 }
