@@ -31,6 +31,51 @@ type statusTestCase struct {
 func TestStatus(t *testing.T) {
 	testCases := []statusTestCase{
 		{
+			name:       "Deployment successful",
+			deployment: "deployed",
+			releases: []*helmtypes.Release{
+				{
+					Name:   "deployed",
+					Status: "DEPLOYED",
+				},
+			},
+			helmConfig: &latest.HelmConfig{
+				Chart: &latest.ChartConfig{
+					Name:    "chartName",
+					Version: "chartVersion",
+				},
+			},
+			expectedStatus: deployer.StatusResult{
+				Name:   "deployed",
+				Type:   "Helm",
+				Target: "chartName (chartVersion)",
+				Status: "Deployed",
+			},
+		},
+		{
+			name:       "helmReleaseName",
+			deployment: "deployment",
+			releases: []*helmtypes.Release{
+				{
+					Name:   "releaseName",
+					Status: "DEPLOYED",
+				},
+			},
+			helmConfig: &latest.HelmConfig{
+				ReleaseName: "releaseName",
+				Chart: &latest.ChartConfig{
+					Name:    "chartName",
+					Version: "chartVersion",
+				},
+			},
+			expectedStatus: deployer.StatusResult{
+				Name:   "deployment",
+				Type:   "Helm",
+				Target: "chartName (chartVersion)",
+				Status: "Deployed",
+			},
+		},
+		{
 			name:       "No releases",
 			deployment: "depl",
 			expectedStatus: deployer.StatusResult{
