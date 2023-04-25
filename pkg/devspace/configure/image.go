@@ -172,8 +172,10 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 				registryHostname = generator.GithubContainerRegistry
 			} else {
 				registryHostname, err = m.log.Question(&survey.QuestionOptions{
-					Question:     "Please provide the registry hostname without the image path (e.g. gcr.io, ghcr.io, ecr.io)",
-					DefaultValue: "gcr.io",
+					Question:               "Please provide the registry hostname without the image path (e.g. gcr.io, ghcr.io, ecr.io)",
+					DefaultValue:           "gcr.io",
+					ValidationRegexPattern: "^[^A-Z\\s]+\\.[^A-Z\\s]+$",
+					ValidationMessage:      "Error parsing registry username: must only include lowercase letters.",
 				})
 				if err != nil {
 					return err
@@ -264,12 +266,13 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 
 		registryUsername, err = m.log.Question(&survey.QuestionOptions{
 			Question:               usernameQuestion,
-			ValidationRegexPattern: "^.*$",
+			ValidationRegexPattern: "^[^A-Z\\s]+\\.[^A-Z\\s]+$",
+			ValidationMessage:      "Error parsing registry username: must only include lowercase letters.",
 		})
+
 		if err != nil {
 			return "", err
 		}
-
 		if registryUsername != "" {
 			registryPassword, err = m.log.Question(&survey.QuestionOptions{
 				Question:               passwordQuestion,
