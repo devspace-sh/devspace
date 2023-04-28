@@ -7,29 +7,25 @@ import (
 	"os"
 	"strings"
 
+	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"mvdan.cc/sh/v3/expand"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/patch"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
-	"github.com/loft-sh/devspace/pkg/util/stringutil"
-	"github.com/loft-sh/utils/pkg/command"
-	"github.com/sirupsen/logrus"
-
-	"github.com/loft-sh/utils/pkg/downloader"
-	"github.com/loft-sh/utils/pkg/downloader/commands"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/ghodss/yaml"
-	"github.com/pkg/errors"
-
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/util/hash"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
+	"github.com/loft-sh/utils/pkg/command"
+	"github.com/loft-sh/utils/pkg/downloader"
+	"github.com/loft-sh/utils/pkg/downloader/commands"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"mvdan.cc/sh/v3/expand"
 )
 
 var Cachemanifest = "./.devspace/manifest-cache.yaml"
@@ -162,7 +158,7 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, _ bool) (bool, error)
 	}
 
 	// Hash the deployment config
-	configStr, err := yaml.Marshal(d.DeploymentConfig)
+	configStr, err := jsonyaml.Marshal(d.DeploymentConfig)
 	if err != nil {
 		return false, errors.Wrap(err, "marshal deployment config")
 	}
@@ -291,7 +287,7 @@ func (d *DeployConfig) getReplacedManifest(ctx devspacecontext.Context, inline b
 			ctx.Log().Warn(err)
 		}
 
-		replacedManifest, err := yaml.Marshal(resource)
+		replacedManifest, err := jsonyaml.Marshal(resource)
 		if err != nil {
 			return false, "", nil, errors.Wrap(err, "marshal yaml")
 		}
@@ -347,7 +343,7 @@ func (d *DeployConfig) isKustomizeInstalled(ctx context.Context, dir, path strin
 }
 
 func (d *DeployConfig) applyDeployPatches(ctx devspacecontext.Context, resource *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	out, err := yaml.Marshal(resource)
+	out, err := jsonyaml.Marshal(resource)
 	if err != nil {
 		return resource, err
 	}
@@ -395,7 +391,7 @@ func (d *DeployConfig) applyDeployPatches(ctx devspacecontext.Context, resource 
 
 	// transform resource back to unstructured
 	var result unstructured.Unstructured
-	err = yaml.Unmarshal(out, &result)
+	err = jsonyaml.Unmarshal(out, &result)
 	if err != nil {
 		return nil, err
 	}

@@ -1,3 +1,5 @@
+# cloud.google.com/go/compute/metadata v0.2.3
+## explicit; go 1.19
 # github.com/AlecAivazis/survey/v2 v2.3.2
 ## explicit; go 1.13
 github.com/AlecAivazis/survey/v2
@@ -569,6 +571,8 @@ github.com/src-d/gcfg
 github.com/src-d/gcfg/scanner
 github.com/src-d/gcfg/token
 github.com/src-d/gcfg/types
+# github.com/stretchr/testify v1.8.1
+## explicit; go 1.13
 # github.com/syncthing/notify v0.0.0-20210616190510-c6b7342338d2
 ## explicit; go 1.11
 # github.com/tcnksm/go-gitconfig v0.1.2
@@ -611,6 +615,8 @@ github.com/xeipuuv/gojsonreference
 # github.com/xeipuuv/gojsonschema v1.2.0
 ## explicit
 github.com/xeipuuv/gojsonschema
+# go.opencensus.io v0.24.0
+## explicit; go 1.13
 # go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.29.0
 ## explicit; go 1.16
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc
@@ -757,8 +763,8 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20220706185917-7780775163c4
-## explicit; go 1.15
+# google.golang.org/genproto v0.0.0-20221202195650-67e5cbc046fd
+## explicit; go 1.19
 google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/protobuf/field_mask

@@ -3,23 +3,22 @@ package kubectl
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/util/constraint"
-
-	"github.com/ghodss/yaml"
+	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
+	"github.com/loft-sh/devspace/pkg/util/constraint"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/utils/pkg/command"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"mvdan.cc/sh/v3/expand"
 )
 
 // Builder is the manifest builder interface
@@ -167,7 +166,7 @@ func stringToUnstructuredArray(out string) ([]*unstructured.Unstructured, error)
 	var firstErr error
 	for _, part := range parts {
 		var objMap map[string]interface{}
-		err := yaml.Unmarshal([]byte(part), &objMap)
+		err := jsonyaml.Unmarshal([]byte(part), &objMap)
 		if err != nil {
 			if firstErr == nil {
 				firstErr = fmt.Errorf("failed to unmarshal manifest: %v", err)
@@ -179,7 +178,7 @@ func stringToUnstructuredArray(out string) ([]*unstructured.Unstructured, error)
 			continue
 		}
 		var obj unstructured.Unstructured
-		err = yaml.Unmarshal([]byte(part), &obj)
+		err = jsonyaml.Unmarshal([]byte(part), &obj)
 		if err != nil {
 			if firstErr == nil {
 				firstErr = fmt.Errorf("failed to unmarshal manifest: %v", err)
