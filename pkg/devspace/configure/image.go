@@ -174,8 +174,8 @@ func (m *manager) AddImage(imageName, image, projectNamespace, dockerfile string
 				registryHostname, err = m.log.Question(&survey.QuestionOptions{
 					Question:               "Please provide the registry hostname without the image path (e.g. gcr.io, ghcr.io, ecr.io)",
 					DefaultValue:           "gcr.io",
-					ValidationRegexPattern: "^[^A-Z\\s]+\\.[^A-Z\\s]+$",
-					ValidationMessage:      "Error parsing registry username: must only include lowercase letters.",
+					ValidationRegexPattern: "^(?!-)[a-z0-9-]{1,63}(\\.[a-z0-9-]{1,63})*$",
+					ValidationMessage:      "Error parsing registry hostname: must only include letters, digits, dots and hyphens and cannot exceed 253 characters.",
 				})
 				if err != nil {
 					return err
