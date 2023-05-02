@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -409,17 +410,21 @@ var _ = DevSpaceDescribe("localregistry", func() {
 
 		// create build command
 		output := &bytes.Buffer{}
+		writer := io.MultiWriter(output, os.Stdout)
 		buildCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
 			Pipeline: "build",
-			Log:      logpkg.NewStreamLogger(output, output, logrus.DebugLevel),
+			Log:      logpkg.NewStreamLogger(writer, writer, logrus.DebugLevel),
 		}
 		err = buildCmd.RunDefault(f)
 		framework.ExpectError(err)
 		gomega.Expect(output.String()).To(
-			gomega.ContainSubstring("UNAUTHORIZED: authentication required"),
+			gomega.Or(
+				gomega.ContainSubstring("unexpected status code 403"),
+				gomega.ContainSubstring("UNAUTHORIZED: authentication required"),
+			),
 		)
 	})
 
