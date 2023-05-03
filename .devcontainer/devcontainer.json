@@ -16,7 +16,7 @@
   "mounts": [
     {
       "type": "volume",
-      "source": "vcluster",
+      "source": "devspace",
       "target": "/home/vscode"
     }
   ],
