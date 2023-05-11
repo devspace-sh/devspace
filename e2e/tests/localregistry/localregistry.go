@@ -422,7 +422,9 @@ var _ = DevSpaceDescribe("localregistry", func() {
 		framework.ExpectError(err)
 		gomega.Expect(output.String()).To(
 			gomega.Or(
+				gomega.ContainSubstring("unexpected status code 401"),
 				gomega.ContainSubstring("unexpected status code 403"),
+				gomega.ContainSubstring("access token has insufficient scopes"),
 				gomega.ContainSubstring("UNAUTHORIZED: authentication required"),
 			),
 		)
