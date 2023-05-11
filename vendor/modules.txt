@@ -367,6 +367,9 @@ github.com/loft-sh/loft-util/pkg/command
 # github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 ## explicit; go 1.11
 github.com/loft-sh/notify
+# github.com/loft-sh/programming-language-detection v0.0.5
+## explicit; go 1.20
+github.com/loft-sh/programming-language-detection/pkg/detector
 # github.com/loft-sh/utils v0.0.16
 ## explicit; go 1.19
 github.com/loft-sh/utils/pkg/command
@@ -571,8 +574,6 @@ github.com/src-d/gcfg
 github.com/src-d/gcfg/scanner
 github.com/src-d/gcfg/token
 github.com/src-d/gcfg/types
-# github.com/stretchr/testify v1.8.1
-## explicit; go 1.13
 # github.com/syncthing/notify v0.0.0-20210616190510-c6b7342338d2
 ## explicit; go 1.11
 # github.com/tcnksm/go-gitconfig v0.1.2
@@ -588,9 +589,6 @@ github.com/tonistiigi/units
 # github.com/tonistiigi/vt100 v0.0.0-20210615222946-8066bb97264f
 ## explicit; go 1.12
 github.com/tonistiigi/vt100
-# github.com/toqueteos/trie v1.0.0
-## explicit
-github.com/toqueteos/trie
 # github.com/ulikunitz/xz v0.5.9
 ## explicit; go 1.12
 github.com/ulikunitz/xz
@@ -864,11 +862,6 @@ gopkg.in/inf.v0
 # gopkg.in/natefinch/lumberjack.v2 v2.0.0
 ## explicit
 gopkg.in/natefinch/lumberjack.v2
-# gopkg.in/src-d/enry.v1 v1.6.4
-## explicit
-gopkg.in/src-d/enry.v1
-gopkg.in/src-d/enry.v1/data
-gopkg.in/src-d/enry.v1/internal/tokenizer
 # gopkg.in/src-d/go-billy.v4 v4.3.2
 ## explicit
 gopkg.in/src-d/go-billy.v4
@@ -919,9 +912,6 @@ gopkg.in/src-d/go-git.v4/utils/merkletrie/filesystem
 gopkg.in/src-d/go-git.v4/utils/merkletrie/index
 gopkg.in/src-d/go-git.v4/utils/merkletrie/internal/frame
 gopkg.in/src-d/go-git.v4/utils/merkletrie/noder
-# gopkg.in/toqueteos/substring.v1 v1.0.2
-## explicit
-gopkg.in/toqueteos/substring.v1
 # gopkg.in/warnings.v0 v0.1.2
 ## explicit
 gopkg.in/warnings.v0
