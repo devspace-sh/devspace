@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"github.com/loft-sh/devspace/pkg/util/git"
@@ -17,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	enry "gopkg.in/src-d/enry.v1"
+	detector "github.com/loft-sh/programming-language-detection/pkg/detector"
 )
 
 // DevSpaceContainerRepo is the default repository url
@@ -183,7 +182,7 @@ func (cg *LanguageHandler) GetLanguage() (string, error) {
 func (cg *LanguageHandler) IsSupportedLanguage(language string) (bool, string) {
 	supportedLanguages, _ := cg.GetSupportedLanguages()
 
-	if language == "c#" {
+	if language == "dotnet" {
 		return true, langCSharpDotNet
 	}
 
@@ -256,95 +255,10 @@ func (cg *LanguageHandler) CreateDockerfile(language string) error {
 }
 
 func (cg *LanguageHandler) detectLanguage() (string, error) {
-	contentReadLimit := int64(16 * 1024 * 1024)
-	bytesByLanguage := make(map[string]int64)
+	contentReadLimit := 16 * 1024 * 1024
 
-	// Cancel the language detection after 10sec
-	cancelDetect := false
-	time.AfterFunc(10*time.Second, func() {
-		cancelDetect = true
-	})
-
-	walkError := filepath.Walk(".", func(path string, fileInfo os.FileInfo, err error) error {
-		// If timeout is over, then cancel detect
-		if cancelDetect {
-			return filepath.SkipDir
-		}
-
-		if err != nil {
-			return filepath.SkipDir
-		}
-
-		if !fileInfo.Mode().IsDir() && !fileInfo.Mode().IsRegular() {
-			return nil
-		}
-
-		relativePath, err := filepath.Rel(".", path)
-		if err != nil {
-			return nil
-		}
-
-		if relativePath == "." {
-			return nil
-		}
-
-		if fileInfo.IsDir() {
-			relativePath = relativePath + "/"
-		}
-
-		if enry.IsVendor(relativePath) || enry.IsDotFile(relativePath) || enry.IsDocumentation(relativePath) || enry.IsConfiguration(relativePath) {
-			if fileInfo.IsDir() {
-				return filepath.SkipDir
-			}
-
-			return nil
-		}
-
-		if fileInfo.IsDir() {
-			return nil
-		}
-
-		language, ok := enry.GetLanguageByExtension(path)
-		if !ok {
-			if language, ok = enry.GetLanguageByFilename(path); !ok {
-				content, err := fsutil.ReadFile(path, contentReadLimit)
-				if err != nil {
-					return nil
-				}
-
-				language = enry.GetLanguage(filepath.Base(path), content)
-				if language == enry.OtherLanguage {
-					return nil
-				}
-			}
-		}
-		_, langExists := bytesByLanguage[language]
-		if !langExists {
-			bytesByLanguage[language] = 0
-		}
-
-		bytesByLanguage[language] = bytesByLanguage[language] + fileInfo.Size()
-		return nil
-	})
-
-	if walkError != nil {
-		return "", walkError
-	}
-
-	detectedLanguage := ""
-	currentMaxBytes := int64(0)
-	for language, bytes := range bytesByLanguage {
-		language = strings.ToLower(language)
-
-		if bytes > currentMaxBytes {
-			isSupported, language := cg.IsSupportedLanguage(language)
-
-			if isSupported {
-				detectedLanguage = language
-				currentMaxBytes = bytes
-			}
-		}
-	}
+	detectedLanguage := detector.GetLanguage(".", contentReadLimit)
+	detectedLanguage = strings.ToLower(detectedLanguage)
 
 	isSupported, language := cg.IsSupportedLanguage(detectedLanguage)
 	if !isSupported {
