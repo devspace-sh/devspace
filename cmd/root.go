@@ -4,12 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"io"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
+	"github.com/mgutz/ansi"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
@@ -64,6 +66,8 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 			} else if globalFlags.Debug {
 				log.SetLevel(logrus.DebugLevel)
 			}
+
+			ansi.DisableColors(globalFlags.NoColors)
 
 			if globalFlags.KubeConfig != "" {
 				err := os.Setenv("KUBECONFIG", globalFlags.KubeConfig)
