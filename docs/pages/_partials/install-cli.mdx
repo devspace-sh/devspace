@@ -12,7 +12,8 @@ DevSpace is a client-only binary. It is super lightweight, does not require any 
     { label: 'brew', value: 'brew', },
     { label: 'Mac', value: 'mac', },
     { label: 'Linux', value: 'linux', },
-    { label: 'Windows Powershell', value: 'windows', },
+    { label: 'Windows Powershell', value: 'windows-ps', },
+    { label: 'Windows Scoop', value: 'windows-scoop', },
   ]
 }>
 <TabItem value="npm">
@@ -58,13 +59,20 @@ curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/downloa
 ```
 
 </TabItem>
-<TabItem value="windows">
+<TabItem value="windows-ps">
 
-```powershell {4}
+```powershell
 md -Force "$Env:APPDATA\devspace"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
 Invoke-WebRequest -URI "https://github.com/loft-sh/devspace/releases/latest/download/devspace-windows-amd64.exe" -o $Env:APPDATA\devspace\devspace.exe;
 $env:Path += ";" + $Env:APPDATA + "\devspace";
 [Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
+```
+
+</TabItem>
+<TabItem value="windows-scoop">
+
+```powershell
+scoop install devspace
 ```
 
 </TabItem>
