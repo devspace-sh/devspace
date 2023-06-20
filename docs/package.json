@@ -9,20 +9,20 @@
     "deploy": "docusaurus deploy"
   },
   "dependencies": {
-    "@docusaurus/core": "2.0.0-beta.17",
-    "@docusaurus/preset-classic": "2.0.0-beta.17",
-    "@saucelabs/theme-github-codeblock": "^0.1.1",
+    "@docusaurus/core": "^2.4.1",
+    "@docusaurus/preset-classic": "^2.4.1",
+    "@saucelabs/theme-github-codeblock": "^0.2.3",
     "classnames": "^2.2.6",
-    "docusaurus-plugin-sass": "^0.2.2",
+    "docusaurus-plugin-sass": "^0.2.3",
     "mdx-link-checker": "^0.1.1",
-    "mdx-mermaid": "^1.2.2",
-    "mermaid": "^9.1.2",
+    "mdx-mermaid": "^v1.3.0",
+    "mermaid": "^10.2.3",
     "plugin-image-zoom": "ataft/plugin-image-zoom",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "redocusaurus": "^1.0.0",
     "resolve-glob": "^1.0.0",
-    "sass": "^1.49.9"
+    "sass": "^1.63.4"
   },
   "browserslist": {
     "production": [
