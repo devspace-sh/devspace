@@ -71,12 +71,12 @@ func (t Transformer) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err
 		nSrc += n
 		nDst += n
 		if err != nil {
-			return
+			return nSrc, nDst, err
 		}
 		// copy the new value
 		n, err = fullcopy(dst[nDst:], t.new)
 		if err != nil {
-			return
+			return nSrc, nDst, err
 		}
 		nDst += n
 		nSrc += t.oldlen
@@ -86,7 +86,7 @@ func (t Transformer) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err
 		n, err = fullcopy(dst[nDst:], src[nSrc:])
 		nDst += n
 		nSrc += n
-		return
+		return nSrc, nDst, err
 	}
 	// skip everything except the trailing len(r.old) - 1
 	// we do this because there could be a match straddling
@@ -96,7 +96,7 @@ func (t Transformer) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err
 		nSrc += n
 		nDst += n
 		if err != nil {
-			return
+			return nSrc, nDst, err
 		}
 	}
 	err = transform.ErrShortSrc

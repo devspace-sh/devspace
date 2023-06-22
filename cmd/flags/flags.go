@@ -9,6 +9,7 @@ import (
 type GlobalFlags struct {
 	Silent                   bool
 	NoWarn                   bool
+	NoColors                 bool
 	Debug                    bool
 	DisableProfileActivation bool
 	SwitchContext            bool
@@ -45,6 +46,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 
 	flags.StringVar(&globalFlags.OverrideName, "override-name", "", "If specified will override the devspace.yaml name")
 	flags.BoolVar(&globalFlags.NoWarn, "no-warn", false, "If true does not show any warning when deploying into a different namespace or kube-context than before")
+	flags.BoolVar(&globalFlags.NoColors, "no-colors", false, "Do not show color highlighting in log output. This avoids invisible output with different terminal background colors")
 	flags.BoolVar(&globalFlags.Debug, "debug", false, "Prints the stack trace if an error occurs")
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devspace log output except panics & fatals")
 
