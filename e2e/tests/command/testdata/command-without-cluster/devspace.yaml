@@ -1,0 +1,6 @@
+version: v2beta1
+name: command-without-cluster
+
+commands:
+  test: |-
+    echo -n "Hello World"
