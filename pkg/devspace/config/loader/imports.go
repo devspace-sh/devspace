@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var ImportSections = []string{
@@ -117,10 +118,78 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 				mergedMap[section] = map[string]interface{}{}
 			}
 
-			for key, value := range sectionMap {
-				_, ok := mergedMap[section].(map[string]interface{})[key]
-				if !ok {
-					mergedMap[section].(map[string]interface{})[key] = value
+			switch section {
+
+			// special handling of require section to get required commands appended from all of the imports
+			case "require":
+				const (
+					devspaceConstraintKey = "devspace"
+					commandConstraintsKey = "commands"
+					pluginConstraintsKey  = "plugins"
+				)
+
+				// check devspace version constraints
+				currDevspaceVersionConst, currHasConstr :=
+					mergedMap[section].(map[string]interface{})[devspaceConstraintKey].(string)
+				if currDevspaceVersionConst == "" {
+					currHasConstr = false
+				}
+
+				// check import devspace version constraint
+				importDevspaceVersionConst, importHasConstr := sectionMap[devspaceConstraintKey].(string)
+				if importDevspaceVersionConst == "" {
+					importHasConstr = false
+				}
+
+				// set the constraint from import if the current is empty
+				if !currHasConstr && importHasConstr {
+					mergedMap[section].(map[string]interface{})[devspaceConstraintKey] = importDevspaceVersionConst
+				}
+
+				// append the constraint if it's not already present in the string
+				if currHasConstr &&
+					importHasConstr &&
+					!strings.Contains(currDevspaceVersionConst, importDevspaceVersionConst) {
+					mergedMap[section].(map[string]interface{})[devspaceConstraintKey] =
+						fmt.Sprintf("%s, %s", currDevspaceVersionConst, importDevspaceVersionConst)
+				}
+
+				// handle command constraints by appending them to the current set of constraints
+				importCommandConstraints, ok := sectionMap[commandConstraintsKey].([]interface{})
+				if ok {
+
+					_, ok := mergedMap[section].(map[string]interface{})[commandConstraintsKey].([]interface{})
+					if !ok {
+						mergedMap[section].(map[string]interface{})[commandConstraintsKey] = []interface{}{}
+					}
+
+					mergedMap[section].(map[string]interface{})[commandConstraintsKey] = append(
+						mergedMap[section].(map[string]interface{})[commandConstraintsKey].([]interface{}),
+						importCommandConstraints...,
+					)
+				}
+
+				// handle plugin constraints by appending them to the current set of constraints
+				importPluginConstraints, ok := sectionMap[pluginConstraintsKey].([]interface{})
+				if ok {
+
+					_, ok := mergedMap[section].(map[string]interface{})[pluginConstraintsKey].([]interface{})
+					if !ok {
+						mergedMap[section].(map[string]interface{})[pluginConstraintsKey] = []interface{}{}
+					}
+
+					mergedMap[section].(map[string]interface{})[pluginConstraintsKey] = append(
+						mergedMap[section].(map[string]interface{})[pluginConstraintsKey].([]interface{}),
+						importPluginConstraints...,
+					)
+				}
+
+			default:
+				for key, value := range sectionMap {
+					_, ok := mergedMap[section].(map[string]interface{})[key]
+					if !ok {
+						mergedMap[section].(map[string]interface{})[key] = value
+					}
 				}
 			}
 		}
