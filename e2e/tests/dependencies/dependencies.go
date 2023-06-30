@@ -291,6 +291,16 @@ dep2dep2wait
 		// calculate dependency path
 		dependencyPath := filepath.Join(dependencyutil.DependencyFolderPath, id)
 
+		// Should export dependency path
+		framework.ExpectLocalFileContents("runtime-path.txt", tempDir)
+		framework.ExpectLocalFileContents("runtime-config.txt", filepath.Join(tempDir, "devspace.yaml"))
+		framework.ExpectLocalFileContents("runtime-imports-0-path.txt", dependencyPath+"-imports")
+		framework.ExpectLocalFileContents("runtime-imports-0-config.txt", filepath.Join(dependencyPath+"-imports", "devspace.yaml"))
+		framework.ExpectLocalFileContents("dependency-path.txt", dependencyPath)
+		framework.ExpectLocalFileContents("dependency-config.txt", filepath.Join(dependencyPath, "devspace.yaml"))
+		framework.ExpectLocalFileContents("dependency-deploy-path.txt", dependencyPath)
+		framework.ExpectLocalFileContents("dependency-deploy-config.txt", filepath.Join(dependencyPath, "devspace.yaml"))
+
 		// wait until file is there
 		framework.ExpectLocalFileContents("imports.txt", "Test-dep-test\n")
 		framework.ExpectLocalFileContents(filepath.Join(dependencyPath, "dependency-dev.txt"), "Hello I am dependency\n")

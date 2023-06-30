@@ -18,3 +18,11 @@ pipelines:
       run_dependencies dependency
       run_dependencies dependency-deploy > dependency.txt
       dep-test > imports.txt
+      echo -n $(get_runtime_variable 'runtime.config') > runtime-config.txt
+      echo -n $(get_runtime_variable 'runtime.path') > runtime-path.txt
+      echo -n $(get_runtime_variable 'runtime.imports[0].config') > runtime-imports-0-config.txt
+      echo -n $(get_runtime_variable 'runtime.imports[0].path') > runtime-imports-0-path.txt
+      echo -n $(get_runtime_variable 'runtime.dependencies.dependency.config') > dependency-config.txt
+      echo -n $(get_runtime_variable 'runtime.dependencies.dependency.path') > dependency-path.txt
+      echo -n $(get_runtime_variable 'runtime.dependencies.dependency-deploy.config') > dependency-deploy-config.txt
+      echo -n $(get_runtime_variable 'runtime.dependencies.dependency-deploy.path') > dependency-deploy-path.txt
