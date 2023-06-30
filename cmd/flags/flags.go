@@ -44,7 +44,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 		Flags: flags,
 	}
 
-	flags.StringVar(&globalFlags.OverrideName, "override-name", "", "If specified will override the devspace.yaml name")
+	flags.StringVar(&globalFlags.OverrideName, "override-name", "", "If specified will override the DevSpace project name provided in the devspace.yaml")
 	flags.BoolVar(&globalFlags.NoWarn, "no-warn", false, "If true does not show any warning when deploying into a different namespace or kube-context than before")
 	flags.BoolVar(&globalFlags.NoColors, "no-colors", false, "Do not show color highlighting in log output. This avoids invisible output with different terminal background colors")
 	flags.BoolVar(&globalFlags.Debug, "debug", false, "Prints the stack trace if an error occurs")
