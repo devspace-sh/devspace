@@ -3,22 +3,20 @@ package plugin
 import (
 	"encoding/base32"
 	"fmt"
-
-	"github.com/blang/semver"
-	"github.com/ghodss/yaml"
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"sync"
-
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sync"
 
+	"github.com/blang/semver"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 )
 
 var encoding = base32.StdEncoding.WithPadding('0')

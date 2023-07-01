@@ -6,10 +6,10 @@ import (
 	"strings"
 	"unicode"
 
-	jsonyaml "github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
+	jsonyaml "sigs.k8s.io/yaml"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"

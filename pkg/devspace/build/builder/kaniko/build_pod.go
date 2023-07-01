@@ -1,20 +1,19 @@
 package kaniko
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 
 	"github.com/docker/distribution/reference"
-	jsonyaml "github.com/ghodss/yaml"
 	"gopkg.in/yaml.v3"
+	jsonyaml "sigs.k8s.io/yaml"
 
 	"github.com/docker/docker/api/types"
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
-
-	"fmt"
 
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"k8s.io/apimachinery/pkg/api/resource"

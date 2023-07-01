@@ -17,7 +17,6 @@ require (
 	github.com/evanphx/json-patch/v5 v5.1.0
 	github.com/fujiwara/shapeio v1.0.0
 	github.com/gertd/go-pluralize v0.2.0
-	github.com/ghodss/yaml v1.0.0
 	github.com/gliderlabs/ssh v0.3.5
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/go-containerregistry v0.13.0

@@ -186,9 +186,6 @@ github.com/fujiwara/shapeio
 # github.com/gertd/go-pluralize v0.2.0
 ## explicit; go 1.17
 github.com/gertd/go-pluralize
-# github.com/ghodss/yaml v1.0.0
-## explicit
-github.com/ghodss/yaml
 # github.com/gliderlabs/ssh v0.3.5
 ## explicit; go 1.12
 github.com/gliderlabs/ssh

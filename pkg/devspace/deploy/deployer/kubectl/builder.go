@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"github.com/loft-sh/devspace/pkg/util/constraint"
@@ -19,6 +18,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"mvdan.cc/sh/v3/expand"
+	jsonyaml "sigs.k8s.io/yaml"
 )
 
 // Builder is the manifest builder interface
