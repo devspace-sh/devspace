@@ -1,9 +1,13 @@
 package imports
 
 import (
-	"github.com/onsi/ginkgo/v2"
+	"bytes"
 	"os"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/onsi/ginkgo/v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -133,5 +137,29 @@ var _ = DevSpaceDescribe("imports", func() {
 		// make sure temp folder is erased
 		_, err = os.Stat(strings.TrimSpace(string(out)))
 		framework.ExpectError(err)
+	})
+
+	ginkgo.It("should import correctly with localRegistry", func() {
+		tempDir, err := framework.CopyToTempDir("tests/imports/testdata/localregistry")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{},
+			Out:         configBuffer,
+			SkipInfo:    true,
+		}
+
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(*latestConfig.LocalRegistry.Enabled, false)
+		framework.ExpectEqual(latestConfig.LocalRegistry.Name, "defaults-registry")
 	})
 })

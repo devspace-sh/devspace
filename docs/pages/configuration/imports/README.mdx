@@ -83,6 +83,25 @@ functions:
     echo "This is a function_x from project-a"
 ```
 
+## Import Sections
+The following DevSpace config sections are allowed to be imported:
+```
+/require/*
+/vars/*
+/dev/*
+/deployments/*
+/images/*
+/localRegistry/*
+/pipelines/*
+/commands/*
+/functions/*
+/pullSecrets/*
+/dependencies/*
+/profiles/*
+/hooks/*
+```
+
+All other config sections will be ignored during import.
 
 ## Config Reference
 The `imports` section in your `devspace.yaml` file is an array and each entry (import) supports the following fields:
