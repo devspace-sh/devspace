@@ -3,6 +3,9 @@ package loader
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
@@ -10,8 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
-	"os"
-	"path/filepath"
 )
 
 var ImportSections = []string{
@@ -27,6 +28,7 @@ var ImportSections = []string{
 	"dependencies",
 	"profiles",
 	"hooks",
+	"localRegistry",
 }
 
 func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath string, rawData map[string]interface{}, log log.Logger) (map[string]interface{}, error) {

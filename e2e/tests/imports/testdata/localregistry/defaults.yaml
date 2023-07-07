@@ -1,0 +1,4 @@
+version: v2beta1
+localRegistry:
+  enabled: false
+  name: defaults-registry

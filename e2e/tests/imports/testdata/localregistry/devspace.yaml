@@ -1,0 +1,3 @@
+version: v2beta1
+imports:
+  - path: defaults.yaml

@@ -49,7 +49,8 @@ type Config struct {
 
 	// Name specifies the name of the DevSpace project and uniquely identifies a project.
 	// DevSpace will not allow multiple active projects with the same name in the same Kubernetes namespace.
-	Name string `yaml:"name" json:"name" jsonschema:"required"`
+	// If not provided, DevSpace will use the name of the current working directory.
+	Name string `yaml:"name" json:"name"`
 
 	// Imports merges specified config files into this one. This is very useful to split up your DevSpace configuration
 	// into multiple files and reuse those through git, a remote url or common local path.

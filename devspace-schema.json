@@ -2068,7 +2068,7 @@
     },
     "name": {
       "type": "string",
-      "description": "Name specifies the name of the DevSpace project and uniquely identifies a project.\nDevSpace will not allow multiple active projects with the same name in the same Kubernetes namespace."
+      "description": "Name specifies the name of the DevSpace project and uniquely identifies a project.\nDevSpace will not allow multiple active projects with the same name in the same Kubernetes namespace.\nIf not provided, DevSpace will use the name of the current working directory."
     },
     "imports": {
       "items": {
