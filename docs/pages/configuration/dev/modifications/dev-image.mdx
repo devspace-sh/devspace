@@ -13,10 +13,12 @@ dev:
     # highlight-start
     imageSelector: ghcr.io/org/project/image
     devImage: ghcr.io/loft-sh/devspace-containers/python:3-alpine
+    command: ["sleep", "100000"]
     # highlight-end
 ```
 
-The example above selects the container with the stable/prod image `ghcr.io/org/project/image` and replaces the image with the prebuilt dev-optimized image `ghcr.io/loft-sh/devspace-containers/python:3-alpine`.
+The example above selects the container with the stable/prod image `ghcr.io/org/project/image` and replaces the image with the prebuilt dev-optimized image `ghcr.io/loft-sh/devspace-containers/python:3-alpine`.  
+_Note: We're overwriting the entrypoint here to keep the container alive._
 
 :::tip Prebuilt Dev Images = Generic Images Without Source Code
 Prebuilt images used for development are usually generic images that do **not** contain your application or any source code. They often only contain the necessary tooling to build, run, and debug your application in the appropriate language.
