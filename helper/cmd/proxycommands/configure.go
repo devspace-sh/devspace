@@ -3,11 +3,12 @@ package proxycommands
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
 
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/pkg/errors"
@@ -63,10 +64,24 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 
 	// first configure the commands
 	for _, c := range cmd.Commands {
-		filePath := "/usr/local/bin/" + c
+		fileDir := "/usr/local/bin/"
+		filePath := fileDir + c
+
+		_, err := os.Stat(fileDir)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return fmt.Errorf("error checking for command path '%s': %v", fileDir, err)
+			}
+
+			err := os.MkdirAll(fileDir, 0755)
+			if err != nil {
+				return fmt.Errorf("error creating command path '%s': %v", fileDir, err)
+			}
+		}
+
 		executeCommand := fmt.Sprintf(`#!/bin/sh
 /tmp/devspacehelper proxy-commands run %s "$@"`, c)
-		err := os.WriteFile(filePath, []byte(executeCommand), 0777)
+		err = os.WriteFile(filePath, []byte(executeCommand), 0777)
 		if err != nil {
 			return fmt.Errorf("error writing command '%s': %v", filePath, err)
 		}

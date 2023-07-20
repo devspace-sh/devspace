@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/onsi/ginkgo/v2"
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/onsi/ginkgo/v2"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -89,6 +90,51 @@ var _ = DevSpaceDescribe("proxyCommands", func() {
 
 		framework.ExpectLocalFileContents("host.out", stdout.String())
 		framework.ExpectRemoteFileContents("alpine", ns, "container.out", fmt.Sprintf("%s\n", podName))
+
+		cancel()
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("devspace dev should proxy commands to host machine without /usr/local/bin", func() {
+		tempDir, err := framework.CopyToTempDir("tests/proxycommands/testdata/proxycommands-no-usr-local")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("no-usr-local")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		// create a new dev command and start it
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			defer ginkgo.GinkgoRecover()
+
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
+			}
+
+			done <- devCmd.RunDefault(f)
+		}()
+
+		// Check that the command is proxied to the host.
+		var stdout, stderr bytes.Buffer
+		cmd := exec.Command("helm", "version")
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err = cmd.Run()
+		framework.ExpectNoError(err)
+
+		framework.ExpectRemoteFileContents("busybox", ns, "helm-version.out", stdout.String())
 
 		cancel()
 
