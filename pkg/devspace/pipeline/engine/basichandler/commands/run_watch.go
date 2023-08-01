@@ -3,6 +3,11 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/bmatcuk/doublestar"
 	"github.com/jessevdk/go-flags"
 	types2 "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
@@ -12,10 +17,6 @@ import (
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/interp"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 type RunWatchOptions struct {
@@ -54,15 +55,21 @@ type watcher struct {
 }
 
 func (w *watcher) Watch(ctx context.Context, action func(ctx context.Context) error, log log.Logger) error {
-	patterns := w.options.Paths
 	if w.options.SkipAndSilent {
 		w.options.Silent = true
 		w.options.SkipInitial = true
 	}
 
 	// prepare patterns
+	patterns := w.options.Paths
 	for i, p := range patterns {
 		patterns[i] = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(p), "./"), "/")
+	}
+
+	// prepare excludes
+	excludes := w.options.Exclude
+	for i, e := range excludes {
+		excludes[i] = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(e), "./"), "/")
 	}
 
 	// get folders from patterns
@@ -147,10 +154,10 @@ func (w *watcher) Watch(ctx context.Context, action func(ctx context.Context) er
 	}
 
 	// start command
-	return w.handleCommand(ctx, patterns, action, globalChannel)
+	return w.handleCommand(ctx, patterns, excludes, action, globalChannel)
 }
 
-func (w *watcher) handleCommand(ctx context.Context, patterns []string, action func(ctx context.Context) error, events chan string) error {
+func (w *watcher) handleCommand(ctx context.Context, patterns []string, excludes []string, action func(ctx context.Context) error, events chan string) error {
 	hc := interp.HandlerCtx(ctx)
 	var t *tomb.Tomb
 	if !w.options.SkipInitial {
@@ -179,7 +186,7 @@ func (w *watcher) handleCommand(ctx context.Context, patterns []string, action f
 
 			if hasMatched {
 				excluded := false
-				for _, excludePath := range w.options.Exclude {
+				for _, excludePath := range excludes {
 					excluded, _ = doublestar.Match(excludePath, e)
 					if excluded {
 						break
