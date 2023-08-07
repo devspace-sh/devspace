@@ -1,11 +1,17 @@
 package pipelines
 
 import (
+	"bytes"
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/context/values"
-	"github.com/onsi/ginkgo/v2"
+	"io"
 	"os"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -158,6 +164,136 @@ var _ = DevSpaceDescribe("pipelines", func() {
 
 		framework.ExpectLocalFileContents("test.yaml", "Hello World\nHello World\nHello World\n")
 		framework.ExpectLocalFileContents("test2.yaml", "Hello World\nHello World\nHello World\n")
+
+		cancel()
+		err = <-done
+		if err != nil && err != context.Canceled {
+			framework.ExpectNoError(err)
+		}
+	})
+
+	ginkgo.It("should watch files with excludes, no ./", func(ctx context.Context) {
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/run_watch")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("pipelines")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.ExpectDeleteNamespace, kubeClient, ns)
+
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(ctx)
+		ginkgo.DeferCleanup(cancel)
+
+		output := &bytes.Buffer{}
+		multiWriter := io.MultiWriter(output, os.Stdout)
+		log := logpkg.NewStreamLogger(multiWriter, multiWriter, logrus.DebugLevel)
+
+		go func() {
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Pipeline: "no-dot-slash-exclude",
+				Ctx:      cancelCtx,
+				Log:      log,
+			}
+			err := devCmd.RunDefault(f)
+			if err != nil {
+				f.GetLog().Errorf("error: %v", err)
+			}
+			done <- err
+		}()
+
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(output.String()).Should(gomega.ContainSubstring("Start watching"))
+		}).
+			WithTimeout(5 * time.Second).
+			Should(gomega.Succeed())
+
+		err = os.WriteFile("foo1/test.txt", []byte("abc.txt"), 0777)
+		framework.ExpectNoError(err)
+
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(output.String()).Should(gomega.ContainSubstring("Restarting command because 'foo1/test.txt' has changed"))
+		}).
+			WithTimeout(5 * time.Second).
+			Should(gomega.Succeed())
+
+		err = os.WriteFile("foo2/test.txt", []byte("abc.txt"), 0777)
+		framework.ExpectNoError(err)
+
+		gomega.Consistently(func(g gomega.Gomega) {
+			g.Expect(output.String()).ShouldNot(gomega.ContainSubstring("Restarting command because 'foo2/test.txt' has changed"))
+		}).
+			WithTimeout(5 * time.Second).
+			Should(gomega.Succeed())
+
+		cancel()
+		err = <-done
+		if err != nil && err != context.Canceled {
+			framework.ExpectNoError(err)
+		}
+	})
+
+	ginkgo.It("should watch files with excludes, with ./", func(ctx context.Context) {
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/run_watch")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("pipelines")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.ExpectDeleteNamespace, kubeClient, ns)
+
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(ctx)
+		ginkgo.DeferCleanup(cancel)
+
+		output := &bytes.Buffer{}
+		multiWriter := io.MultiWriter(output, os.Stdout)
+		log := logpkg.NewStreamLogger(multiWriter, multiWriter, logrus.DebugLevel)
+
+		go func() {
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Pipeline: "dot-slash-exclude",
+				Ctx:      cancelCtx,
+				Log:      log,
+			}
+			err := devCmd.RunDefault(f)
+			if err != nil {
+				f.GetLog().Errorf("error: %v", err)
+			}
+			done <- err
+		}()
+
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(output.String()).Should(gomega.ContainSubstring("Start watching"))
+		}).
+			WithTimeout(5 * time.Second).
+			Should(gomega.Succeed())
+
+		err = os.WriteFile("foo1/test.txt", []byte("abc.txt"), 0777)
+		framework.ExpectNoError(err)
+
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(output.String()).Should(gomega.ContainSubstring("Restarting command because 'foo1/test.txt' has changed"))
+		}).
+			WithTimeout(5 * time.Second).
+			Should(gomega.Succeed())
+
+		err = os.WriteFile("foo2/test.txt", []byte("abc.txt"), 0777)
+		framework.ExpectNoError(err)
+
+		gomega.Consistently(func(g gomega.Gomega) {
+			g.Expect(output.String()).ShouldNot(gomega.ContainSubstring("Restarting command because 'foo2/test.txt' has changed"))
+		}).
+			WithTimeout(5 * time.Second).
+			Should(gomega.Succeed())
 
 		cancel()
 		err = <-done

@@ -18,4 +18,19 @@ pipelines:
 
   dev:
     run: |-
-      run_watch -p *.txt -- run_pipelines other3
+      run_watch -p '*.txt' -- run_pipelines other3
+
+  no-dot-slash-exclude: |-
+    run_watch \
+      --path 'foo*/**/*' \
+      --exclude 'foo2/*' \
+      -- date
+
+  dot-slash-exclude: |-
+    # Still triggers run_watch for foo2/bar2.txt changes
+    run_watch \
+      --path './foo*/**/*' \
+      --exclude './foo2/*' \
+      -- date
+      
+  
