@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/kubectl/pkg/cmd/version"
 	"mvdan.cc/sh/v3/expand"
 	jsonyaml "sigs.k8s.io/yaml"
 )
@@ -78,12 +80,18 @@ func NewKubectlBuilder(path string, config *latest.DeploymentConfig, kubeConfig 
 // to decide the --dry-run value
 var useOldDryRun = func(ctx context.Context, environ expand.Environ, dir, path string) (bool, error) {
 	// compare kubectl version for --dry-run flag value
-	out, err := command.Output(ctx, dir, environ, path, "version", "--client", "--short")
+	out, err := command.Output(ctx, dir, environ, path, "version", "--client", "--output=json")
 	if err != nil {
 		return false, err
 	}
 
-	v1, err := constraint.NewVersion(strings.TrimPrefix(strings.TrimSpace(string(out)), "Client Version: v"))
+	kubectlVersion := &version.Version{}
+	err = json.Unmarshal(out, kubectlVersion)
+	if err != nil {
+		return false, err
+	}
+
+	v1, err := constraint.NewVersion(strings.TrimPrefix(kubectlVersion.ClientVersion.GitVersion, "v"))
 	if err != nil {
 		return false, nil
 	}
