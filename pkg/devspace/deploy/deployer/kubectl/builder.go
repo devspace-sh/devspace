@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"encoding/json"
 
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -78,12 +79,29 @@ func NewKubectlBuilder(path string, config *latest.DeploymentConfig, kubeConfig 
 // to decide the --dry-run value
 var useOldDryRun = func(ctx context.Context, environ expand.Environ, dir, path string) (bool, error) {
 	// compare kubectl version for --dry-run flag value
-	out, err := command.Output(ctx, dir, environ, path, "version", "--client", "--short")
+	// --output=json provides the same output for versions 1.28 and <1.28
+	out, err := command.Output(ctx, dir, environ, path, "version", "--client", "--output=json")
 	if err != nil {
 		return false, err
 	}
 
-	v1, err := constraint.NewVersion(strings.TrimPrefix(strings.TrimSpace(string(out)), "Client Version: v"))
+    type ClientVersion struct {
+        GitVersion string `json:"gitVersion"`
+    }
+
+    type Data struct {
+        ClientVersion ClientVersion `json:"clientVersion"`
+    }
+
+    var parsedData Data
+    err = json.Unmarshal([]byte(out), &parsedData)
+    if err != nil {
+        return false, err
+    }
+
+    gitVersion := parsedData.ClientVersion.GitVersion
+
+	v1, err := constraint.NewVersion(strings.TrimPrefix(strings.TrimSpace(string(gitVersion)), "v"))
 	if err != nil {
 		return false, nil
 	}
