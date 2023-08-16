@@ -32,8 +32,15 @@ body .menu {
     background-color: #fff !important;
   }
 
+  [data-theme="dark"] &:not(:hover)::-webkit-scrollbar,
+  ,
+  [data-theme="dark"] &:not(:hover)::-webkit-scrollbar-thumb,
+  [data-theme="dark"] &:not(:hover)::-webkit-scrollbar-track {
+    background-color: #1b1b1d !important;
+  }
+
   .code-style {
-    font-family: Menlo, 'Courier New', monospace;
+    font-family: Menlo, "Courier New", monospace;
     word-spacing: -0.15em;
   }
 
@@ -45,7 +52,7 @@ body .menu {
   }
 
   .menu__list {
-    &, 
+    &,
     .menu__list-item,
     .menu__list-item-collapsible {
       position: relative;
@@ -53,7 +60,6 @@ body .menu {
       padding: 0;
       border-radius: 0;
     }
-
 
     /* 1st level links */
     .menu__link {
@@ -82,7 +88,7 @@ body .menu {
           border-radius: 4px;
           background-color: var(--ifm-color-info);
           transform: scale(0);
-          transition: .4s cubic-bezier(.4,0,.2,1);
+          transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* Background and dot for hover/active links */
@@ -102,7 +108,7 @@ body .menu {
         }
       }
     }
-  
+
     .menu__list {
       /* 2nd level links */
       .menu__link {
@@ -110,13 +116,13 @@ body .menu {
         font-weight: 400;
         transition: 0.3s;
       }
-  
+
       .menu__list {
         /* 3rd level links */
         .menu__link {
           padding-left: 4.3rem;
           font-size: 0.9em;
-          
+
           &:not(:hover) {
             opacity: 0.9;
           }
@@ -131,24 +137,24 @@ body .menu {
             text-decoration: none;
           }
         }
-  
+
         .menu__list {
           /* 4th level links */
           .menu__link {
             padding-left: 6rem;
             font-size: 0.9em;
-            
+
             &:not(.menu__link--active):not(:hover) {
               opacity: 0.6;
             }
           }
-  
+
           .menu__list {
             /* 5th level links */
             .menu__link {
               padding-left: 7.5rem;
               font-size: 0.85em;
-              
+
               &:not(.menu__link--active):not(:hover) {
                 opacity: 0.6;
               }
@@ -161,9 +167,13 @@ body .menu {
 }
 
 /* 1st level categories: add a grey background when expanded (= not collapsed) OR active */
-.theme-doc-sidebar-item-category-level-1.menu__list-item:not(.menu__list-item--collapsed),
+.theme-doc-sidebar-item-category-level-1.menu__list-item:not(
+    .menu__list-item--collapsed
+  ),
 .theme-doc-sidebar-item-category-level-1.menu__list-item.menu__list-item--active,
-.theme-doc-sidebar-item-category-level-2.menu__list-item:not(.menu__list-item--collapsed),
+.theme-doc-sidebar-item-category-level-2.menu__list-item:not(
+    .menu__list-item--collapsed
+  ),
 .theme-doc-sidebar-item-category-level-2.menu__list-item.menu__list-item--active {
   &,
   + .menu__list {
@@ -195,10 +205,12 @@ body .menu {
 }
 
 /* Extra padding bottom for expanded categories */
-.theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) > .menu__list {
+.theme-doc-sidebar-item-category:not(.menu__list-item--collapsed)
+  > .menu__list {
   padding-bottom: 1.2rem;
 
-  .theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) > .menu__list {
+  .theme-doc-sidebar-item-category:not(.menu__list-item--collapsed)
+    > .menu__list {
     padding-bottom: 0.4rem;
   }
 }
@@ -213,7 +225,8 @@ body .menu {
 }
 
 /* Add line between two expanded sections (grey once expanded) */
-.theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) + .theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) {
+.theme-doc-sidebar-item-category:not(.menu__list-item--collapsed)
+  + .theme-doc-sidebar-item-category:not(.menu__list-item--collapsed) {
   border-top-color: rgba(0, 0, 0, 0.1);
 }
 
