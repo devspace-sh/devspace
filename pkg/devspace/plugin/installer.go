@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/util/git"
 	"github.com/otiai10/copy"
+	"sigs.k8s.io/yaml"
 )
 
 type Installer interface {

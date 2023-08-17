@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
-
-	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
@@ -21,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 )
 
 var (

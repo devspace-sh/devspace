@@ -12,12 +12,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/utils/pkg/downloader/commands"
+	"sigs.k8s.io/yaml"
 )
 
 type client struct {

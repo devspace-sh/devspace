@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/patch"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
@@ -26,6 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"mvdan.cc/sh/v3/expand"
+	jsonyaml "sigs.k8s.io/yaml"
 )
 
 var Cachemanifest = "./.devspace/manifest-cache.yaml"
