@@ -12,7 +12,9 @@ module.exports = {
   projectName: 'devspace', // Usually your repo name.
   themeConfig: {
     colorMode: {
-      disableSwitch: true
+      defaultMode: "light",
+      disableSwitch: false,
+      respectPrefersColorScheme: true,
     },
     navbar: {
       //hideOnScroll: true,
