@@ -2,9 +2,10 @@ package helm
 
 import (
 	"fmt"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"os"
 	"path/filepath"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 
 	"github.com/loft-sh/devspace/assets"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -22,7 +23,7 @@ const ComponentChartFolder = "component-chart"
 // DevSpaceChartConfig is the config that holds the devspace chart information
 var DevSpaceChartConfig = &latest.ChartConfig{
 	Name:    "component-chart",
-	Version: "0.9.0",
+	Version: "0.9.1",
 	RepoURL: "https://charts.devspace.sh",
 }
 
