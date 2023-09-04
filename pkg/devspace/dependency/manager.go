@@ -2,6 +2,8 @@ package dependency
 
 import (
 	"bytes"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -11,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"strings"
 )
 
 // Manager can update, build, deploy and purge dependencies.
@@ -39,7 +40,7 @@ func NewManagerWithParser(ctx devspacecontext.Context, configOptions *loader.Con
 
 type ResolveOptions struct {
 	SkipDependencies []string
-	Dependencies     []string
+	Dependencies     []string // Same as DependencyOptions.Only, either should be renamed
 }
 
 func (m *manager) ResolveAll(ctx devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error) {
