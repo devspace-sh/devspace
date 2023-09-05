@@ -99,7 +99,7 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 		_, statErr := os.Stat(localPath)
 
 		// Update dependency
-		if !source.DisablePull || statErr != nil {
+		if !source.DisablePull && statErr != nil {
 			repo, err := git.NewGitCLIRepository(ctx, localPath)
 			if err != nil {
 				if statErr == nil {
