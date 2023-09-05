@@ -40,7 +40,7 @@ func NewManagerWithParser(ctx devspacecontext.Context, configOptions *loader.Con
 
 type ResolveOptions struct {
 	SkipDependencies []string
-	Dependencies     []string // Same as DependencyOptions.Only, either should be renamed
+	Dependencies     []string
 }
 
 func (m *manager) ResolveAll(ctx devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error) {
