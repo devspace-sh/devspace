@@ -18,6 +18,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/pkg/errors"
 )
 
@@ -117,6 +118,10 @@ func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, paren
 	}
 	for _, dependencyConfig := range dependencies {
 		if contains(options.SkipDependencies, dependencyConfig.Name) {
+			continue
+		}
+
+		if len(options.Dependencies) > 0 && !stringutil.Contains(options.Dependencies, dependencyConfig.Name) {
 			continue
 		}
 
