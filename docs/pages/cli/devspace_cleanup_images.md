@@ -4,7 +4,7 @@ sidebar_label: devspace cleanup images
 ---
 
 
-Deletes all locally created images from docker
+Deletes all locally created images from docker, which are defined in the `devspace.yaml`'s `images` section
 
 ## Synopsis
 
