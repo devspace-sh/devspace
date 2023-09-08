@@ -361,7 +361,8 @@
         },
         "updateImageTags": {
           "type": "boolean",
-          "description": "UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the\nimages section with their most recent built tag."
+          "description": "UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the\nimages section with their most recent built tag.",
+          "default": true
         },
         "namespace": {
           "type": "string",
@@ -752,6 +753,159 @@
       },
       "type": "object",
       "description": "HelmConfig defines the specific helm options used during deployment"
+    },
+    "HookConfig": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name is the name of the hook"
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Disabled can be used to disable the hook"
+        },
+        "events": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Events are the events when the hook should be executed"
+        },
+        "command": {
+          "type": "string",
+          "description": "Command is the base command that is either executed locally or in a remote container.\nCommand is mutually exclusive with other hook actions. In the case this is defined\ntogether with where.container, DevSpace will until the target container is running and\nonly then execute the command. If the container does not start in time, DevSpace will fail."
+        },
+        "args": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Args are additional arguments passed together with the command to execute."
+        },
+        "os": {
+          "type": "string",
+          "description": "If an operating system is defined, the hook will only be executed for the given os.\nAll supported golang OS types are supported and multiple can be combined with ','."
+        },
+        "upload": {
+          "$ref": "#/$defs/HookSyncConfig",
+          "description": "If Upload is specified, DevSpace will upload certain local files or folders into a\nremote container."
+        },
+        "download": {
+          "$ref": "#/$defs/HookSyncConfig",
+          "description": "Same as Upload, but with this option DevSpace will download files or folders from\na remote container."
+        },
+        "logs": {
+          "$ref": "#/$defs/HookLogsConfig",
+          "description": "If logs is defined will print the logs of the target container. This is useful for containers\nthat should finish like init containers or job pods. Otherwise this hook will never terminate."
+        },
+        "wait": {
+          "$ref": "#/$defs/HookWaitConfig",
+          "description": "If wait is defined the hook will wait until the matched pod or container is running or is terminated\nwith a certain exit code."
+        },
+        "background": {
+          "type": "boolean",
+          "description": "If true, the hook will be executed in the background."
+        },
+        "silent": {
+          "type": "boolean",
+          "description": "If true, the hook will not output anything to the standard out of DevSpace except\nfor the case when the hook fails, where DevSpace will show the error including\nthe captured output streams of the hook."
+        },
+        "container": {
+          "$ref": "#/$defs/HookContainer",
+          "description": "Container specifies where the hook should be run. If this is omitted DevSpace expects a\nlocal command hook."
+        }
+      },
+      "type": "object",
+      "required": [
+        "events"
+      ],
+      "description": "HookConfig defines a hook"
+    },
+    "HookContainer": {
+      "properties": {
+        "labelSelector": {
+          "patternProperties": {
+            ".*": {
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "description": "LabelSelector to select a container"
+        },
+        "pod": {
+          "type": "string",
+          "description": "Pod name to use"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Namespace to use"
+        },
+        "imageSelector": {
+          "type": "string",
+          "description": "ImageSelector to select a container"
+        },
+        "containerName": {
+          "type": "string",
+          "description": "ContainerName to use"
+        },
+        "wait": {
+          "type": "boolean",
+          "description": "Wait can be used to disable waiting"
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Timeout is how long to wait (in seconds) for the container to start. Default is 150 seconds.",
+          "default": 150
+        },
+        "once": {
+          "type": "boolean",
+          "description": "Once only executes an hook once in the container until it is restarted"
+        }
+      },
+      "type": "object",
+      "description": "HookContainer defines how to select one or more containers to execute a hook in"
+    },
+    "HookLogsConfig": {
+      "properties": {
+        "tailLines": {
+          "type": "integer",
+          "description": "If set, the number of lines from the end of the logs to show. If not specified,\nlogs are shown from the creation of the container"
+        }
+      },
+      "type": "object",
+      "description": "HookLogsConfig defines a hook logs config"
+    },
+    "HookSyncConfig": {
+      "properties": {
+        "localPath": {
+          "type": "string",
+          "description": "LocalPath to sync files from"
+        },
+        "containerPath": {
+          "type": "string",
+          "description": "ContainerPath to sync files to"
+        }
+      },
+      "type": "object",
+      "description": "HookSyncConfig defines a hook upload config"
+    },
+    "HookWaitConfig": {
+      "properties": {
+        "running": {
+          "type": "boolean",
+          "description": "If running is true, will wait until the matched containers are running. Can be used together with terminatedWithCode."
+        },
+        "terminatedWithCode": {
+          "type": "integer",
+          "description": "If terminatedWithCode is not nil, will wait until the matched containers are terminated with the given exit code.\nIf the container has exited with a different exit code, the hook will fail. Can be used together with running."
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "The amount of seconds to wait until the hook will fail. Defaults to 150 seconds."
+        }
+      },
+      "type": "object",
+      "description": "HookWaitConfig defines a hook wait config"
     },
     "Image": {
       "properties": {
@@ -2209,6 +2363,13 @@
     "require": {
       "$ref": "#/$defs/RequireConfig",
       "description": "Require defines what DevSpace, plugins and command versions are required to use this config and if a condition is not\nfulfilled, DevSpace will fail."
+    },
+    "hooks": {
+      "items": {
+        "$ref": "#/$defs/HookConfig"
+      },
+      "type": "array",
+      "description": "Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed\nin the order they are specified. They are deprecated and pipelines should be used instead."
     },
     "localRegistry": {
       "$ref": "#/$defs/LocalRegistryConfig",
