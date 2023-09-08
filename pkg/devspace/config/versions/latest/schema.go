@@ -1008,7 +1008,7 @@ type SSH struct {
 	// Enabled can be used to enable the ssh server within the container. By default,
 	// DevSpace will generate the required keys and create an entry in your ~/.ssh/config
 	// for this container that can be used via `ssh dev-config-name.dev-project-name.devspace`
-	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
 	// LocalHostname is the local ssh host to write to the ~/.ssh/config
 	LocalHostname string `yaml:"localHostname,omitempty" json:"localHostname,omitempty"`

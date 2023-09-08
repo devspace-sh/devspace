@@ -3,8 +3,6 @@ package ssh
 import (
 	"bytes"
 	"fmt"
-	"github.com/mgutz/ansi"
-	"github.com/mitchellh/go-homedir"
 	"io"
 	"path/filepath"
 	"strconv"
@@ -21,6 +19,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
+	"github.com/mgutz/ansi"
+	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	kubectlExec "k8s.io/client-go/util/exec"
@@ -35,7 +35,7 @@ func StartSSH(ctx devspacecontext.Context, devPod *latest.DevPod, selector targe
 	// init done array is used to track when sync was initialized
 	initDoneArray := []chan struct{}{}
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
-		if devContainer.SSH == nil {
+		if devContainer.SSH == nil || (devContainer.SSH.Enabled != nil && !*devContainer.SSH.Enabled) {
 			return true
 		}
 
