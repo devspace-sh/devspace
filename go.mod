@@ -22,7 +22,7 @@ require (
 	github.com/google/go-containerregistry v0.13.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/invopop/jsonschema v0.3.0
+	github.com/invopop/jsonschema v0.4.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/joho/godotenv v1.3.0
 	github.com/json-iterator/go v1.1.12

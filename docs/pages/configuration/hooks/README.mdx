@@ -3,6 +3,8 @@ title: Hooks
 sidebar_label: hooks
 ---
 
+import ConfigPartialHooks from '../_partials/v2beta1/hooks.mdx'
+
 DevSpace allows you to define certain actions that should be executed during the pipeline. This makes it possible to customize the deployment and development process with DevSpace. The following actions can be executed with hooks:
 - Execute a command on the local machine (in a golang shell or directly on the system)
 - Execute a command in a container
@@ -274,3 +276,7 @@ DevSpace passes certain environment variables to the hook execution:
 - **DEVSPACE_HOOK_EVENT**: the event that has triggered the hook
 
 Depending on the hook there will be other context variables set that are prefixed with `DEVSPACE_HOOK_`. 
+
+## Config Reference
+
+<ConfigPartialHooks />

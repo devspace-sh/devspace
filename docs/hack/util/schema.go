@@ -182,10 +182,22 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 					fieldPartial = fmt.Sprintf(TemplateConfigField, true, "", headlinePrefix, fieldName, false, fieldType, "", "", anchorName, fieldSchema.Description, fieldPartial)
 				} else {
 					if fieldType == "boolean" {
-						fieldDefault = "false"
 						if required {
 							fieldDefault = "true"
 							required = false
+						} else {
+							fieldDefault = "false"
+							boolDefault, ok := fieldSchema.Default.(bool)
+							if ok && boolDefault {
+								fieldDefault = "true"
+							}
+						}
+					} else if fieldType == "integer" {
+						intDefault, ok := fieldSchema.Default.(int)
+						if ok {
+							fieldDefault = strconv.Itoa(intDefault)
+						} else {
+							fieldDefault = ""
 						}
 					} else {
 						fieldDefault, ok = fieldSchema.Default.(string)

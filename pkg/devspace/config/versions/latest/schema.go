@@ -118,7 +118,7 @@ type Config struct {
 
 	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
 	// in the order they are specified. They are deprecated and pipelines should be used instead.
-	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty" jsonschema:"-"`
+	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
 
 	// LocalRegistry specifies the configuration for a local image registry
 	LocalRegistry *LocalRegistryConfig `yaml:"localRegistry,omitempty" json:"localRegistry,omitempty"`
@@ -648,7 +648,7 @@ type DeploymentConfig struct {
 
 	// UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the
 	// images section with their most recent built tag.
-	UpdateImageTags *bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
+	UpdateImageTags *bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty" jsonschema:"default=true"`
 
 	// Namespace where to deploy this deployment
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -1470,8 +1470,8 @@ type HookContainer struct {
 	// Wait can be used to disable waiting
 	Wait *bool `yaml:"wait,omitempty" json:"wait,omitempty"`
 
-	// Timeout how long to wait
-	Timeout int64 `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	// Timeout is how long to wait (in seconds) for the container to start. Default is 150 seconds.
+	Timeout int64 `yaml:"timeout,omitempty" json:"timeout,omitempty" jsonschema:"default=150"`
 
 	// Once only executes an hook once in the container until it is restarted
 	Once *bool `yaml:"once,omitempty" json:"once,omitempty"`

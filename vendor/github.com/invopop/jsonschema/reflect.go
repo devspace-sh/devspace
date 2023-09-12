@@ -618,6 +618,8 @@ func (t *Schema) structKeywordsFromTags(f reflect.StructField, parent *Schema, p
 		t.numbericKeywords(tags)
 	case "array":
 		t.arrayKeywords(tags)
+	case "boolean":
+		t.booleanKeywords(tags)
 	}
 	extras := strings.Split(f.Tag.Get("jsonschema_extras"), ",")
 	t.extraKeywords(extras)
@@ -680,6 +682,24 @@ func (t *Schema) genericKeywords(tags []string, parent *Schema, propertyName str
 	}
 }
 
+// read struct tags for boolean type keyworks
+func (t *Schema) booleanKeywords(tags []string) {
+	for _, tag := range tags {
+		nameValue := strings.Split(tag, "=")
+		if len(nameValue) != 2 {
+			continue
+		}
+		name, val := nameValue[0], nameValue[1]
+		if name == "default" {
+			if val == "true" {
+				t.Default = true
+			} else if val == "false" {
+				t.Default = false
+			}
+		}
+	}
+}
+
 // read struct tags for string type keyworks
 func (t *Schema) stringKeywords(tags []string) {
 	for _, tag := range tags {
@@ -697,7 +717,7 @@ func (t *Schema) stringKeywords(tags []string) {
 				t.Pattern = val
 			case "format":
 				switch val {
-				case "date-time", "email", "hostname", "ipv4", "ipv6", "uri":
+				case "date-time", "email", "hostname", "ipv4", "ipv6", "uri", "uuid":
 					t.Format = val
 					break
 				}
