@@ -69,7 +69,7 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bo
 	}
 
 	// Ensure deployment config is there
-	deployCache, _ := ctx.Config().RemoteCache().GetDeployment(d.DeploymentConfig.Name)
+	deployCache, _ := ctx.Config().RemoteCache().GetDeployment(releaseName)
 
 	// Check values files for changes
 	helmOverridesHash := ""
@@ -158,14 +158,14 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bo
 		if rootName, ok := values.RootNameFrom(ctx.Context()); ok && !stringutil.Contains(deployCache.Projects, rootName) {
 			deployCache.Projects = append(deployCache.Projects, rootName)
 		}
-		ctx.Config().RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
+		ctx.Config().RemoteCache().SetDeployment(releaseName, deployCache)
 		return true, nil
 	}
 
 	if rootName, ok := values.RootNameFrom(ctx.Context()); ok && !stringutil.Contains(deployCache.Projects, rootName) {
 		deployCache.Projects = append(deployCache.Projects, rootName)
 	}
-	ctx.Config().RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
+	ctx.Config().RemoteCache().SetDeployment(releaseName, deployCache)
 	return false, nil
 }
 
@@ -191,7 +191,7 @@ func (d *DeployConfig) internalDeploy(ctx devspacecontext.Context, overwriteValu
 		return nil, nil
 	}
 
-	ctx.Log().Infof("Deploying chart %s (%s) with helm...", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name)
+	ctx.Log().Infof("Deploying chart %s (%s) with helm...", d.DeploymentConfig.Helm.Chart.Name, releaseName)
 	valuesOut, _ := yaml.Marshal(overwriteValues)
 	ctx.Log().Debugf("Deploying chart with values:\n %v\n", string(valuesOut))
 

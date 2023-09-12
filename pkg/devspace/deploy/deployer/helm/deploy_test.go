@@ -27,6 +27,7 @@ type deployTestCase struct {
 	// builtImages    map[string]string
 	releasesBefore []*helmtypes.Release
 	deployment     string
+	releaseName    string
 	chart          string
 	valuesFiles    []string
 	values         map[string]interface{}
@@ -82,6 +83,30 @@ func TestDeploy(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:       "Deploy one deployment with different release name",
+			deployment: "deploy2",
+			chart:      ".",
+			values: map[string]interface{}{
+				"val": "fromVal",
+			},
+			releaseName:      "deploy2-special",
+			expectedDeployed: true,
+			expectedCache: &remotecache.RemoteCache{
+				Deployments: []remotecache.DeploymentCache{
+					{
+						Name:                 "deploy2-special",
+						DeploymentConfigHash: "aca018bdc51747a41d18361a2a678bb64fd36f834d62303b538dcdbb50c5b410",
+						Helm: &remotecache.HelmCache{
+							Release:          "deploy2-special",
+							ReleaseNamespace: "testNamespace",
+							ReleaseRevision:  "1",
+							ValuesHash:       "efd6e101b768968a49f8dba46ef07785ac530ea9f75c4f9ca5733e223b6a4da1",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -106,6 +131,7 @@ func TestDeploy(t *testing.T) {
 					Chart: &latest.ChartConfig{
 						Name: testCase.chart,
 					},
+					ReleaseName: testCase.releaseName,
 					ValuesFiles: testCase.valuesFiles,
 					Values:      testCase.values,
 				},
