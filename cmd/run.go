@@ -250,10 +250,12 @@ func (cmd *RunCmd) LoadCommandsConfig(f factory.Factory, configLoader loader.Con
 	}
 
 	// verify client connectivity / authn / authz
-	_, err = client.KubeClient().Discovery().ServerVersion()
-	if err != nil {
-		log.Debugf("Unable to discover server version: %v", err)
-		client = nil
+	if client != nil {
+		_, err = client.KubeClient().Discovery().ServerVersion()
+		if err != nil {
+			log.Debugf("Unable to discover server version: %v", err)
+			client = nil
+		}
 	}
 
 	// Parse commands
