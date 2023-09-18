@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"mvdan.cc/sh/v3/expand"
 
 	"github.com/loft-sh/devspace/pkg/devspace/compose"
@@ -759,7 +760,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 	devConfig.DevImage = devImage
 
 	devConfig.SSH = &latest.SSH{
-		Enabled: true,
+		Enabled: ptr.Bool(true),
 	}
 
 	if devConfig.ProxyCommands == nil {

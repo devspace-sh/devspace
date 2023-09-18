@@ -1,7 +1,9 @@
 version: v2beta1
-name: ssh-simple
+name: ssh-variable
 vars:
   IMAGE: alpine
+  SSH:
+    value: true
 deployments:
   test:
     helm:
@@ -17,6 +19,7 @@ dev:
   test:
     imageSelector: ${IMAGE}
     ssh:
-      enabled: true
-      localHostname: test.ssh-simple.devspace
-      localPort: 10022
+      enabled: ${SSH}
+      localHostname: test.ssh-variable.devspace
+      localPort: 10023
+      remoteAddress: 0.0.0.0:8023

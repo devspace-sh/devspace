@@ -3,10 +3,10 @@ package basichandler
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"os"
 	"time"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	enginecommands "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler/commands"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"github.com/loft-sh/devspace/pkg/util/log"
