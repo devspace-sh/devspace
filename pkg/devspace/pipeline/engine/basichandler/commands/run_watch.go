@@ -30,6 +30,15 @@ type RunWatchOptions struct {
 }
 
 func RunWatch(ctx context.Context, args []string, handler types2.ExecHandler, log log.Logger) error {
+	command := []string{}
+
+	// Separately handle the `--` catchall flag
+	// in order to have clean arguments for the parsing below
+	commandINdex := indexOf("--", args)
+	if commandINdex > 0 {
+		command = args[commandINdex+1:]
+	}
+
 	options := &RunWatchOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
@@ -41,10 +50,15 @@ func RunWatch(ctx context.Context, args []string, handler types2.ExecHandler, lo
 	if len(args) == 0 {
 		return fmt.Errorf("usage: run_watch --path MY_PATH -- my_command")
 	}
+	if len(args) > len(command) {
+		// if we have more args left thant the one after "--" then we have some invalid flags inside
+		return fmt.Errorf("invalid flags: %v, usage: run_watch --path MY_PATH --path 'MY/**/GLOB*/PATH' -- my_command", command)
+	}
 
 	w := &watcher{
 		options: *options,
 	}
+
 	return w.Watch(ctx, func(ctx context.Context) error {
 		return handler.ExecHandler(ctx, args)
 	}, log)
@@ -231,4 +245,13 @@ func (w *watcher) startCommand(ctx context.Context, action func(ctx context.Cont
 		return action(tombCtx)
 	})
 	return t
+}
+
+func indexOf(element string, data []string) int {
+	for k, v := range data {
+		if element == v {
+			return k
+		}
+	}
+	return -1
 }
