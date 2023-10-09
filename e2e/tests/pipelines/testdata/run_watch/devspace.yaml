@@ -32,5 +32,9 @@ pipelines:
       --path './foo*/**/*' \
       --exclude './foo2/*' \
       -- date
-      
-  
+
+  unquoted-glob: |-
+    # Still triggers run_watch for foo2/bar2.txt changes
+    run_watch \
+      --path **/* \
+      -- date
