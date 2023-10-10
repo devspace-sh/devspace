@@ -301,6 +301,34 @@ var _ = DevSpaceDescribe("pipelines", func() {
 			framework.ExpectNoError(err)
 		}
 	})
+	ginkgo.It("should fail to watch files with unquoted globbing", func(ctx context.Context) {
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/run_watch")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("pipelines")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.ExpectDeleteNamespace, kubeClient, ns)
+
+		cancelCtx, cancel := context.WithCancel(ctx)
+		ginkgo.DeferCleanup(cancel)
+
+		output := &bytes.Buffer{}
+		multiWriter := io.MultiWriter(output, os.Stdout)
+		log := logpkg.NewStreamLogger(multiWriter, multiWriter, logrus.DebugLevel)
+
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "unquoted-glob",
+			Ctx:      cancelCtx,
+			Log:      log,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectError(err)
+	})
 
 	ginkgo.It("should use --set and --set-string values from run_pipelines command", func() {
 		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/run_pipelines")

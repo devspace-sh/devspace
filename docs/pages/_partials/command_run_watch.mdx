@@ -12,7 +12,16 @@ run_watch --path [MY_PATH] -- [my_command]
 
 ### `--path`, `-p`
 
-The paths to watch. Can be patterns in the form of `./**/my-file.txt`.
+The paths to watch. Can be patterns in the form of `"./**/my-file.txt"`.
+
+Please note that globgs need to be quoted in order to avoid them being expanded
+by your shell, for example:
+
+
+```
+run_watch --path "**/*.go" -- devspace dev
+```
+
 
 ```
 ```
