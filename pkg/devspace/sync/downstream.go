@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"google.golang.org/grpc"
 
 	"github.com/fujiwara/shapeio"
 	"github.com/pkg/errors"
@@ -27,6 +28,7 @@ type downstream struct {
 	client remote.DownstreamClient
 
 	ignoreMatcher ignoreparser.IgnoreParser
+	conn          *grpc.ClientConn
 
 	unarchiver *Unarchiver
 }
@@ -71,6 +73,7 @@ func newDownstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*do
 		client:        remote.NewDownstreamClient(conn),
 		ignoreMatcher: ignoreMatcher,
 		unarchiver:    NewUnarchiver(sync, false, sync.log),
+		conn:          conn,
 	}, nil
 }
 

@@ -415,6 +415,9 @@ func (s *Sync) Stop(fatalError error) {
 			if s.upstream.reader != nil {
 				s.upstream.reader.Close()
 			}
+			if s.upstream.conn != nil {
+				s.upstream.conn.Close()
+			}
 		}
 
 		if s.downstream != nil {
@@ -423,6 +426,9 @@ func (s *Sync) Stop(fatalError error) {
 			}
 			if s.downstream.reader != nil {
 				s.downstream.reader.Close()
+			}
+			if s.downstream.conn != nil {
+				s.downstream.conn.Close()
 			}
 		}
 
