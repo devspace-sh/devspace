@@ -22,9 +22,10 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"google.golang.org/grpc"
 
-	"github.com/loft-sh/utils/pkg/command"
 	"github.com/loft-sh/notify"
+	"github.com/loft-sh/utils/pkg/command"
 
 	"github.com/bmatcuk/doublestar"
 	"github.com/fujiwara/shapeio"
@@ -57,6 +58,8 @@ type upstream struct {
 	initialSyncChanges        []string
 	initialSyncCompleted      bool
 	initialSyncTouchOnce      sync.Once
+
+	conn *grpc.ClientConn
 }
 
 const (
@@ -111,6 +114,8 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 		client: remote.NewUpstreamClient(conn),
 
 		ignoreMatcher: ignoreMatcher,
+
+		conn: conn,
 	}, nil
 }
 

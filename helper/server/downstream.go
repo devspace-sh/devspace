@@ -4,9 +4,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"github.com/loft-sh/devspace/helper/util/pingtimeout"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
-	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"io"
 	"log"
 	"os"
@@ -14,6 +11,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/helper/util/pingtimeout"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
