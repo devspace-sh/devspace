@@ -321,7 +321,7 @@ func (d *DeployConfig) buildManifests(ctx devspacecontext.Context, manifest stri
 	}
 
 	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize && d.isKustomizeInstalled(ctx.Context(), ctx.WorkingDir(), kustomizePath) {
-		return NewKustomizeBuilder(kustomizePath, d.DeploymentConfig, ctx.Log()).Build(ctx.Context(), ctx.Environ(), ctx.WorkingDir(), manifest)
+		return NewKustomizeBuilder(kustomizePath, d.DeploymentConfig, ctx.Log()).Build(ctx.Context(), ctx.Environ(), ctx.WorkingDir(), ctx.KubeClient().Namespace(), manifest)
 	}
 
 	raw, err := ctx.KubeClient().KubeConfigLoader().LoadRawConfig()
@@ -334,7 +334,7 @@ func (d *DeployConfig) buildManifests(ctx devspacecontext.Context, manifest stri
 	}
 
 	// Build with kubectl
-	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, *copied).Build(ctx.Context(), ctx.Environ(), ctx.WorkingDir(), manifest)
+	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, *copied).Build(ctx.Context(), ctx.Environ(), ctx.WorkingDir(), ctx.KubeClient().Namespace(), manifest)
 }
 
 func (d *DeployConfig) isKustomizeInstalled(ctx context.Context, dir, path string) bool {

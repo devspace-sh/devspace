@@ -25,7 +25,7 @@ import (
 
 // Builder is the manifest builder interface
 type Builder interface {
-	Build(ctx context.Context, environ expand.Environ, dir, manifest string) ([]*unstructured.Unstructured, error)
+	Build(ctx context.Context, environ expand.Environ, dir, namespace string, manifest string) ([]*unstructured.Unstructured, error)
 }
 
 type kustomizeBuilder struct {
@@ -42,7 +42,7 @@ func NewKustomizeBuilder(path string, config *latest.DeploymentConfig, log log.L
 	}
 }
 
-func (k *kustomizeBuilder) Build(ctx context.Context, environ expand.Environ, dir, manifest string) ([]*unstructured.Unstructured, error) {
+func (k *kustomizeBuilder) Build(ctx context.Context, environ expand.Environ, dir, namespace string, manifest string) ([]*unstructured.Unstructured, error) {
 	args := []string{"build", manifest}
 	args = append(args, k.config.Kubectl.KustomizeArgs...)
 
@@ -108,7 +108,7 @@ var useOldDryRun = func(ctx context.Context, environ expand.Environ, dir, path s
 	return false, nil
 }
 
-func (k *kubectlBuilder) Build(ctx context.Context, environ expand.Environ, dir, manifest string) ([]*unstructured.Unstructured, error) {
+func (k *kubectlBuilder) Build(ctx context.Context, environ expand.Environ, dir, namespace string, manifest string) ([]*unstructured.Unstructured, error) {
 	tempFile, err := os.CreateTemp("", "")
 	if err != nil {
 		return nil, err
@@ -135,9 +135,9 @@ func (k *kubectlBuilder) Build(ctx context.Context, environ expand.Environ, dir,
 	}
 
 	if uodr {
-		args = append(args, "--dry-run", "--output", "yaml", "--validate=false")
+		args = append(args, "--dry-run", "--output", "yaml", "--validate=false", "-n", namespace)
 	} else {
-		args = append(args, "--dry-run=client", "--output", "yaml", "--validate=false")
+		args = append(args, "--dry-run=client", "--output", "yaml", "--validate=false", "-n", namespace)
 	}
 
 	if k.config.Kubectl.Kustomize != nil && *k.config.Kubectl.Kustomize {
