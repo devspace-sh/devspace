@@ -120,7 +120,7 @@ github.com/docker/distribution/registry/client/auth/challenge
 github.com/docker/distribution/registry/client/transport
 github.com/docker/distribution/registry/storage/cache
 github.com/docker/distribution/registry/storage/cache/memory
-# github.com/docker/docker v23.0.0-rc.1+incompatible
+# github.com/docker/docker v24.0.7+incompatible
 ## explicit
 github.com/docker/docker/api
 github.com/docker/docker/api/types
@@ -147,7 +147,9 @@ github.com/docker/docker/pkg/idtools
 github.com/docker/docker/pkg/ioutils
 github.com/docker/docker/pkg/jsonmessage
 github.com/docker/docker/pkg/longpath
+github.com/docker/docker/pkg/meminfo
 github.com/docker/docker/pkg/pools
+github.com/docker/docker/pkg/process
 github.com/docker/docker/pkg/progress
 github.com/docker/docker/pkg/streamformatter
 github.com/docker/docker/pkg/stringid
