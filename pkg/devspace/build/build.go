@@ -1,9 +1,10 @@
 package build
 
 import (
+	"strings"
+
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
 	"github.com/loft-sh/devspace/pkg/devspace/build/types"
@@ -98,16 +99,16 @@ func (c *controller) Build(ctx devspacecontext.Context, images []string, options
 
 			dockerClient, err := dockerclient.NewClient(ctx.Context(), ctx.Log())
 			if err == nil {
-				if imageConf.Kaniko != nil && imageConf.Kaniko.Namespace != "" && ctx.KubeClient().Namespace() != imageConf.Kaniko.Namespace {
-					err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, imageConf.Kaniko.Namespace, registryURL)
+				if imageConf.Kaniko != nil {
+					pullSecretNamespace := imageConf.Kaniko.Namespace
+					if pullSecretNamespace == "" {
+						pullSecretNamespace = ctx.KubeClient().Namespace()
+					}
+
+					err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, pullSecretNamespace, registryURL)
 					if err != nil {
 						ctx.Log().Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
 					}
-				}
-
-				err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, ctx.KubeClient().Namespace(), registryURL)
-				if err != nil {
-					ctx.Log().Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
 				}
 			}
 		}
