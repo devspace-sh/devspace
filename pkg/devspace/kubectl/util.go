@@ -3,10 +3,11 @@ package kubectl
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime"
 	"net"
 	"net/http"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -23,6 +24,7 @@ const (
 	minikubeProvider        = "minikube.sigs.k8s.io"
 	dockerDesktopContext    = "docker-desktop"
 	dockerForDesktopContext = "docker-for-desktop"
+	orbstackContext         = "orbstack"
 )
 
 // WaitStatus are the status to wait
@@ -216,6 +218,7 @@ func IsLocalKubernetes(kubeClient Client) bool {
 
 	context := kubeClient.CurrentContext()
 	if strings.HasPrefix(context, "kind-") ||
+		context == orbstackContext ||
 		context == dockerDesktopContext ||
 		context == dockerForDesktopContext {
 		return true
