@@ -417,23 +417,18 @@ var _ = DevSpaceDescribe("pipelines", func() {
 		err = devCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 	})
-})
 
-var _ = DevSpaceDescribe("pipelines_without_kubeconfig", func() {
-	initialDir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	// create a new factory
-	var (
-		f factory.Factory
-	)
 	ginkgo.It("should not panic on inalid kubeconfig", func() {
-		f = framework.NewDefaultFactory()
 		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/invalid_kubeconfig")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		origEnv := os.Getenv("KUBE_CONFIG")
+		defer os.Setenv("KUBE_CONFIG", origEnv)
+
+		os.Setenv("KUBE_CONFIG", "nonexistent.yaml")
+		newEnv := os.Getenv("KUBE_CONFIG")
+		framework.ExpectEqual(newEnv, "nonexistent.yaml")
 
 		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
