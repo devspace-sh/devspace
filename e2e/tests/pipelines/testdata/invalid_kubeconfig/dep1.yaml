@@ -1,0 +1,6 @@
+version: v2beta1
+name: dep1
+
+pipelines:
+  deploy: |-
+    echo "Hello World"
