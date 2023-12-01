@@ -336,6 +336,15 @@ var Functions = []Function{
 		IsGlobal:    true,
 	},
 	{
+		Name:        "is_in",
+		Description: "Returns exit code 0 if the value of the first argument can be found in the second argument (second argument being a blank-separated list of strings e.g `\"bananas apples peaches\"`)",
+		Args:        `[value-1] [value-2]`,
+		Handler:     basiccommands.IsIn,
+		Return:      reflect.Int.String(),
+		Group:       groupChecks,
+		IsGlobal:    true,
+	},
+	{
 		Name:        "is_os",
 		Description: `Returns exit code 0 if the current operating system equals the value provided as argument`,
 		Args:        `[os]`,
