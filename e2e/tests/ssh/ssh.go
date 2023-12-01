@@ -84,7 +84,7 @@ var _ = DevSpaceDescribe("ssh", func() {
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
-		ns, err := kubeClient.CreateNamespace("ssh")
+		ns, err := kubeClient.CreateNamespace("ssh-without-service")
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.ExpectDeleteNamespace, kubeClient, ns)
 
@@ -137,7 +137,7 @@ var _ = DevSpaceDescribe("ssh", func() {
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
-		ns, err := kubeClient.CreateNamespace("ssh")
+		ns, err := kubeClient.CreateNamespace("ssh-with-service")
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.ExpectDeleteNamespace, kubeClient, ns)
 
