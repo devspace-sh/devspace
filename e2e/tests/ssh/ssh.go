@@ -34,7 +34,7 @@ var _ = DevSpaceDescribe("ssh", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("devspace dev should start an SSH service", func(ctx context.Context) {
+	ginkgo.It("devspace dev should start an SSH service", func() {
 		tempDir, err := framework.CopyToTempDir("tests/ssh/testdata/ssh-simple")
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
@@ -79,7 +79,7 @@ var _ = DevSpaceDescribe("ssh", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("devspace dev should NOT start an SSH service when disabled with a variable", func(ctx context.Context) {
+	ginkgo.It("devspace dev should NOT start an SSH service when disabled with a variable", func() {
 		tempDir, err := framework.CopyToTempDir("tests/ssh/testdata/ssh-variable")
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
@@ -132,7 +132,7 @@ var _ = DevSpaceDescribe("ssh", func() {
 		framework.ExpectNoError(cmdErr)
 	})
 
-	ginkgo.It("devspace dev should start an SSH service when enabled with a variable", func(ctx context.Context) {
+	ginkgo.It("devspace dev should start an SSH service when enabled with a variable", func() {
 		tempDir, err := framework.CopyToTempDir("tests/ssh/testdata/ssh-variable")
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)

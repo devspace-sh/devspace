@@ -1,12 +1,13 @@
 version: v2beta1
 name: ssh-variable
 vars:
-  IMAGE: alpine
+  IMAGE: busybox
   SSH:
     value: true
 deployments:
-  test:
+  ssh-variable:
     helm:
+      displayOutput: true
       chart:
         name: component-chart
         repo: https://charts.devspace.sh
@@ -16,7 +17,7 @@ deployments:
             command: ["sleep"]
             args: ["999999999999"]
 dev:
-  test:
+  ssh-variable:
     imageSelector: ${IMAGE}
     ssh:
       enabled: ${SSH}

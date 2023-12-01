@@ -1,9 +1,9 @@
 version: v2beta1
 name: ssh-simple
 vars:
-  IMAGE: alpine
+  IMAGE: busybox
 deployments:
-  test:
+  ssh-simple:
     helm:
       chart:
         name: component-chart
@@ -14,7 +14,7 @@ deployments:
             command: ["sleep"]
             args: ["999999999999"]
 dev:
-  test:
+  ssh-simple:
     imageSelector: ${IMAGE}
     ssh:
       enabled: true
