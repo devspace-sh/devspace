@@ -78,11 +78,16 @@ func switchURLType(gitPath string) string {
 	return newGitURL
 }
 
-func DownloadDependency(ctx context.Context, workingDirectory string, source *latest.SourceConfig, log log.Logger) (configPath string, err error) {
+func DownloadDependency(ctx context.Context, workingDirectory string, source *latest.SourceConfig, log log.Logger, downloadedIds string[]) (configPath string, err error) {
 	downloadMutex.Lock()
 	defer downloadMutex.Unlock()
 
 	ID, err := GetDependencyID(source)
+	if contains(downloadedIds, ID) {
+		log.Debugf("Using depdendencies download cache for ", ID)
+		return "", nil
+	}
+
 	if err != nil {
 		return "", err
 	}
@@ -90,6 +95,7 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 	// Resolve source
 	var localPath string
 	if source.Git != "" {
+		fmt.Println("--- DownloadDependency", source.Git, source.Branch)
 		gitPath := strings.TrimSpace(source.Git)
 
 		_ = os.MkdirAll(DependencyFolderPath, 0755)
@@ -142,6 +148,8 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 					return "", errors.Wrap(err, "clone repository")
 				}
 			}
+
+			downloadedIds.append(??)
 			log.Debugf("Pulled %s", gitPath)
 		}
 	} else if source.Path != "" {
