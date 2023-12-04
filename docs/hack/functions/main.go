@@ -315,7 +315,6 @@ var Functions = []Function{
 		Handler:     commands.IsDependency,
 		Return:      reflect.Int.String(),
 		Group:       groupChecks,
-		IsGlobal:    true,
 	},
 	{
 		Name:        "is_empty",
