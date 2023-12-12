@@ -61,7 +61,8 @@ upx "${DEVSPACE_ROOT}/release/devspacehelper" #compress devspacehelper
 shasum -a 256 "${DEVSPACE_ROOT}/release/devspacehelper" > "${DEVSPACE_ROOT}/release/devspacehelper".sha256
 
 GOARCH=arm64 GOOS=linux go build -ldflags "-s -w -X github.com/loft-sh/devspace/helper/cmd.version=${VERSION}" -o "${DEVSPACE_ROOT}/release/devspacehelper-arm64" helper/main.go
-upx "${DEVSPACE_ROOT}/release/devspacehelper-arm64" #compress devspacehelper
+# FIXME: this is not working for any number of arguments/flags
+# upx "${DEVSPACE_ROOT}/release/devspacehelper-arm64" #compress devspacehelper
 shasum -a 256 "${DEVSPACE_ROOT}/release/devspacehelper-arm64" > "${DEVSPACE_ROOT}/release/devspacehelper-arm64".sha256
 
 # build bin data
