@@ -2,9 +2,9 @@ package cleanup
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/build/localregistry"
 
 	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/build/localregistry"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -110,7 +110,7 @@ func (cmd *localRegistryCmd) RunCleanupLocalRegistry(f factory.Factory, cobraCmd
 		if kerrors.IsNotFound(err) {
 			hasDeployment = false
 		} else {
-			return errors.Wrap(err, "clean up statefulset")
+			return errors.Wrap(err, "clean up deployment")
 		}
 	}
 
@@ -120,7 +120,7 @@ func (cmd *localRegistryCmd) RunCleanupLocalRegistry(f factory.Factory, cobraCmd
 		if kerrors.IsNotFound(err) {
 			hasService = false
 		} else {
-			return errors.Wrap(err, "clean up statefulset")
+			return errors.Wrap(err, "clean up service")
 		}
 	}
 
