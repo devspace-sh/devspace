@@ -68,8 +68,9 @@ func StartSync(ctx devspacecontext.Context, devPod *latest.DevPod, selector targ
 
 	// init done array is used to track when sync was initialized
 	initDoneArray := []chan struct{}{}
-	starter := sync.NewDelayedContainerStarter()
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		starter := sync.NewDelayedContainerStarter()
+
 		// make sure we add all the sync paths that need to wait for initial start
 		for _, syncConfig := range devContainer.Sync {
 			if syncConfig.StartContainer || (syncConfig.OnUpload != nil && syncConfig.OnUpload.RestartContainer) {
