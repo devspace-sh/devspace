@@ -123,7 +123,12 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 	}
 
 	// replace paths
-	if len(devPod.PersistPaths) > 0 {
+	persist := false
+	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		persist = len(devContainer.PersistPaths) > 0
+		return persist == false
+	})
+	if persist {
 		err := persistPaths(name, devPod, podTemplate)
 		if err != nil {
 			return nil, err
