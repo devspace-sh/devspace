@@ -67,4 +67,4 @@ jobs:
     - name: e2e test
       working-directory: ./e2e
       run: |
-        go test -v -ginkgo.v -timeout 3600s
+        go test -v -ginkgo.v -ginkgo.fail-fast -timeout 3600s
