@@ -126,7 +126,7 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 	persist := false
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
 		persist = len(devContainer.PersistPaths) > 0
-		return persist == false
+		return !persist
 	})
 	if persist {
 		err := persistPaths(name, devPod, podTemplate)
