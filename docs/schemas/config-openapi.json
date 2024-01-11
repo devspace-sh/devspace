@@ -2259,6 +2259,11 @@
                 "type": "object"
               },
               {
+                "patternProperties": {
+                  ".*": {
+                    "$ref": "#/definitions/Config/$defs/Pipeline"
+                  }
+                },
                 "type": "object"
               },
               {
@@ -2306,6 +2311,11 @@
                 "type": "object"
               },
               {
+                "patternProperties": {
+                  ".*": {
+                    "$ref": "#/definitions/Config/$defs/Variable"
+                  }
+                },
                 "type": "object"
               },
               {
@@ -2326,6 +2336,11 @@
                 "type": "object"
               },
               {
+                "patternProperties": {
+                  ".*": {
+                    "$ref": "#/definitions/Config/$defs/CommandConfig"
+                  }
+                },
                 "type": "object"
               },
               {
