@@ -45,7 +45,7 @@ var _ = DevSpaceDescribe("ssh", func() {
 
 		// create a new dev command and start it
 		done := make(chan error)
-		cancelCtx, cancel := context.WithCancel(context.Background())
+		cancelCtx, cancel := context.WithCancel(ctx)
 		ginkgo.DeferCleanup(cancel)
 
 		go func() {
@@ -63,23 +63,31 @@ var _ = DevSpaceDescribe("ssh", func() {
 			done <- devCmd.RunDefault(f)
 		}()
 
-		// connect to the SSH server
+		// Wait for the dev session to start
 		gomega.Eventually(func(g gomega.Gomega) {
-			cmd := exec.Command("ssh", "test.ssh-simple.devspace", "ls")
-			err := cmd.Run()
+			_, err := os.ReadFile("started")
 			g.Expect(err).NotTo(gomega.HaveOccurred())
-
-			cancel()
 		}).
 			WithPolling(time.Second).
 			WithTimeout(time.Second * 60).
 			Should(gomega.Succeed())
 
+		// connect to the SSH server
+		gomega.Eventually(func(g gomega.Gomega) {
+			cmd := exec.Command("ssh", "test.ssh-simple.devspace", "ls")
+			err := cmd.Run()
+			g.Expect(err).NotTo(gomega.HaveOccurred())
+		}).
+			WithPolling(time.Second).
+			WithTimeout(time.Second * 60).
+			Should(gomega.Succeed())
+
+		cancel()
 		err = <-done
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("devspace dev should NOT start an SSH service when disabled with a variable", ginkgo.FlakeAttempts(3), func(ctx context.Context) {
+	ginkgo.It("devspace dev should NOT start an SSH service when disabled with a variable", func(ctx context.Context) {
 		tempDir, err := framework.CopyToTempDir("tests/ssh/testdata/ssh-variable")
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
@@ -90,7 +98,7 @@ var _ = DevSpaceDescribe("ssh", func() {
 
 		// create a new dev command and start it
 		done := make(chan error)
-		cancelCtx, cancel := context.WithCancel(context.Background())
+		cancelCtx, cancel := context.WithCancel(ctx)
 		ginkgo.DeferCleanup(cancel)
 
 		go func() {
@@ -110,6 +118,15 @@ var _ = DevSpaceDescribe("ssh", func() {
 			done <- devCmd.RunDefault(f)
 		}()
 
+		// Wait for the dev session to start
+		gomega.Eventually(func(g gomega.Gomega) {
+			_, err := os.ReadFile("started")
+			g.Expect(err).NotTo(gomega.HaveOccurred())
+		}).
+			WithPolling(time.Second).
+			WithTimeout(time.Second * 60).
+			Should(gomega.Succeed())
+
 		gomega.Eventually(func(g gomega.Gomega) {
 			cmd := exec.Command("ssh", "test.ssh-variable.devspace", "ls")
 			out, err := cmd.CombinedOutput()
@@ -121,13 +138,12 @@ var _ = DevSpaceDescribe("ssh", func() {
 					gomega.ContainSubstring("ssh: connect to host localhost port 10023"),
 				),
 			)
-
-			cancel()
 		}).
 			WithPolling(time.Second).
 			WithTimeout(time.Second * 60).
 			Should(gomega.Succeed())
 
+		cancel()
 		cmdErr := <-done
 		framework.ExpectNoError(cmdErr)
 	})
@@ -143,7 +159,7 @@ var _ = DevSpaceDescribe("ssh", func() {
 
 		// create a new dev command and start it
 		done := make(chan error)
-		cancelCtx, cancel := context.WithCancel(context.Background())
+		cancelCtx, cancel := context.WithCancel(ctx)
 		ginkgo.DeferCleanup(cancel)
 
 		go func() {
@@ -163,18 +179,26 @@ var _ = DevSpaceDescribe("ssh", func() {
 			done <- devCmd.RunDefault(f)
 		}()
 
-		// connect to the SSH server
+		// Wait for the dev session to start
 		gomega.Eventually(func(g gomega.Gomega) {
-			cmd := exec.Command("ssh", "test.ssh-variable.devspace", "ls")
-			err := cmd.Run()
+			_, err := os.ReadFile("started")
 			g.Expect(err).NotTo(gomega.HaveOccurred())
-
-			cancel()
 		}).
 			WithPolling(time.Second).
 			WithTimeout(time.Second * 60).
 			Should(gomega.Succeed())
 
+		// connect to the SSH server
+		gomega.Eventually(func(g gomega.Gomega) {
+			cmd := exec.Command("ssh", "test.ssh-variable.devspace", "ls")
+			err := cmd.Run()
+			g.Expect(err).NotTo(gomega.HaveOccurred())
+		}).
+			WithPolling(time.Second).
+			WithTimeout(time.Second * 60).
+			Should(gomega.Succeed())
+
+		cancel()
 		cmdErr := <-done
 		framework.ExpectNoError(cmdErr)
 	})
