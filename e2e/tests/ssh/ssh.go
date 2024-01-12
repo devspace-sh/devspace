@@ -87,7 +87,7 @@ var _ = DevSpaceDescribe("ssh", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("devspace dev should NOT start an SSH service when disabled with a variable", ginkgo.FlakeAttempts(3), func(ctx context.Context) {
+	ginkgo.It("devspace dev should NOT start an SSH service when disabled with a variable", func(ctx context.Context) {
 		tempDir, err := framework.CopyToTempDir("tests/ssh/testdata/ssh-variable")
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
