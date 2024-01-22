@@ -311,7 +311,8 @@ func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devConta
 
 	// should we inject devspace restart helper?
 	if injectRestartHelper {
-		annotationName := restartHelperAnnotation + strings.ToLower(hash.String(container.Name))[0:10]
+		containerHash := strings.ToLower(hash.String(container.Name))[0:10]
+		annotationName := restartHelperAnnotation + containerHash
 		if podTemplate.Annotations == nil {
 			podTemplate.Annotations = map[string]string{}
 		}
