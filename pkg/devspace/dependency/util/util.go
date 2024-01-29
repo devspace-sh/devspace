@@ -96,10 +96,10 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 		_ = os.MkdirAll(DependencyFolderPath, 0755)
 		localPath = filepath.Join(DependencyFolderPath, ID)
 
-		// Check if dependency exists
+		// Check if dependency are cached locally
 		_, statErr := os.Stat(localPath)
 
-		// Check git cli
+		// Verify git cli works
 		repo, err := git.NewGitCLIRepository(ctx, localPath)
 		if err != nil {
 			if statErr == nil {
@@ -121,6 +121,7 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 
 		// Update dependency
 		if statErr != nil {
+			// Git clone
 			err = repo.Clone(ctx, gitCloneOptions)
 
 			if err != nil {
@@ -143,6 +144,7 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 
 			log.Debugf("Cloned %s", gitPath)
 		} else if !source.DisablePull {
+			// Git pull
 			repo.Pull(ctx, gitCloneOptions)
 			log.Debugf("Pulled %s", gitPath)
 		}

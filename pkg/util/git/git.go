@@ -94,6 +94,7 @@ func (gr *GitCLIRepository) Clone(ctx context.Context, options CloneOptions) err
 }
 
 func (gr *GitCLIRepository) Pull(ctx context.Context, options CloneOptions) error {
+	// Skip pulling if a specific commit id is cloned, since no new commits is possible then
 	if options.Commit == "" {
 		out, err := command.CombinedOutput(ctx, gr.LocalPath, expand.ListEnviron(os.Environ()...), "git", "-C", gr.LocalPath, "pull")
 		if err != nil {
