@@ -119,9 +119,8 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 			DisableShallow: source.DisableShallow,
 		}
 
-		// Update dependency
+		// Git clone
 		if statErr != nil {
-			// Git clone
 			err = repo.Clone(ctx, gitCloneOptions)
 
 			if err != nil {
@@ -143,11 +142,14 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 			}
 
 			log.Debugf("Cloned %s", gitPath)
-		} else if !source.DisablePull {
-			// Git pull
-			repo.Pull(ctx, gitCloneOptions)
+		}
+
+		// Git pull
+		if !source.DisablePull && source.Revision == "" {
+			repo.Pull(ctx)
 			log.Debugf("Pulled %s", gitPath)
 		}
+
 		// Resolve local source
 	} else if source.Path != "" {
 		if isURL(source.Path) {
