@@ -92,8 +92,9 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 		return "", err
 	}
 
-	// Resolve source
 	var localPath string
+
+	// Resolve git source
 	if source.Git != "" {
 		fmt.Println("--- DownloadDependency", source.Git, source.Branch)
 		gitPath := strings.TrimSpace(source.Git)
@@ -101,42 +102,39 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 		_ = os.MkdirAll(DependencyFolderPath, 0755)
 		localPath = filepath.Join(DependencyFolderPath, ID)
 
-		// Check if dependency exists
+		// Check if dependency are cached locally
 		_, statErr := os.Stat(localPath)
 
-		// Update dependency
-		if !source.DisablePull && statErr != nil {
-			repo, err := git.NewGitCLIRepository(ctx, localPath)
-			if err != nil {
-				if statErr == nil {
-					log.Warnf("Error creating git cli: %v", err)
-					return getDependencyConfigPath(localPath, source)
-				}
-
-				return "", err
+		// Verify git cli works
+		repo, err := git.NewGitCLIRepository(ctx, localPath)
+		if err != nil {
+			if statErr == nil {
+				log.Warnf("Error creating git cli: %v", err)
+				return getDependencyConfigPath(localPath, source)
 			}
+			return "", err
+		}
 
-			err = repo.Clone(ctx, git.CloneOptions{
-				URL:            gitPath,
-				Tag:            source.Tag,
-				Branch:         source.Branch,
-				Commit:         source.Revision,
-				Args:           source.CloneArgs,
-				DisableShallow: source.DisableShallow,
-			})
+		// Create git clone options
+		var gitCloneOptions = git.CloneOptions{
+			URL:            gitPath,
+			Tag:            source.Tag,
+			Branch:         source.Branch,
+			Commit:         source.Revision,
+			Args:           source.CloneArgs,
+			DisableShallow: source.DisableShallow,
+		}
+
+		// Git clone
+		if statErr != nil {
+			err = repo.Clone(ctx, gitCloneOptions)
 
 			if err != nil {
 				log.Warn("Error cloning repo: ", err)
-				newGitURL := switchURLType(gitPath)
-				log.Infof("Switching URL from %s to %s and will try cloning again", gitPath, newGitURL)
-				err = repo.Clone(ctx, git.CloneOptions{
-					URL:            newGitURL,
-					Tag:            source.Tag,
-					Branch:         source.Branch,
-					Commit:         source.Revision,
-					Args:           source.CloneArgs,
-					DisableShallow: source.DisableShallow,
-				})
+
+				gitCloneOptions.URL = switchURLType(gitPath)
+				log.Infof("Switching URL from %s to %s and will try cloning again", gitPath, gitCloneOptions.URL)
+				err = repo.Clone(ctx, gitCloneOptions)
 
 				if err != nil {
 					log.Warn("Failed to clone repo with both HTTPS and SSH URL. Please make sure if your git login or ssh setup is correct.")
@@ -150,8 +148,17 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 			}
 
 			downloadedIds.append(??)
+
+			log.Debugf("Cloned %s", gitPath)
+		}
+
+		// Git pull
+		if !source.DisablePull && source.Revision == "" {
+			repo.Pull(ctx)
 			log.Debugf("Pulled %s", gitPath)
 		}
+
+		// Resolve local source
 	} else if source.Path != "" {
 		if isURL(source.Path) {
 			localPath = filepath.Join(DependencyFolderPath, ID)

@@ -59,7 +59,7 @@ func (gr *GitCLIRepository) Clone(ctx context.Context, options CloneOptions) err
 			args = append(args, "--branch", options.Tag)
 		}
 
-		// do a shallow clone by default
+		// Do a shallow clone by default
 		if options.Commit == "" && !options.DisableShallow {
 			args = append(args, "--depth", "1")
 		}
@@ -76,7 +76,7 @@ func (gr *GitCLIRepository) Clone(ctx context.Context, options CloneOptions) err
 			return errors.Errorf("Error running 'git %s': %v -> %s", strings.Join(args, " "), err, string(out))
 		}
 
-		// checkout the commit if necessary
+		// Checkout the commit if necessary
 		if options.Commit != "" {
 			out, err := command.CombinedOutput(ctx, gr.LocalPath, expand.ListEnviron(os.Environ()...), "git", "-C", gr.LocalPath, "checkout", options.Commit)
 			if err != nil {
@@ -87,13 +87,14 @@ func (gr *GitCLIRepository) Clone(ctx context.Context, options CloneOptions) err
 		return nil
 	}
 
-	// make sure the repo is up-to-date
-	if options.Commit == "" {
-		out, err := command.CombinedOutput(ctx, gr.LocalPath, expand.ListEnviron(os.Environ()...), "git", "-C", gr.LocalPath, "pull")
-		if err != nil {
-			return errors.Errorf("Error running 'git pull %s': %v -> %s", options.URL, err, string(out))
-		}
-	}
-
 	return nil
+}
+
+func (gr *GitCLIRepository) Pull(ctx context.Context) error {
+	out, err := command.CombinedOutput(ctx, gr.LocalPath, expand.ListEnviron(os.Environ()...), "git", "-C", gr.LocalPath, "pull")
+	if err != nil {
+		return errors.Errorf("Error running 'git pull %s': %v -> %s", gr.LocalPath, err, string(out))
+	} else {
+		return nil
+	}
 }

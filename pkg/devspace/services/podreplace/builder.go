@@ -123,7 +123,12 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 	}
 
 	// replace paths
-	if len(devPod.PersistPaths) > 0 {
+	persist := false
+	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		persist = len(devContainer.PersistPaths) > 0
+		return !persist
+	})
+	if persist {
 		err := persistPaths(name, devPod, podTemplate)
 		if err != nil {
 			return nil, err
@@ -306,7 +311,8 @@ func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devConta
 
 	// should we inject devspace restart helper?
 	if injectRestartHelper {
-		annotationName := restartHelperAnnotation + container.Name
+		containerHash := strings.ToLower(hash.String(container.Name))[0:10]
+		annotationName := restartHelperAnnotation + containerHash
 		if podTemplate.Annotations == nil {
 			podTemplate.Annotations = map[string]string{}
 		}
@@ -322,7 +328,7 @@ func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devConta
 		}
 		podTemplate.Annotations[annotationName] = restartHelperString
 
-		volumeName := "devspace-restart-" + container.Name
+		volumeName := "devspace-restart-" + containerHash
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, corev1.Volume{
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{

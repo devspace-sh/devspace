@@ -45,7 +45,7 @@ var _ = DevSpaceDescribe("ssh", func() {
 
 		// create a new dev command and start it
 		done := make(chan error)
-		cancelCtx, cancel := context.WithCancel(context.Background())
+		cancelCtx, cancel := context.WithCancel(ctx)
 		ginkgo.DeferCleanup(cancel)
 
 		go func() {
@@ -63,18 +63,26 @@ var _ = DevSpaceDescribe("ssh", func() {
 			done <- devCmd.RunDefault(f)
 		}()
 
-		// connect to the SSH server
+		// Wait for the dev session to start
 		gomega.Eventually(func(g gomega.Gomega) {
-			cmd := exec.Command("ssh", "test.ssh-simple.devspace", "ls")
-			err := cmd.Run()
+			_, err := os.ReadFile("started")
 			g.Expect(err).NotTo(gomega.HaveOccurred())
-
-			cancel()
 		}).
 			WithPolling(time.Second).
 			WithTimeout(time.Second * 60).
 			Should(gomega.Succeed())
 
+		// connect to the SSH server
+		gomega.Eventually(func(g gomega.Gomega) {
+			cmd := exec.Command("ssh", "test.ssh-simple.devspace", "ls")
+			err := cmd.Run()
+			g.Expect(err).NotTo(gomega.HaveOccurred())
+		}).
+			WithPolling(time.Second).
+			WithTimeout(time.Second * 60).
+			Should(gomega.Succeed())
+
+		cancel()
 		err = <-done
 		framework.ExpectNoError(err)
 	})
@@ -84,13 +92,13 @@ var _ = DevSpaceDescribe("ssh", func() {
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
-		ns, err := kubeClient.CreateNamespace("ssh")
+		ns, err := kubeClient.CreateNamespace("ssh-without-service")
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.ExpectDeleteNamespace, kubeClient, ns)
 
 		// create a new dev command and start it
 		done := make(chan error)
-		cancelCtx, cancel := context.WithCancel(context.Background())
+		cancelCtx, cancel := context.WithCancel(ctx)
 		ginkgo.DeferCleanup(cancel)
 
 		go func() {
@@ -110,6 +118,15 @@ var _ = DevSpaceDescribe("ssh", func() {
 			done <- devCmd.RunDefault(f)
 		}()
 
+		// Wait for the dev session to start
+		gomega.Eventually(func(g gomega.Gomega) {
+			_, err := os.ReadFile("started")
+			g.Expect(err).NotTo(gomega.HaveOccurred())
+		}).
+			WithPolling(time.Second).
+			WithTimeout(time.Second * 60).
+			Should(gomega.Succeed())
+
 		gomega.Eventually(func(g gomega.Gomega) {
 			cmd := exec.Command("ssh", "test.ssh-variable.devspace", "ls")
 			out, err := cmd.CombinedOutput()
@@ -121,13 +138,12 @@ var _ = DevSpaceDescribe("ssh", func() {
 					gomega.ContainSubstring("ssh: connect to host localhost port 10023"),
 				),
 			)
-
-			cancel()
 		}).
 			WithPolling(time.Second).
 			WithTimeout(time.Second * 60).
 			Should(gomega.Succeed())
 
+		cancel()
 		cmdErr := <-done
 		framework.ExpectNoError(cmdErr)
 	})
@@ -137,13 +153,13 @@ var _ = DevSpaceDescribe("ssh", func() {
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
-		ns, err := kubeClient.CreateNamespace("ssh")
+		ns, err := kubeClient.CreateNamespace("ssh-with-service")
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.ExpectDeleteNamespace, kubeClient, ns)
 
 		// create a new dev command and start it
 		done := make(chan error)
-		cancelCtx, cancel := context.WithCancel(context.Background())
+		cancelCtx, cancel := context.WithCancel(ctx)
 		ginkgo.DeferCleanup(cancel)
 
 		go func() {
@@ -163,18 +179,26 @@ var _ = DevSpaceDescribe("ssh", func() {
 			done <- devCmd.RunDefault(f)
 		}()
 
-		// connect to the SSH server
+		// Wait for the dev session to start
 		gomega.Eventually(func(g gomega.Gomega) {
-			cmd := exec.Command("ssh", "test.ssh-variable.devspace", "ls")
-			err := cmd.Run()
+			_, err := os.ReadFile("started")
 			g.Expect(err).NotTo(gomega.HaveOccurred())
-
-			cancel()
 		}).
 			WithPolling(time.Second).
 			WithTimeout(time.Second * 60).
 			Should(gomega.Succeed())
 
+		// connect to the SSH server
+		gomega.Eventually(func(g gomega.Gomega) {
+			cmd := exec.Command("ssh", "test.ssh-variable.devspace", "ls")
+			err := cmd.Run()
+			g.Expect(err).NotTo(gomega.HaveOccurred())
+		}).
+			WithPolling(time.Second).
+			WithTimeout(time.Second * 60).
+			Should(gomega.Succeed())
+
+		cancel()
 		cmdErr := <-done
 		framework.ExpectNoError(cmdErr)
 	})
