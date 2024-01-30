@@ -145,21 +145,21 @@ func (p *pipeline) WaitDev() error {
 	p.m.Unlock()
 
 	// wait for children first
-	errors := []error{}
+	errs := []error{}
 	for _, child := range children {
 		err := child.WaitDev()
 		if err != nil {
-			errors = append(errors, err)
+			errs = append(errs, err)
 		}
 	}
 
 	// wait for dev pods to finish
 	err := p.devPodManager.Wait()
 	if err != nil {
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 
-	return utilerrors.NewAggregate(errors)
+	return utilerrors.NewAggregate(errs)
 }
 
 func (p *pipeline) Name() string {
@@ -425,7 +425,12 @@ func (p *pipeline) startNewDependency(ctx devspacecontext.Context, dependency ty
 func applyFlags(ctx devspacecontext.Context, pipeline *latest.Pipeline, setFlags []string) (devspacecontext.Context, error) {
 	newFlags := map[string]string{}
 	for _, flag := range pipeline.Flags {
-		newFlags[flag.Name] = fmt.Sprintf("%v", flag.Default)
+		val, err := GetDefaultValue(flag)
+		if err != nil {
+			return nil, err
+		}
+
+		newFlags[flag.Name] = fmt.Sprintf("%v", val)
 	}
 	for _, v := range setFlags {
 		splitted := strings.Split(v, "=")
