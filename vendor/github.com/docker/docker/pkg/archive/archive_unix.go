@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package archive // import "github.com/docker/docker/pkg/archive"
 
@@ -35,16 +34,8 @@ func getWalkRoot(srcPath string, include string) string {
 	return strings.TrimSuffix(srcPath, string(filepath.Separator)) + string(filepath.Separator) + include
 }
 
-// CanonicalTarNameForPath returns platform-specific filepath
-// to canonical posix-style path for tar archival. p is relative
-// path.
-func CanonicalTarNameForPath(p string) string {
-	return p // already unix-style
-}
-
 // chmodTarEntry is used to adjust the file permissions used in tar header based
 // on the platform the archival is done.
-
 func chmodTarEntry(perm os.FileMode) os.FileMode {
 	return perm // noop for unix as golang APIs provide perm bits correctly
 }
@@ -91,7 +82,7 @@ func getFileUIDGID(stat interface{}) (idtools.Identity, error) {
 // handleTarTypeBlockCharFifo is an OS-specific helper function used by
 // createTarFile to handle the following types of header: Block; Char; Fifo
 func handleTarTypeBlockCharFifo(hdr *tar.Header, path string) error {
-	mode := uint32(hdr.Mode & 07777)
+	mode := uint32(hdr.Mode & 0o7777)
 	switch hdr.Typeflag {
 	case tar.TypeBlock:
 		mode |= unix.S_IFBLK

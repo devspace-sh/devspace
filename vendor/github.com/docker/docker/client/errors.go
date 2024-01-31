@@ -31,20 +31,10 @@ func ErrorConnectionFailed(host string) error {
 	return errConnectionFailed{host: host}
 }
 
-// Deprecated: use the errdefs.NotFound() interface instead. Kept for backward compatibility
-type notFound interface {
-	error
-	NotFound() bool
-}
-
 // IsErrNotFound returns true if the error is a NotFound error, which is returned
-// by the API when some object is not found.
+// by the API when some object is not found. It is an alias for [errdefs.IsNotFound].
 func IsErrNotFound(err error) bool {
-	if errdefs.IsNotFound(err) {
-		return true
-	}
-	var e notFound
-	return errors.As(err, &e)
+	return errdefs.IsNotFound(err)
 }
 
 type objectNotFoundError struct {
@@ -56,31 +46,6 @@ func (e objectNotFoundError) NotFound() {}
 
 func (e objectNotFoundError) Error() string {
 	return fmt.Sprintf("Error: No such %s: %s", e.object, e.id)
-}
-
-// IsErrUnauthorized returns true if the error is caused
-// when a remote registry authentication fails
-//
-// Deprecated: use errdefs.IsUnauthorized
-func IsErrUnauthorized(err error) bool {
-	return errdefs.IsUnauthorized(err)
-}
-
-type pluginPermissionDenied struct {
-	name string
-}
-
-func (e pluginPermissionDenied) Error() string {
-	return "Permission denied while installing plugin " + e.name
-}
-
-// IsErrNotImplemented returns true if the error is a NotImplemented error.
-// This is returned by the API when a requested feature has not been
-// implemented.
-//
-// Deprecated: use errdefs.IsNotImplemented
-func IsErrNotImplemented(err error) bool {
-	return errdefs.IsNotImplemented(err)
 }
 
 // NewVersionError returns an error if the APIVersion required

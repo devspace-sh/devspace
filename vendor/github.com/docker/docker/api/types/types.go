@@ -1,18 +1,14 @@
 package types // import "github.com/docker/docker/api/types"
 
 import (
-	"errors"
-	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
@@ -118,14 +114,8 @@ type ImageInspect struct {
 	// VirtualSize is the total size of the image including all layers it is
 	// composed of.
 	//
-	// In versions of Docker before v1.10, this field was calculated from
-	// the image itself and all of its parent images. Docker v1.10 and up
-	// store images self-contained, and no longer use a parent-chain, making
-	// this field an equivalent of the Size field.
-	//
-	// This field is kept for backward compatibility, but may be removed in
-	// a future version of the API.
-	VirtualSize int64 // TODO(thaJeztah): deprecate this field
+	// Deprecated: this field is omitted in API v1.44, but kept for backward compatibility. Use Size instead.
+	VirtualSize int64 `json:"VirtualSize,omitempty"`
 
 	// GraphDriver holds information about the storage driver used to store the
 	// container's and image's filesystem.
@@ -236,151 +226,6 @@ type Version struct {
 	KernelVersion string `json:",omitempty"`
 	Experimental  bool   `json:",omitempty"`
 	BuildTime     string `json:",omitempty"`
-}
-
-// Commit holds the Git-commit (SHA1) that a binary was built from, as reported
-// in the version-string of external tools, such as containerd, or runC.
-type Commit struct {
-	ID       string // ID is the actual commit ID of external tool.
-	Expected string // Expected is the commit ID of external tool expected by dockerd as set at build time.
-}
-
-// Info contains response of Engine API:
-// GET "/info"
-type Info struct {
-	ID                 string
-	Containers         int
-	ContainersRunning  int
-	ContainersPaused   int
-	ContainersStopped  int
-	Images             int
-	Driver             string
-	DriverStatus       [][2]string
-	SystemStatus       [][2]string `json:",omitempty"` // SystemStatus is only propagated by the Swarm standalone API
-	Plugins            PluginsInfo
-	MemoryLimit        bool
-	SwapLimit          bool
-	KernelMemory       bool `json:",omitempty"` // Deprecated: kernel 5.4 deprecated kmem.limit_in_bytes
-	KernelMemoryTCP    bool `json:",omitempty"` // KernelMemoryTCP is not supported on cgroups v2.
-	CPUCfsPeriod       bool `json:"CpuCfsPeriod"`
-	CPUCfsQuota        bool `json:"CpuCfsQuota"`
-	CPUShares          bool
-	CPUSet             bool
-	PidsLimit          bool
-	IPv4Forwarding     bool
-	BridgeNfIptables   bool
-	BridgeNfIP6tables  bool `json:"BridgeNfIp6tables"`
-	Debug              bool
-	NFd                int
-	OomKillDisable     bool
-	NGoroutines        int
-	SystemTime         string
-	LoggingDriver      string
-	CgroupDriver       string
-	CgroupVersion      string `json:",omitempty"`
-	NEventsListener    int
-	KernelVersion      string
-	OperatingSystem    string
-	OSVersion          string
-	OSType             string
-	Architecture       string
-	IndexServerAddress string
-	RegistryConfig     *registry.ServiceConfig
-	NCPU               int
-	MemTotal           int64
-	GenericResources   []swarm.GenericResource
-	DockerRootDir      string
-	HTTPProxy          string `json:"HttpProxy"`
-	HTTPSProxy         string `json:"HttpsProxy"`
-	NoProxy            string
-	Name               string
-	Labels             []string
-	ExperimentalBuild  bool
-	ServerVersion      string
-	ClusterStore       string `json:",omitempty"` // Deprecated: host-discovery and overlay networks with external k/v stores are deprecated
-	ClusterAdvertise   string `json:",omitempty"` // Deprecated: host-discovery and overlay networks with external k/v stores are deprecated
-	Runtimes           map[string]Runtime
-	DefaultRuntime     string
-	Swarm              swarm.Info
-	// LiveRestoreEnabled determines whether containers should be kept
-	// running when the daemon is shutdown or upon daemon start if
-	// running containers are detected
-	LiveRestoreEnabled  bool
-	Isolation           container.Isolation
-	InitBinary          string
-	ContainerdCommit    Commit
-	RuncCommit          Commit
-	InitCommit          Commit
-	SecurityOptions     []string
-	ProductLicense      string               `json:",omitempty"`
-	DefaultAddressPools []NetworkAddressPool `json:",omitempty"`
-
-	// Warnings contains a slice of warnings that occurred  while collecting
-	// system information. These warnings are intended to be informational
-	// messages for the user, and are not intended to be parsed / used for
-	// other purposes, as they do not have a fixed format.
-	Warnings []string
-}
-
-// KeyValue holds a key/value pair
-type KeyValue struct {
-	Key, Value string
-}
-
-// NetworkAddressPool is a temp struct used by Info struct
-type NetworkAddressPool struct {
-	Base string
-	Size int
-}
-
-// SecurityOpt contains the name and options of a security option
-type SecurityOpt struct {
-	Name    string
-	Options []KeyValue
-}
-
-// DecodeSecurityOptions decodes a security options string slice to a type safe
-// SecurityOpt
-func DecodeSecurityOptions(opts []string) ([]SecurityOpt, error) {
-	so := []SecurityOpt{}
-	for _, opt := range opts {
-		// support output from a < 1.13 docker daemon
-		if !strings.Contains(opt, "=") {
-			so = append(so, SecurityOpt{Name: opt})
-			continue
-		}
-		secopt := SecurityOpt{}
-		split := strings.Split(opt, ",")
-		for _, s := range split {
-			kv := strings.SplitN(s, "=", 2)
-			if len(kv) != 2 {
-				return nil, fmt.Errorf("invalid security option %q", s)
-			}
-			if kv[0] == "" || kv[1] == "" {
-				return nil, errors.New("invalid empty security option")
-			}
-			if kv[0] == "name" {
-				secopt.Name = kv[1]
-				continue
-			}
-			secopt.Options = append(secopt.Options, KeyValue{Key: kv[0], Value: kv[1]})
-		}
-		so = append(so, secopt)
-	}
-	return so, nil
-}
-
-// PluginsInfo is a temp struct holding Plugins name
-// registered with docker daemon. It is used by Info struct
-type PluginsInfo struct {
-	// List of Volume plugins registered
-	Volume []string
-	// List of Network plugins registered
-	Network []string
-	// List of Authorization plugins registered
-	Authorization []string
-	// List of Log plugins registered
-	Log []string
 }
 
 // ExecStartCheck is a temp struct used by execStart
@@ -652,22 +497,6 @@ type NetworkInspectOptions struct {
 // Checkpoint represents the details of a checkpoint
 type Checkpoint struct {
 	Name string // Name is the name of the checkpoint
-}
-
-// Runtime describes an OCI runtime
-type Runtime struct {
-	Path string   `json:"path"`
-	Args []string `json:"runtimeArgs,omitempty"`
-
-	// This is exposed here only for internal use
-	// It is not currently supported to specify custom shim configs
-	Shim *ShimConfig `json:"-"`
-}
-
-// ShimConfig is used by runtime to configure containerd shims
-type ShimConfig struct {
-	Binary string
-	Opts   interface{}
 }
 
 // DiskUsageObject represents an object type used for disk usage query filtering.
