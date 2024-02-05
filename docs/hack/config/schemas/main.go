@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/invopop/jsonschema"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	varspkg "github.com/loft-sh/devspace/pkg/util/vars"
 )
 
 const jsonschemaFile = "devspace-schema.json"
@@ -28,13 +30,14 @@ func main() {
 		panic(err)
 	}
 
-	schema := r.Reflect(&latest.Config{})
+	openapiSchema := r.Reflect(&latest.Config{})
+	genSchema(openapiSchema, openapiSchemaFile)
 
-	genSchema(schema, jsonschemaFile)
-	genSchema(schema, openapiSchemaFile)
+	jsonSchema := r.Reflect(&latest.Config{})
+	genSchema(jsonSchema, jsonschemaFile, Expressions, Vars, CleanUp)
 }
 
-func genSchema(schema *jsonschema.Schema, schemaFile string) {
+func genSchema(schema *jsonschema.Schema, schemaFile string, visitors ...func(s *jsonschema.Schema)) {
 	isOpenAPISpec := schemaFile == openapiSchemaFile
 	prefix := ""
 	if isOpenAPISpec {
@@ -58,6 +61,13 @@ func genSchema(schema *jsonschema.Schema, schemaFile string) {
 	if ok {
 		commands.(*jsonschema.Schema).AnyOf = modifyAnyOf(commands)
 		commands.(*jsonschema.Schema).PatternProperties = nil
+	}
+
+	// Apply visitors
+	if len(visitors) > 0 {
+		for _, visitor := range visitors {
+			walk(schema, visitor)
+		}
 	}
 
 	schemaJSON, err := json.MarshalIndent(schema, prefix, "  ")
@@ -112,5 +122,106 @@ func modifyAnyOf(field interface{}) []*jsonschema.Schema {
 		{
 			Type: "object",
 		},
+	}
+}
+
+func walk(schema *jsonschema.Schema, visit func(s *jsonschema.Schema)) {
+	for _, name := range schema.Properties.Keys() {
+		property, ok := schema.Properties.Get(name)
+		if ok {
+			visit(property.(*jsonschema.Schema))
+		}
+	}
+
+	for _, definition := range schema.Definitions {
+		for _, name := range definition.Properties.Keys() {
+			property, ok := definition.Properties.Get(name)
+			if ok {
+				visit(property.(*jsonschema.Schema))
+			}
+		}
+	}
+}
+
+func Expressions(s *jsonschema.Schema) {
+	if s.Type == "" && s.Ref == "" {
+		return
+	}
+
+	if s.Type == "string" {
+		return
+	}
+
+	if len(s.AnyOf) > 0 {
+		s.AnyOf = append(s.AnyOf, &jsonschema.Schema{
+			Type:    "string",
+			Pattern: expression.ExpressionMatchRegex.String(),
+		})
+	} else {
+		if len(s.OneOf) == 0 {
+			// Preserve original type
+			if s.Ref != "" {
+				s.OneOf = append(s.OneOf, &jsonschema.Schema{
+					Ref: s.Ref,
+				})
+			} else {
+				s.OneOf = append(s.OneOf, &jsonschema.Schema{
+					Type:              s.Type,
+					Items:             s.Items,
+					PatternProperties: s.PatternProperties,
+				})
+			}
+		}
+		s.OneOf = append(s.OneOf, &jsonschema.Schema{
+			Type:    "string",
+			Pattern: expression.ExpressionMatchRegex.String(),
+		})
+	}
+}
+
+func Vars(s *jsonschema.Schema) {
+	if s.Type == "" {
+		return
+	}
+
+	if s.Type == "string" {
+		return
+	}
+
+	if s.Type == "object" {
+		return
+	}
+
+	if s.Type == "array" {
+		return
+	}
+
+	if len(s.AnyOf) > 0 {
+		s.AnyOf = append(s.AnyOf, &jsonschema.Schema{
+			Type:    "string",
+			Pattern: varspkg.VarMatchRegex.String(),
+		})
+	} else {
+		if len(s.OneOf) == 0 {
+			// Preserve original type
+			s.OneOf = append(s.OneOf, &jsonschema.Schema{
+				Type:              s.Type,
+				Items:             s.Items,
+				PatternProperties: s.PatternProperties,
+			})
+		}
+		s.OneOf = append(s.OneOf, &jsonschema.Schema{
+			Type:    "string",
+			Pattern: varspkg.VarMatchRegex.String(),
+		})
+	}
+}
+
+func CleanUp(s *jsonschema.Schema) {
+	if len(s.OneOf) > 0 || len(s.AnyOf) > 0 {
+		s.Ref = ""
+		s.Type = ""
+		s.Items = nil
+		s.PatternProperties = nil
 	}
 }
