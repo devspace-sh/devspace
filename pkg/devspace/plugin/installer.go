@@ -60,7 +60,7 @@ func (i *installer) DownloadBinary(metadataPath, version, binaryPath, outFile st
 	if err != nil {
 		return err
 	}
-	repo.Pull(context.Background())
+	_ = repo.Pull(context.Background())
 
 	return copy.Copy(filepath.Join(tempDir, binaryPath), outFile)
 }
@@ -133,7 +133,7 @@ func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
-	repo.Pull(context.Background())
+	_ = repo.Pull(context.Background())
 
 	out, err := os.ReadFile(filepath.Join(tempDir, pluginYaml))
 	if err != nil {

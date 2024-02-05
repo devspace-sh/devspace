@@ -146,7 +146,11 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 
 		// Git pull
 		if !source.DisablePull && source.Revision == "" {
-			repo.Pull(ctx)
+			err = repo.Pull(ctx)
+			if err != nil {
+				log.Warn(err)
+			}
+
 			log.Debugf("Pulled %s", gitPath)
 		}
 
