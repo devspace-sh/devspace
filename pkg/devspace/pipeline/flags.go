@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
@@ -31,18 +32,42 @@ func GetDefaultValue(pipelineFlag latest.PipelineFlag) (interface{}, error) {
 	case latest.PipelineFlagTypeInteger:
 		val := 0
 		if pipelineFlag.Default != nil {
-			val, ok = pipelineFlag.Default.(int)
-			if !ok {
-				return nil, fmt.Errorf("default is not an integer")
+			switch pipelineFlag.Default.(type) {
+			case float64:
+				floatVal, ok := pipelineFlag.Default.(float64)
+				if !ok {
+					return nil, fmt.Errorf("default is not an integer")
+				}
+				return int(floatVal), nil
+			case int:
+				intVal, ok := pipelineFlag.Default.(int)
+				if !ok {
+					return nil, fmt.Errorf("default is not an integer")
+				}
+				return intVal, nil
+			case string:
+				strVal, ok := pipelineFlag.Default.(string)
+				if !ok {
+					return nil, fmt.Errorf("default is not an integer")
+				}
+				intVal, err := strconv.ParseInt(strVal, 10, 0)
+				if err != nil {
+					return nil, err
+				}
+				return int(intVal), nil
 			}
+			return nil, fmt.Errorf("default is not an integer")
 		}
 		return val, nil
 	case latest.PipelineFlagTypeStringArray:
 		val := []string{}
 		if pipelineFlag.Default != nil {
-			val, ok = pipelineFlag.Default.([]string)
-			if !ok {
-				return nil, fmt.Errorf("default is not a string array")
+			for _, anyVal := range pipelineFlag.Default.([]interface{}) {
+				strVal, ok := anyVal.(string)
+				if !ok {
+					return nil, fmt.Errorf("default is not a string array")
+				}
+				val = append(val, strVal)
 			}
 		}
 		return val, nil
