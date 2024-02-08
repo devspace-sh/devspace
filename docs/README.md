@@ -47,3 +47,10 @@ cd ../ # main project directory
 
 go run ./docs/hack/config/schemas/main.go
 ```
+
+### Generate Function Docs
+```bash
+cd ../ # main project directory
+
+go run ./docs/hack/functions/main.go
+```

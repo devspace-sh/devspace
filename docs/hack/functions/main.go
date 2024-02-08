@@ -315,7 +315,6 @@ var Functions = []Function{
 		Handler:     commands.IsDependency,
 		Return:      reflect.Int.String(),
 		Group:       groupChecks,
-		IsGlobal:    true,
 	},
 	{
 		Name:        "is_empty",
@@ -331,6 +330,15 @@ var Functions = []Function{
 		Description: `Returns exit code 0 if the values of both arguments provided are equal`,
 		Args:        `[value-1] [value-2]`,
 		Handler:     basiccommands.IsEqual,
+		Return:      reflect.Int.String(),
+		Group:       groupChecks,
+		IsGlobal:    true,
+	},
+	{
+		Name:        "is_in",
+		Description: "Returns exit code 0 if the value of the first argument can be found in the second argument (second argument being a blank-separated list of strings e.g `\"bananas apples peaches\"`)",
+		Args:        `[value-1] [value-2]`,
+		Handler:     basiccommands.IsIn,
 		Return:      reflect.Int.String(),
 		Group:       groupChecks,
 		IsGlobal:    true,
