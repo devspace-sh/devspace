@@ -152,7 +152,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 				return err
 			}
 		} else {
-			logger.Warnf("If you want to use the sync paths from `devspace.yaml`, use the `--config=devspace.yaml` flag for this command.")
+			logger.Warnf("If you want to use the sync paths from `devspace.yaml`, use the `DEVSPACE_CONFIG=devspace.yaml` environment variable for this command.")
 		}
 	}
 
