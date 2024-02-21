@@ -31,6 +31,7 @@ type ResolverInterface interface {
 // Resolver implements the resolver interface
 type resolver struct {
 	DependencyGraph *graph.Graph
+	DownloadedIds   []string
 
 	BaseCache  localcache.Cache
 	BaseConfig *latest.Config
@@ -130,7 +131,7 @@ func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, paren
 			continue
 		}
 
-		dependencyConfigPath, err := util.DownloadDependency(ctx.Context(), basePath, dependencyConfig.Source, ctx.Log())
+		dependencyConfigPath, err := util.DownloadDependency(ctx.Context(), basePath, dependencyConfig.Source, ctx.Log(), r.DownloadedIds)
 		if err != nil {
 			return err
 		}
