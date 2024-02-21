@@ -75,6 +75,8 @@ var _ = DevSpaceDescribe("pipelines", func() {
 		framework.ExpectLocalFileContentsImmediately("other.txt", "test\n")
 		framework.ExpectLocalFileContentsImmediately("other2.txt", "false\n")
 		framework.ExpectLocalFileContentsImmediately("other3.txt", "true\n")
+		framework.ExpectLocalFileContentsImmediately("other4-0.txt", "one\n")
+		framework.ExpectLocalFileContentsImmediately("other4-1.txt", "two\n")
 		framework.ExpectLocalFileContentsImmediately("other-profile.txt", "profile1\n")
 		framework.ExpectLocalFileContentsImmediately("dep1-test.txt", "test\n")
 		framework.ExpectLocalFileContentsImmediately("dep1-test2.txt", "true\n")
@@ -83,6 +85,143 @@ var _ = DevSpaceDescribe("pipelines", func() {
 		framework.ExpectLocalFileContentsImmediately("dep1-other2.txt", "false\n")
 		framework.ExpectLocalFileContentsImmediately("dep1-other3.txt", "false\n")
 		framework.ExpectLocalFileContentsImmediately("dep1-other-profile.txt", "profile1\n")
+	})
+
+	ginkgo.It("should resolve pipeline override array flags", func() {
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/flags")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("pipelines")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		rootCmd := cmd.NewRootCmd(f)
+		persistentFlags := rootCmd.PersistentFlags()
+		globalFlags := flags.SetGlobalFlags(persistentFlags)
+		globalFlags.NoWarn = true
+		globalFlags.Namespace = ns
+		globalFlags.Profiles = []string{"profile1"}
+
+		cmdCtx := values.WithCommandFlags(context.Background(), globalFlags.Flags)
+		cmdCtx = values.WithFlagsMap(cmdCtx, map[string]string{
+			"other":  "test",
+			"other2": "false",
+			"other3": "true",
+			"other4": "three four",
+		})
+
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: globalFlags,
+			Pipeline:    "other",
+			Ctx:         cmdCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		framework.ExpectLocalFileContentsImmediately("other.txt", "test\n")
+		framework.ExpectLocalFileContentsImmediately("other2.txt", "false\n")
+		framework.ExpectLocalFileContentsImmediately("other3.txt", "true\n")
+		framework.ExpectLocalFileContentsImmediately("other-profile.txt", "profile1\n")
+		framework.ExpectLocalFileContentsImmediately("other4-0.txt", "three\n")
+		framework.ExpectLocalFileContentsImmediately("other4-1.txt", "four\n")
+	})
+
+	ginkgo.It("should resolve pipeline override with --set-flags", func() {
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/flags")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("pipelines")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		rootCmd := cmd.NewRootCmd(f)
+		persistentFlags := rootCmd.PersistentFlags()
+		globalFlags := flags.SetGlobalFlags(persistentFlags)
+		globalFlags.NoWarn = true
+		globalFlags.Namespace = ns
+		globalFlags.Profiles = []string{"profile1"}
+
+		cmdCtx := values.WithCommandFlags(context.Background(), globalFlags.Flags)
+		cmdCtx = values.WithFlagsMap(cmdCtx, map[string]string{})
+
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: globalFlags,
+			Pipeline:    "other-override",
+			Ctx:         cmdCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		framework.ExpectLocalFileContentsImmediately("other.txt", "test\n")
+		framework.ExpectLocalFileContentsImmediately("other2.txt", "true\n")
+		framework.ExpectLocalFileContentsImmediately("other3.txt", "true\n")
+		framework.ExpectLocalFileContentsImmediately("other-profile.txt", "profile1\n")
+		framework.ExpectLocalFileContentsImmediately("other4-0.txt", "five\n")
+		framework.ExpectLocalFileContentsImmediately("other4-1.txt", "six\n")
+	})
+
+	ginkgo.It("should resolve dependency pipeline flag defaults", func() {
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/flags")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("pipelines")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		rootCmd := cmd.NewRootCmd(f)
+		persistentFlags := rootCmd.PersistentFlags()
+		globalFlags := flags.SetGlobalFlags(persistentFlags)
+		globalFlags.NoWarn = true
+		globalFlags.Namespace = ns
+		globalFlags.Profiles = []string{"profile1"}
+
+		cmdCtx := values.WithCommandFlags(context.Background(), globalFlags.Flags)
+		cmdCtx = values.WithFlagsMap(cmdCtx, map[string]string{})
+
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: globalFlags,
+			Pipeline:    "arr-dep1",
+			Ctx:         cmdCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		framework.ExpectLocalFileContentsImmediately("arr-0.txt", "one")
+		framework.ExpectLocalFileContentsImmediately("arr-1.txt", "two")
+	})
+
+	ginkgo.It("should resolve dependency pipeline flag defaults", func() {
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/flags")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("pipelines")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		rootCmd := cmd.NewRootCmd(f)
+		persistentFlags := rootCmd.PersistentFlags()
+		globalFlags := flags.SetGlobalFlags(persistentFlags)
+		globalFlags.NoWarn = true
+		globalFlags.Namespace = ns
+		globalFlags.Profiles = []string{"profile1"}
+
+		cmdCtx := values.WithCommandFlags(context.Background(), globalFlags.Flags)
+		cmdCtx = values.WithFlagsMap(cmdCtx, map[string]string{})
+
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: globalFlags,
+			Pipeline:    "arr-dep1-override",
+			Ctx:         cmdCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		framework.ExpectLocalFileContentsImmediately("arr-0.txt", "three")
+		framework.ExpectLocalFileContentsImmediately("arr-1.txt", "")
 	})
 
 	ginkgo.It("should exec container", func() {

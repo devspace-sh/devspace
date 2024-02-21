@@ -15,6 +15,11 @@ pipelines:
         default: true
       - name: other3
         default: true
+      - name: other4
+        type: stringArray
+        default:
+          - one
+          - two
     run: |-
       if get_flag test; then
         exit 1
@@ -24,6 +29,22 @@ pipelines:
       echo $(get_flag other2) > other2.txt
       echo $(get_flag other3) > other3.txt
       echo $(get_flag profile) > other-profile.txt
+      
+      other4=($(get_flag other4))
+      echo ${other4[0]} > other4-0.txt
+      echo ${other4[1]} > other4-1.txt
+
+  other-override:
+    run: |-
+      run_pipelines other --set-flag other4=five --set-flag other4=six
+
+  arr-dep1:
+    run: |-
+      run_dependency_pipelines dep1 --pipeline array
+
+  arr-dep1-override:
+    run: |-
+      run_dependency_pipelines dep1 --pipeline array --set-flag arr=three
 
   dev:
     flags:

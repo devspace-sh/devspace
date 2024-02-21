@@ -20,7 +20,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
+	pipelinepkg "github.com/loft-sh/devspace/pkg/devspace/pipeline"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
@@ -100,51 +100,34 @@ func (cmd *RunPipelineCmd) AddPipelineFlags(f factory.Factory, command *cobra.Co
 				usage = "Flag " + pipelineFlag.Name
 			}
 
-			var ok bool
 			if pipelineFlag.Type == "" || pipelineFlag.Type == latest.PipelineFlagTypeBoolean {
-				val := false
-				if pipelineFlag.Default != nil {
-					val, ok = pipelineFlag.Default.(bool)
-					if !ok {
-						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a boolean", pipelineFlag.Name, pipelineFlag.Default)
-						continue
-					}
+				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
+				if err != nil {
+					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a boolean", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
-				command.Flags().BoolP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+				command.Flags().BoolP(pipelineFlag.Name, pipelineFlag.Short, val.(bool), usage)
 			} else if pipelineFlag.Type == latest.PipelineFlagTypeString {
-				val := ""
-				if pipelineFlag.Default != nil {
-					val, ok = pipelineFlag.Default.(string)
-					if !ok {
-						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string", pipelineFlag.Name, pipelineFlag.Default)
-						continue
-					}
+				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
+				if err != nil {
+					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
-				command.Flags().StringP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+				command.Flags().StringP(pipelineFlag.Name, pipelineFlag.Short, val.(string), usage)
 			} else if pipelineFlag.Type == latest.PipelineFlagTypeInteger {
-				val := 0
-				if pipelineFlag.Default != nil {
-					val, ok = pipelineFlag.Default.(int)
-					if !ok {
-						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not an integer", pipelineFlag.Name, pipelineFlag.Default)
-						continue
-					}
+				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
+				if err != nil {
+					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not an integer", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
-				command.Flags().IntP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+				command.Flags().IntP(pipelineFlag.Name, pipelineFlag.Short, val.(int), usage)
 			} else if pipelineFlag.Type == latest.PipelineFlagTypeStringArray {
-				val := []string{}
-				if pipelineFlag.Default != nil {
-					val, ok = pipelineFlag.Default.([]string)
-					if !ok {
-						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string array", pipelineFlag.Name, pipelineFlag.Default)
-						continue
-					}
+				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
+				if err != nil {
+					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string array", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
-				command.Flags().StringSliceP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+				command.Flags().StringSliceP(pipelineFlag.Name, pipelineFlag.Short, val.([]string), usage)
 			}
 		}
 	}
@@ -463,7 +446,7 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	dependencyRegistry := registry.NewDependencyRegistry(ctx.Config().Config().Name, options.DeployOptions.Render)
 
 	// get deploy pipeline
-	pipe := pipeline.NewPipeline(ctx.Config().Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
+	pipe := pipelinepkg.NewPipeline(ctx.Config().Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
 	kill.SetStopFunction(func(message string) {
 		if message != "" {
 			ctx.Log().WriteString(logrus.FatalLevel, "\n"+ansi.Color("fatal", "red+b")+" "+message+"\n")

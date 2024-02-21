@@ -35,3 +35,15 @@ pipelines:
       echo $(get_flag test3) > dep1-test2.txt
       echo $(get_flag profile) > dep1-dev-profile.txt
       run_pipelines other --set-flag other2=false
+
+  array:
+    flags:
+      - name: arr
+        type: stringArray
+        default:
+          - one
+          - two
+    run: |-
+      arr=($(get_flag arr))
+      echo -n ${arr[0]} > arr-0.txt
+      echo -n ${arr[1]} > arr-1.txt

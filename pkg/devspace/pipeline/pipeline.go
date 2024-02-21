@@ -145,21 +145,21 @@ func (p *pipeline) WaitDev() error {
 	p.m.Unlock()
 
 	// wait for children first
-	errors := []error{}
+	errs := []error{}
 	for _, child := range children {
 		err := child.WaitDev()
 		if err != nil {
-			errors = append(errors, err)
+			errs = append(errs, err)
 		}
 	}
 
 	// wait for dev pods to finish
 	err := p.devPodManager.Wait()
 	if err != nil {
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 
-	return utilerrors.NewAggregate(errors)
+	return utilerrors.NewAggregate(errs)
 }
 
 func (p *pipeline) Name() string {
@@ -423,17 +423,44 @@ func (p *pipeline) startNewDependency(ctx devspacecontext.Context, dependency ty
 }
 
 func applyFlags(ctx devspacecontext.Context, pipeline *latest.Pipeline, setFlags []string) (devspacecontext.Context, error) {
-	newFlags := map[string]string{}
+	defaultFlags := map[string]string{}
 	for _, flag := range pipeline.Flags {
-		newFlags[flag.Name] = fmt.Sprintf("%v", flag.Default)
+		val, err := GetDefaultValue(flag)
+		if err != nil {
+			return nil, err
+		}
+
+		switch flag.Type {
+		case latest.PipelineFlagTypeStringArray:
+			defaultFlags[flag.Name] = fmt.Sprintf("%v", strings.Join(val.([]string), " "))
+		default:
+			defaultFlags[flag.Name] = fmt.Sprintf("%v", val)
+		}
 	}
+
+	newFlags := map[string]string{}
 	for _, v := range setFlags {
 		splitted := strings.Split(v, "=")
 		if len(splitted) <= 1 {
 			return nil, fmt.Errorf("error parsing flag %s: expected format flag=value", v)
 		}
 
-		newFlags[splitted[0]] = strings.Join(splitted[1:], "=")
+		flagName := splitted[0]
+		flagVal := strings.Join(splitted[1:], "=")
+		flagVals := strings.Join(strings.Split(flagVal, ","), " ")
+
+		if newFlags[flagName] != "" {
+			newFlags[flagName] = strings.Join([]string{newFlags[flagName], flagVals}, " ")
+		} else {
+			newFlags[flagName] = flagVals
+		}
+
+	}
+
+	for name, value := range defaultFlags {
+		if _, ok := newFlags[name]; !ok {
+			newFlags[name] = value
+		}
 	}
 
 	return ctx.WithContext(values.WithFlagsMap(ctx.Context(), newFlags)), nil

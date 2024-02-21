@@ -326,8 +326,8 @@ pipelines:
       short: e
       type: stringArray
     run: |-
-      extraEnv=$(get_flag "env")    # Retrieve the value of the `env` flag and store it in a variable
-      echo ${extraEnv[1]}
+      extraEnv=($(get_flag "env"))    # Retrieve the value of the `env` flag and store it in an array variable
+      echo ${extraEnv[0]}             # Arrays are zero indexed
 
       TERMINAL_ENABLED=true
       if [ $(get_flag "logs") == "true" ]; then     # Test if --logs/-l flag is used or not
