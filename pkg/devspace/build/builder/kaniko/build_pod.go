@@ -24,7 +24,7 @@ import (
 const kanikoInitImage = "alpine"
 
 // The kaniko build image we use by default
-const kanikoBuildImage = "gcr.io/kaniko-project/executor:v1.8.1"
+const kanikoBuildImage = "gcr.io/kaniko-project/executor:v1.20.1"
 
 // The context path within the kaniko pod
 const kanikoContextPath = "/context"
