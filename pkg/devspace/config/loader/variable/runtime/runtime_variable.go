@@ -17,6 +17,7 @@ var Locations = []string{
 	"/images/*/build/custom/args/**",
 	"/images/*/build/custom/appendArgs/**",
 	"/deployments/*/helm/values/**",
+	"/deployments/*/tanka/**",
 	"/deployments/*/kubectl/inlineManifest/**",
 	"/hooks/*/command",
 	"/hooks/*/args/*",

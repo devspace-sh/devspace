@@ -645,6 +645,8 @@ type DeploymentConfig struct {
 	Helm *HelmConfig `yaml:"helm,omitempty" json:"helm,omitempty"`
 	// Kubectl tells DevSpace to deploy this deployment via kubectl or kustomize
 	Kubectl *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
+	// Tanka tells DevSpace to deployment via Tanka
+	Tanka *TankaConfig `yaml:"tanka,omitempty" json:"tanka,omitempty"`
 
 	// UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the
 	// images section with their most recent built tag.
@@ -830,6 +832,40 @@ type RollingUpdateConfig struct {
 	MaxSurge       string `yaml:"maxSurge,omitempty" json:"maxSurge,omitempty"`
 	MaxUnavailable string `yaml:"maxUnavailable,omitempty" json:"maxUnavailable,omitempty"`
 	Partition      *int   `yaml:"partition,omitempty" json:"partition,omitempty"`
+}
+
+// TankaConfig defines the specific tanka options used during deployment.
+type TankaConfig struct {
+	// Path is the (relative) path of the tanka environment, usually identified by jsonnetfile.json.
+	// It can be omitted if environmentPath is set and is also relative to the working directory (Tanka's project directory tree). If omitted, Devspace will traverse in reverse environmentPath looking for jsonnetfile.json, when found, that will be set as Path. Otherwise will throw an error.
+	Path string `yaml:"path,omitempty" json:"path,omitempty"`
+	// RunJsonnetBundlerInstall indicates if the `jb install` command shall be run, default to true
+	RunJsonnetBundlerInstall *bool `yaml:"runJsonnetBundlerInstall,omitempty" json:"runJsonnetBundlerInstall,omitempty"`
+	// RunJsonnetBundlerUpdate indicates if the `jb update` command shall be run default to false
+	RunJsonnetBundlerUpdate *bool `yaml:"runJsonnetBundlerUpdate,omitempty" json:"runJsonnetBundlerUpdate,omitempty"`
+
+	// EnvironmentPath is the (relative) path to a specific tanka environment.
+	// In case Path is omitted it will be used to discover Tanka project's root. Look at Path parameter for more details.
+	EnvironmentPath string `yaml:"environmentPath,omitempty" json:"environmentPath,omitempty"`
+	// When using environment auto-discovery, this maps to the `--name` parameter
+	EnvironmentName string `yaml:"environmentName,omitempty" json:"environmentName,omitempty"`
+
+	// Maps to --ext-code cli argument.
+	ExternalCodeVariables map[string]string `yaml:"externalCodeVariables,omitempty" json:"externalCodeVariables,omitempty"`
+	// Maps to --ext-str cli argument.
+	ExternalStringVariables map[string]string `yaml:"externalStringVariables,omitempty" json:"externalStringVariables,omitempty"`
+	// Maps to --tla-code argument.
+	TopLevelCode []string `yaml:"topLevelCode,omitempty" json:"topLevelCode,omitempty"`
+	// Maps to --tla-string argument.
+	TopLevelString []string `yaml:"topLevelString,omitempty" json:"topLevelString,omitempty"`
+
+	// Maps to the option `--target` argument and allows filtering for specific resources.
+	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
+
+	// JsonBundlerBinaryPath allows overriding the `jb` binary used.
+	JsonnetBundlerBinaryPath string `yaml:"jsonnetBundlerBinaryPath,omitempty" json:"jsonnetBundlerBinaryPath,omitempty"`
+	// JsonBundlerBinaryPath allows overriding the `tanka` binary used.
+	TankaBinaryPath string `yaml:"tankaBinaryPath,omitempty" json:"tankaBinaryPath,omitempty"`
 }
 
 // HelmConfig defines the specific helm options used during deployment

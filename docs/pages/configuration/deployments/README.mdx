@@ -6,7 +6,7 @@ sidebar_label: Basics
 import ConfigPartialDeployments from '../_partials/v2beta1/deployments.mdx'
 
 
-The `deployments` section in `devspace.yaml` defines Helm charts, Kubernetes manifests and Kustomizations that can deployed using the [`create_deployments` function](../functions/README.mdx#create_deployments).
+The `deployments` section in `devspace.yaml` defines Helm charts, Kubernetes manifests, Kustomizations and Tanka templates that can deployed using the [`create_deployments` function](../functions/README.mdx#create_deployments).
 
 
 ## Workflow
@@ -51,12 +51,18 @@ deployments:
         repo: https://mycompany.tld/helm/
       values:
         ...
+  front:
+    tanka:
+      path: ./front
+      environmentPath: environments/default
+
 ```
 The example above defines 4 deployments:
 - `configs` which deploys two ConfigMap objects to Kubernetes from plain manifest files
 - `api` which is deployed from the component chart provided by DevSpace
 - `payments` which is deployed using a local Helm chart that is located in a folder
 - `auth` which is deployed from a chart that has been pushed to a Helm repository
+- `front` which is deployed from a Tanka template
 
 
 ### 2. Call `create_deployments` in Pipeline

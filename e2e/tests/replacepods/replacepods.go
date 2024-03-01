@@ -327,4 +327,43 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 0)
 	})
+
+	ginkgo.It("should replace deployment pod with devImage", func() {
+		tempDir, err := framework.CopyToTempDir("tests/replacepods/testdata/dev-image")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("devImage")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		// create a new dev command
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "dev",
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// check if replica set exists & pod got replaced correctly
+		list, err := kubeClient.Client().KubeClient().AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(len(list.Items), 1)
+
+		// wait until a pod has started
+		var pods *corev1.PodList
+		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+			if err != nil {
+				return false, err
+			}
+
+			return len(pods.Items) == 1, nil
+		})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(pods.Items[0].Spec.Containers[0].Image, "nginx:perl")
+	})
 })

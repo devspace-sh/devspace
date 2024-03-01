@@ -1,0 +1,18 @@
+version: v2beta1
+name: tanka
+
+vars:
+  IMAGE_NGINX: nginx:alpine
+
+deployments:
+  # Define a tanka deployment
+  nginx:
+    tanka:
+      environmentPath: environments/default
+      externalStringVariables:
+        IMAGE_NGINX: ${IMAGE_NGINX}
+
+dev:
+  nginx:
+    imageSelector: ${IMAGE_NGINX}
+    devImage: nginx:perl  
