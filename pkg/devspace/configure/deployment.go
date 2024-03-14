@@ -37,12 +37,16 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 			}
 
 			if isKustomization {
-				stat, err := os.Stat(path.Join(value, "kustomization.yaml"))
-				if err == nil && !stat.IsDir() {
-					return nil
+				fileNames := []string{"kustomization.yaml", "kustomization.yml"}
+				for _, fileName := range fileNames {
+						stat, err := os.Stat(path.Join(value, fileName))
+						if err == nil && !stat.IsDir() {
+								return nil
+						}
 				}
-				return fmt.Errorf("path `%s` is not a Kustomization (kustomization.yaml missing)", value)
-			} else {
+				return fmt.Errorf("path `%s` is not a Kustomization (kustomization.yaml or kustomization.yml missing)", value)
+		 }		
+		 else {
 				matches, err := filepath.Glob(value)
 				if err != nil {
 					return fmt.Errorf("path `%s` is not a valid glob pattern", value)
