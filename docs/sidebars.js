@@ -206,5 +206,9 @@ module.exports = {
       ],
     },
     "plugins/README",
+    {
+        type: "doc",
+        id: "licenses/devspace",
+    },
   ],
 };
