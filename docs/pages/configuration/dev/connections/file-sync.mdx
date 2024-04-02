@@ -289,10 +289,10 @@ The `initialSync` option expects a string with an initial sync strategy. The fol
   3. resolves all file conflicts (different content on local filesystem than inside the container) by preferring the newest file (i.e. compares last modified timestamps and replaces all outdated files)
 
 `keepAll` merges local and remote filesystem without resolving any conflicts
+  1. uploads all files which are existing on the local filesystem but are missing within the container
+  2. downloads all files which are existing inside the container but are missing on the local filesystem
 
-1. uploads all files which are existing on the local filesystem but are missing within the container
-2. downloads all files which are existing inside the container but are missing on the local filesystem
-
+`disabled` disabled the initial sync completely
 
 ```yaml
 deployments:

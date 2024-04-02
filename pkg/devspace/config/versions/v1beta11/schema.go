@@ -884,6 +884,7 @@ const (
 	InitialSyncStrategyPreferRemote InitialSyncStrategy = "preferRemote"
 	InitialSyncStrategyPreferNewest InitialSyncStrategy = "preferNewest"
 	InitialSyncStrategyKeepAll      InitialSyncStrategy = "keepAll"
+	InitialSyncStrategyDisabled     InitialSyncStrategy = "disabled"
 )
 
 // InitialSyncCompareBy is the type of how a change should be determined during the initial sync

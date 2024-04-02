@@ -352,6 +352,7 @@ const (
 	InitialSyncStrategyPreferRemote InitialSyncStrategy = "preferRemote"
 	InitialSyncStrategyPreferNewest InitialSyncStrategy = "preferNewest"
 	InitialSyncStrategyKeepAll      InitialSyncStrategy = "keepAll"
+	InitialSyncStrategyDisabled     InitialSyncStrategy = "disabled"
 )
 
 // BandwidthLimits defines the struct for specifying the sync bandwidth limits
