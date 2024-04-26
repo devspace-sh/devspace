@@ -254,7 +254,7 @@ func (cmd *RunCmd) LoadCommandsConfig(f factory.Factory, configLoader loader.Con
 	if client != nil {
 		// If the current kube context or namespace is different than old,
 		// show warnings and reset kube client if necessary
-		client, err = kubectl.CheckKubeContext(client, localCache, false, false, false, log)
+		client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, false, log)
 		if err != nil {
 			log.Debugf("Unable to verify kube context %v", err)
 			client = nil
