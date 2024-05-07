@@ -2,12 +2,13 @@ package sync
 
 import (
 	"context"
-	"github.com/onsi/ginkgo/v2"
-	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/onsi/ginkgo/v2"
+	"github.com/pkg/errors"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -767,6 +768,73 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectLocalFileContents(filepath.Join(tempDir, "other-folder", "test.txt"), "Hello DevSpace")
 		framework.ExpectLocalFileNotFound(filepath.Join(tempDir, "other-folder", "test.test"))
+
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
+	})
+
+	ginkgo.It("devspace sync should work with initialSync:disabled", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-initial-disabled")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Pipeline: "deploy",
+		}
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		cancelCtx, stop := context.WithCancel(context.Background())
+		defer stop()
+
+		// sync command
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Wait: true,
+			Ctx:  cancelCtx,
+		}
+
+		// start the command
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+			err = syncCmd.Run(f)
+			framework.ExpectNoError(err)
+		}()
+
+		// check that node_modules folder was not synced
+		framework.ExpectRemoteFileNotFound("alpine", ns, "/app/node_modules")
+
+		// check that included file was not synced
+		framework.ExpectRemoteFileNotFound("alpine", ns, "/app/syncme/file.txt")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteFileContents("alpine", ns, "/app/watching.txt", payload)
 
 		// stop command
 		stop()

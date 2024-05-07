@@ -313,13 +313,21 @@ func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone ch
 			}
 
 			if onInitUploadDone != nil {
-				s.log.Info("Upstream - Initial sync completed")
+				if s.Options.InitialSync == latest.InitialSyncStrategyDisabled {
+					s.log.Info("Upstream - Initial sync disabled")
+				} else {
+					s.log.Info("Upstream - Initial sync completed")
+				}
 				close(onInitUploadDone)
 			}
 		},
 		DownstreamDone: func() {
 			if onInitDownloadDone != nil {
-				s.log.Info("Downstream - Initial sync completed")
+				if s.Options.InitialSync == latest.InitialSyncStrategyDisabled {
+					s.log.Info("Downstream - Initial sync disabled")
+				} else {
+					s.log.Info("Downstream - Initial sync completed")
+				}
 				close(onInitDownloadDone)
 			}
 		},

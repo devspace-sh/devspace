@@ -25,6 +25,7 @@ func ValidInitialSyncStrategy(strategy latest.InitialSyncStrategy) bool {
 		strategy == latest.InitialSyncStrategyKeepAll ||
 		strategy == latest.InitialSyncStrategyPreferLocal ||
 		strategy == latest.InitialSyncStrategyPreferRemote ||
+		strategy == latest.InitialSyncStrategyDisabled ||
 		strategy == latest.InitialSyncStrategyPreferNewest
 }
 
