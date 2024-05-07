@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"mvdan.cc/sh/v3/expand"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"mvdan.cc/sh/v3/expand"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
@@ -37,11 +38,14 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 			}
 
 			if isKustomization {
-				stat, err := os.Stat(path.Join(value, "kustomization.yaml"))
-				if err == nil && !stat.IsDir() {
-					return nil
+				fileNames := []string{"kustomization.yaml", "kustomization.yml"}
+				for _, fileName := range fileNames {
+					stat, err := os.Stat(path.Join(value, fileName))
+					if err == nil && !stat.IsDir() {
+						return nil
+					}
 				}
-				return fmt.Errorf("path `%s` is not a Kustomization (kustomization.yaml missing)", value)
+				return fmt.Errorf("path `%s` is not a Kustomization (kustomization.yaml or kustomization.yml missing)", value)
 			} else {
 				matches, err := filepath.Glob(value)
 				if err != nil {
