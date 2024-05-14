@@ -145,11 +145,26 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				localChartPathRel = localChartPath
 			}
 
-			stat, err := os.Stat(path.Join(localChartPathRel, "Chart.yaml"))
-			if err != nil || stat.IsDir() {
+			pathStat, err := os.Stat(localChartPathRel)
+			if err != nil {
+				return err
+			}
+
+			if !pathStat.IsDir() {
 				m.log.WriteString(logrus.InfoLevel, "\n")
-				m.log.Errorf("Local path `%s` is not a Helm chart (Chart.yaml missing)", localChartPathRel)
+				m.log.Errorf("Local path `%s` is not a Helm chart (path is not a directory)", localChartPathRel)
 				continue
+			}
+
+			if _, err := os.Stat(path.Join(localChartPathRel, "Chart.yaml")); err != nil {
+				m.log.WriteString(logrus.InfoLevel, "\n")
+				if errors.Is(err, os.ErrNotExist) {
+					m.log.Errorf("Local path `%s` is not a Helm chart (Chart.yaml missing)", localChartPathRel)
+					continue
+				} else {
+					m.log.Errorf("Encountered unexpected error checking local path `%s`: %s", localChartPathRel, err.Error())
+					continue
+				}
 			}
 
 			helmConfig.Chart.Name = localChartPathRel
