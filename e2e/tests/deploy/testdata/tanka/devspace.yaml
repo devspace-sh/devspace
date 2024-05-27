@@ -1,0 +1,14 @@
+version: v2beta1
+name: tanka-deploy
+vars:
+  IMAGE_NGINX: nginx:alpine
+
+deployments:
+  # Define a tanka deployment
+  nginx-test:
+    tanka:
+      runJsonnetBundlerInstall: true
+      runJsonnetBundlerUpdate: true
+      environmentPath: environments/default
+      externalStringVariables:
+        IMAGE_NGINX: ${IMAGE_NGINX}

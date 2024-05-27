@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/env"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/encryption"
@@ -97,6 +98,9 @@ type DeploymentCache struct {
 
 	// Kubectl holds the kubectl cache
 	Kubectl *KubectlCache `yaml:"kubectlCache,omitempty"`
+
+	// Tanka holds the tanka cache
+	Tanka *TankaCache `yaml:"tankaCache,omitempty"`
 }
 
 type HelmCache struct {
@@ -112,6 +116,10 @@ type HelmCache struct {
 type KubectlCache struct {
 	Objects       []KubectlObject `yaml:"kubectlObjects,omitempty"`
 	ManifestsHash string          `yaml:"kubectlManifestsHash,omitempty"`
+}
+
+type TankaCache struct {
+	AppliedTankaConfig *latest.TankaConfig `yaml:"appliedTankaConfig,omitempty"`
 }
 
 type KubectlObject struct {

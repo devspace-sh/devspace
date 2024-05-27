@@ -347,6 +347,74 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 	return nil
 }
 
+// AddTankaDeployment adds a new tanka deployment to the provided config
+func (m *manager) AddTankaDeployment(deploymentName string) error {
+
+	tankaPath, err := m.log.Question(&survey.QuestionOptions{
+		Question:       "Please enter the path to your tanka root [Enter to abort]",
+		ValidationFunc: func(value string) error {
+			if value == "" {
+				return nil
+			}
+			stat, err := os.Stat(value)
+			if err != nil {
+				return fmt.Errorf("path `%s` does not exist", value)
+			}
+			if !stat.IsDir() {
+				return fmt.Errorf("path `%s` is not a directory", value)
+			}
+			return nil
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	if tankaPath == "" {
+		return fmt.Errorf("adding tanka deployment aborted")
+	}
+	if m.config.Deployments == nil {
+		m.config.Deployments = map[string]*latest.DeploymentConfig{}
+	}
+
+	environmentPath, err := m.log.Question(&survey.QuestionOptions{
+		Question:       "Please enter Tanka's environment path (relative to Tanka's path) [Enter to abort]",
+		ValidationFunc: func(value string) error {
+			if value == "" {
+				return nil
+			}
+			stat, err := os.Stat(path.Join(tankaPath, value))
+			if err != nil {
+				return fmt.Errorf("environment path `%s` does not exist", value)
+			}
+			if !stat.IsDir() {
+				return fmt.Errorf("environment path `%s` is not a directory", value)
+			}
+			return nil
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	if environmentPath == "" {
+		return fmt.Errorf("adding tanka deployment aborted")
+	}
+
+	m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
+		Name: deploymentName,
+		Tanka: &latest.TankaConfig{
+			Path:            tankaPath,
+			EnvironmentPath: environmentPath,
+		},
+	}
+
+	// TANKA TODO CHECK IF is Remote
+	m.isRemote[deploymentName] = false
+
+	return nil
+}
+
 // AddComponentDeployment adds a new deployment to the provided config
 func (m *manager) AddComponentDeployment(deploymentName, image string, servicePort int) error {
 	componentConfig := &latest.ComponentConfig{

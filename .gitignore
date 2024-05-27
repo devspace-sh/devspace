@@ -1,5 +1,6 @@
 # Dependencies
 /.vendor-new/
+/examples/tanka-example/vendor/
 
 # Created by devspace init
 /.devspace/
