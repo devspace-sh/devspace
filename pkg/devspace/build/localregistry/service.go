@@ -45,6 +45,10 @@ func (r *LocalRegistry) ensureService(ctx devspacecontext.Context) (*corev1.Serv
 		return nil, err
 	}
 
+	if !ctx.KubeClient().SupportServerSideApply() {
+		return existing, nil
+	}
+
 	// Use server side apply if it does exist
 	applyConfiguration, err := applyv1.ExtractService(existing, ApplyFieldManager)
 	if err != nil {
