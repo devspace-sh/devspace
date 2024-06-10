@@ -3,6 +3,11 @@ package kubectl
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
@@ -12,11 +17,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/loft-sh/devspace/pkg/util/terminal"
-	"io"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"net/http"
-	"os"
-	"time"
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -40,6 +41,9 @@ type Client interface {
 	// KubeClient returns an interface to a kube client
 	KubeClient() kubernetes.Interface
 
+	// KubeGitVersion returns kubernetes server version
+	KubeGitVersion() string
+
 	// Namespace returns the default namespace of the kube context
 	Namespace() string
 
@@ -51,6 +55,9 @@ type Client interface {
 
 	// KubeConfigLoader returns the kube config loader interface
 	KubeConfigLoader() kubeconfig.Loader
+
+	// SupportServerSideApply returns if kubernetes support server-side apply
+	SupportServerSideApply() bool
 
 	// CopyFromReader copies and extracts files into the container from the reader interface
 	CopyFromReader(ctx context.Context, pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error
@@ -91,6 +98,9 @@ type client struct {
 	currentContext string
 	namespace      string
 	isInCluster    bool
+
+	kubeGitVersion         string
+	supportServerSideApply bool
 }
 
 var _, tty = terminal.SetupTTY(os.Stdin, os.Stdout)
@@ -130,6 +140,15 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 		return nil, errors.Wrap(err, "new client")
 	}
 
+	kubeGitVersion, err := GetKubeGitVersion(kubeClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "get kubernetes version")
+	}
+	supportServerSideApply, err := IsSupportServerSideApply(kubeClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "if support server side apply")
+	}
+
 	return &client{
 		Client:       kubeClient,
 		clientConfig: clientConfig,
@@ -139,6 +158,9 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 		namespace:      activeNamespace,
 		currentContext: activeContext,
 		isInCluster:    isInCluster,
+
+		kubeGitVersion:         kubeGitVersion,
+		supportServerSideApply: supportServerSideApply,
 	}, nil
 }
 
@@ -285,6 +307,10 @@ func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, aut
 		}
 	}
 
+	if !client.SupportServerSideApply() {
+		log.Debugf("kubernetes version '%s' not support server side apply", ansi.Color(client.KubeGitVersion(), "white+b"))
+	}
+
 	// wake up and ping
 	if !skipWakeUpPing {
 		err := wakeUpAndPing(context.TODO(), client, log)
@@ -304,6 +330,10 @@ func (client *client) KubeClient() kubernetes.Interface {
 	return client.Client
 }
 
+func (client *client) KubeGitVersion() string {
+	return client.kubeGitVersion
+}
+
 func (client *client) Namespace() string {
 	return client.namespace
 }
@@ -314,6 +344,10 @@ func (client *client) RestConfig() *rest.Config {
 
 func (client *client) KubeConfigLoader() kubeconfig.Loader {
 	return client.kubeLoader
+}
+
+func (client *client) SupportServerSideApply() bool {
+	return client.supportServerSideApply
 }
 
 func wakeUpAndPing(ctx context.Context, client Client, log log.Logger) error {

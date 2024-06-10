@@ -58,11 +58,16 @@ func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) (*appsv1.D
 		return nil, err
 	}
 
+	if !ctx.KubeClient().SupportServerSideApply() {
+		return existing, nil
+	}
+
 	// Use server side apply if it does exist
 	applyConfiguration, err := appsapplyv1.ExtractDeployment(existing, ApplyFieldManager)
 	if err != nil {
 		return nil, err
 	}
+
 	return ctx.KubeClient().KubeClient().AppsV1().Deployments(r.Namespace).Apply(
 		ctx.Context(),
 		applyConfiguration,

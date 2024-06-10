@@ -54,6 +54,10 @@ func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.
 		return nil, err
 	}
 
+	if !ctx.KubeClient().SupportServerSideApply() {
+		return existing, nil
+	}
+
 	// Use server side apply if it does exist
 	applyConfiguration, err := appsapplyv1.ExtractStatefulSet(existing, ApplyFieldManager)
 	if err != nil {
