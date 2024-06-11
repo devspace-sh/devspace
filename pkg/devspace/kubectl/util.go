@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/version"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -16,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/transport/spdy"
 )
 
@@ -273,4 +275,28 @@ func GetKindContext(context string) string {
 	}
 
 	return strings.TrimPrefix(context, "kind-")
+}
+
+func GetKubeGitVersion(kubeClient *kubernetes.Clientset) (string, error) {
+	kubeVersion, err := kubeClient.Discovery().ServerVersion()
+	if err != nil {
+		return "", err
+	}
+	return kubeVersion.GitVersion, nil
+}
+
+func IsSupportServerSideApply(kubeClient *kubernetes.Clientset) (bool, error) {
+	kubeGitVersionString, err := GetKubeGitVersion(kubeClient)
+	if err != nil {
+		return true, err
+	}
+	kubeGitVersion, err := version.ParseSemantic(kubeGitVersionString)
+	if err != nil {
+		return true, err
+	}
+	supportSSAVersion, err := version.ParseSemantic("v1.22.0")
+	if err != nil {
+		return true, err
+	}
+	return kubeGitVersion.AtLeast(supportSSAVersion), nil
 }
