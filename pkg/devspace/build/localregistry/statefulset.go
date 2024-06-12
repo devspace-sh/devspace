@@ -93,7 +93,7 @@ func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
-						Resources: corev1.ResourceRequirements{
+						Resources: corev1.VolumeResourceRequirements{ // Fix: Change corev1.ResourceRequirements to corev1.VolumeResourceRequirements
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: resource.MustParse(r.StorageSize),
 							},

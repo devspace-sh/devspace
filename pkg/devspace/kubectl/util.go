@@ -98,6 +98,8 @@ func GetPodStatus(pod *corev1.Pod) string {
 		switch {
 		case container.State.Terminated != nil && container.State.Terminated.ExitCode == 0:
 			continue
+		case container.State.Running != nil && pod.Spec.InitContainers[i].RestartPolicy != nil:
+			continue
 		case container.State.Terminated != nil:
 			// initialization is failed
 			if len(container.State.Terminated.Reason) == 0 {
