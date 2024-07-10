@@ -211,7 +211,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// wait until files were synced
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/file1.txt"})
 			if err != nil {
 				return false, nil
@@ -236,7 +236,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// wait for sync
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/file3.txt"})
 			if err != nil {
 				return false, nil
@@ -252,7 +252,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectEqual(os.IsNotExist(err), true)
 
 		// check if file was downloaded through after hook
-		err = wait.PollImmediate(time.Second, time.Minute, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 			out, err := os.ReadFile(filepath.Join(tempDir, "file5.txt"))
 			if err != nil {
 				if !os.IsNotExist(err) {
@@ -311,7 +311,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// wait until files were synced
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/file1.txt"})
 			if err != nil {
 				return false, nil
@@ -335,7 +335,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		err = os.WriteFile(filepath.Join(tempDir, "/project1/app/file3.txt"), []byte(payload1), 0666)
 		framework.ExpectNoError(err)
 
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/file3.txt"})
 			if err != nil {
 				return false, nil
@@ -350,7 +350,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		err = os.WriteFile(filepath.Join(tempDir, "/project2/file4.txt"), []byte(payload2), 0666)
 		framework.ExpectNoError(err)
 
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/file4.txt"})
 			if err != nil {
 				return false, nil

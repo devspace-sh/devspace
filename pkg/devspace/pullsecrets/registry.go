@@ -1,6 +1,7 @@
 package pullsecrets
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -67,8 +68,8 @@ func (r *client) CreatePullSecret(ctx devspacecontext.Context, options *PullSecr
 		email = "noreply@devspace.sh"
 	}
 
-	err := wait.PollImmediate(time.Second, time.Second*30, func() (bool, error) {
-		secret, err := ctx.KubeClient().KubeClient().CoreV1().Secrets(options.Namespace).Get(ctx.Context(), pullSecretName, metav1.GetOptions{})
+	err := wait.PollUntilContextTimeout(ctx.Context(), time.Second, time.Second*30, true, func(ctxPollUntil context.Context) (bool, error) {
+		secret, err := ctx.KubeClient().KubeClient().CoreV1().Secrets(options.Namespace).Get(ctxPollUntil, pullSecretName, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				// Create the pull secret
@@ -77,7 +78,7 @@ func (r *client) CreatePullSecret(ctx devspacecontext.Context, options *PullSecr
 					return false, err
 				}
 
-				_, err = ctx.KubeClient().KubeClient().CoreV1().Secrets(options.Namespace).Create(ctx.Context(), secret, metav1.CreateOptions{})
+				_, err = ctx.KubeClient().KubeClient().CoreV1().Secrets(options.Namespace).Create(ctxPollUntil, secret, metav1.CreateOptions{})
 				if err != nil {
 					if kerrors.IsAlreadyExists(err) {
 						// Retry

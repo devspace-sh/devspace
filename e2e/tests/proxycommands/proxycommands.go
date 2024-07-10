@@ -78,8 +78,8 @@ var _ = DevSpaceDescribe("proxyCommands", func() {
 
 		// Get the expected Pod hostname
 		var pods *corev1.PodList
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: "app.kubernetes.io/component=test"})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: "app.kubernetes.io/component=test"})
 			if err != nil {
 				return false, err
 			}

@@ -315,7 +315,7 @@ func (l *RemoteCache) Save(ctx context.Context, client kubectl.Client) error {
 		namespace = client.Namespace()
 	}
 
-	waitErr := wait.PollImmediate(time.Second, time.Second*10, func() (done bool, err error) {
+	waitErr := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Second*10, true, func(_ context.Context) (done bool, err error) {
 		secret, err := client.KubeClient().CoreV1().Secrets(namespace).Get(ctx, l.secretName, metav1.GetOptions{})
 		if err != nil {
 			if !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) {

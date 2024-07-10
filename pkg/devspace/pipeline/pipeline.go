@@ -276,7 +276,7 @@ func waitForDependency(ctx context.Context, start types.Pipeline, dependencyName
 
 	// try to find the dependency
 	var pipeline types.Pipeline
-	err := wait.PollImmediateWithContext(ctx, time.Millisecond*10, time.Second, func(_ context.Context) (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, time.Millisecond*10, time.Second, true, func(_ context.Context) (bool, error) {
 		pipeline = findDependencies(start, dependencyName)
 		return pipeline != nil, nil
 	})

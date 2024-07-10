@@ -66,8 +66,8 @@ func ExpectNamespace(namespace string) {
 	kubeClient, err := kube.NewKubeHelper()
 	ExpectNoErrorWithOffset(1, err)
 
-	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
-		ns, err := kubeClient.Client().KubeClient().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+	err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(ctx context.Context) (done bool, err error) {
+		ns, err := kubeClient.Client().KubeClient().CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
 		}
@@ -81,7 +81,7 @@ func ExpectRemoteFileContents(imageSelector string, namespace string, filePath s
 	kubeClient, err := kube.NewKubeHelper()
 	ExpectNoErrorWithOffset(1, err)
 
-	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+	err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 		out, err := kubeClient.ExecByImageSelector(imageSelector, namespace, []string{"cat", filePath})
 		if err != nil {
 			return false, nil
@@ -94,7 +94,7 @@ func ExpectRemoteFileContents(imageSelector string, namespace string, filePath s
 
 func ExpectLocalCurlContents(urlString string, contents string) {
 	client := resty.New()
-	err := wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 		resp, _ := client.R().
 			EnableTrace().
 			Get(urlString)
@@ -106,7 +106,7 @@ func ExpectLocalCurlContents(urlString string, contents string) {
 func ExpectContainerNameAndImageEqual(namespace, deploymentName, containerImage, containerName string) {
 	kubeClient, err := kube.NewKubeHelper()
 	ExpectNoErrorWithOffset(1, err)
-	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+	err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 		deploy, err := kubeClient.RawClient().AppsV1().Deployments(namespace).Get(context.TODO(),
 			deploymentName, metav1.GetOptions{})
 		if err != nil {
@@ -121,7 +121,7 @@ func ExpectContainerNameAndImageEqual(namespace, deploymentName, containerImage,
 func ExpectRemoteCurlContents(imageSelector string, namespace string, urlString string, contents string) {
 	kubeClient, err := kube.NewKubeHelper()
 	ExpectNoErrorWithOffset(1, err)
-	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+	err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 		out, err := kubeClient.ExecByImageSelector(imageSelector, namespace, []string{"curl", urlString})
 		if err != nil {
 			return false, nil
@@ -137,7 +137,7 @@ func ExpectRemoteFileNotFound(imageSelector string, namespace string, filePath s
 
 	fileExists := "file exists"
 	fileNotFound := "file not found"
-	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+	err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 		test := []string{"sh", "-c", fmt.Sprintf("test -e %s && echo %s || echo %s", filePath, fileExists, fileNotFound)}
 		out, err := kubeClient.ExecByImageSelector(imageSelector, namespace, test)
 		if err != nil {
@@ -159,7 +159,7 @@ func ExpectRemoteContainerFileContents(labelSelector, container string, namespac
 	kubeClient, err := kube.NewKubeHelper()
 	ExpectNoErrorWithOffset(1, err)
 
-	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+	err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 		out, err := kubeClient.ExecByContainer(labelSelector, container, namespace, []string{"cat", filePath})
 		if err != nil {
 			return false, nil
@@ -182,7 +182,7 @@ func ExpectLocalFileContainSubstringImmediately(filePath string, contents string
 }
 
 func ExpectLocalFileContents(filePath string, contents string) {
-	err := wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 		out, err := os.ReadFile(filePath)
 		if err != nil {
 			if !os.IsNotExist(err) {

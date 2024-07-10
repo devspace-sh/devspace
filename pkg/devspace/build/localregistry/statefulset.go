@@ -27,7 +27,7 @@ func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.
 	var existing *appsv1.StatefulSet
 	desired := r.getStatefulSet()
 	kubeClient := ctx.KubeClient()
-	err = wait.PollImmediateWithContext(ctx.Context(), time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx.Context(), time.Second, 30*time.Second, true, func(ctx context.Context) (bool, error) {
 		var err error
 
 		existing, err = kubeClient.KubeClient().AppsV1().StatefulSets(r.Namespace).Get(ctx, r.Name, metav1.GetOptions{})

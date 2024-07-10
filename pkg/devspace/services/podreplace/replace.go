@@ -1,6 +1,7 @@
 package podreplace
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -273,8 +274,8 @@ func updatePVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPo
 				// delete the old one and wait
 				_ = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Delete(ctx.Context(), deployment.Name, metav1.DeleteOptions{})
 				ctx.Log().Infof("Waiting for old persistent volume claim to terminate")
-				err = wait.Poll(time.Second, time.Minute*2, func() (done bool, err error) {
-					_, err = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Get(ctx.Context(), deployment.Name, metav1.GetOptions{})
+				err = wait.PollUntilContextTimeout(ctx.Context(), time.Second, time.Minute*2, false, func(ctxPullUntil context.Context) (done bool, err error) {
+					_, err = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Get(ctxPullUntil, deployment.Name, metav1.GetOptions{})
 					return kerrors.IsNotFound(err), nil
 				})
 				if err != nil {

@@ -31,7 +31,7 @@ func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) (*appsv1.D
 	var existing *appsv1.Deployment
 	desired := r.getDeployment()
 	kubeClient := ctx.KubeClient()
-	err = wait.PollImmediateWithContext(ctx.Context(), time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx.Context(), time.Second, 30*time.Second, true, func(ctx context.Context) (bool, error) {
 		var err error
 
 		existing, err = kubeClient.KubeClient().AppsV1().Deployments(r.Namespace).Get(ctx, r.Name, metav1.GetOptions{})
@@ -125,7 +125,7 @@ func getAnnotations(localbuild bool) map[string]string {
 
 // this returns a different deployment, if we're using a local docker build or not.
 func getContainers(registryImage, buildKitImage, volume string, port int32, localbuild bool) []corev1.Container {
-	buildContainers := getRegistryContainers(registryImage, buildKitImage, volume, port)
+	buildContainers := getRegistryContainers(registryImage, volume, port)
 	if localbuild {
 		// in case we're using local builds just return the deployment with only the
 		// registry container inside
@@ -186,7 +186,7 @@ func getContainers(registryImage, buildKitImage, volume string, port int32, loca
 	return append(buildKitContainer, buildContainers...)
 }
 
-func getRegistryContainers(registryImage, buildKitImage, volume string, port int32) []corev1.Container {
+func getRegistryContainers(registryImage, volume string, port int32) []corev1.Container {
 	return []corev1.Container{
 		{
 			Name:  "registry",

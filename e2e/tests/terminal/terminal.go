@@ -3,6 +3,12 @@ package terminal
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
@@ -13,11 +19,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
 )
 
 var _ = DevSpaceDescribe("terminal", func() {
@@ -126,7 +127,7 @@ sleep 1000000
 
 		// wait until we get the first hostnames
 		var podName string
-		err = wait.PollImmediate(time.Second, time.Minute*3, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*3, true, func(_ context.Context) (done bool, err error) {
 			lines := strings.Split(buffer.String(), "\n")
 			if len(lines) <= 1 {
 				return false, nil
@@ -142,8 +143,8 @@ sleep 1000000
 		framework.ExpectNoError(err)
 
 		// wait until pod is terminated
-		err = wait.PollImmediate(time.Second, time.Minute*3, func() (done bool, err error) {
-			_, err = kubeClient.RawClient().CoreV1().Pods(ns).Get(context.TODO(), podName, metav1.GetOptions{})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*3, true, func(ctx context.Context) (done bool, err error) {
+			_, err = kubeClient.RawClient().CoreV1().Pods(ns).Get(ctx, podName, metav1.GetOptions{})
 			if err != nil {
 				if kerrors.IsNotFound(err) {
 					return true, nil
@@ -157,7 +158,7 @@ sleep 1000000
 		framework.ExpectNoError(err)
 
 		// get new pod name
-		err = wait.PollImmediate(time.Second, time.Minute*3, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*3, true, func(_ context.Context) (done bool, err error) {
 			lines := strings.Split(buffer.String(), "\n")
 			if len(lines) <= 1 {
 				return false, nil
