@@ -1,12 +1,13 @@
 package localregistry
 
 import (
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net"
 	"sync"
 	"time"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -44,7 +45,7 @@ func ExecConn(ctx devspacecontext.Context, namespace, pod, container string, cmd
 		writer := ctx.Log().Writer(logrus.ErrorLevel, true)
 		defer writer.Close()
 
-		serr := exec.Stream(remotecommand.StreamOptions{
+		serr := exec.StreamWithContext(ctx.Context(), remotecommand.StreamOptions{
 			Stdin:  stdinR,
 			Stdout: stdoutW,
 			Stderr: writer,
