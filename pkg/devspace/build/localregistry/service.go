@@ -5,6 +5,7 @@ import (
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,17 +46,12 @@ func (r *LocalRegistry) ensureService(ctx devspacecontext.Context) (*corev1.Serv
 		return nil, err
 	}
 
-	if !ctx.KubeClient().SupportServerSideApply() {
-		return existing, nil
-	}
-
 	// Use server side apply if it does exist
 	applyConfiguration, err := applyv1.ExtractService(existing, ApplyFieldManager)
 	if err != nil {
 		return nil, err
 	}
-
-	return ctx.KubeClient().KubeClient().CoreV1().Services(r.Namespace).Apply(
+	apply, err := ctx.KubeClient().KubeClient().CoreV1().Services(r.Namespace).Apply(
 		ctx.Context(),
 		applyConfiguration,
 		metav1.ApplyOptions{
@@ -63,6 +59,13 @@ func (r *LocalRegistry) ensureService(ctx devspacecontext.Context) (*corev1.Serv
 			Force:        true,
 		},
 	)
+	if err != nil && kubectl.IsIncompatibleServerError(err) {
+		ctx.Log().Debugf("Server-side apply not available on the server for localRegistry service: (%v)", err)
+		// Unsupport server-side apply, we use existing or created service
+		return existing, nil
+	}
+
+	return apply, err
 }
 
 func (r *LocalRegistry) getService() *corev1.Service {

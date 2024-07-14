@@ -5,6 +5,7 @@ import (
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -58,17 +59,12 @@ func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) (*appsv1.D
 		return nil, err
 	}
 
-	if !ctx.KubeClient().SupportServerSideApply() {
-		return existing, nil
-	}
-
 	// Use server side apply if it does exist
 	applyConfiguration, err := appsapplyv1.ExtractDeployment(existing, ApplyFieldManager)
 	if err != nil {
 		return nil, err
 	}
-
-	return ctx.KubeClient().KubeClient().AppsV1().Deployments(r.Namespace).Apply(
+	apply, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.Namespace).Apply(
 		ctx.Context(),
 		applyConfiguration,
 		metav1.ApplyOptions{
@@ -76,6 +72,13 @@ func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) (*appsv1.D
 			Force:        true,
 		},
 	)
+	if err != nil && kubectl.IsIncompatibleServerError(err) {
+		ctx.Log().Debugf("Server-side apply not available on the server for localRegistry deployment: (%v)", err)
+		// Unsupport server-side apply, we use existing or created deployment
+		return existing, nil
+	}
+
+	return apply, err
 }
 
 func (r *LocalRegistry) getDeployment() *appsv1.Deployment {
@@ -130,7 +133,7 @@ func getAnnotations(localbuild bool) map[string]string {
 
 // this returns a different deployment, if we're using a local docker build or not.
 func getContainers(registryImage, buildKitImage, volume string, port int32, localbuild bool) []corev1.Container {
-	buildContainers := getRegistryContainers(registryImage, buildKitImage, volume, port)
+	buildContainers := getRegistryContainers(registryImage, volume, port)
 	if localbuild {
 		// in case we're using local builds just return the deployment with only the
 		// registry container inside
@@ -191,7 +194,7 @@ func getContainers(registryImage, buildKitImage, volume string, port int32, loca
 	return append(buildKitContainer, buildContainers...)
 }
 
-func getRegistryContainers(registryImage, buildKitImage, volume string, port int32) []corev1.Container {
+func getRegistryContainers(registryImage, volume string, port int32) []corev1.Container {
 	return []corev1.Container{
 		{
 			Name:  "registry",
