@@ -3,11 +3,6 @@ package kubectl
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"time"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
@@ -17,7 +12,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/loft-sh/devspace/pkg/util/terminal"
+	"io"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"net/http"
+	"os"
+	"time"
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"

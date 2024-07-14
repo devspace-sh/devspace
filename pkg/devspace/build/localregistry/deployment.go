@@ -5,6 +5,7 @@ import (
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -63,7 +64,7 @@ func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) (*appsv1.D
 	if err != nil {
 		return nil, err
 	}
-	return ctx.KubeClient().KubeClient().AppsV1().Deployments(r.Namespace).Apply(
+	apply, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.Namespace).Apply(
 		ctx.Context(),
 		applyConfiguration,
 		metav1.ApplyOptions{
@@ -71,6 +72,13 @@ func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) (*appsv1.D
 			Force:        true,
 		},
 	)
+	if err != nil && kubectl.IsIncompatibleServerError(err) {
+		ctx.Log().Debugf("Server-side apply not available on the server for localRegistry deployment: (%v)", err)
+		// Unsupport server-side apply, we use existing or created deployment
+		return existing, nil
+	}
+
+	return apply, err
 }
 
 func (r *LocalRegistry) getDeployment() *appsv1.Deployment {

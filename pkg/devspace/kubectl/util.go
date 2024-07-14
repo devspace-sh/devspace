@@ -276,3 +276,13 @@ func GetKindContext(context string) string {
 
 	return strings.TrimPrefix(context, "kind-")
 }
+
+func IsIncompatibleServerError(err error) bool {
+	// 415: Unsupported media type means we're talking to a server which doesn't support server-side apply.
+	// Also included the apiserver enabled feature: ServerSideApply=false option
+	if _, ok := err.(*kerrors.StatusError); !ok {
+		// Non-StatusError means the error isn't because the server is incompatible.
+		return false
+	}
+	return err.(*kerrors.StatusError).Status().Code == http.StatusUnsupportedMediaType
+}
