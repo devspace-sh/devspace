@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -138,9 +139,18 @@ sleep 1000000
 		})
 		framework.ExpectNoError(err)
 
-		// make sure the pod exists
-		err = kubeClient.RawClient().CoreV1().Pods(ns).Delete(context.TODO(), podName, metav1.DeleteOptions{})
-		framework.ExpectNoError(err)
+		gomega.Eventually(func(g gomega.Gomega) {
+			// make sure the pod exists
+			_, err := kubeClient.RawClient().CoreV1().Pods(ns).Get(context.TODO(), podName, metav1.GetOptions{})
+			g.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// delete it
+			err = kubeClient.RawClient().CoreV1().Pods(ns).Delete(context.TODO(), podName, metav1.DeleteOptions{})
+			g.Expect(err).NotTo(gomega.HaveOccurred())
+		}).
+			WithPolling(1 * time.Second).
+			WithTimeout(30 * time.Second).
+			Should(gomega.Succeed())
 
 		// wait until pod is terminated
 		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*3, true, func(ctx context.Context) (done bool, err error) {
