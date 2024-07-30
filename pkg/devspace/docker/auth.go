@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	cliTypes "github.com/docker/cli/cli/config/types"
-	"github.com/docker/docker/api/types"
+	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	"github.com/pkg/errors"
@@ -22,7 +22,7 @@ func (c *client) GetRegistryEndpoint(ctx context.Context, registryURL string) (b
 }
 
 // GetAuthConfig returns the AuthConfig for a Docker registry from the Docker credential helper
-func (c *client) GetAuthConfig(ctx context.Context, registryURL string, checkCredentialsStore bool) (*types.AuthConfig, error) {
+func (c *client) GetAuthConfig(ctx context.Context, registryURL string, checkCredentialsStore bool) (*dockerregistry.AuthConfig, error) {
 	isDefaultRegistry, serverAddress, err := c.GetRegistryEndpoint(ctx, registryURL)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func (c *client) GetAuthConfig(ctx context.Context, registryURL string, checkCre
 }
 
 // Login logs the user into docker
-func (c *client) Login(ctx context.Context, registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*types.AuthConfig, error) {
+func (c *client) Login(ctx context.Context, registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockerregistry.AuthConfig, error) {
 	isDefaultRegistry, serverAddress, err := c.GetRegistryEndpoint(ctx, registryURL)
 	if err != nil {
 		return nil, err
@@ -120,8 +120,8 @@ func (c *client) getOfficialServer(ctx context.Context) string {
 	return serverAddress
 }
 
-func getDefaultAuthConfig(checkCredStore bool, serverAddress string, isDefaultRegistry bool) (*types.AuthConfig, error) {
-	var authconfig types.AuthConfig
+func getDefaultAuthConfig(checkCredStore bool, serverAddress string, isDefaultRegistry bool) (*dockerregistry.AuthConfig, error) {
+	var authconfig dockerregistry.AuthConfig
 	var err error
 
 	if !isDefaultRegistry {

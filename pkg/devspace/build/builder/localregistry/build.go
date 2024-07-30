@@ -8,16 +8,15 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
-	"github.com/loft-sh/devspace/pkg/devspace/build/localregistry"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/pkg/errors"
-
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/loft-sh/devspace/pkg/devspace/build/localregistry"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/pkg/errors"
 
 	buildkit "github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/session"

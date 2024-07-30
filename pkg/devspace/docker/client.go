@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/loft-sh/utils/pkg/command"
 	"mvdan.cc/sh/v3/expand"
 
@@ -34,8 +35,8 @@ type Client interface {
 
 	ImagePush(ctx context.Context, ref string, options dockertypes.ImagePushOptions) (io.ReadCloser, error)
 
-	Login(ctx context.Context, registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockertypes.AuthConfig, error)
-	GetAuthConfig(ctx context.Context, registryURL string, checkCredentialsStore bool) (*dockertypes.AuthConfig, error)
+	Login(ctx context.Context, registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockerregistry.AuthConfig, error)
+	GetAuthConfig(ctx context.Context, registryURL string, checkCredentialsStore bool) (*dockerregistry.AuthConfig, error)
 
 	ParseProxyConfig(buildArgs map[string]*string) map[string]*string
 

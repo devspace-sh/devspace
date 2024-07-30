@@ -7,8 +7,8 @@ import (
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
+	dockerregistry "github.com/docker/docker/api/types/registry"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/homedir"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 )
@@ -30,7 +30,7 @@ func LoadDockerConfig() (*configfile.ConfigFile, error) {
 }
 
 // GetAllAuthConfigs returns every auth config found in the docker config
-func GetAllAuthConfigs() (map[string]types.AuthConfig, error) {
+func GetAllAuthConfigs() (map[string]dockerregistry.AuthConfig, error) {
 	config, err := LoadDockerConfig()
 	if err != nil {
 		return nil, err
@@ -41,10 +41,10 @@ func GetAllAuthConfigs() (map[string]types.AuthConfig, error) {
 		return nil, err
 	}
 
-	retMap := make(map[string]types.AuthConfig)
+	retMap := make(map[string]dockerregistry.AuthConfig)
 	for k, v := range authMap {
 		// convert
-		authconfigConverted := &types.AuthConfig{}
+		authconfigConverted := &dockerregistry.AuthConfig{}
 		err = util.Convert(v, authconfigConverted)
 		if err != nil {
 			return nil, err
