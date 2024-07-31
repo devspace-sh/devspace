@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/docker/docker/api/types/image"
 	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/loft-sh/utils/pkg/command"
 	"mvdan.cc/sh/v3/expand"
@@ -33,15 +34,15 @@ type Client interface {
 	ImageBuild(ctx context.Context, context io.Reader, options dockertypes.ImageBuildOptions) (dockertypes.ImageBuildResponse, error)
 	ImageBuildCLI(ctx context.Context, workingDir string, environ expand.Environ, useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error
 
-	ImagePush(ctx context.Context, ref string, options dockertypes.ImagePushOptions) (io.ReadCloser, error)
+	ImagePush(ctx context.Context, ref string, options image.PushOptions) (io.ReadCloser, error)
 
 	Login(ctx context.Context, registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockerregistry.AuthConfig, error)
 	GetAuthConfig(ctx context.Context, registryURL string, checkCredentialsStore bool) (*dockerregistry.AuthConfig, error)
 
 	ParseProxyConfig(buildArgs map[string]*string) map[string]*string
 
-	DeleteImageByName(ctx context.Context, imageName string, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
-	DeleteImageByFilter(ctx context.Context, filter filters.Args, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
+	DeleteImageByName(ctx context.Context, imageName string, log log.Logger) ([]image.DeleteResponse, error)
+	DeleteImageByFilter(ctx context.Context, filter filters.Args, log log.Logger) ([]image.DeleteResponse, error)
 	DockerAPIClient() dockerclient.CommonAPIClient
 }
 

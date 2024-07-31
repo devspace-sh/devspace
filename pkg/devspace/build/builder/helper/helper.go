@@ -1,7 +1,13 @@
 package helper
 
 import (
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/docker/cli/cli/streams"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
@@ -10,10 +16,6 @@ import (
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	dockerterm "github.com/moby/term"
 	"github.com/sirupsen/logrus"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
@@ -243,7 +245,7 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx devspacecontext.Context, docke
 	imageName := imageCache.ResolveImage() + ":" + imageCache.Tag
 
 	dockerAPIClient := dockerClient.DockerAPIClient()
-	imageList, err := dockerAPIClient.ImageList(ctx.Context(), types.ImageListOptions{})
+	imageList, err := dockerAPIClient.ImageList(ctx.Context(), image.ListOptions{})
 	if err != nil {
 		return false, err
 	}

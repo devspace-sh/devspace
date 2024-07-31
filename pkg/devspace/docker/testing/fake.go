@@ -8,6 +8,7 @@ import (
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/loft-sh/devspace/pkg/util/log"
 )
@@ -44,7 +45,7 @@ func (client *FakeClient) ImageBuild(ctx context.Context, context io.Reader, opt
 }
 
 // ImagePush is a fake implementation
-func (client *FakeClient) ImagePush(ctx context.Context, ref string, options dockertypes.ImagePushOptions) (io.ReadCloser, error) {
+func (client *FakeClient) ImagePush(ctx context.Context, ref string, options image.PushOptions) (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewBufferString("")), nil
 }
 
@@ -54,13 +55,13 @@ func (client *FakeClient) Login(registryURL, user, password string, checkCredent
 }
 
 // DeleteImageByName is a fake implementation
-func (client *FakeClient) DeleteImageByName(imageName string, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error) {
+func (client *FakeClient) DeleteImageByName(imageName string, log log.Logger) ([]image.DeleteResponse, error) {
 	return client.DeleteImageByFilter(filters.NewArgs(filters.Arg("reference", strings.TrimSpace(imageName))), log)
 }
 
 // DeleteImageByFilter is a fake implementation
-func (client *FakeClient) DeleteImageByFilter(filter filters.Args, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error) {
-	return []dockertypes.ImageDeleteResponseItem{}, nil
+func (client *FakeClient) DeleteImageByFilter(filter filters.Args, log log.Logger) ([]image.DeleteResponse, error) {
+	return []image.DeleteResponse{}, nil
 }
 
 // GetAuthConfig is a fake implementation
