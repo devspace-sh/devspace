@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	log "github.com/loft-sh/devspace/pkg/util/log/testing"
 	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
@@ -14,7 +14,7 @@ type deleteImageTestCase struct {
 	name string
 
 	deletedImageName string
-	expectedResponse []types.ImageDeleteResponseItem
+	expectedResponse []image.DeleteResponse
 	expectedErr      bool
 }
 
@@ -23,7 +23,7 @@ func TestDeleteImage(t *testing.T) {
 		{
 			name:             "Delete by name",
 			deletedImageName: "deleteThis",
-			expectedResponse: []types.ImageDeleteResponseItem{
+			expectedResponse: []image.DeleteResponse{
 				{
 					Deleted:  "deleteThis",
 					Untagged: "deleteThis",
@@ -34,7 +34,7 @@ func TestDeleteImage(t *testing.T) {
 
 	for _, testCase := range testCases {
 		var (
-			response []types.ImageDeleteResponseItem
+			response []image.DeleteResponse
 			err      error
 		)
 

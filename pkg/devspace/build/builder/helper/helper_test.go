@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/docker/docker/api/types/image"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
@@ -15,7 +16,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"gotest.tools/assert"
 
-	"github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
 )
 
@@ -31,8 +31,8 @@ type fakeDockerAPIClient struct {
 	dockerclient.CommonAPIClient
 }
 
-func (c *fakeDockerAPIClient) ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error) {
-	return []types.ImageSummary{
+func (c *fakeDockerAPIClient) ImageList(ctx context.Context, options image.ListOptions) ([]image.Summary, error) {
+	return []image.Summary{
 		{
 			RepoTags: []string{"image1:dbysxsH"},
 		},

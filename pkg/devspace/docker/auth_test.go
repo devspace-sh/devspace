@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	dockerregistry "github.com/docker/docker/api/types/registry"
+	"github.com/docker/docker/api/types/system"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"gopkg.in/yaml.v3"
@@ -20,8 +22,8 @@ type fakeDockerClient struct {
 	dockerclient.Client
 }
 
-func (f *fakeDockerClient) Info(ctx context.Context) (types.Info, error) {
-	return types.Info{
+func (f *fakeDockerClient) Info(ctx context.Context) (system.Info, error) {
+	return system.Info{
 		IndexServerAddress: "IndexServerAddress",
 	}, nil
 }
@@ -40,16 +42,16 @@ func (f *fakeDockerClient) RegistryLogin(ctx context.Context, auth dockerregistr
 	}, nil
 }
 
-func (f *fakeDockerClient) ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error) {
-	return []types.ImageSummary{
+func (f *fakeDockerClient) ImageList(ctx context.Context, options image.ListOptions) ([]image.Summary, error) {
+	return []image.Summary{
 		{
 			ID: "deleteThis",
 		},
 	}, nil
 }
 
-func (f *fakeDockerClient) ImageRemove(ctx context.Context, image string, options types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error) {
-	return []types.ImageDeleteResponseItem{
+func (f *fakeDockerClient) ImageRemove(ctx context.Context, img string, options image.RemoveOptions) ([]image.DeleteResponse, error) {
+	return []image.DeleteResponse{
 		{
 			Deleted:  "deleteThis",
 			Untagged: "deleteThis",

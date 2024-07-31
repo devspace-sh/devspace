@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/onsi/ginkgo/v2"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
+	"github.com/onsi/ginkgo/v2"
+
 	"github.com/docker/docker/api/types/container"
 
 	"github.com/loft-sh/devspace/cmd"
@@ -63,7 +64,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
-		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 
 		found := false
@@ -102,7 +103,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
-		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 
 		found := false
@@ -139,7 +140,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
-		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 
 		found := false
@@ -186,7 +187,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
-		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 
 		found := false
@@ -242,7 +243,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
-		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 
 		for _, image := range imageList {
@@ -286,7 +287,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
-		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 
 		for _, image := range imageList {
@@ -338,7 +339,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
-		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 
 		for _, image := range imageList {
@@ -373,7 +374,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
-		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 		imageName := "my-docker-username/helloworld-dockerignore:latest"
 		for _, image := range imageList {
@@ -393,7 +394,7 @@ var _ = DevSpaceDescribe("build", func() {
 		}, nil, nil, nil, "")
 		framework.ExpectNoError(err)
 
-		err = dockerClient.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
+		err = dockerClient.ContainerStart(ctx, resp.ID, container.StartOptions{})
 		framework.ExpectNoError(err)
 
 		statusCh, errCh := dockerClient.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
@@ -403,7 +404,7 @@ var _ = DevSpaceDescribe("build", func() {
 		case <-statusCh:
 		}
 
-		out, err := dockerClient.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+		out, err := dockerClient.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true})
 		framework.ExpectNoError(err)
 
 		stdout := &bytes.Buffer{}
@@ -438,7 +439,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
-		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 		imageName := "my-docker-username/helloworld-dockerignore-rel-path:latest"
 		for _, image := range imageList {
@@ -458,7 +459,7 @@ var _ = DevSpaceDescribe("build", func() {
 		}, nil, nil, nil, "")
 		framework.ExpectNoError(err)
 
-		err = dockerClient.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
+		err = dockerClient.ContainerStart(ctx, resp.ID, container.StartOptions{})
 		framework.ExpectNoError(err)
 
 		statusCh, errCh := dockerClient.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
@@ -468,7 +469,7 @@ var _ = DevSpaceDescribe("build", func() {
 		case <-statusCh:
 		}
 
-		out, err := dockerClient.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+		out, err := dockerClient.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true})
 		framework.ExpectNoError(err)
 
 		stdout := &bytes.Buffer{}
@@ -503,7 +504,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerAPIClient()
-		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 		imageName := "my-docker-username/helloworld-dockerignore-context:latest"
 		for _, image := range imageList {
@@ -523,7 +524,7 @@ var _ = DevSpaceDescribe("build", func() {
 		}, nil, nil, nil, "")
 		framework.ExpectNoError(err)
 
-		err = dockerClient.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
+		err = dockerClient.ContainerStart(ctx, resp.ID, container.StartOptions{})
 		framework.ExpectNoError(err)
 
 		statusCh, errCh := dockerClient.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
@@ -533,7 +534,7 @@ var _ = DevSpaceDescribe("build", func() {
 		case <-statusCh:
 		}
 
-		out, err := dockerClient.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+		out, err := dockerClient.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true})
 		framework.ExpectNoError(err)
 
 		stdout := &bytes.Buffer{}
