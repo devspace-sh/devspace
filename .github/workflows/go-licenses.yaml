@@ -36,7 +36,7 @@ jobs:
 
       - name: Check invalid licenses
         run: |
-          if cat licenses/devspace.mdx | grep '^ - ' | grep -Evi "apache|bsd|mit|isc|python|postgre|x11|zlib"; then
+          if cat docs/pages/licenses/devspace.mdx | grep '^ - ' | grep -Evi "apache|bsd|mit|isc|python|postgre|x11|zlib"; then
             echo "ERR: Found invalid licenses!"
             exit 1
           fi
