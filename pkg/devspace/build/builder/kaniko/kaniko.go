@@ -1,6 +1,7 @@
 package kaniko
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -169,8 +170,8 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 		}
 
 		ctx.Log().Info("Waiting for build init container to start...")
-		err = wait.PollImmediate(time.Second, waitTimeout, func() (done bool, err error) {
-			buildPod, err = ctx.KubeClient().KubeClient().CoreV1().Pods(b.BuildNamespace).Get(ctx.Context(), buildPodCreated.Name, metav1.GetOptions{})
+		err = wait.PollUntilContextTimeout(ctx.Context(), time.Second, waitTimeout, true, func(ctxPollUntil context.Context) (done bool, err error) {
+			buildPod, err = ctx.KubeClient().KubeClient().CoreV1().Pods(b.BuildNamespace).Get(ctxPollUntil, buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
 				if kerrors.IsNotFound(err) {
 					return false, nil
@@ -181,7 +182,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 				status := buildPod.Status.InitContainerStatuses[0]
 				if status.State.Terminated != nil {
 					errorLog := ""
-					reader, _ := ctx.KubeClient().Logs(ctx.Context(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.InitContainers[0].Name, false, nil, false)
+					reader, _ := ctx.KubeClient().Logs(ctxPollUntil, b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.InitContainers[0].Name, false, nil, false)
 					if reader != nil {
 						out, err := io.ReadAll(reader)
 						if err == nil {
@@ -310,8 +311,8 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 		ctx.Log().Done("Uploaded files to container")
 		ctx.Log().Info("Waiting for kaniko container to start...")
-		err = wait.PollImmediate(time.Second, waitTimeout, func() (done bool, err error) {
-			buildPod, err = ctx.KubeClient().KubeClient().CoreV1().Pods(b.BuildNamespace).Get(ctx.Context(), buildPodCreated.Name, metav1.GetOptions{})
+		err = wait.PollUntilContextTimeout(ctx.Context(), time.Second, waitTimeout, true, func(ctxPollUntil context.Context) (done bool, err error) {
+			buildPod, err = ctx.KubeClient().KubeClient().CoreV1().Pods(b.BuildNamespace).Get(ctxPollUntil, buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
 				if kerrors.IsNotFound(err) {
 					return false, nil
@@ -326,7 +327,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 					}
 
 					errorLog := ""
-					reader, _ := ctx.KubeClient().Logs(ctx.Context(), b.BuildNamespace, buildPodCreated.Name, status.Name, false, nil, false)
+					reader, _ := ctx.KubeClient().Logs(ctxPollUntil, b.BuildNamespace, buildPodCreated.Name, status.Name, false, nil, false)
 					if reader != nil {
 						out, err := io.ReadAll(reader)
 						if err == nil {

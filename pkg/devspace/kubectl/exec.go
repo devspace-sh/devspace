@@ -3,8 +3,9 @@ package kubectl
 import (
 	"bytes"
 	"context"
-	"github.com/loft-sh/devspace/pkg/util/terminal"
 	"io"
+
+	"github.com/loft-sh/devspace/pkg/util/terminal"
 	"k8s.io/kubectl/pkg/util/term"
 
 	corev1 "k8s.io/api/core/v1"
@@ -106,7 +107,7 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 	errChan := make(chan error)
 	go func() {
 		errChan <- t.Safe(func() error {
-			return exec.Stream(streamOptions)
+			return exec.StreamWithContext(ctx, streamOptions)
 		})
 	}()
 

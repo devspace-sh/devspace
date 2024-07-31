@@ -2,11 +2,12 @@ package hook
 
 import (
 	"context"
+	"sync"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
-	"sync"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -72,7 +73,7 @@ func (r *waitHook) execute(ctx context.Context, hook *latest.HookConfig, client 
 	}
 
 	// wait until the defined condition will be true, this will wait initially 2 seconds
-	err := wait.Poll(time.Second*2, time.Duration(timeout)*time.Second, func() (done bool, err error) {
+	err := wait.PollUntilContextTimeout(ctx, time.Second*2, time.Duration(timeout)*time.Second, false, func(ctx context.Context) (done bool, err error) {
 		podContainers, err := selector.NewFilter(client).SelectContainers(ctx, selector.Selector{
 			ImageSelector:   targetselector.ToStringImageSelector(imageSelector),
 			LabelSelector:   labelSelector,

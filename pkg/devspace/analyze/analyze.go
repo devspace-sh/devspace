@@ -1,9 +1,11 @@
 package analyze
 
 import (
+	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -82,7 +84,7 @@ func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportIte
 	}
 
 	// Loop as long as we have a timeout
-	err := wait.Poll(time.Second, timeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, timeout, false, func(_ context.Context) (bool, error) {
 		report = []*ReportItem{}
 
 		// Analyze pods

@@ -2,10 +2,11 @@ package hooks
 
 import (
 	"context"
-	"github.com/onsi/ginkgo/v2"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/onsi/ginkgo/v2"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -147,7 +148,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 
 		// Read the 'once' hook output
 		onceOutput1 := ""
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			onceOutput1, err = kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/once.out"})
 			if err != nil {
 				return false, nil
@@ -159,7 +160,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 
 		// Read the 'each' hook output
 		eachOutput1 := ""
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			eachOutput1, err = kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/each.out"})
 			if err != nil {
 				return false, nil
@@ -196,7 +197,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 
 		// Wait for 'each' hook output to change
 		eachOutput2 := ""
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			eachOutput2, err = kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/each.out"})
 			if err != nil {
 				return false, nil
@@ -208,7 +209,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 
 		// Read the 'once' hook output again
 		onceOutput2 := ""
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			onceOutput2, err = kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/once.out"})
 			if err != nil {
 				return false, nil

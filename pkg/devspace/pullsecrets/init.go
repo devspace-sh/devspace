@@ -1,6 +1,7 @@
 package pullsecrets
 
 import (
+	"context"
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -120,9 +121,9 @@ func (r *client) addPullSecretsToServiceAccount(ctx devspacecontext.Context, nam
 		serviceAccount = "default"
 	}
 
-	err := wait.PollImmediate(time.Second, time.Second*30, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx.Context(), time.Second, time.Second*30, true, func(ctxPollUntil context.Context) (bool, error) {
 		// Get default service account
-		sa, err := ctx.KubeClient().KubeClient().CoreV1().ServiceAccounts(namespace).Get(ctx.Context(), serviceAccount, metav1.GetOptions{})
+		sa, err := ctx.KubeClient().KubeClient().CoreV1().ServiceAccounts(namespace).Get(ctxPollUntil, serviceAccount, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				return false, nil
@@ -142,7 +143,7 @@ func (r *client) addPullSecretsToServiceAccount(ctx devspacecontext.Context, nam
 		}
 		if !found {
 			sa.ImagePullSecrets = append(sa.ImagePullSecrets, v1.LocalObjectReference{Name: pullSecretName})
-			_, err := ctx.KubeClient().KubeClient().CoreV1().ServiceAccounts(namespace).Update(ctx.Context(), sa, metav1.UpdateOptions{})
+			_, err := ctx.KubeClient().KubeClient().CoreV1().ServiceAccounts(namespace).Update(ctxPollUntil, sa, metav1.UpdateOptions{})
 			if err != nil {
 				if kerrors.IsConflict(err) {
 					return false, nil

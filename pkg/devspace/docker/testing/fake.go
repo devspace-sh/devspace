@@ -8,12 +8,13 @@ import (
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 // FakeClient is a prototype for a fake docker cient for testing purposes
 type FakeClient struct {
-	AuthConfig *dockertypes.AuthConfig
+	AuthConfig *dockerregistry.AuthConfig
 	PingErr    error
 }
 
@@ -48,7 +49,7 @@ func (client *FakeClient) ImagePush(ctx context.Context, ref string, options doc
 }
 
 // Login is a fake implementation
-func (client *FakeClient) Login(registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockertypes.AuthConfig, error) {
+func (client *FakeClient) Login(registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockerregistry.AuthConfig, error) {
 	return client.AuthConfig, nil
 }
 
@@ -63,6 +64,6 @@ func (client *FakeClient) DeleteImageByFilter(filter filters.Args, log log.Logge
 }
 
 // GetAuthConfig is a fake implementation
-func (client *FakeClient) GetAuthConfig(registryURL string, checkCredentialsStore bool) (*dockertypes.AuthConfig, error) {
+func (client *FakeClient) GetAuthConfig(registryURL string, checkCredentialsStore bool) (*dockerregistry.AuthConfig, error) {
 	return client.AuthConfig, nil
 }

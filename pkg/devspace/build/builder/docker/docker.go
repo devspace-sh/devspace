@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"io"
+
 	"github.com/docker/cli/cli/streams"
 	"github.com/docker/distribution/reference"
+	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -13,7 +16,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	command2 "github.com/loft-sh/utils/pkg/command"
-	"io"
 
 	"github.com/docker/docker/api/types"
 	"github.com/pkg/errors"
@@ -28,7 +30,7 @@ const EngineName = "docker"
 type Builder struct {
 	helper *helper.BuildHelper
 
-	authConfig                *types.AuthConfig
+	authConfig                *dockerregistry.AuthConfig
 	client                    dockerclient.Client
 	skipPush                  bool
 	skipPushOnLocalKubernetes bool
@@ -179,7 +181,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 }
 
 // Authenticate authenticates the client with a remote registry
-func (b *Builder) Authenticate(ctx context.Context) (*types.AuthConfig, error) {
+func (b *Builder) Authenticate(ctx context.Context) (*dockerregistry.AuthConfig, error) {
 	registryURL, err := pullsecrets.GetRegistryFromImageName(b.helper.ImageName + ":" + b.helper.ImageTags[0])
 	if err != nil {
 		return nil, err
@@ -221,7 +223,7 @@ func (b *Builder) pushImage(ctx context.Context, writer io.Writer, imageName str
 	return nil
 }
 
-func encodeAuthToBase64(authConfig types.AuthConfig) (string, error) {
+func encodeAuthToBase64(authConfig dockerregistry.AuthConfig) (string, error) {
 	buf, err := json.Marshal(authConfig)
 	if err != nil {
 		return "", err

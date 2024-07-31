@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/registry"
+	dockerregistry "github.com/docker/docker/api/types/registry"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"gopkg.in/yaml.v3"
@@ -30,12 +30,12 @@ func (f *fakeDockerClient) Ping(ctx context.Context) (types.Ping, error) {
 	return types.Ping{}, nil
 }
 
-func (f *fakeDockerClient) RegistryLogin(ctx context.Context, auth types.AuthConfig) (registry.AuthenticateOKBody, error) {
+func (f *fakeDockerClient) RegistryLogin(ctx context.Context, auth dockerregistry.AuthConfig) (dockerregistry.AuthenticateOKBody, error) {
 	identityToken := ""
 	if auth.Password == "useToken" {
 		identityToken = "someToken"
 	}
-	return registry.AuthenticateOKBody{
+	return dockerregistry.AuthenticateOKBody{
 		IdentityToken: identityToken,
 	}, nil
 }
@@ -107,7 +107,7 @@ type getAuthConfigTestCase struct {
 	registryURL           string
 	checkCredentialsStore bool
 
-	expectedAuthConfig *types.AuthConfig
+	expectedAuthConfig *dockerregistry.AuthConfig
 	expectedErr        bool
 }
 
@@ -116,7 +116,7 @@ func TestGetAuthConfig(t *testing.T) {
 		{
 			name:                  "Use default server",
 			checkCredentialsStore: true,
-			expectedAuthConfig: &types.AuthConfig{
+			expectedAuthConfig: &dockerregistry.AuthConfig{
 				ServerAddress: "IndexServerAddress",
 			},
 		},
@@ -124,7 +124,7 @@ func TestGetAuthConfig(t *testing.T) {
 			name:                  "Use custom server",
 			registryURL:           "http://custom",
 			checkCredentialsStore: true,
-			expectedAuthConfig: &types.AuthConfig{
+			expectedAuthConfig: &dockerregistry.AuthConfig{
 				ServerAddress: "custom",
 			},
 		},
@@ -202,7 +202,7 @@ type loginTestCase struct {
 	saveAuthConfig        bool
 	relogin               bool
 
-	expectedAuthConfig *types.AuthConfig
+	expectedAuthConfig *dockerregistry.AuthConfig
 	expectedErr        bool
 }
 
@@ -214,7 +214,7 @@ func TestLogin(t *testing.T) {
 			saveAuthConfig:        true,
 			user:                  "user",
 			password:              "useToken",
-			expectedAuthConfig: &types.AuthConfig{
+			expectedAuthConfig: &dockerregistry.AuthConfig{
 				ServerAddress: "IndexServerAddress",
 				Username:      "user",
 				IdentityToken: "someToken",

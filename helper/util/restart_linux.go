@@ -4,6 +4,7 @@
 package util
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -79,7 +80,7 @@ func (*containerRestarter) RestartContainer() error {
 		if err != nil {
 			return nil
 		}
-		err = wait.PollImmediate(time.Second, 5*time.Second, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 5*time.Second, true, func(_ context.Context) (done bool, err error) {
 			_, err = os.Stat(procPath)
 			return os.IsNotExist(err), nil
 		})

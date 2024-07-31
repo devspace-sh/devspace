@@ -190,10 +190,11 @@ func (r *LocalRegistry) waitForNodePort(ctx devspacecontext.Context) (*corev1.Se
 	var servicePort *corev1.ServicePort
 
 	kubeClient := ctx.KubeClient().KubeClient()
-	err := wait.PollImmediateWithContext(
+	err := wait.PollUntilContextTimeout(
 		ctx.Context(),
 		time.Second,
 		30*time.Second,
+		true,
 		func(ctx context.Context) (done bool, err error) {
 			service, err := kubeClient.CoreV1().
 				Services(r.Namespace).
@@ -271,10 +272,11 @@ func (r *LocalRegistry) startPortForwarding(
 }
 
 func (r *LocalRegistry) waitForRegistry(ctx context.Context) error {
-	return wait.PollImmediateWithContext(
+	return wait.PollUntilContextTimeout(
 		ctx,
 		time.Second,
 		30*time.Second,
+		true,
 		func(ctx context.Context) (done bool, err error) {
 			return r.ping(ctx)
 		},
