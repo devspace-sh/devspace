@@ -821,7 +821,9 @@ var _ = DevSpaceDescribe("sync", func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
 			err = syncCmd.Run(f)
-			framework.ExpectNoError(err)
+			if !errors.Is(err, context.Canceled) {
+				framework.ExpectNoError(err)
+			}
 		}()
 
 		// check that node_modules folder was not synced
