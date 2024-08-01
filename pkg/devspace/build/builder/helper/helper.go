@@ -195,7 +195,7 @@ func (b *BuildHelper) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bo
 			return false, errors.Wrap(err, "get context from local dir")
 		}
 
-		relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
+		relDockerfile = filepath.ToSlash(relDockerfile)
 		excludes, err := ReadDockerignore(contextDir, relDockerfile)
 		if err != nil {
 			return false, errors.Errorf("Error reading .dockerignore: %v", err)
@@ -300,7 +300,7 @@ func (b *BuildHelper) CreateContextStream(contextPath, dockerfilePath string, en
 
 	// And canonicalize dockerfile name to a platform-independent one
 	authConfigs, _ := dockerclient.GetAllAuthConfigs()
-	relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
+	relDockerfile = filepath.ToSlash(relDockerfile)
 	excludes, err := ReadDockerignore(contextDir, relDockerfile)
 	if err != nil {
 		return nil, writer, nil, nil, err

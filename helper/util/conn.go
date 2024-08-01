@@ -2,9 +2,10 @@ package util
 
 import (
 	"context"
-	"google.golang.org/grpc/credentials/insecure"
 	"io"
 	"net"
+
+	"google.golang.org/grpc/credentials/insecure"
 
 	"google.golang.org/grpc"
 )
@@ -14,7 +15,7 @@ func NewClientConnection(reader io.Reader, writer io.Writer) (*grpc.ClientConn, 
 	pipe := NewStdStreamJoint(reader, writer, false)
 
 	// Set up a connection to the server.
-	return grpc.Dial("", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+	return grpc.NewClient("", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 		return pipe, nil
 	}))
 }
