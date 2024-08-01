@@ -208,7 +208,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 		}
 
 		// Get ignore rules from docker ignore
-		relDockerfile := archive.CanonicalTarNameForPath(dockerfilePath)
+		relDockerfile := filepath.ToSlash(dockerfilePath)
 		ignoreRules, err := helper.ReadDockerignore(contextPath, relDockerfile)
 		if err != nil {
 			return err

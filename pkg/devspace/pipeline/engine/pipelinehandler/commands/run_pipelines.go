@@ -2,13 +2,14 @@ package commands
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/expand"
-	"strings"
 )
 
 type RunPipelineOptions struct {
@@ -50,6 +51,6 @@ func RunPipelines(ctx devspacecontext.Context, pipeline types.Pipeline, args []s
 		return fmt.Errorf("no pipeline to run specified")
 	}
 
-	options.Environ = environ
+	options.PipelineOptions.Environ = environ
 	return pipeline.StartNewPipelines(ctx, pipelines, options.PipelineOptions)
 }
