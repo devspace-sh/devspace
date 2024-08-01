@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package semconv // import "go.opentelemetry.io/otel/semconv/v1.7.0"
+/*
+Package otelgrpc is the instrumentation library for [google.golang.org/grpc].
 
-// SchemaURL is the schema URL that matches the version of the semantic conventions
-// that this package defines. Semconv packages starting from v1.4.0 must declare
-// non-empty schema URL in the form https://opentelemetry.io/schemas/<version>
-const SchemaURL = "https://opentelemetry.io/schemas/1.7.0"
+Use [NewClientHandler] with [grpc.WithStatsHandler] to instrument a gRPC client.
+
+Use [NewServerHandler] with [grpc.StatsHandler] to instrument a gRPC server.
+*/
+package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
