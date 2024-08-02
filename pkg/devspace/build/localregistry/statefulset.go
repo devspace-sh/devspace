@@ -5,6 +5,7 @@ import (
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -59,7 +60,7 @@ func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.
 	if err != nil {
 		return nil, err
 	}
-	return ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.Namespace).Apply(
+	apply, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.Namespace).Apply(
 		ctx.Context(),
 		applyConfiguration,
 		metav1.ApplyOptions{
@@ -67,6 +68,13 @@ func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.
 			Force:        true,
 		},
 	)
+	if err != nil && kubectl.IsIncompatibleServerError(err) {
+		ctx.Log().Debugf("Server-side apply not available on the server for localRegistry statefulset: (%v)", err)
+		// Unsupport server-side apply, we use existing or created statefulset
+		return existing, nil
+	}
+
+	return apply, err
 }
 
 func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
