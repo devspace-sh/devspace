@@ -62,7 +62,7 @@
     "tslint-react": "^3.2.0",
     "uglifyjs-webpack-plugin": "2.2.0",
     "url-loader": "2.1.0",
-    "webpack": "4.38.0",
+    "webpack": "5.94.0",
     "webpack-dev-server": "4.0.0",
     "webpack-manifest-plugin": "2.0.4",
     "whatwg-fetch": "2.0.3",
