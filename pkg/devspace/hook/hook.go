@@ -3,6 +3,10 @@ package hook
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -13,10 +17,7 @@ import (
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
 	"k8s.io/apimachinery/pkg/labels"
-	"strings"
-	"time"
 )
 
 var (
@@ -105,7 +106,7 @@ func executeSingle(ctx devspacecontext.Context, extraEnv map[string]string, even
 	}
 
 	c := config.Config()
-	if c.Hooks != nil && len(c.Hooks) > 0 {
+	if len(c.Hooks) > 0 {
 		hooksToExecute := []*latest.HookConfig{}
 
 		// Gather all hooks we should execute

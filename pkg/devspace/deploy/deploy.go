@@ -59,7 +59,7 @@ func (c *controller) Deploy(ctx devspacecontext.Context, deployments []string, o
 		return nil
 	}
 
-	if config.Deployments != nil && len(config.Deployments) > 0 {
+	if len(config.Deployments) > 0 {
 		// Execute before deployments deploy hook
 		err := hook.ExecuteHooks(ctx, nil, "before:"+event)
 		if err != nil {

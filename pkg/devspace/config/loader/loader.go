@@ -150,7 +150,7 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 		var ok bool
 		name, ok = data["name"].(string)
 		if !ok {
-			return nil, fmt.Errorf("name is missing in " + filepath.Base(l.absConfigPath))
+			return nil, fmt.Errorf("name is missing in %s", filepath.Base(l.absConfigPath))
 		}
 	} else {
 		data["name"] = options.OverrideName

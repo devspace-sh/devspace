@@ -68,7 +68,7 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 	config := configInterface.Config()
 	portForwards := make([][]string, 0)
 	for _, dev := range config.Dev {
-		if dev.Ports == nil || len(dev.Ports) == 0 {
+		if len(dev.Ports) == 0 {
 			continue
 		}
 		selector := ""

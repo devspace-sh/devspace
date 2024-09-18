@@ -2,12 +2,13 @@ package custom
 
 import (
 	"fmt"
+	"io"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/sirupsen/logrus"
-	"io"
-	"strings"
 
 	"github.com/bmatcuk/doublestar"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -40,7 +41,7 @@ func NewBuilder(imageConf *latest.Image, imageTags []string) *Builder {
 
 // ShouldRebuild implements interface
 func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) (bool, error) {
-	if b.imageConf.Custom.OnChange == nil || len(b.imageConf.Custom.OnChange) == 0 {
+	if len(b.imageConf.Custom.OnChange) == 0 {
 		return true, nil
 	}
 

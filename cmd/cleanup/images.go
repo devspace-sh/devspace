@@ -2,6 +2,7 @@ package cleanup
 
 import (
 	"context"
+
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -76,7 +77,7 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 	}
 
 	config := configInterface.Config()
-	if config.Images == nil || len(config.Images) == 0 {
+	if len(config.Images) == 0 {
 		log.Done("No images found in config to delete")
 		return nil
 	}
