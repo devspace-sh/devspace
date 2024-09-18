@@ -2,6 +2,7 @@ package flags
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/env"
@@ -16,6 +17,18 @@ func ApplyExtraFlags(cobraCmd *cobra.Command, osArgs []string, forceParsing bool
 	flags, err := ParseCommandLine(env.GlobalGetEnv("DEVSPACE_FLAGS"))
 	if err != nil {
 		return nil, err
+	}
+
+	for i := 0; i < len(flags); i++ {
+		if flags[i] == "--kubeconfig" {
+			if i+1 < len(flags) {
+				err = os.Setenv("KUBECONFIG", flags[i+1])
+				if err != nil {
+					return nil, err
+				}
+				break
+			}
+		}
 	}
 
 	commandFlags, err := ParseCommandLine(env.GlobalGetEnv(envName))
