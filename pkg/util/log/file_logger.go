@@ -121,7 +121,7 @@ func (f *fileLogger) Debugf(format string, args ...interface{}) {
 		return
 	}
 
-	f.logger.Debugf(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
+	f.logger.Debug(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Info(args ...interface{}) {
