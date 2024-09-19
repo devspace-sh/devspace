@@ -5,7 +5,6 @@ import (
 	"time"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,7 +58,7 @@ func (r *LocalRegistry) ensureService(ctx devspacecontext.Context) (*corev1.Serv
 			Force:        true,
 		},
 	)
-	if err != nil && kubectl.IsIncompatibleServerError(err) {
+	if kerrors.IsUnsupportedMediaType(err) {
 		ctx.Log().Debugf("Server-side apply not available on the server for localRegistry service: (%v)", err)
 		// Unsupport server-side apply, we use existing or created service
 		return existing, nil
