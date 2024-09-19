@@ -49,7 +49,7 @@ jobs:
           CI: "false"
         run: ./hack/build-ui.bash
       - name: Upload ui tar
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ui-tar
           path: release/ui.tar.gz
