@@ -54,9 +54,7 @@ func (arr testCaseList) Less(i, j int) bool {
 }
 
 func (arr testCaseList) Swap(i, j int) {
-	x := arr[i]
-	arr[i] = arr[j]
-	arr[j] = x
+	arr[i], arr[j] = arr[j], arr[i]
 }
 
 const fileContents = "TestContents"
