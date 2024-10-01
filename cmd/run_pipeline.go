@@ -323,7 +323,7 @@ func initialize(ctx context.Context, f factory.Factory, options *CommandOptions,
 	}
 
 	// resolve dependencies
-	dependencies, err := f.NewDependencyManager(devCtx, options.ConfigOptions).ResolveAll(devCtx, dependency.ResolveOptions{SkipDependencies: options.DependencyOptions.Exclude, Dependencies: options.DependencyOptions.Only})
+	dependencies, err := f.NewDependencyManager(devCtx, options.ConfigOptions).ResolveAll(devCtx, dependency.ResolveOptions{SkipDependencies: options.Options.DependencyOptions.Exclude, Dependencies: options.Options.DependencyOptions.Only})
 	if err != nil {
 		return nil, errors.Wrap(err, "deploy dependencies")
 	}
@@ -443,7 +443,7 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	defer devPodManager.Close()
 
 	// create dependency registry
-	dependencyRegistry := registry.NewDependencyRegistry(ctx.Config().Config().Name, options.DeployOptions.Render)
+	dependencyRegistry := registry.NewDependencyRegistry(ctx.Config().Config().Name, options.Options.DeployOptions.Render)
 
 	// get deploy pipeline
 	pipe := pipelinepkg.NewPipeline(ctx.Config().Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
