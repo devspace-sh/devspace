@@ -11,6 +11,7 @@ import (
 
 	"github.com/docker/docker/api/types/image"
 	dockerregistry "github.com/docker/docker/api/types/registry"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/loft-sh/utils/pkg/command"
 	"mvdan.cc/sh/v3/expand"
 
@@ -19,7 +20,6 @@ import (
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/pkg/errors"
 )
