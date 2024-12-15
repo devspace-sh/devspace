@@ -161,7 +161,7 @@ func CopyImageToRemote(ctx context.Context, client dockerclient.Client, imageNam
 
 	for update := range progressChan {
 		if update.Error != nil {
-			return err
+			return update.Error
 		}
 
 		status := "Pushing"
