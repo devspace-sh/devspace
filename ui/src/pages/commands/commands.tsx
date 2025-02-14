@@ -10,6 +10,7 @@ import CommandsLinkTabSelector from 'components/basic/LinkTabSelector/CommandsLi
 import CommandsList, { getURLByName } from 'components/views/Commands/Commands/CommandsList/CommandsList';
 import InteractiveTerminal, { InteractiveTerminalProps } from 'components/advanced/InteractiveTerminal/InteractiveTerminal';
 import AdvancedCodeLine from 'components/basic/CodeSnippet/AdvancedCodeLine/AdvancedCodeLine';
+import Button from '../../components/basic/Button/Button';
 
 interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
 
@@ -17,6 +18,7 @@ interface State {
   podList?: V1PodList;
   selected?: string;
   terminals: StateTerminalProps[];
+  showInternal: boolean;
 }
 
 interface StateTerminalProps extends InteractiveTerminalProps {
@@ -26,6 +28,7 @@ interface StateTerminalProps extends InteractiveTerminalProps {
 class Commands extends React.PureComponent<Props, State> {
   state: State = {
     terminals: [],
+    showInternal: false
   };
 
   onSelectCommand = (commandName: string) => {
@@ -81,11 +84,18 @@ class Commands extends React.PureComponent<Props, State> {
   };
 
   render() {
+    let commands = this.props.devSpaceConfig.config.commands;
+    if (this.state.showInternal === false) {
+      commands = Object.fromEntries(Object.entries(commands).filter(([_key, config]) => {
+        return config.internal !== true
+      }))
+    }
+
     return (
       <PageLayout className={styles['commands-component']} heading={<CommandsLinkTabSelector />}>
         {!this.props.devSpaceConfig.config ||
-        !this.props.devSpaceConfig.config.commands ||
-        Object.entries(this.props.devSpaceConfig.config.commands).length === 0 ? (
+          !this.props.devSpaceConfig.config.commands ||
+          Object.entries(this.props.devSpaceConfig.config.commands).length === 0 ? (
           <div className={styles['no-config']}>
             <div>
               No commands available. Take a look at&nbsp;
@@ -98,13 +108,27 @@ class Commands extends React.PureComponent<Props, State> {
         ) : (
           <React.Fragment>
             {this.renderTerminals()}
-            <div className={styles['info-part']}>
-              <CommandsList
-                commandsList={this.props.devSpaceConfig.config.commands}
-                running={this.state.terminals.map((terminal) => terminal.url)}
-                selected={this.state.selected}
-                onSelect={this.onSelectCommand}
-              />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ height: '3rem', display: 'flex', justifyContent: 'right', marginRight: '10px', marginBottom: '10px' }}>
+                <Button
+                  onClick={() => {
+                    this.setState((state) => {
+                      return {
+                        showInternal: !state.showInternal
+                      }
+                    })
+                  }}
+                >{this.state.showInternal ? 'Hide internal' : 'Show internal'}</Button>
+              </div>
+
+              <div className={styles['info-part']} style={{ overflowY: 'auto' }}>
+                <CommandsList
+                  commandsList={commands}
+                  running={this.state.terminals.map((terminal) => terminal.url)}
+                  selected={this.state.selected}
+                  onSelect={this.onSelectCommand}
+                />
+              </div>
             </div>
           </React.Fragment>
         )}
