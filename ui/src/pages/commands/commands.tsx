@@ -4,7 +4,7 @@ import styles from './commands.module.scss';
 import PageLayout from 'components/basic/PageLayout/PageLayout';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
 import { V1PodList } from '@kubernetes/client-node';
-import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
+import withDevSpaceConfig, { Command, DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import withWarning, { WarningContext } from 'contexts/withWarning/withWarning';
 import CommandsLinkTabSelector from 'components/basic/LinkTabSelector/CommandsLinkTabSelector/CommandsLinkTabSelector';
 import CommandsList, { getURLByName } from 'components/views/Commands/Commands/CommandsList/CommandsList';
@@ -83,14 +83,16 @@ class Commands extends React.PureComponent<Props, State> {
     ));
   };
 
-  render() {
-    let commands = this.props.devSpaceConfig.config.commands;
+  getVisibleCommands(commands:  { [key: string]: Command }) {
     if (this.state.showInternal === false) {
-      commands = Object.fromEntries(Object.entries(commands).filter(([_key, config]) => {
+      return Object.fromEntries(Object.entries(commands).filter(([_key, config]) => {
         return config.internal !== true
       }))
     }
+    return commands;
+  }
 
+  render() {
     return (
       <PageLayout className={styles['commands-component']} heading={<CommandsLinkTabSelector />}>
         {!this.props.devSpaceConfig.config ||
@@ -123,7 +125,7 @@ class Commands extends React.PureComponent<Props, State> {
 
               <div className={styles['info-part']} style={{ overflowY: 'auto' }}>
                 <CommandsList
-                  commandsList={commands}
+                  commandsList={this.getVisibleCommands(this.props.devSpaceConfig.config.commands)}
                   running={this.state.terminals.map((terminal) => terminal.url)}
                   selected={this.state.selected}
                   onSelect={this.onSelectCommand}
