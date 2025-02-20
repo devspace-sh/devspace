@@ -69,8 +69,8 @@
     "xterm": "4.1.0"
   },
   "scripts": {
-    "start": "NODE_ENV=development nodemon scripts/start.js",
-    "build": "node scripts/build.js"
+    "start": "NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider nodemon scripts/start.js",
+    "build": "NODE_OPTIONS=--openssl-legacy-provider node scripts/build.js"
   },
   "devDependencies": {
     "@types/jest": "^23.3.10",

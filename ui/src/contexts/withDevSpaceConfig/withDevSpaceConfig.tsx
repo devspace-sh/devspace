@@ -50,6 +50,7 @@ interface RawConfig {
 
 export interface Command {
   command: string;
+  internal?: boolean;
 }
 
 interface ImageConfig {

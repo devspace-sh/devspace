@@ -39,7 +39,9 @@ class CommandsList extends React.PureComponent<Props, State> {
       return <PortletSimple key={key}>
         {{
           top: {
-            left: key,
+            left: cmd.internal === true ? (<div>
+            {key} <br/> <span style={{fontSize: 'small'}}>(internal)</span>
+            </div>): key,
             right: (
                 <React.Fragment>
                   <IconButton
