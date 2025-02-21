@@ -13,7 +13,7 @@ require (
 	github.com/creack/pty v1.1.18
 	github.com/docker/cli v24.0.0+incompatible
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/docker/docker v26.1.4+incompatible
+	github.com/docker/docker v26.1.5+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/evanphx/json-patch v4.12.0+incompatible
 	github.com/evanphx/json-patch/v5 v5.1.0
