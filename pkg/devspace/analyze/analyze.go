@@ -63,14 +63,13 @@ func NewAnalyzer(client kubectl.Client, log log.Logger) Analyzer {
 // Analyze analyses a given
 func (a *analyzer) Analyze(namespace string, options Options) error {
 	report, err := a.CreateReport(namespace, options)
-	if err != nil {
-		return err
+
+	if len(report) > 0 {
+		reportString := ReportToString(report)
+		a.log.WriteString(logrus.InfoLevel, reportString)
 	}
 
-	reportString := ReportToString(report)
-	a.log.WriteString(logrus.InfoLevel, reportString)
-
-	return nil
+	return err
 }
 
 // CreateReport creates a new report about a certain namespace
@@ -141,7 +140,10 @@ func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportIte
 
 		return len(report) == 0 || !options.Wait || !options.Patient, nil
 	})
-	if err != nil && len(report) == 0 {
+	if err != nil {
+		if options.Patient && len(report) > 0 {
+			return report, errors.Errorf("Error waiting for pod to become healthy: %v", err)
+		}
 		return nil, err
 	}
 
