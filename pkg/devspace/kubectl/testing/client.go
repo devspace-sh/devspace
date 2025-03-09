@@ -138,7 +138,7 @@ func (c *Client) GetUpgraderWrapper() (http.RoundTripper, kubectl.UpgraderWrappe
 	return nil, nil, nil
 }
 
-// EnsureDefaultNamespace is a fake implementation of function
+// EnsureDeployNamespaces is a fake implementation of function
 func (c *Client) EnsureDeployNamespaces(ctx context.Context, config *latest.Config, log log.Logger) error {
 	return nil
 }
