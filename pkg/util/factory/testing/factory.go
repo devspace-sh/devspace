@@ -42,7 +42,7 @@ type Factory struct {
 	PluginClient      plugin.Interface
 }
 
-// NewPluginsManager creates a new plugin manager
+// NewPluginManager creates a new plugin manager
 func (f *Factory) NewPluginManager(log log.Logger) plugin.Interface {
 	return f.PluginClient
 }

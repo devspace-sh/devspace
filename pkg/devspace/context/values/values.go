@@ -25,7 +25,7 @@ func WithFlagsMap(parent context.Context, flagsMap map[string]string) context.Co
 	return WithValue(parent, flagsKey, flagsMap)
 }
 
-// WithFlags creates a new context with the given flags
+// WithCommandFlags creates a new context with the given flags
 func WithCommandFlags(parent context.Context, flagSet *flag.FlagSet) context.Context {
 	flagsMap := map[string]string{}
 	flagSet.VisitAll(func(f *flag.Flag) {
