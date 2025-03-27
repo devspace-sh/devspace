@@ -12,12 +12,13 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 12
+          node-version: 20
           registry-url: https://registry.npmjs.org/
       - run: |
+          export NODE_OPTIONS="--openssl-legacy-provider"
           npm install -g
           export RELEASE_VERSION=$(node index.js get-latest)
           npm run prepare
@@ -35,12 +36,13 @@ jobs:
   windows:
     runs-on: windows-2019
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 12
+          node-version: 20
           registry-url: https://registry.npmjs.org/
       - run: |
+          $env:NODE_OPTIONS="--openssl-legacy-provider"
           npm install -g
           $releaseVersion = node index.js get-latest
           $env:RELEASE_VERSION = $releaseVersion
