@@ -3,7 +3,6 @@ package sync
 import (
 	"archive/tar"
 	"compress/gzip"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"os"
 	"path"
@@ -11,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 
@@ -290,7 +291,7 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) error {
 	var err error
 	filepath := path.Join(a.basePath, target.Name)
-	if targetStat.Mode()&os.ModeSymlink == os.ModeSymlink {
+	if fsutil.IsSymlink(targetStat.Mode()) {
 		if filepath, err = os.Readlink(filepath); err != nil {
 			return nil
 		}
@@ -376,7 +377,7 @@ func fillGo18FileTypeBits(mode int64, fi os.FileInfo) int64 {
 		mode |= modeISREG
 	case fi.IsDir():
 		mode |= modeISDIR
-	case fm&os.ModeSymlink != 0:
+	case fsutil.IsSymlink(fm):
 		mode |= modeISLNK
 	case fm&os.ModeDevice != 0:
 		if fm&os.ModeCharDevice != 0 {

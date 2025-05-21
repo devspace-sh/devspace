@@ -4,12 +4,13 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -141,7 +142,7 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 				}
 			}
 			return nil
-		} else if stat.Mode()&os.ModeSymlink != 0 {
+		} else if fsutil.IsSymlink(stat.Mode()) {
 			//case soft link
 			hdr, _ := tar.FileInfoHeader(stat, fpath)
 			target, err := os.Readlink(fpath)

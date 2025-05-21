@@ -1,9 +1,11 @@
 package sync
 
 import (
-	"github.com/loft-sh/devspace/helper/remote"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"os"
+
+	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 // s.fileIndex needs to be locked before this function is called
@@ -132,7 +134,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 		}
 
 		return false
-	} else if stat.Mode()&os.ModeSymlink != 0 {
+	} else if fsutil.IsSymlink(stat.Mode()) {
 		return true
 	}
 
