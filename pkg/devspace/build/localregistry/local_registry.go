@@ -33,6 +33,8 @@ type LocalRegistry struct {
 	Options
 	host        string
 	servicePort *corev1.ServicePort
+	resources   *corev1.ResourceRequirements
+	annotations map[string]string
 }
 
 func GetOrCreateLocalRegistry(
