@@ -209,8 +209,6 @@ github.com/exponent-io/jsonpath
 # github.com/felixge/httpsnoop v1.0.3
 ## explicit; go 1.13
 github.com/felixge/httpsnoop
-# github.com/fsnotify/fsnotify v1.4.9
-## explicit; go 1.13
 # github.com/fujiwara/shapeio v1.0.0
 ## explicit; go 1.16
 github.com/fujiwara/shapeio
@@ -539,13 +537,9 @@ github.com/munnerz/goautoneg
 # github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f
 ## explicit
 github.com/mxk/go-flowrate/flowrate
-# github.com/nxadm/tail v1.4.8
-## explicit; go 1.13
 # github.com/olekukonko/tablewriter v0.0.5
 ## explicit; go 1.12
 github.com/olekukonko/tablewriter
-# github.com/onsi/ginkgo v1.16.5
-## explicit; go 1.16
 # github.com/onsi/ginkgo/v2 v2.13.0
 ## explicit; go 1.18
 github.com/onsi/ginkgo/v2
@@ -1012,8 +1006,6 @@ gopkg.in/src-d/go-git.v4/utils/merkletrie/filesystem
 gopkg.in/src-d/go-git.v4/utils/merkletrie/index
 gopkg.in/src-d/go-git.v4/utils/merkletrie/internal/frame
 gopkg.in/src-d/go-git.v4/utils/merkletrie/noder
-# gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
-## explicit
 # gopkg.in/warnings.v0 v0.1.2
 ## explicit
 gopkg.in/warnings.v0

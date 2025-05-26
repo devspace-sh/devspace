@@ -33,11 +33,8 @@ func NewContext(ctx context2.Context, variables map[string]interface{}, log log.
 		context:    ctx,
 		workingDir: workingDir,
 		runID:      strings.ToLower(randutil.GenerateRandomString(12)),
-		environ: env.NewVariableEnvProvider(
-			expand.ListEnviron(os.Environ()...),
-			env.ConvertMap(variables),
-		),
-		log: log,
+		environ:    env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), env.ConvertMap(variables)),
+		log:        log,
 	}
 }
 
