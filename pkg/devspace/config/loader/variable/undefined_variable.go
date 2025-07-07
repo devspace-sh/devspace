@@ -99,7 +99,7 @@ func getParams(variable *latest.Variable) *survey.QuestionOptions {
 			params.IsPassword = true
 		}
 
-		if variable.Default != "" {
+		if variable.Default != nil && variable.Default != "" {
 			params.DefaultValue = fmt.Sprintf("%v", variable.Default)
 		}
 		if variable.Default != nil {
