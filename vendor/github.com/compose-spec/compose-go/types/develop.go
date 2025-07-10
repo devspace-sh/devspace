@@ -14,11 +14,23 @@
    limitations under the License.
 */
 
-package consts
+package types
+
+type DevelopConfig struct {
+	Watch []Trigger `json:"watch,omitempty"`
+}
+
+type WatchAction string
 
 const (
-	ComposeProjectName   = "COMPOSE_PROJECT_NAME"
-	ComposePathSeparator = "COMPOSE_PATH_SEPARATOR"
-	ComposeFilePath      = "COMPOSE_FILE"
-	ComposeProfiles      = "COMPOSE_PROFILES"
+	WatchActionSync        WatchAction = "sync"
+	WatchActionRebuild     WatchAction = "rebuild"
+	WatchActionSyncRestart WatchAction = "sync+restart"
 )
+
+type Trigger struct {
+	Path   string      `json:"path,omitempty"`
+	Action WatchAction `json:"action,omitempty"`
+	Target string      `json:"target,omitempty"`
+	Ignore []string    `json:"ignore,omitempty"`
+}

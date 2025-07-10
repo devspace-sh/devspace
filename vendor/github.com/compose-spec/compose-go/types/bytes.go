@@ -14,11 +14,29 @@
    limitations under the License.
 */
 
-package consts
+package types
 
-const (
-	ComposeProjectName   = "COMPOSE_PROJECT_NAME"
-	ComposePathSeparator = "COMPOSE_PATH_SEPARATOR"
-	ComposeFilePath      = "COMPOSE_FILE"
-	ComposeProfiles      = "COMPOSE_PROFILES"
+import (
+	"fmt"
+
+	"github.com/docker/go-units"
 )
+
+// UnitBytes is the bytes type
+type UnitBytes int64
+
+// MarshalYAML makes UnitBytes implement yaml.Marshaller
+func (u UnitBytes) MarshalYAML() (interface{}, error) {
+	return fmt.Sprintf("%d", u), nil
+}
+
+// MarshalJSON makes UnitBytes implement json.Marshaler
+func (u UnitBytes) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%d"`, u)), nil
+}
+
+func (u *UnitBytes) DecodeMapstructure(value interface{}) error {
+	v, err := units.RAMInBytes(fmt.Sprint(value))
+	*u = UnitBytes(v)
+	return err
+}

@@ -32,9 +32,45 @@ func checkConsistency(project *types.Project) error {
 			return errors.Wrapf(errdefs.ErrInvalid, "service %q has neither an image nor a build context specified", s.Name)
 		}
 
+		if s.Build != nil {
+			if s.Build.DockerfileInline != "" && s.Build.Dockerfile != "" {
+				return errors.Wrapf(errdefs.ErrInvalid, "service %q declares mutualy exclusive dockerfile and dockerfile_inline", s.Name)
+			}
+
+			if len(s.Build.Platforms) > 0 && s.Platform != "" {
+				var found bool
+				for _, platform := range s.Build.Platforms {
+					if platform == s.Platform {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return errors.Wrapf(errdefs.ErrInvalid, "service.build.platforms MUST include service.platform %q ", s.Platform)
+				}
+			}
+		}
+
+		if s.NetworkMode != "" && len(s.Networks) > 0 {
+			return errors.Wrap(errdefs.ErrInvalid, fmt.Sprintf("service %s declares mutually exclusive `network_mode` and `networks`", s.Name))
+		}
 		for network := range s.Networks {
 			if _, ok := project.Networks[network]; !ok {
 				return errors.Wrap(errdefs.ErrInvalid, fmt.Sprintf("service %q refers to undefined network %s", s.Name, network))
+			}
+		}
+
+		if s.HealthCheck != nil && len(s.HealthCheck.Test) > 0 {
+			switch s.HealthCheck.Test[0] {
+			case "CMD", "CMD-SHELL", "NONE":
+			default:
+				return errors.New(`healthcheck.test must start either by "CMD", "CMD-SHELL" or "NONE"`)
+			}
+		}
+
+		for dependedService := range s.DependsOn {
+			if _, err := project.GetService(dependedService); err != nil {
+				return errors.Wrap(errdefs.ErrInvalid, fmt.Sprintf("service %q depends on undefined service %s", s.Name, dependedService))
 			}
 		}
 
@@ -46,18 +82,17 @@ func checkConsistency(project *types.Project) error {
 		}
 
 		for _, volume := range s.Volumes {
-			switch volume.Type {
-			case types.VolumeTypeVolume:
-				if volume.Source != "" { // non anonymous volumes
-					if _, ok := project.Volumes[volume.Source]; !ok {
-						return errors.Wrap(errdefs.ErrInvalid, fmt.Sprintf("service %q refers to undefined volume %s", s.Name, volume.Source))
-					}
+			if volume.Type == types.VolumeTypeVolume && volume.Source != "" { // non anonymous volumes
+				if _, ok := project.Volumes[volume.Source]; !ok {
+					return errors.Wrap(errdefs.ErrInvalid, fmt.Sprintf("service %q refers to undefined volume %s", s.Name, volume.Source))
 				}
 			}
 		}
-		for _, secret := range s.Secrets {
-			if _, ok := project.Secrets[secret.Source]; !ok {
-				return errors.Wrap(errdefs.ErrInvalid, fmt.Sprintf("service %q refers to undefined secret %s", s.Name, secret.Source))
+		if s.Build != nil {
+			for _, secret := range s.Build.Secrets {
+				if _, ok := project.Secrets[secret.Source]; !ok {
+					return errors.Wrap(errdefs.ErrInvalid, fmt.Sprintf("service %q refers to undefined build secret %s", s.Name, secret.Source))
+				}
 			}
 		}
 		for _, config := range s.Configs {
@@ -65,6 +100,22 @@ func checkConsistency(project *types.Project) error {
 				return errors.Wrap(errdefs.ErrInvalid, fmt.Sprintf("service %q refers to undefined config %s", s.Name, config.Source))
 			}
 		}
+
+		for _, secret := range s.Secrets {
+			if _, ok := project.Secrets[secret.Source]; !ok {
+				return errors.Wrap(errdefs.ErrInvalid, fmt.Sprintf("service %q refers to undefined secret %s", s.Name, secret.Source))
+			}
+		}
 	}
+
+	for name, secret := range project.Secrets {
+		if secret.External.External {
+			continue
+		}
+		if secret.File == "" && secret.Environment == "" {
+			return errors.Wrap(errdefs.ErrInvalid, fmt.Sprintf("secret %q must declare either `file` or `environment`", name))
+		}
+	}
+
 	return nil
 }
