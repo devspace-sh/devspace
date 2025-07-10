@@ -1,3 +1,5 @@
+name: restart_on_failure
+
 services:
   db:
     image: mysql/mysql-server:8.0.19

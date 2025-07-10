@@ -1,3 +1,5 @@
+name: build_args_map
+
 services:
   foo:
     build:

@@ -1,3 +1,5 @@
+name: extra_hosts_single
+
 services:
   db:
     image: mysql/mysql-server:8.0.19

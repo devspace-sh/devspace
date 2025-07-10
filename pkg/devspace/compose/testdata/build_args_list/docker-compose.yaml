@@ -1,3 +1,5 @@
+name: build_arg
+
 services:
   foo:
     build:

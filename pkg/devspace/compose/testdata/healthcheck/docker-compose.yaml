@@ -1,3 +1,5 @@
+name: healthcheck
+
 services:
   cmd:
     image: mysql/mysql-server:8.0.19

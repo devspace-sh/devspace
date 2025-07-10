@@ -1,3 +1,5 @@
+name: volumes-depends
+
 services:
   db:
     image: loft.sh/mysql-server:8.0.19

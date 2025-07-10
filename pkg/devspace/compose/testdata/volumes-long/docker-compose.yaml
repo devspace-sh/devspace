@@ -1,3 +1,5 @@
+name: volumes-long
+
 services:
   db:
     image: alpine

@@ -1,3 +1,5 @@
+name: restart-unless-stopped
+
 services:
   db:
     image: mysql/mysql-server:8.0.19

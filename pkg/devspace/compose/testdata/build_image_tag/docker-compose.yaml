@@ -1,3 +1,5 @@
+name: build_image_tag
+
 services:
   foo:
     build: foo

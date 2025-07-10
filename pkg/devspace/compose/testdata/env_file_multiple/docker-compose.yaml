@@ -1,3 +1,5 @@
+name: env_file_multiple
+
 services:
   db:
     image: mysql/mysql-server:8.0.19
