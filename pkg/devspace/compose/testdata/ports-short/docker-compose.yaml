@@ -1,3 +1,5 @@
+name: ports-short
+
 services:
   db:
     image: mysql/mysql-server:8.0.19

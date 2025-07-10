@@ -1,3 +1,5 @@
+name: build_context
+
 services:
   foo:
     build:

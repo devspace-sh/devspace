@@ -1,3 +1,5 @@
+name: container_name
+
 services:
   db:
     image: mysql/mysql-server:8.0.19

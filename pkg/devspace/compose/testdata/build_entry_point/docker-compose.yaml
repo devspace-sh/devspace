@@ -1,3 +1,5 @@
+name: build_entry_point
+
 services:
   foo:
     build:

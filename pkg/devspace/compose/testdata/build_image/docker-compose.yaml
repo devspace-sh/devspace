@@ -1,3 +1,5 @@
+name: build_image
+
 services:
   foo:
     build: foo

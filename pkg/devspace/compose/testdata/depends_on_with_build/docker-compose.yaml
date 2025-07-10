@@ -1,3 +1,5 @@
+name: depends_on_with_build
+
 services:
   db:
     image: mysql/mysql-server:8.0.19
