@@ -568,7 +568,7 @@ func (cmd *InitCmd) initDockerCompose(f factory.Factory, composePath string) err
 		
 		if noEntryPoint && hasSyncEndpoints {
 			entrypointStr, err := cmd.log.Question(&survey.QuestionOptions{
-				Question: fmt.Sprintf(`How is this container "%s" started? (e.g. npm start, gradle run, go run main.go)`, service),
+				Question: fmt.Sprintf(`How is this container "%s" started? (e.g. npm start, gradle run, go run main.go)`, service.Name),
 			})
 			if err != nil {
 				return err

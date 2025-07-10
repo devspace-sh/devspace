@@ -45,6 +45,8 @@ func LoadDockerComposeProject(path string) (*composetypes.Project, error) {
 				Content: composeFile,
 			},
 		},
+	}, func(o *composeloader.Options) {
+		o.ResolvePaths = false
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "project name must not be empty") {

@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
-
+	
 	composetypes "github.com/compose-spec/compose-go/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	v1 "k8s.io/api/core/v1"
@@ -14,18 +13,18 @@ import (
 
 func (cb *configBuilder) AddDeployment(dockerCompose *composetypes.Project, service composetypes.ServiceConfig) error {
 	values := map[string]interface{}{}
-
+	
 	volumes, volumeMounts, _ := volumesConfig(service, dockerCompose.Volumes, cb.log)
 	if len(volumes) > 0 {
 		values["volumes"] = volumes
 	}
-
+	
 	container, err := containerConfig(service, volumeMounts)
 	if err != nil {
 		return err
 	}
 	values["containers"] = []interface{}{container}
-
+	
 	if service.Restart != "" {
 		restartPolicy := string(v1.RestartPolicyNever)
 		switch service.Restart {
@@ -36,7 +35,7 @@ func (cb *configBuilder) AddDeployment(dockerCompose *composetypes.Project, serv
 		}
 		values["restartPolicy"] = restartPolicy
 	}
-
+	
 	ports := []interface{}{}
 	for _, port := range service.Ports {
 		var protocol string
@@ -48,24 +47,24 @@ func (cb *configBuilder) AddDeployment(dockerCompose *composetypes.Project, serv
 		default:
 			return fmt.Errorf("invalid protocol %s", port.Protocol)
 		}
-
+		
 		if port.Published == "" {
 			cb.log.Warnf("Unassigned ports are not supported: %s", port.Target)
 			continue
 		}
-
+		
 		portNumber, err := strconv.Atoi(port.Published)
 		if err != nil {
 			return err
 		}
-
+		
 		ports = append(ports, map[string]interface{}{
 			"port":          portNumber,
 			"containerPort": int(port.Target),
 			"protocol":      protocol,
 		})
 	}
-
+	
 	for _, port := range service.Expose {
 		intPort, err := strconv.Atoi(port)
 		if err != nil {
@@ -75,22 +74,19 @@ func (cb *configBuilder) AddDeployment(dockerCompose *composetypes.Project, serv
 			"port": intPort,
 		})
 	}
-
+	
 	if len(ports) > 0 {
 		values["service"] = map[string]interface{}{
 			"ports": ports,
 		}
 	}
-
+	
 	if len(service.ExtraHosts) > 0 {
 		hostsMap := map[string][]interface{}{}
-		for _, host := range service.ExtraHosts {
-			hostTokens := strings.Split(host, ":")
-			hostName := hostTokens[0]
-			hostIP := hostTokens[1]
+		for hostName, hostIP := range service.ExtraHosts {
 			hostsMap[hostIP] = append(hostsMap[hostIP], hostName)
 		}
-
+		
 		hostAliases := []interface{}{}
 		for ip, hosts := range hostsMap {
 			hostAliases = append(hostAliases, map[string]interface{}{
@@ -98,23 +94,23 @@ func (cb *configBuilder) AddDeployment(dockerCompose *composetypes.Project, serv
 				"hostnames": hosts,
 			})
 		}
-
+		
 		values["hostAliases"] = hostAliases
 	}
-
+	
 	deployment := &latest.DeploymentConfig{
 		Helm: &latest.HelmConfig{
 			Values: values,
 		},
 	}
-
+	
 	if cb.config.Deployments == nil {
 		cb.config.Deployments = map[string]*latest.DeploymentConfig{}
 	}
-
+	
 	deploymentName := formatName(service.Name)
 	cb.config.Deployments[deploymentName] = deployment
-
+	
 	return nil
 }
 
@@ -123,22 +119,22 @@ func containerConfig(service composetypes.ServiceConfig, volumeMounts []interfac
 		"name":  containerName(service),
 		"image": resolveImage(service),
 	}
-
+	
 	if len(service.Command) > 0 {
 		container["args"] = shellCommandToSlice(service.Command)
 	}
-
+	
 	if service.Build == nil && len(service.Entrypoint) > 0 {
 		container["command"] = shellCommandToSlice(service.Entrypoint)
 	}
-
+	
 	if service.Environment != nil {
 		env := containerEnv(service.Environment)
 		if len(env) > 0 {
 			container["env"] = env
 		}
 	}
-
+	
 	if service.HealthCheck != nil {
 		livenessProbe, err := containerLivenessProbe(service.HealthCheck)
 		if err != nil {
@@ -148,11 +144,11 @@ func containerConfig(service composetypes.ServiceConfig, volumeMounts []interfac
 			container["livenessProbe"] = livenessProbe
 		}
 	}
-
+	
 	if len(volumeMounts) > 0 {
 		container["volumeMounts"] = volumeMounts
 	}
-
+	
 	return container, nil
 }
 
@@ -163,7 +159,7 @@ func containerEnv(env composetypes.MappingWithEquals) []interface{} {
 		keys = append(keys, name)
 	}
 	sort.Strings(keys)
-
+	
 	for _, name := range keys {
 		value := env[name]
 		envs = append(envs, map[string]interface{}{
@@ -185,7 +181,7 @@ func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[string]
 	if len(health.Test) == 0 {
 		return nil, nil
 	}
-
+	
 	var command []interface{}
 	testKind := health.Test[0]
 	switch testKind {
@@ -202,17 +198,17 @@ func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[string]
 	default:
 		command = append(command, health.Test[0:])
 	}
-
+	
 	livenessProbe := map[string]interface{}{
 		"exec": map[string]interface{}{
 			"command": command,
 		},
 	}
-
+	
 	if health.Retries != nil {
 		livenessProbe["failureThreshold"] = int(*health.Retries)
 	}
-
+	
 	if health.Interval != nil {
 		period, err := time.ParseDuration(health.Interval.String())
 		if err != nil {
@@ -220,7 +216,7 @@ func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[string]
 		}
 		livenessProbe["periodSeconds"] = int(period.Seconds())
 	}
-
+	
 	if health.StartPeriod != nil {
 		initialDelay, err := time.ParseDuration(health.Interval.String())
 		if err != nil {
@@ -228,7 +224,7 @@ func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[string]
 		}
 		livenessProbe["initialDelaySeconds"] = int(initialDelay.Seconds())
 	}
-
+	
 	return livenessProbe, nil
 }
 
