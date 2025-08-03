@@ -133,7 +133,7 @@ github.com/davecgh/go-spew/spew
 ## explicit; go 1.15
 github.com/distribution/distribution/v3/digestset
 github.com/distribution/distribution/v3/reference
-# github.com/distribution/reference v0.6.0
+# github.com/distribution/reference v0.6.0 => github.com/distribution/reference v0.5.0
 ## explicit; go 1.20
 github.com/distribution/reference
 # github.com/docker/cli v28.2.2+incompatible
@@ -1552,3 +1552,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 ## explicit; go 1.12
 sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
+# github.com/distribution/reference => github.com/distribution/reference v0.5.0
