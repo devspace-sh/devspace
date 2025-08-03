@@ -27,12 +27,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containerd/containerd/content"
-	"github.com/containerd/containerd/filters"
-	"github.com/containerd/containerd/pkg/randutil"
-	"github.com/containerd/errdefs"
 	"github.com/containerd/log"
 	"github.com/sirupsen/logrus"
+
+	"github.com/containerd/containerd/content"
+	"github.com/containerd/containerd/errdefs"
+	"github.com/containerd/containerd/filters"
+	"github.com/containerd/containerd/pkg/randutil"
 
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -262,7 +263,7 @@ func (s *store) Walk(ctx context.Context, fn content.WalkFunc, fs ...string) err
 			return nil
 		}
 
-		dgst := digest.NewDigestFromHex(alg.String(), filepath.Base(path))
+		dgst := digest.NewDigestFromEncoded(alg, filepath.Base(path))
 		if err := dgst.Validate(); err != nil {
 			// log error but don't report
 			log.L.WithError(err).WithField("path", path).Error("invalid digest for blob path")
@@ -629,14 +630,14 @@ func (s *store) blobPath(dgst digest.Digest) (string, error) {
 		return "", fmt.Errorf("cannot calculate blob path from invalid digest: %v: %w", err, errdefs.ErrInvalidArgument)
 	}
 
-	return filepath.Join(s.root, "blobs", dgst.Algorithm().String(), dgst.Hex()), nil
+	return filepath.Join(s.root, "blobs", dgst.Algorithm().String(), dgst.Encoded()), nil
 }
 
 func (s *store) ingestRoot(ref string) string {
 	// we take a digest of the ref to keep the ingest paths constant length.
 	// Note that this is not the current or potential digest of incoming content.
 	dgst := digest.FromString(ref)
-	return filepath.Join(s.root, "ingest", dgst.Hex())
+	return filepath.Join(s.root, "ingest", dgst.Encoded())
 }
 
 // ingestPaths are returned. The paths are the following:
