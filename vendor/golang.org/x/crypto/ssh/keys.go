@@ -36,14 +36,19 @@ import (
 // ClientConfig.HostKeyAlgorithms, Signature.Format, or as AlgorithmSigner
 // arguments.
 const (
-	KeyAlgoRSA        = "ssh-rsa"
-	KeyAlgoDSA        = "ssh-dss"
-	KeyAlgoECDSA256   = "ecdsa-sha2-nistp256"
-	KeyAlgoSKECDSA256 = "sk-ecdsa-sha2-nistp256@openssh.com"
-	KeyAlgoECDSA384   = "ecdsa-sha2-nistp384"
-	KeyAlgoECDSA521   = "ecdsa-sha2-nistp521"
-	KeyAlgoED25519    = "ssh-ed25519"
-	KeyAlgoSKED25519  = "sk-ssh-ed25519@openssh.com"
+	KeyAlgoRSA = "ssh-rsa"
+	// Deprecated: DSA is only supported at insecure key sizes, and was removed
+	// from major implementations.
+	KeyAlgoDSA = InsecureKeyAlgoDSA
+	// Deprecated: DSA is only supported at insecure key sizes, and was removed
+	// from major implementations.
+	InsecureKeyAlgoDSA = "ssh-dss"
+	KeyAlgoECDSA256    = "ecdsa-sha2-nistp256"
+	KeyAlgoSKECDSA256  = "sk-ecdsa-sha2-nistp256@openssh.com"
+	KeyAlgoECDSA384    = "ecdsa-sha2-nistp384"
+	KeyAlgoECDSA521    = "ecdsa-sha2-nistp521"
+	KeyAlgoED25519     = "ssh-ed25519"
+	KeyAlgoSKED25519   = "sk-ssh-ed25519@openssh.com"
 
 	// KeyAlgoRSASHA256 and KeyAlgoRSASHA512 are only public key algorithms, not
 	// public key formats, so they can't appear as a PublicKey.Type. The
@@ -67,7 +72,7 @@ func parsePubKey(in []byte, algo string) (pubKey PublicKey, rest []byte, err err
 	switch algo {
 	case KeyAlgoRSA:
 		return parseRSA(in)
-	case KeyAlgoDSA:
+	case InsecureKeyAlgoDSA:
 		return parseDSA(in)
 	case KeyAlgoECDSA256, KeyAlgoECDSA384, KeyAlgoECDSA521:
 		return parseECDSA(in)
@@ -77,7 +82,7 @@ func parsePubKey(in []byte, algo string) (pubKey PublicKey, rest []byte, err err
 		return parseED25519(in)
 	case KeyAlgoSKED25519:
 		return parseSKEd25519(in)
-	case CertAlgoRSAv01, CertAlgoDSAv01, CertAlgoECDSA256v01, CertAlgoECDSA384v01, CertAlgoECDSA521v01, CertAlgoSKECDSA256v01, CertAlgoED25519v01, CertAlgoSKED25519v01:
+	case CertAlgoRSAv01, InsecureCertAlgoDSAv01, CertAlgoECDSA256v01, CertAlgoECDSA384v01, CertAlgoECDSA521v01, CertAlgoSKECDSA256v01, CertAlgoED25519v01, CertAlgoSKED25519v01:
 		cert, err := parseCert(in, certKeyAlgoNames[algo])
 		if err != nil {
 			return nil, nil, err
@@ -268,7 +273,7 @@ func ParseAuthorizedKey(in []byte) (out PublicKey, comment string, options []str
 	return nil, "", nil, nil, errors.New("ssh: no key found")
 }
 
-// ParsePublicKey parses an SSH public key formatted for use in
+// ParsePublicKey parses an SSH public key or certificate formatted for use in
 // the SSH wire protocol according to RFC 4253, section 6.6.
 func ParsePublicKey(in []byte) (out PublicKey, err error) {
 	algo, in, ok := parseString(in)
@@ -488,7 +493,49 @@ func (r *rsaPublicKey) Verify(data []byte, sig *Signature) error {
 	h := hash.New()
 	h.Write(data)
 	digest := h.Sum(nil)
-	return rsa.VerifyPKCS1v15((*rsa.PublicKey)(r), hash, digest, sig.Blob)
+
+	// Signatures in PKCS1v15 must match the key's modulus in
+	// length. However with SSH, some signers provide RSA
+	// signatures which are missing the MSB 0's of the bignum
+	// represented. With ssh-rsa signatures, this is encouraged by
+	// the spec (even though e.g. OpenSSH will give the full
+	// length unconditionally). With rsa-sha2-* signatures, the
+	// verifier is allowed to support these, even though they are
+	// out of spec. See RFC 4253 Section 6.6 for ssh-rsa and RFC
+	// 8332 Section 3 for rsa-sha2-* details.
+	//
+	// In practice:
+	// * OpenSSH always allows "short" signatures:
+	//   https://github.com/openssh/openssh-portable/blob/V_9_8_P1/ssh-rsa.c#L526
+	//   but always generates padded signatures:
+	//   https://github.com/openssh/openssh-portable/blob/V_9_8_P1/ssh-rsa.c#L439
+	//
+	// * PuTTY versions 0.81 and earlier will generate short
+	//   signatures for all RSA signature variants. Note that
+	//   PuTTY is embedded in other software, such as WinSCP and
+	//   FileZilla. At the time of writing, a patch has been
+	//   applied to PuTTY to generate padded signatures for
+	//   rsa-sha2-*, but not yet released:
+	//   https://git.tartarus.org/?p=simon/putty.git;a=commitdiff;h=a5bcf3d384e1bf15a51a6923c3724cbbee022d8e
+	//
+	// * SSH.NET versions 2024.0.0 and earlier will generate short
+	//   signatures for all RSA signature variants, fixed in 2024.1.0:
+	//   https://github.com/sshnet/SSH.NET/releases/tag/2024.1.0
+	//
+	// As a result, we pad these up to the key size by inserting
+	// leading 0's.
+	//
+	// Note that support for short signatures with rsa-sha2-* may
+	// be removed in the future due to such signatures not being
+	// allowed by the spec.
+	blob := sig.Blob
+	keySize := (*rsa.PublicKey)(r).Size()
+	if len(blob) < keySize {
+		padded := make([]byte, keySize)
+		copy(padded[keySize-len(blob):], blob)
+		blob = padded
+	}
+	return rsa.VerifyPKCS1v15((*rsa.PublicKey)(r), hash, digest, blob)
 }
 
 func (r *rsaPublicKey) CryptoPublicKey() crypto.PublicKey {
@@ -904,6 +951,10 @@ func (k *skECDSAPublicKey) Verify(data []byte, sig *Signature) error {
 	return errors.New("ssh: signature did not verify")
 }
 
+func (k *skECDSAPublicKey) CryptoPublicKey() crypto.PublicKey {
+	return &k.PublicKey
+}
+
 type skEd25519PublicKey struct {
 	// application is a URL-like string, typically "ssh:" for SSH.
 	// see openssh/PROTOCOL.u2f for details.
@@ -998,6 +1049,10 @@ func (k *skEd25519PublicKey) Verify(data []byte, sig *Signature) error {
 	}
 
 	return nil
+}
+
+func (k *skEd25519PublicKey) CryptoPublicKey() crypto.PublicKey {
+	return k.PublicKey
 }
 
 // NewSignerFromKey takes an *rsa.PrivateKey, *dsa.PrivateKey,
