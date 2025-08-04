@@ -34,10 +34,10 @@ import (
 	"time"
 	
 	"github.com/docker/cli/cli/command/image/build"
-	"github.com/docker/docker/api/types"
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	buildtypes "github.com/docker/docker/api/types/build"
 )
 
 // EngineName is the name of the building engine
@@ -117,7 +117,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}
 	
 	// build options
-	options := &types.ImageBuildOptions{}
+	options := &buildtypes.ImageBuildOptions{}
 	if b.helper.ImageConf.BuildArgs != nil {
 		options.BuildArgs = b.helper.ImageConf.BuildArgs
 	}

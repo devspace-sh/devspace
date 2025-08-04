@@ -1,5 +1,5 @@
-//go:build linux || openbsd || dragonfly || solaris
-// +build linux openbsd dragonfly solaris
+//go:build linux || openbsd || solaris
+// +build linux openbsd solaris
 
 /*
    Copyright The containerd Authors.

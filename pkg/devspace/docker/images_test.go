@@ -3,7 +3,7 @@ package docker
 import (
 	"context"
 	"testing"
-
+	
 	"github.com/docker/docker/api/types/image"
 	log "github.com/loft-sh/devspace/pkg/util/log/testing"
 	"gopkg.in/yaml.v3"
@@ -12,7 +12,7 @@ import (
 
 type deleteImageTestCase struct {
 	name string
-
+	
 	deletedImageName string
 	expectedResponse []image.DeleteResponse
 	expectedErr      bool
@@ -31,27 +31,27 @@ func TestDeleteImage(t *testing.T) {
 			},
 		},
 	}
-
+	
 	for _, testCase := range testCases {
 		var (
 			response []image.DeleteResponse
 			err      error
 		)
-
+		
 		client := &client{
-			CommonAPIClient: &fakeDockerClient{},
+			APIClient: &fakeDockerClient{},
 		}
-
+		
 		if testCase.deletedImageName != "" {
 			response, err = client.DeleteImageByName(context.Background(), testCase.deletedImageName, &log.FakeLogger{})
 		}
-
+		
 		if !testCase.expectedErr {
 			assert.NilError(t, err, "Unexpected error in testCase %s", testCase.name)
 		} else if err == nil {
 			t.Fatalf("Unexpected error %v in testCase %s", err, testCase.name)
 		}
-
+		
 		authsAsYaml, err := yaml.Marshal(response)
 		assert.NilError(t, err, "Error parsing response to yaml in testCase %s", testCase.name)
 		expectedAsYaml, err := yaml.Marshal(testCase.expectedResponse)

@@ -1,4 +1,3 @@
-//go:build openbsd && cgo
 // +build openbsd,cgo
 
 /*

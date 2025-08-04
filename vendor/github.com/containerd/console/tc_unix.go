@@ -1,5 +1,4 @@
-//go:build darwin || freebsd || linux || netbsd || openbsd || zos
-// +build darwin freebsd linux netbsd openbsd zos
+// +build darwin freebsd linux netbsd openbsd solaris zos
 
 /*
    Copyright The containerd Authors.
@@ -84,7 +83,7 @@ func cfmakeraw(t unix.Termios) unix.Termios {
 	t.Oflag &^= unix.OPOST
 	t.Lflag &^= (unix.ECHO | unix.ECHONL | unix.ICANON | unix.ISIG | unix.IEXTEN)
 	t.Cflag &^= (unix.CSIZE | unix.PARENB)
-	t.Cflag |= unix.CS8
+	t.Cflag &^= unix.CS8
 	t.Cc[unix.VMIN] = 1
 	t.Cc[unix.VTIME] = 0
 

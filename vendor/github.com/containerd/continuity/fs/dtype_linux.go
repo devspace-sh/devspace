@@ -21,13 +21,14 @@ package fs
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"syscall"
 	"unsafe"
 )
 
 func locateDummyIfEmpty(path string) (string, error) {
-	children, err := os.ReadDir(path)
+	children, err := ioutil.ReadDir(path)
 	if err != nil {
 		return "", err
 	}

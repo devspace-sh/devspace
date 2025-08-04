@@ -18,7 +18,6 @@ package local
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/containerd/containerd/content"
@@ -65,8 +64,4 @@ func (ra sizeReaderAt) Size() int64 {
 
 func (ra sizeReaderAt) Close() error {
 	return ra.fp.Close()
-}
-
-func (ra sizeReaderAt) Reader() io.Reader {
-	return io.LimitReader(ra.fp, ra.size)
 }

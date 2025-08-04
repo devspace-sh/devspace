@@ -26,7 +26,9 @@ import (
 )
 
 func diskUsage(ctx context.Context, roots ...string) (Usage, error) {
-	var size int64
+	var (
+		size int64
+	)
 
 	// TODO(stevvooe): Support inodes (or equivalent) for windows.
 
@@ -55,7 +57,9 @@ func diskUsage(ctx context.Context, roots ...string) (Usage, error) {
 }
 
 func diffUsage(ctx context.Context, a, b string) (Usage, error) {
-	var size int64
+	var (
+		size int64
+	)
 
 	if err := Changes(ctx, a, b, func(kind ChangeKind, _ string, fi os.FileInfo, err error) error {
 		if err != nil {

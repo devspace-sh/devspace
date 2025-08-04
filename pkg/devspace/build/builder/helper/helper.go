@@ -18,7 +18,6 @@ import (
 	"github.com/sirupsen/logrus"
 	
 	"github.com/docker/cli/cli/command/image/build"
-	"github.com/docker/docker/api/types"
 	"github.com/containers/storage/pkg/archive"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -29,6 +28,7 @@ import (
 	"github.com/loft-sh/utils/pkg/command"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
+	buildtypes "github.com/docker/docker/api/types/build"
 )
 
 var (
@@ -264,9 +264,9 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx devspacecontext.Context, docke
 
 // CreateContextStream creates a new context stream that includes the correct docker context, (modified) dockerfile and inject helper
 // if needed.
-func (b *BuildHelper) CreateContextStream(contextPath, dockerfilePath string, entrypoint, cmd []string, log logpkg.Logger) (io.Reader, io.WriteCloser, *streams.Out, *types.ImageBuildOptions, error) {
+func (b *BuildHelper) CreateContextStream(contextPath, dockerfilePath string, entrypoint, cmd []string, log logpkg.Logger) (io.Reader, io.WriteCloser, *streams.Out, *buildtypes.ImageBuildOptions, error) {
 	// Buildoptions
-	options := &types.ImageBuildOptions{}
+	options := &buildtypes.ImageBuildOptions{}
 	if b.ImageConf.BuildArgs != nil {
 		options.BuildArgs = b.ImageConf.BuildArgs
 	}
@@ -398,7 +398,7 @@ func (b *BuildHelper) CreateContextStream(contextPath, dockerfilePath string, en
 	outStream := streams.NewOut(writer)
 	progressOutput := streamformatter.NewProgressOutput(outStream)
 	body := progress.NewProgressReader(buildCtx, progressOutput, 0, "", "Sending build context to Docker daemon")
-	buildOptions := &types.ImageBuildOptions{
+	buildOptions := &buildtypes.ImageBuildOptions{
 		Tags:        tags,
 		Dockerfile:  relDockerfile,
 		BuildArgs:   options.BuildArgs,
