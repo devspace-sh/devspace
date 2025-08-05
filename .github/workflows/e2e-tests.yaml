@@ -58,8 +58,6 @@ jobs:
     - name: Build devspacehelper
       run: |
         export GOMODCACHE="${{ github.workspace }}/.gomodcache"
-        mkdir -p "$GOMODCACHE"
-        mkdir -p ~/.devspace/devspacehelper/latest
         CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags=-static" -o ~/.devspace/devspacehelper/latest/devspacehelper helper/main.go
         chmod +x ~/.devspace/devspacehelper/latest/devspacehelper
       env:
