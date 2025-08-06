@@ -8,20 +8,21 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
+	
 	"github.com/docker/docker/api/types/image"
 	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/loft-sh/utils/pkg/command"
 	"mvdan.cc/sh/v3/expand"
-
+	
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
-
+	
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/pkg/errors"
+	"github.com/docker/docker/api/types/build"
 )
 
 var errNotMinikube = errors.New("not a minikube context")
@@ -30,26 +31,26 @@ var errNotMinikube = errors.New("not a minikube context")
 type Client interface {
 	Ping(ctx context.Context) (dockertypes.Ping, error)
 	NegotiateAPIVersion(ctx context.Context)
-
-	ImageBuild(ctx context.Context, context io.Reader, options dockertypes.ImageBuildOptions) (dockertypes.ImageBuildResponse, error)
-	ImageBuildCLI(ctx context.Context, workingDir string, environ expand.Environ, useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error
-
+	
+	ImageBuild(ctx context.Context, context io.Reader, options build.ImageBuildOptions) (build.ImageBuildResponse, error)
+	ImageBuildCLI(ctx context.Context, workingDir string, environ expand.Environ, useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options build.ImageBuildOptions, log log.Logger) error
+	
 	ImagePush(ctx context.Context, ref string, options image.PushOptions) (io.ReadCloser, error)
-
+	
 	Login(ctx context.Context, registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockerregistry.AuthConfig, error)
 	GetAuthConfig(ctx context.Context, registryURL string, checkCredentialsStore bool) (*dockerregistry.AuthConfig, error)
-
+	
 	ParseProxyConfig(buildArgs map[string]*string) map[string]*string
-
+	
 	DeleteImageByName(ctx context.Context, imageName string, log log.Logger) ([]image.DeleteResponse, error)
 	DeleteImageByFilter(ctx context.Context, filter filters.Args, log log.Logger) ([]image.DeleteResponse, error)
-	DockerAPIClient() dockerclient.CommonAPIClient
+	DockerAPIClient() dockerclient.APIClient
 }
 
 // Client is a client for docker
 type client struct {
-	dockerclient.CommonAPIClient
-
+	dockerclient.APIClient
+	
 	minikubeEnv map[string]string
 }
 
@@ -62,7 +63,7 @@ func NewClient(ctx context.Context, log log.Logger) (Client, error) {
 func NewClientWithMinikube(ctx context.Context, kubectlClient kubectl.Client, preferMinikube bool, log log.Logger) (Client, error) {
 	var cli Client
 	var err error
-
+	
 	if preferMinikube {
 		cli, err = newDockerClientFromMinikube(ctx, kubectlClient)
 		if err != nil && err != errNotMinikube {
@@ -73,7 +74,7 @@ func NewClientWithMinikube(ctx context.Context, kubectlClient kubectl.Client, pr
 		cli, err = newDockerClientFromEnvironment()
 		if err != nil {
 			log.Warnf("Error creating docker client from environment: %v", err)
-
+			
 			// Last try to create it without the environment option
 			cli, err = newDockerClient()
 			if err != nil {
@@ -81,7 +82,7 @@ func NewClientWithMinikube(ctx context.Context, kubectlClient kubectl.Client, pr
 			}
 		}
 	}
-
+	
 	cli.NegotiateAPIVersion(ctx)
 	return cli, nil
 }
@@ -91,10 +92,10 @@ func newDockerClient() (Client, error) {
 	if err != nil {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
-
+	
 	return &client{
-		CommonAPIClient: cli,
-		minikubeEnv:     nil,
+		APIClient:   cli,
+		minikubeEnv: nil,
 	}, nil
 }
 
@@ -103,10 +104,10 @@ func newDockerClientFromEnvironment() (Client, error) {
 	if err != nil {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
-
+	
 	return &client{
-		CommonAPIClient: cli,
-		minikubeEnv:     nil,
+		APIClient:   cli,
+		minikubeEnv: nil,
 	}, nil
 }
 
@@ -114,12 +115,12 @@ func newDockerClientFromMinikube(ctx context.Context, kubectlClient kubectl.Clie
 	if !kubectl.IsMinikubeKubernetes(kubectlClient) {
 		return nil, errNotMinikube
 	}
-
+	
 	env, err := GetMinikubeEnvironment(ctx, kubectlClient.CurrentContext())
 	if err != nil {
 		return nil, errors.Errorf("can't retrieve minikube docker environment due to error: %v", err)
 	}
-
+	
 	var httpclient *http.Client
 	if dockerCertPath := env["DOCKER_CERT_PATH"]; dockerCertPath != "" {
 		options := tlsconfig.Options{
@@ -132,7 +133,7 @@ func newDockerClientFromMinikube(ctx context.Context, kubectlClient kubectl.Clie
 		if err != nil {
 			return nil, err
 		}
-
+		
 		httpclient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: tlsc,
@@ -140,20 +141,20 @@ func newDockerClientFromMinikube(ctx context.Context, kubectlClient kubectl.Clie
 			CheckRedirect: dockerclient.CheckRedirect,
 		}
 	}
-
+	
 	host := env["DOCKER_HOST"]
 	if host == "" {
 		host = dockerclient.DefaultDockerHost
 	}
-
+	
 	cli, err := dockerclient.NewClientWithOpts(dockerclient.WithHost(host), dockerclient.WithVersion(env["DOCKER_API_VERSION"]), dockerclient.WithHTTPClient(httpclient), dockerclient.WithHTTPHeaders(nil))
 	if err != nil {
 		return nil, err
 	}
-
+	
 	return &client{
-		CommonAPIClient: cli,
-		minikubeEnv:     env,
+		APIClient:   cli,
+		minikubeEnv: env,
 	}, nil
 }
 
@@ -165,23 +166,23 @@ func GetMinikubeEnvironment(ctx context.Context, kubeContext string) (map[string
 		}
 		return nil, errors.Errorf("error executing 'minikube docker-env --shell none'\nerror: %v\noutput: %s", err, string(out))
 	}
-
+	
 	env := map[string]string{}
 	for _, line := range strings.Split(string(out), "\n") {
 		envKeyValue := strings.Split(line, "=")
-
+		
 		if len(envKeyValue) != 2 {
 			continue
 		}
-
+		
 		env[envKeyValue[0]] = envKeyValue[1]
 	}
-
+	
 	return env, nil
 }
 
-func (c *client) DockerAPIClient() dockerclient.CommonAPIClient {
-	return c.CommonAPIClient
+func (c *client) DockerAPIClient() dockerclient.APIClient {
+	return c.APIClient
 }
 
 // ParseProxyConfig parses the proxy config from the ~/.docker/config.json
@@ -190,6 +191,6 @@ func (c *client) ParseProxyConfig(buildArgs map[string]*string) map[string]*stri
 	if err == nil {
 		buildArgs = dockerConfig.ParseProxyConfig(c.DaemonHost(), buildArgs)
 	}
-
+	
 	return buildArgs
 }

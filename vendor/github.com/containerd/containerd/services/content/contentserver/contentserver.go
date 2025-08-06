@@ -24,8 +24,8 @@ import (
 
 	api "github.com/containerd/containerd/api/services/content/v1"
 	"github.com/containerd/containerd/content"
-	"github.com/containerd/errdefs"
-	"github.com/containerd/log"
+	"github.com/containerd/containerd/errdefs"
+	"github.com/containerd/containerd/log"
 	ptypes "github.com/gogo/protobuf/types"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"

@@ -4,31 +4,44 @@ import (
 	"context"
 	"os/exec"
 	"testing"
-
+	
 	"github.com/docker/docker/api/types/image"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/util/log"
-
+	
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"gotest.tools/assert"
-
+	
 	dockerclient "github.com/docker/docker/client"
+	"github.com/docker/docker/api/types/checkpoint"
 )
 
 type fakeDockerClient struct {
 	docker.Client
 }
 
-func (d *fakeDockerClient) DockerAPIClient() dockerclient.CommonAPIClient {
+func (d *fakeDockerClient) DockerAPIClient() dockerclient.APIClient {
 	return &fakeDockerAPIClient{}
 }
 
 type fakeDockerAPIClient struct {
 	dockerclient.CommonAPIClient
+}
+
+func (c *fakeDockerAPIClient) CheckpointCreate(ctx context.Context, container string, options checkpoint.CreateOptions) error {
+	return nil
+}
+
+func (c *fakeDockerAPIClient) CheckpointDelete(ctx context.Context, container string, options checkpoint.DeleteOptions) error {
+	return nil
+}
+
+func (c *fakeDockerAPIClient) CheckpointList(ctx context.Context, container string, options checkpoint.ListOptions) ([]checkpoint.Summary, error) {
+	return nil, nil
 }
 
 func (c *fakeDockerAPIClient) ImageList(ctx context.Context, options image.ListOptions) ([]image.Summary, error) {
@@ -51,9 +64,9 @@ func TestIsImageAvailableLocally(t *testing.T) {
 		},
 		Entrypoint: []string{"echo"},
 	}
-
+	
 	client := &fakeDockerClient{}
-
+	
 	cache1 := &localcache.LocalCache{
 		Images: map[string]localcache.ImageCache{
 			"ImageConf": {
@@ -67,7 +80,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 		t.Error(err)
 	}
 	assert.Assert(t, exists1, "Expected image1:dbysxsH to be available locally")
-
+	
 	cache2 := &localcache.LocalCache{
 		Images: map[string]localcache.ImageCache{
 			"ImageConf": {
@@ -81,7 +94,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 		t.Error(err)
 	}
 	assert.Assert(t, exists2, "Expected image1:xEmrClh to be available locally")
-
+	
 	cache3 := &localcache.LocalCache{
 		Images: map[string]localcache.ImageCache{
 			"ImageConf": {
@@ -95,7 +108,7 @@ func TestIsImageAvailableLocally(t *testing.T) {
 		t.Error(err)
 	}
 	assert.Assert(t, exists3, "Expected image1:UgjIYde to be available locally")
-
+	
 	cache4 := &localcache.LocalCache{
 		Images: map[string]localcache.ImageCache{
 			"ImageConf": {

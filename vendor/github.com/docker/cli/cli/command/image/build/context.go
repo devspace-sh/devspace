@@ -8,21 +8,21 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/docker/docker/builder/remotecontext/git"
-	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/ioutils"
-	"github.com/docker/docker/pkg/pools"
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
 	"github.com/docker/docker/pkg/stringid"
+	"github.com/moby/go-archive"
+	"github.com/moby/go-archive/compression"
 	"github.com/moby/patternmatcher"
 	"github.com/pkg/errors"
-	exec "golang.org/x/sys/execabs"
 )
 
 const (
@@ -155,19 +155,22 @@ func GetContextFromReader(rc io.ReadCloser, dockerfileName string) (out io.ReadC
 	if dockerfileName == "-" {
 		return nil, "", errors.New("build context is not an archive")
 	}
+	if dockerfileName != "" {
+		return nil, "", errors.New("ambiguous Dockerfile source: both stdin and flag correspond to Dockerfiles")
+	}
 
 	dockerfileDir, err := WriteTempDockerfile(rc)
 	if err != nil {
 		return nil, "", err
 	}
 
-	tar, err := archive.Tar(dockerfileDir, archive.Uncompressed)
+	tarArchive, err := archive.Tar(dockerfileDir, compression.None)
 	if err != nil {
 		return nil, "", err
 	}
 
-	return ioutils.NewReadCloserWrapper(tar, func() error {
-		err := tar.Close()
+	return ioutils.NewReadCloserWrapper(tarArchive, func() error {
+		err := tarArchive.Close()
 		os.RemoveAll(dockerfileDir)
 		return err
 	}), DefaultDockerfileName, nil
@@ -176,8 +179,7 @@ func GetContextFromReader(rc io.ReadCloser, dockerfileName string) (out io.ReadC
 // IsArchive checks for the magic bytes of a tar or any supported compression
 // algorithm.
 func IsArchive(header []byte) bool {
-	compression := archive.DetectCompression(header)
-	if compression != archive.Uncompressed {
+	if compression.Detect(header) != compression.None {
 		return true
 	}
 	r := tar.NewReader(bytes.NewBuffer(header))
@@ -223,7 +225,7 @@ func GetContextFromURL(out io.Writer, remoteURL, dockerfileName string) (io.Read
 	progressOutput := streamformatter.NewProgressOutput(out)
 
 	// Pass the response body through a progress reader.
-	progReader := progress.NewProgressReader(response.Body, progressOutput, response.ContentLength, "", fmt.Sprintf("Downloading build context from remote url: %s", remoteURL))
+	progReader := progress.NewProgressReader(response.Body, progressOutput, response.ContentLength, "", "Downloading build context from remote url: "+remoteURL)
 
 	return GetContextFromReader(ioutils.NewReadCloserWrapper(progReader, func() error { return response.Body.Close() }), dockerfileName)
 }
@@ -231,7 +233,7 @@ func GetContextFromURL(out io.Writer, remoteURL, dockerfileName string) (io.Read
 // getWithStatusError does an http.Get() and returns an error if the
 // status code is 4xx or 5xx.
 func getWithStatusError(url string) (resp *http.Response, err error) {
-	// #nosec G107
+	//nolint:gosec // Ignore G107: Potential HTTP request made with variable url
 	if resp, err = http.Get(url); err != nil {
 		return nil, err
 	}
@@ -425,15 +427,14 @@ func Compress(buildCtx io.ReadCloser) (io.ReadCloser, error) {
 	pipeReader, pipeWriter := io.Pipe()
 
 	go func() {
-		compressWriter, err := archive.CompressStream(pipeWriter, archive.Gzip)
+		compressWriter, err := compression.CompressStream(pipeWriter, archive.Gzip)
 		if err != nil {
 			pipeWriter.CloseWithError(err)
 		}
 		defer buildCtx.Close()
 
-		if _, err := pools.Copy(compressWriter, buildCtx); err != nil {
-			pipeWriter.CloseWithError(
-				errors.Wrap(err, "failed to compress context"))
+		if _, err := io.Copy(compressWriter, buildCtx); err != nil {
+			pipeWriter.CloseWithError(errors.Wrap(err, "failed to compress context"))
 			compressWriter.Close()
 			return
 		}

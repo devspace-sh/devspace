@@ -70,7 +70,7 @@ package filters
 import (
 	"regexp"
 
-	"github.com/containerd/log"
+	"github.com/containerd/containerd/log"
 )
 
 // Filter matches specific resources based the provided filter

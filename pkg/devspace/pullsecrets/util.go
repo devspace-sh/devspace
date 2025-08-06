@@ -2,8 +2,8 @@ package pullsecrets
 
 import (
 	"strings"
-
-	"github.com/docker/distribution/reference"
+	
+	"github.com/distribution/reference"
 	dockerregistry "github.com/docker/docker/registry"
 )
 
@@ -13,16 +13,16 @@ func GetRegistryFromImageName(imageName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	
 	repoInfo, err := dockerregistry.ParseRepositoryInfo(ref)
 	if err != nil {
 		return "", err
 	}
-
+	
 	if repoInfo.Index.Official {
 		return "", nil
 	}
-
+	
 	return repoInfo.Index.Name, nil
 }
 

@@ -114,7 +114,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/containerd/errdefs"
+	"github.com/containerd/containerd/errdefs"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 )
 

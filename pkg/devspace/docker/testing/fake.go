@@ -5,12 +5,13 @@ import (
 	"context"
 	"io"
 	"strings"
-
+	
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/docker/docker/api/types/build"
 )
 
 // FakeClient is a prototype for a fake docker cient for testing purposes
@@ -28,7 +29,7 @@ func (client *FakeClient) Ping(ctx context.Context) (dockertypes.Ping, error) {
 func (client *FakeClient) NegotiateAPIVersion(ctx context.Context) {}
 
 // ImageBuildCLI builds an image with the docker cli
-func (client *FakeClient) ImageBuildCLI(ctx context.Context, workingDir string, useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error {
+func (client *FakeClient) ImageBuildCLI(ctx context.Context, workingDir string, useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options build.ImageBuildOptions, log log.Logger) error {
 	return nil
 }
 
@@ -38,8 +39,8 @@ func (client *FakeClient) ParseProxyConfig(buildArgs map[string]*string) map[str
 }
 
 // ImageBuild is a fake implementation
-func (client *FakeClient) ImageBuild(ctx context.Context, context io.Reader, options dockertypes.ImageBuildOptions) (dockertypes.ImageBuildResponse, error) {
-	return dockertypes.ImageBuildResponse{
+func (client *FakeClient) ImageBuild(ctx context.Context, context io.Reader, options build.ImageBuildOptions) (build.ImageBuildResponse, error) {
+	return build.ImageBuildResponse{
 		Body: io.NopCloser(bytes.NewBufferString("")),
 	}, nil
 }
