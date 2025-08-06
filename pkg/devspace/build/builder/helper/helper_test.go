@@ -32,7 +32,6 @@ type fakeDockerAPIClient struct {
 	dockerclient.CommonAPIClient
 }
 
-// TODO: (Ryan) see if these are needed for the tests
 func (c *fakeDockerAPIClient) CheckpointCreate(ctx context.Context, container string, options checkpoint.CreateOptions) error {
 	return nil
 }
