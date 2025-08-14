@@ -10,6 +10,7 @@ import (
 	"github.com/docker/cli/cli/streams"
 	"github.com/docker/docker/api/types/image"
 	dockerregistry "github.com/docker/docker/api/types/registry"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -17,10 +18,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	command2 "github.com/loft-sh/utils/pkg/command"
-
 	"github.com/pkg/errors"
-
-	"github.com/docker/docker/pkg/jsonmessage"
 )
 
 // EngineName is the name of the building engine
