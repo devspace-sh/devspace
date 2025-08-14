@@ -5,11 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
-	
-	"github.com/docker/cli/cli/streams"
+
 	"github.com/distribution/reference"
+	"github.com/docker/cli/cli/streams"
 	"github.com/docker/docker/api/types/image"
 	dockerregistry "github.com/docker/docker/api/types/registry"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -17,10 +18,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	command2 "github.com/loft-sh/utils/pkg/command"
-	
 	"github.com/pkg/errors"
-	
-	"github.com/docker/docker/pkg/jsonmessage"
 )
 
 // EngineName is the name of the building engine
@@ -29,7 +27,7 @@ const EngineName = "docker"
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
 	helper *helper.BuildHelper
-	
+
 	authConfig                *dockerregistry.AuthConfig
 	client                    dockerclient.Client
 	skipPush                  bool
@@ -57,7 +55,7 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.helper.ImageConf.Name)
 	imageName := imageCache.ResolveImage() + ":" + imageCache.Tag
 	rebuild, err := b.helper.ShouldRebuild(ctx, forceRebuild)
-	
+
 	// Check if image is present in local docker daemon
 	if !rebuild && err == nil {
 		if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient()) {
@@ -68,7 +66,7 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 			}
 		}
 	}
-	
+
 	return rebuild, err
 }
 
@@ -79,7 +77,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	var (
 		displayRegistryURL = "hub.docker.com"
 	)
-	
+
 	// Display nice registry name
 	registryURL, err := pullsecrets.GetRegistryFromImageName(b.helper.ImageName)
 	if err != nil {
@@ -88,12 +86,12 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	if registryURL != "" {
 		displayRegistryURL = registryURL
 	}
-	
+
 	// We skip pushing when it is the minikube client
 	if b.skipPushOnLocalKubernetes && ctx.KubeClient() != nil && kubectl.IsLocalKubernetes(ctx.KubeClient()) {
 		b.skipPush = true
 	}
-	
+
 	// Authenticate
 	if !b.skipPush && !b.helper.ImageConf.SkipPush {
 		if pullsecrets.IsAzureContainerRegistry(registryURL) {
@@ -108,18 +106,18 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 			if err != nil {
 				return errors.Errorf("Error during image registry authentication: %v", err)
 			}
-			
+
 			ctx.Log().Done("Authentication successful (" + displayRegistryURL + ")")
 		}
 	}
-	
+
 	// create context stream
 	body, writer, outStream, buildOptions, err := b.helper.CreateContextStream(contextPath, dockerfilePath, entrypoint, cmd, ctx.Log())
 	defer writer.Close()
 	if err != nil {
 		return err
 	}
-	
+
 	// Should we build with cli?
 	useBuildKit := false
 	useDockerCli := b.helper.ImageConf.Docker != nil && b.helper.ImageConf.Docker.UseCLI
@@ -138,19 +136,19 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	} else {
 		// make sure to use the correct proxy configuration
 		buildOptions.BuildArgs = b.client.ParseProxyConfig(buildOptions.BuildArgs)
-		
+
 		response, err := b.client.ImageBuild(ctx.Context(), body, *buildOptions)
 		if err != nil {
 			return err
 		}
 		defer response.Body.Close()
-		
+
 		err = jsonmessage.DisplayJSONMessagesStream(response.Body, outStream, outStream.FD(), outStream.IsTerminal(), nil)
 		if err != nil {
 			return err
 		}
 	}
-	
+
 	// Check if we skip push
 	if !b.skipPush && !b.helper.ImageConf.SkipPush {
 		for _, tag := range buildOptions.Tags {
@@ -158,7 +156,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 			if err != nil {
 				return errors.Errorf("error during image push: %v", err)
 			}
-			
+
 			ctx.Log().Info("Image pushed to registry (" + displayRegistryURL + ")")
 		}
 	} else if ctx.KubeClient() != nil && kubectl.GetKindContext(ctx.KubeClient().CurrentContext()) != "" {
@@ -169,14 +167,14 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 			completeArgs = append(completeArgs, command[1:]...)
 			err = command2.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writer, writer, nil, command[0], completeArgs...)
 			if err != nil {
-				ctx.Log().Info(errors.Errorf("error during image load to kind cluster: %v", err))
+				return errors.Errorf("error during image load to kind cluster: %v", err)
 			}
 			ctx.Log().Info("Image loaded to kind cluster")
 		}
 	} else {
 		ctx.Log().Infof("Skip image push for %s", b.helper.ImageName)
 	}
-	
+
 	return nil
 }
 
@@ -186,12 +184,12 @@ func (b *Builder) Authenticate(ctx context.Context) (*dockerregistry.AuthConfig,
 	if err != nil {
 		return nil, err
 	}
-	
+
 	b.authConfig, err = b.client.Login(ctx, registryURL, "", "", true, false, false)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return b.authConfig, nil
 }
 
@@ -201,25 +199,25 @@ func (b *Builder) pushImage(ctx context.Context, writer io.Writer, imageName str
 	if err != nil {
 		return err
 	}
-	
+
 	encodedAuth, err := encodeAuthToBase64(*b.authConfig)
 	if err != nil {
 		return err
 	}
-	
+
 	out, err := b.client.ImagePush(ctx, reference.FamiliarString(ref), image.PushOptions{
 		RegistryAuth: encodedAuth,
 	})
 	if err != nil {
 		return err
 	}
-	
+
 	outStream := streams.NewOut(writer)
 	err = jsonmessage.DisplayJSONMessagesStream(out, outStream, outStream.FD(), outStream.IsTerminal(), nil)
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -228,6 +226,6 @@ func encodeAuthToBase64(authConfig dockerregistry.AuthConfig) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	return base64.URLEncoding.EncodeToString(buf), nil
 }
