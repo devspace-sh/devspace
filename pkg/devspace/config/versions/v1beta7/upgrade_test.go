@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ghodss/yaml"
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta8"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"sigs.k8s.io/yaml"
 )
 
 type testCase struct {

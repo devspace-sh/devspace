@@ -2,18 +2,19 @@ package custom
 
 import (
 	"fmt"
+	"io"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/sirupsen/logrus"
-	"io"
-	"strings"
 
 	"github.com/bmatcuk/doublestar"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/utils/pkg/command"
 
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
@@ -26,23 +27,21 @@ var (
 
 // Builder holds all the relevant information for a custom build
 type Builder struct {
-	imageConf       *latest.Image
-	imageConfigName string
-	imageTags       []string
+	imageConf *latest.Image
+	imageTags []string
 }
 
 // NewBuilder creates a new custom builder
-func NewBuilder(imageConfigName string, imageConf *latest.Image, imageTags []string) *Builder {
+func NewBuilder(imageConf *latest.Image, imageTags []string) *Builder {
 	return &Builder{
-		imageConfigName: imageConfigName,
-		imageConf:       imageConf,
-		imageTags:       imageTags,
+		imageConf: imageConf,
+		imageTags: imageTags,
 	}
 }
 
 // ShouldRebuild implements interface
 func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) (bool, error) {
-	if b.imageConf.Custom.OnChange == nil || len(b.imageConf.Custom.OnChange) == 0 {
+	if len(b.imageConf.Custom.OnChange) == 0 {
 		return true, nil
 	}
 
@@ -72,14 +71,14 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 	}
 	customFilesHash = hash.String(customFilesHash)
 
-	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.imageConfigName)
+	imageCache, _ := ctx.Config().LocalCache().GetImageCache(b.imageConf.Name)
 
 	// only rebuild Docker image when Dockerfile or context has changed since latest build
 	mustRebuild := forceRebuild || b.imageConf.RebuildStrategy == latest.RebuildStrategyAlways || imageCache.Tag == "" || imageCache.ImageConfigHash != imageConfigHash || imageCache.CustomFilesHash != customFilesHash
 
 	imageCache.ImageConfigHash = imageConfigHash
 	imageCache.CustomFilesHash = customFilesHash
-	ctx.Config().LocalCache().SetImageCache(b.imageConfigName, imageCache)
+	ctx.Config().LocalCache().SetImageCache(b.imageConf.Name, imageCache)
 
 	return mustRebuild, nil
 }
@@ -91,7 +90,7 @@ func (b *Builder) Build(ctx devspacecontext.Context) error {
 
 	// resolve command
 	if len(b.imageTags) > 0 {
-		key := fmt.Sprintf("images.%s", b.imageConfigName)
+		key := fmt.Sprintf("images.%s", b.imageConf.Name)
 		ctx.Config().SetRuntimeVariable(key, b.imageConf.Image+":"+b.imageTags[0])
 		ctx.Config().SetRuntimeVariable(key+".image", b.imageConf.Image)
 		ctx.Config().SetRuntimeVariable(key+".tag", b.imageTags[0])
@@ -164,12 +163,12 @@ func (b *Builder) Build(ctx devspacecontext.Context) error {
 	ctx.Log().Infof("Build %s:%s with custom command", b.imageConf.Image, b.imageTags[0])
 	ctx.Log().Debugf("Build %s:%s with custom command '%s %s' in working dir %s", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "), ctx.WorkingDir)
 	if len(args) == 0 {
-		err = engine.ExecuteSimpleShellCommand(ctx.Context(), ctx.WorkingDir(), writer, writer, nil, nil, commandPath, args...)
+		err = engine.ExecuteSimpleShellCommand(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writer, writer, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}
 	} else {
-		err = command.Command(ctx.Context(), ctx.WorkingDir(), writer, writer, nil, commandPath, args...)
+		err = command.Command(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), writer, writer, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}

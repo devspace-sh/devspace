@@ -1,0 +1,72 @@
+---
+title: "Profiles: Replace"
+sidebar_label: replace
+---
+
+import FragmentInfoPrintConfig from '../../_partials/tip-print-config.mdx';
+
+## Configuration
+
+### `name`
+The `name` option is mandatory and expects a string defining the name of the profile.
+
+### `replace`
+
+The `replace` option expects an object with the following (optional) fields:
+- `images` which will replace the entire `images` section of the devspace.yaml
+- `deployments` which will replace the entire `deployments` section of the devspace.yaml
+- `dev` which will replace the entire `dev` section of the devspace.yaml
+- `dependencies` which will replace the entire `dependencies` section of the devspace.yaml
+- `hooks` which will replace the entire `hooks` section of the devspace.yaml
+
+#### Example: Using Config Replace For Profile `production`
+```yaml {16-19}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: john/devbackend
+        - image: john/debugger
+profiles:
+- name: production
+  replace:
+    images:
+      backend:
+        image: john/prodbackend
+  patches:
+  - op: remove
+    path: deployments.app-backend.helm.values.containers[1]
+```
+**Explanation:**  
+- The above example defines 1 profile: `production`
+- When using the profile `production`, the config section `images` would be entirely replaced and additionally, 1 patch would be applied.
+- The resulting config used in-memory when the profile `production` is used would look like this:
+
+```yaml
+# In-Memory Config After Applying Profile `production`
+images:
+  backend:
+    image: john/prodbackend
+deployments:
+  app-backend:
+    helm:
+      values:
+        containers:
+        - image: john/prodbackend
+```
+
+:::tip Combine Replace & Patches
+As shown in this example, it is possible to use `replace` and `patch` options in combination.
+:::
+
+## Useful Commands
+
+### `devspace print -p [profile]`
+
+<FragmentInfoPrintConfig/>

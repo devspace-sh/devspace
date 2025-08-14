@@ -12,14 +12,14 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/blang/semver"
-	"github.com/rhysd/go-github-selfupdate/selfupdate"
+	"github.com/loft-sh/go-github-selfupdate/selfupdate"
 )
 
 // Version holds the current version tag
 var version string
 var rawVersion string
 
-var githubSlug = "loft-sh/devspace"
+var githubSlug = "devspace-sh/devspace"
 var reVersion = regexp.MustCompile(`\d+\.\d+\.\d+`)
 
 func eraseVersionPrefix(version string) (string, error) {

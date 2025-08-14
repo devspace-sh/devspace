@@ -2,7 +2,6 @@ package compose
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -34,7 +33,7 @@ func GetDockerComposePath() string {
 }
 
 func LoadDockerComposeProject(path string) (*composetypes.Project, error) {
-	composeFile, err := ioutil.ReadFile(path)
+	composeFile, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +182,7 @@ func (cm *composeManager) Save() error {
 			return err
 		}
 
-		err = ioutil.WriteFile(path, configYaml, os.ModePerm)
+		err = os.WriteFile(path, configYaml, os.ModePerm)
 		if err != nil {
 			return err
 		}

@@ -3,9 +3,188 @@ title: Pipelines
 sidebar_label: pipelines
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import ConfigPartialPipeline from '../_partials/v2beta1/pipelines.mdx'
+import PipelineFunctionRef from '../_partials/functions/reference_pipeline.mdx'
+import GlobalFunctionRef from '../_partials/functions/reference_global.mdx'
 
 Pipelines allow you to fully customize the execution logic in DevSpace, i.e. they define what happens when a users run commands such as `devspace dev`, `devspace build`, `devspace deploy` or `devspace run-pipeline my-custom-pipeline`
+
+Pipelines are defined in POSIX shell syntax and a DevSpace pipeline reads as a regular POSIX script. However, DevSpace implements certain special commands that can be used inside the POSIX script to tell DevSpace when to build, deploy or start developing. For a complete function reference, please take a look below.
+
+<br />
+
+<Tabs
+  defaultValue="executionorder"
+  values={[
+    { label: 'Execution Order', value: 'executionorder' },
+    { label: 'Dynamic Config', value: 'configoverride' },
+    { label: 'Rerun Pipeline', value: 'rerun' },
+    { label: 'Deploy / Sync / Open', value: 'deploywaitsync', },
+    { label: 'Custom Dockerfile Flag', value: 'dockerfile', },
+  ]
+}>
+<TabItem value="configoverride">
+
+```yaml
+# Simple deployment that deploys an nginx pod
+deployments:
+  test:
+    helm:
+      values:
+        containers:
+        - image: nginx
+
+pipelines:
+  deploy: |-
+    # You can use the --set, --set-string, --from and --from-file
+    # arguments to dynamically change the config of the images,
+    # deployments or dev configurations you want to use inside the
+    # pipeline.
+
+    # Exchange the image in our deployment
+    if is_equal ${DEVSPACE_NAMESPACE} "test"; then
+      create_deployments test --set "helm.values.containers[0].image=bitnami/nginx"
+    fi
+
+    # Create a new deployment based on another deployment and change the image.
+    # This will copy over the values from the test deployment and then change the image
+    create_deployments nginx --from test \
+                             --set helm.values.containers[0].image=mysql
+
+    # Create a new deployment from a file. ${DEVSPACE_TMPDIR} is always cleaned up
+    # after each run
+    echo """
+    helm:
+      values:
+        containers:
+        - image: nginx
+    """ > ${DEVSPACE_TMPDIR}/my-deployment.yaml
+    create_deployments nginx-from-file --from-file ${DEVSPACE_TMPDIR}/my-deployment.yaml
+
+    # Force the container name to be a string (true) as DevSpace will otherwise convert
+    # those automatically.
+    create_deployments nginx-string-annotation --from test \
+                                               --set-string "helm.values.containers[0].name=true"
+```
+
+</TabItem>
+<TabItem value="executionorder">
+
+```yaml
+pipelines:
+  deploy: |-
+    # Pipelines are a great tool to define your custom execution order of
+    # building, deploying and starting dev configurations. This works for
+    # all special commands such as: build_images, create_deployments, start_dev
+    # run_dependencies and run_pipelines.
+
+    # Run two pipelines in parallel
+    run_pipelines other-pipeline-1 other-pipeline-2
+
+    # Wait until all 4 deployments were deployed
+    echo "All deployments are deployed"
+
+  other-pipeline-1: |-
+    # Deploys deployments deploy-a and deploy-b in parallel
+    create_deployments deploy-a deploy-b
+    echo "Deployment deploy-a and deploy-b are deployed"
+
+  other-pipeline-2: |-
+    # Deploys deployments deploy-c and then deploy-d
+    create_deployments deploy-c
+    echo "Deployment deploy-c is deployed"
+    create_deployments deploy-d
+    echo "Deployment deploy-d is deployed"
+
+
+deployments:
+  deploy-a: ...
+  deploy-b: ...
+  deploy-c: ...
+  deploy-d: ...
+```
+
+</TabItem>
+<TabItem value="rerun">
+
+```yaml
+pipelines:
+  deploy: |-
+    # This pipeline watches a secret and applies it as well as deploys the application
+    # Start two pipelines in parallel
+    run_pipelines watch-secret default-deploy
+
+  watch-secret: |-
+    # Rerun the pipeline as soon as the secret.yaml changes
+    run_watch -p secret.yaml -- kubectl apply -n ${DEVSPACE_NAMESPACE} -f secret.yaml
+
+  default-deploy: |-
+    # Run regular deploy pipeline to start the application
+    run_default_pipeline deploy
+
+deployments: ...
+dev: ...
+```
+
+</TabItem>
+<TabItem value="deploywaitsync">
+
+```yaml
+pipelines:
+  # Run with devspace run-pipeline custom-pipeline
+  custom-pipeline: |-
+    # Deploy simple nginx pod with the default DevSpace component chart
+    create_deployments nginx --set helm.values.containers[0].image=nginx
+
+    # Create a file we want to sync to the nginx pod
+    echo "Hello World!" > ${DEVSPACE_TMPDIR}/index.html
+
+    # Sync the file into the nginx pod via DevSpace sync
+    start_dev nginx --set imageSelector=nginx \
+                    --set "sync[0].path=${DEVSPACE_TMPDIR}:/usr/share/nginx/html" \
+                    --set "sync[0].noWatch=true"
+
+    # Print contents within the nginx pod
+    exec_container --image-selector=nginx -- cat /usr/share/nginx/html/index.html
+
+    # Start port-forwarding and open the url
+    start_dev nginx --set imageSelector=nginx \
+                    --set 'ports[0].port=8080:80' \
+                    --set 'open[0].url=http://localhost:8080'
+```
+
+</TabItem>
+<TabItem value="dockerfile">
+
+```yaml
+images:
+  my-image:
+    dockerfile: ./Dockerfile
+
+pipelines:
+  # Executed on 'devspace deploy'
+  deploy:
+    flags:
+    - name: dockerfile
+      description: If enabled, will build the image with the given dockerfile
+      type: string
+    run: |-
+        if ! is_empty $(get_flag dockerfile); then
+            echo "Building the image with the overriden dockerfile $(get_flag dockerfile)"
+            run_default_pipeline deploy --set "images.my-image.dockerfile=$(get_flag dockerfile)"
+        else
+            run_default_pipeline deploy
+        fi
+```
+
+</TabItem>
+</Tabs>
+
+
+
+
 
 
 ## Using Pipelines
@@ -15,6 +194,7 @@ An example `pipelines` section could look like this in `devspace.yaml`:
 ```yaml title=devspace.yaml
 version: v2beta1
 pipelines:
+  # Override the default pipeline for 'devspace dev'
   dev: |-
     run_dependency_pipelines --all    # 1. Deploy any projects this project needs (see "dependencies")
     create_deployments --all          # 2. Deploy Helm charts and manifests specfied as "deployments"
@@ -49,10 +229,11 @@ Write all pipeline scrips in `bash` fashion. DevSpace is using a library to make
 
 
 ## Default Pipelines
-DevSpace provides default pipeline scripts for the following top-level commands:
+Internally DevSpace uses pipelines for the following commands that can be overriden according to your preferences. DevSpace provides default pipeline scripts for the following top-level commands:
 - [`devspace dev`](#dev)
 - [`devspace deploy`](#deploy)
 - [`devspace build`](#build)
+- [`devspace purge`](#purge)
 
 <details>
 <summary>
@@ -64,9 +245,11 @@ DevSpace provides default pipeline scripts for the following top-level commands:
 The `dev` pipeline is executed by running `devspace dev` and has the following default workflow:
 
 ```bash
-run_dependency_pipelines --all      # 1. Deploy any projects this project needs (see "dependencies")
-create_deployments --all            # 2. Deploy Helm charts and manifests specfied as "deployments"
-start_dev --all                     # 3. Start all dev modes
+run_dependencies --all
+ensure_pull_secrets --all
+build_images --all
+create_deployments --all
+start_dev --all
 ```
 
 </details>
@@ -81,9 +264,10 @@ start_dev --all                     # 3. Start all dev modes
 The `deploy` pipeline is executed by running `devspace deploy` and has the following default workflow:
 
 ```bash
-run_dependency_pipelines --all      # 1. Deploy any projects this project needs (see "dependencies")
-build_images --all                  # 2. Build, tag (git commit hash) and push all images (see "images")
-create_deployments --all            # 3. Deploy Helm charts and manifests specfied as "deployments"
+run_dependencies --all
+ensure_pull_secrets --all
+build_images --all
+create_deployments --all
 ```
 
 </details>
@@ -99,7 +283,26 @@ create_deployments --all            # 3. Deploy Helm charts and manifests specfi
 The `build` pipeline is executed by running `devspace build` and has the following default workflow:
 
 ```bash
-build_images --all      # Build, tag (git commit hash) and push all images (see "images")
+run_dependencies --all --pipeline build
+build_images --all
+```
+
+</details>
+
+
+<details>
+<summary>
+
+### `purge`
+
+</summary>
+
+The `purge` pipeline is executed by running `devspace purge` and has the following default workflow:
+
+```bash
+stop_dev --all
+purge_deployments --all
+run_dependencies --all --pipeline purge
 ```
 
 </details>
@@ -123,8 +326,8 @@ pipelines:
       short: e
       type: stringArray
     run: |-
-      extraEnv=$(get_flag "env")    # Retrieve the value of the `env` flag and store it in a variable
-      echo ${extraEnv[1]}
+      extraEnv=($(get_flag "env"))    # Retrieve the value of the `env` flag and store it in an array variable
+      echo ${extraEnv[0]}             # Arrays are zero indexed
 
       TERMINAL_ENABLED=true
       if [ $(get_flag "logs") == "true" ]; then     # Test if --logs/-l flag is used or not
@@ -133,6 +336,23 @@ pipelines:
 
       start_dev app --set terminal.enabled=$TERMINAL_ENABLED
 ```
+
+
+## Built-In Functions
+DevSpace provides a set of built-in functions. There are two types of functions:
+1. [Pipeline-Only Functions](#pipeline-only-functions)
+2. [Global Functions](#global-functions)
+
+### Pipeline-Only Functions
+Pipeline-only functions can only be used inside the scripts within the `pipelines` section of `devspace.yaml`.
+
+<PipelineFunctionRef/>
+
+
+### Global Functions
+Global functions can be used anywhere in `devspace.yaml`, either in config fields that expect a bash script such as within `functions` or using [`$(command)` vars](../variables.mdx#from-commands) in any other config field.
+
+<GlobalFunctionRef/>
 
 
 ## Config Reference

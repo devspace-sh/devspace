@@ -1,17 +1,17 @@
 package ssh
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/scanner"
-	"github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/scanner"
+	"github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 )
 
 var configLock sync.Mutex
@@ -21,7 +21,43 @@ var (
 	MarkerEndPrefix   = "# DevSpace End "
 )
 
-func configureSSHConfig(host, port string, log log.Logger) error {
+func configureSSHConfig(host, port string, useInclude bool, log log.Logger) error {
+	if useInclude {
+		return configureSSHConfigSeparateFile(host, port, log)
+	}
+
+	return configureSSHConfigSameFile(host, port, log)
+}
+
+func configureSSHConfigSameFile(host, port string, log log.Logger) error {
+	configLock.Lock()
+	defer configLock.Unlock()
+
+	homeDir, err := homedir.Dir()
+	if err != nil {
+		return errors.Wrap(err, "get home dir")
+	}
+
+	sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
+	newFile, err := addHost(sshConfigPath, host, port)
+	if err != nil {
+		return errors.Wrap(err, "parse ssh config")
+	}
+
+	err = os.MkdirAll(filepath.Dir(sshConfigPath), 0755)
+	if err != nil {
+		log.Debugf("error creating ssh directory: %v", err)
+	}
+
+	err = os.WriteFile(sshConfigPath, []byte(newFile), 0600)
+	if err != nil {
+		return errors.Wrap(err, "write ssh config")
+	}
+
+	return nil
+}
+
+func configureSSHConfigSeparateFile(host, port string, log log.Logger) error {
 	configLock.Lock()
 	defer configLock.Unlock()
 
@@ -48,13 +84,13 @@ func configureSSHConfig(host, port string, log log.Logger) error {
 	}
 
 	if newSSHFile != "" {
-		err = ioutil.WriteFile(sshConfigPath, []byte(newSSHFile), 0600)
+		err = os.WriteFile(sshConfigPath, []byte(newSSHFile), 0600)
 		if err != nil {
 			return errors.Wrap(err, "write ssh config")
 		}
 	}
 
-	err = ioutil.WriteFile(devSpaceSSHConfigPath, []byte(newFile), 0600)
+	err = os.WriteFile(devSpaceSSHConfigPath, []byte(newFile), 0600)
 	if err != nil {
 		return errors.Wrap(err, "write devspace ssh config")
 	}
@@ -151,6 +187,7 @@ func includeDevSpaceConfig(path string) (string, error) {
 
 	// add new section
 	newLines = append(newLines, startMarker)
+	newLines = append(newLines, "Match all")
 	newLines = append(newLines, "Include devspace_config")
 	newLines = append(newLines, "# DevSpace End")
 	return strings.Join(newLines, "\n"), nil
@@ -193,8 +230,9 @@ func addHost(path, host, port string) (string, error) {
 	newLines = append(newLines, startMarker)
 	newLines = append(newLines, "Host "+host)
 	newLines = append(newLines, "  HostName localhost")
+	newLines = append(newLines, "  LogLevel error")
 	newLines = append(newLines, "  Port "+port)
-	newLines = append(newLines, "  IdentityFile "+DevSpaceSSHPrivateKeyFile)
+	newLines = append(newLines, "  IdentityFile \""+DevSpaceSSHPrivateKeyFile+"\"")
 	newLines = append(newLines, "  StrictHostKeyChecking no")
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
 	newLines = append(newLines, "  User devspace")

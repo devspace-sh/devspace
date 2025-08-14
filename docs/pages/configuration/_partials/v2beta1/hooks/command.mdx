@@ -1,0 +1,16 @@
+
+<details className="config-field" data-expandable="false" open>
+<summary>
+
+### `command` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-command}
+
+Command is the base command that is either executed locally or in a remote container.
+Command is mutually exclusive with other hook actions. In the case this is defined
+together with where.container, DevSpace will until the target container is running and
+only then execute the command. If the container does not start in time, DevSpace will fail.
+
+</summary>
+
+
+
+</details>

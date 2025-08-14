@@ -3,8 +3,9 @@ package targetselector
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"k8s.io/apimachinery/pkg/labels"
@@ -234,7 +235,7 @@ func (t *targetSelector) selectSingle(ctx context.Context, client kubectl.Client
 		}
 
 		var out interface{}
-		err := wait.PollImmediateWithContext(ctx, time.Millisecond*500, timeout, func(ctx context.Context) (done bool, err error) {
+		err := wait.PollUntilContextTimeout(ctx, time.Millisecond*500, timeout, true, func(ctx context.Context) (done bool, err error) {
 			done, o, err := selectFn(ctx, client, options, log)
 			if err != nil {
 				return false, err
@@ -246,7 +247,7 @@ func (t *targetSelector) selectSingle(ctx context.Context, client kubectl.Client
 			return true, nil
 		})
 		if err != nil {
-			if err == wait.ErrWaitTimeout {
+			if wait.Interrupted(err) {
 				return nil, &NotFoundErr{
 					Timeout:  true,
 					Selector: options.selector.String(),

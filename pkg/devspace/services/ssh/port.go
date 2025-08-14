@@ -40,8 +40,15 @@ func NewManager(log log.Logger) PortManager {
 	if err != nil {
 		log.Errorf("error parsing %s: %v", sshConfigPath, err)
 	}
-
 	reservedPorts := map[int]bool{}
+	for _, h := range hosts {
+		reservedPorts[h.Port] = true
+	}
+	sshConfigPath = filepath.Join(homeDir, ".ssh", "devspace_config")
+	hosts, err = ParseDevSpaceHosts(sshConfigPath)
+	if err != nil {
+		log.Errorf("error parsing %s: %v", sshConfigPath, err)
+	}
 	for _, h := range hosts {
 		reservedPorts[h.Port] = true
 	}

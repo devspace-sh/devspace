@@ -74,6 +74,7 @@ message TouchPath {
 message Command {
     string Cmd = 1;
     repeated string Args = 2;
+    bool Once = 3;
 }
 
 message PathsChecksum {

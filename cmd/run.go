@@ -7,16 +7,20 @@ import (
 	"os"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
+	"mvdan.cc/sh/v3/expand"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/loft-util/pkg/command"
 	"mvdan.cc/sh/v3/interp"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -118,7 +122,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// load the config
-	ctx, err := LoadCommandsConfig(configLoader, configOptions, f.GetLog())
+	ctx, err := cmd.LoadCommandsConfig(f, configLoader, configOptions, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -232,21 +236,40 @@ func ParseArgs(cobraCmd *cobra.Command, globalFlags *flags.GlobalFlags, log log.
 }
 
 // LoadCommandsConfig loads the commands config
-func LoadCommandsConfig(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log log.Logger) (devspacecontext.Context, error) {
+func (cmd *RunCmd) LoadCommandsConfig(f factory.Factory, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log log.Logger) (devspacecontext.Context, error) {
 	// load generated
 	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
 		return nil, err
 	}
 
+	// try to load client
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
+	if err != nil {
+		log.Debugf("Unable to create new kubectl client: %v", err)
+		client = nil
+	}
+
+	// verify client connectivity / authn / authz
+	if client != nil {
+		// If the current kube context or namespace is different than old,
+		// show warnings and reset kube client if necessary
+		client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, false, log)
+		if err != nil {
+			log.Debugf("Unable to verify kube context %v", err)
+			client = nil
+		}
+	}
+
 	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(context.Background(), localCache, nil, loader.NewCommandsParser(), configOptions, log)
+	commandsInterface, err := configLoader.LoadWithParser(context.Background(), localCache, client, loader.NewCommandsParser(), configOptions, log)
 	if err != nil {
 		return nil, err
 	}
 
 	// create context
 	return devspacecontext.NewContext(context.Background(), commandsInterface.Variables(), log).
+		WithKubeClient(client).
 		WithConfig(commandsInterface), nil
 }
 
@@ -257,7 +280,7 @@ func executeShellCommand(ctx context.Context, shellCommand string, variables map
 	}
 
 	// execute the command in a shell
-	err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, args...)
+	err := engine.ExecuteSimpleShellCommand(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), extraEnv), stdout, stderr, stdin, shellCommand, args...)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok {
 			return &exit.ReturnCodeError{
@@ -292,7 +315,7 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 		}
 
 		// execute the command in a shell
-		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, args...)
+		err := engine.ExecuteSimpleShellCommand(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), extraEnv), stdout, stderr, stdin, shellCommand, args...)
 		if err != nil {
 			if status, ok := interp.IsExitStatus(err); ok {
 				return &exit.ReturnCodeError{
@@ -307,7 +330,7 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 	}
 
 	shellArgs = append(shellArgs, args...)
-	return command.CommandWithEnv(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, shellArgs...)
+	return command.Command(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), extraEnv), stdout, stderr, stdin, shellCommand, shellArgs...)
 }
 
 // RunCommandCmd holds the cmd flags of a run command

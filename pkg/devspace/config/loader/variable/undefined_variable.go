@@ -3,9 +3,11 @@ package variable
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"os"
 	"strconv"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -38,6 +40,11 @@ func (u *undefinedVariable) Load(ctx context.Context, _ *latest.Variable) (inter
 		return convertStringValue(v), nil
 	}
 
+	// is logger silent
+	if u.log == log.Discard || u.log.GetLevel() < logrus.InfoLevel {
+		return "", nil
+	}
+
 	// Ask for variable
 	val, err := askQuestion(&latest.Variable{
 		Question: "Please enter a value for " + u.name,
@@ -62,6 +69,17 @@ func convertStringValue(value string) interface{} {
 }
 
 func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
+	params := getParams(variable)
+
+	answer, err := log.Question(params)
+	if err != nil {
+		return "", err
+	}
+
+	return answer, nil
+}
+
+func getParams(variable *latest.Variable) *survey.QuestionOptions {
 	params := &survey.QuestionOptions{}
 
 	if variable == nil {
@@ -81,10 +99,12 @@ func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
 			params.IsPassword = true
 		}
 
-		if variable.Default != "" {
+		if variable.Default != nil && variable.Default != "" {
 			params.DefaultValue = fmt.Sprintf("%v", variable.Default)
 		}
-
+		if variable.Default != nil {
+			params.DefaultValueSet = true
+		}
 		if len(variable.Options) > 0 {
 			params.Options = variable.Options
 			if variable.Default == nil {
@@ -98,11 +118,5 @@ func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
 			}
 		}
 	}
-
-	answer, err := log.Question(params)
-	if err != nil {
-		return "", err
-	}
-
-	return answer, nil
+	return params
 }

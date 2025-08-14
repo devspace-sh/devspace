@@ -1,0 +1,29 @@
+The function `is_in` checks if the first argument can be found in the second argument.
+
+## Arguments
+
+### `[arg1 arg2]`
+
+```
+is_in [arg1] [arg2]
+```
+
+### Example
+
+Use `is_in` as a function under your pipeline definitions:
+
+```yaml
+pipelines:
+  dev:
+    run: |-
+      is_in apples "apples peaches"
+```
+Returns exit status 0
+
+```yaml
+pipelines:
+  dev:
+    run: |-
+      is_in apples "peaches bananas"
+```
+Returns exist status 1 (fatal)

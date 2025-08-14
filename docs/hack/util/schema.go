@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -183,10 +182,22 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 					fieldPartial = fmt.Sprintf(TemplateConfigField, true, "", headlinePrefix, fieldName, false, fieldType, "", "", anchorName, fieldSchema.Description, fieldPartial)
 				} else {
 					if fieldType == "boolean" {
-						fieldDefault = "false"
 						if required {
 							fieldDefault = "true"
 							required = false
+						} else {
+							fieldDefault = "false"
+							boolDefault, ok := fieldSchema.Default.(bool)
+							if ok && boolDefault {
+								fieldDefault = "true"
+							}
+						}
+					} else if fieldType == "integer" {
+						intDefault, ok := fieldSchema.Default.(int)
+						if ok {
+							fieldDefault = strconv.Itoa(intDefault)
+						} else {
+							fieldDefault = ""
 						}
 					} else {
 						fieldDefault, ok = fieldSchema.Default.(string)
@@ -206,7 +217,7 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 					panic(err)
 				}
 
-				err = ioutil.WriteFile(fieldFile, []byte(fieldContent), os.ModePerm)
+				err = os.WriteFile(fieldFile, []byte(fieldContent), os.ModePerm)
 				if err != nil {
 					panic(err)
 				}
@@ -258,7 +269,7 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 
 	content = fmt.Sprintf("%s%s", importContent, content)
 
-	err := ioutil.WriteFile(pageFile, []byte(content), os.ModePerm)
+	err := os.WriteFile(pageFile, []byte(content), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}

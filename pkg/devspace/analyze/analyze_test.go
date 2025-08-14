@@ -64,8 +64,10 @@ type createReportTestCase struct {
 	expectedReport []*ReportItem
 }
 
-/*Part of this function is untestable right now because the helper function events uses the RestClient of the KubeClient.
-The fake client returns nil. Therefore it's not possible to let events return problems.*/
+/*
+Part of this function is untestable right now because the helper function events uses the RestClient of the KubeClient.
+The fake client returns nil. Therefore it's not possible to let events return problems.
+*/
 func TestCreateReport(t *testing.T) {
 	testCases := []createReportTestCase{
 		{

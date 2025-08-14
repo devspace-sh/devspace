@@ -104,9 +104,9 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 			return err
 		}
 
-		// If the current kube context or namespace is different than old,
+		// If the current kube context or namespace is different from old,
 		// show warnings and reset kube client if necessary
-		client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, log)
+		client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, false, log)
 		if err != nil {
 			return err
 		}

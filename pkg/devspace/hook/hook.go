@@ -3,20 +3,21 @@ package hook
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
-	"github.com/loft-sh/devspace/pkg/util/command"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/utils/pkg/command"
 	"github.com/mgutz/ansi"
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
 	"k8s.io/apimachinery/pkg/labels"
-	"strings"
-	"time"
 )
 
 var (
@@ -105,7 +106,7 @@ func executeSingle(ctx devspacecontext.Context, extraEnv map[string]string, even
 	}
 
 	c := config.Config()
-	if c.Hooks != nil && len(c.Hooks) > 0 {
+	if len(c.Hooks) > 0 {
 		hooksToExecute := []*latest.HookConfig{}
 
 		// Gather all hooks we should execute
@@ -200,7 +201,7 @@ func executeHook(ctx devspacecontext.Context, hookConfig *latest.HookConfig, hoo
 	err := hook.Execute(ctx.WithLogger(hookLog), hookConfig, extraEnv)
 	if err != nil {
 		if hookConfig.Silent {
-			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(logpkg.NopCloser).Writer.(*bytes.Buffer).String())
+			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*logpkg.NopCloser).Writer.(*bytes.Buffer).String())
 		}
 		return errors.Wrapf(err, "in hook '%s'", ansi.Color(hookName(hookConfig), "white+b"))
 	}

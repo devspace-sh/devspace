@@ -1,0 +1,143 @@
+---
+title: Deploy Kubernetes Inline Manifests
+sidebar_label: InlineManifests
+---
+
+import FragmentKubectlApplyArgs from '../../../_partials/kubectl-options-applyArgs.mdx';
+import FragmentKubectlBinaryPath from '../../../_partials/kubectl-options-binaryPath.mdx';
+import FragmentKubectlKustomize from '../../../_partials/kubectl-kustomize.mdx';
+import FragmentKustomizeKustomizeArgs from '../../../_partials/kustomize-options-kustomizeArgs.mdx';
+import FragmentUpdateImageTags from '../../../_partials/kubectl-updateImageTags.mdx';
+
+To deploy Kubernetes using inline manifests with `kubectl apply`, you need to configure them within the `deployments` section of the `devspace.yaml`.
+
+
+## Example
+```yaml title=devspace.yaml
+pipelines:
+  dev: 
+    run: |
+      create_deployments backend
+      create_deployments frontend
+deployments:
+  backend:
+    kubectl:
+      inlineManifest: |-
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: busybox-sleep
+        spec:
+          containers:
+          - name: busybox
+            image: busybox:1.28
+            args:
+            - sleep
+            - "1000000"
+  frontend:
+    kubectl:
+      manifests:
+      - frontend/manifest.yaml
+```
+
+The above example will be executed during the deployment process as follows:
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox-sleep
+spec:
+  containers:
+  - name: busybox
+    image: busybox:1.28
+    args:
+    - sleep
+    - "1000000"
+EOF
+```
+
+You can also use variables:
+
+```yaml
+vars:
+  CONTAINER_NAME: $(cat my-example.txt)
+
+deployments:
+  backend:
+    kubectl:
+      inlineManifest: |-
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: busybox-sleep
+        spec:
+          containers:
+          - name: ${CONTAINER_NAME}
+            # name: $(cat my-example.txt) won't work!
+            image: busybox:1.28
+            args:
+            - sleep
+            - "1000000"
+      createArgs:
+      - "--recursive"
+```
+
+## Update Image Tags
+
+<FragmentUpdateImageTags/>
+
+
+## `kubectl` Binary
+Deployments with `kubectl` require `kubectl` to be installed. If the `kubectl` binary cannot be found within the `$PATH` variable and it is not specified by specifying the [`kubectlBinaryPath` option](./README.mdx#deployments-kubectl-kubectlBinaryPath), DevSpace will download the `kubectl` binary into the `$HOME/.devspace/bin` folder.
+
+
+
+## Extra Arguments
+When deploying manifests via `kubectl`, DevSpace can pass additional arguments and flags to the `kubectl` commands used for the deployment process.
+
+### Args For `kubectl create`
+The `createArgs` option expects an array of strings stating additional arguments (and flags) that should be used when calling `kubectl create`.
+
+#### Example: Custom Kubectl Args & Flags
+```yaml
+deployments:
+  backend:
+    kubectl:
+      inlineManifest: |-
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: busybox-sleep
+        spec:
+          containers:
+          - name: busybox
+            image: busybox:1.28
+            args:
+            - sleep
+            - "1000000"
+      createArgs:
+      - "--recursive"
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+cat <<EOF | kubectl create --dry-run --output yaml --validate=false --recursive -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox-sleep
+spec:
+  containers:
+  - name: busybox
+    image: busybox:1.28
+    args:
+    - sleep
+    - "1000000"
+EOF
+```
+
+
+### Args For `kubectl apply`
+
+<FragmentKubectlApplyArgs/>

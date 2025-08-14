@@ -5,25 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/moby/patternmatcher"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/docker/docker/pkg/fileutils"
+	
 	scanner2 "github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
-
+	
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
-
+	
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-
-	"github.com/docker/docker/pkg/archive"
+	
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/pkg/errors"
+	"github.com/containers/storage/pkg/archive"
 )
 
 // DefaultDockerfilePath is the default dockerfile path to use
@@ -66,7 +65,7 @@ func ReadDockerignore(contextDir string, dockerfile string) ([]string, error) {
 		return nil, err
 	}
 	defer f.Close()
-
+	
 	excludes, err = dockerignore.ReadAll(f)
 	if err != nil {
 		return nil, err
@@ -79,11 +78,11 @@ func ensureDockerIgnoreAndDockerFile(excludes []string, dockerfile, dockerignore
 		excludes = append(excludes, ".dockerignore")
 	} else {
 		_, dockerignorefile := filepath.Split(dockerignorefilepath)
-		if keep, _ := fileutils.Matches(dockerignorefile, excludes); keep {
+		if keep, _ := patternmatcher.MatchesOrParentMatches(dockerignorefile, excludes); keep {
 			excludes = append(excludes, "!"+dockerignorefile)
 		}
 	}
-	if keep, _ := fileutils.Matches(dockerfile, excludes); keep {
+	if keep, _ := patternmatcher.MatchesOrParentMatches(dockerfile, excludes); keep {
 		excludes = append(excludes, "!"+dockerfile)
 	}
 	excludes = append(excludes, ".devspace/")
@@ -96,15 +95,15 @@ func GetDockerfileAndContext(ctx devspacecontext.Context, imageConf *latest.Imag
 		dockerfilePath = DefaultDockerfilePath
 		contextPath    = DefaultContextPath
 	)
-
+	
 	if imageConf.Dockerfile != "" {
 		dockerfilePath = imageConf.Dockerfile
 	}
-
+	
 	if imageConf.Context != "" {
 		contextPath = imageConf.Context
 	}
-
+	
 	return ctx.ResolvePath(dockerfilePath), ctx.ResolvePath(contextPath)
 }
 
@@ -128,7 +127,7 @@ func InjectBuildScriptInContext(helperScript string, buildCtx io.ReadCloser) (io
 		ChangeTime: now,
 		Typeflag:   tar.TypeDir,
 	}
-
+	
 	buildCtx = archive.ReplaceFileTarWrapper(buildCtx, map[string]archive.TarModifierFunc{
 		"/.devspace/.devspace": func(_ string, h *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
 			return fldTmpl, nil, nil
@@ -142,7 +141,7 @@ func InjectBuildScriptInContext(helperScript string, buildCtx io.ReadCloser) (io
 
 // OverwriteDockerfileInBuildContext will overwrite the dockerfile with the dockerfileCtx
 func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.ReadCloser, relDockerfile string) (io.ReadCloser, error) {
-	file, err := ioutil.ReadAll(dockerfileCtx)
+	file, err := io.ReadAll(dockerfileCtx)
 	dockerfileCtx.Close()
 	if err != nil {
 		return nil, err
@@ -157,7 +156,7 @@ func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.
 		AccessTime: now,
 		ChangeTime: now,
 	}
-
+	
 	buildCtx = archive.ReplaceFileTarWrapper(buildCtx, map[string]archive.TarModifierFunc{
 		// Overwrite docker file
 		relDockerfile: func(_ string, h *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
@@ -176,18 +175,18 @@ func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, add
 	if additionalInstructions == nil {
 		additionalInstructions = []string{}
 	}
-
+	
 	if injectHelper {
-		data, err := ioutil.ReadFile(dockerfile)
+		data, err := os.ReadFile(dockerfile)
 		if err != nil {
 			return "", err
 		}
-
+		
 		oldEntrypoint, oldCmd, err := GetEntrypointAndCmd(string(data), target)
 		if err != nil {
 			return "", err
 		}
-
+		
 		if len(entrypoint) == 0 {
 			if len(oldEntrypoint) == 0 {
 				if len(cmd) == 0 && len(oldCmd) == 0 {
@@ -195,7 +194,7 @@ func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, add
 				}
 				log.Warn("Using CMD statement for injecting restart helper because ENTRYPOINT is missing in Dockerfile and `images.*.entrypoint` is also not configured")
 			}
-
+			
 			entrypoint = oldEntrypoint
 			if len(cmd) == 0 && len(oldCmd) > 0 {
 				cmd = oldCmd
@@ -203,11 +202,11 @@ func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, add
 		} else if len(cmd) == 0 && len(oldCmd) > 0 {
 			cmd = oldCmd
 		}
-
+		
 		entrypoint = append([]string{restart.ScriptPath}, entrypoint...)
 		additionalInstructions = append(additionalInstructions, "COPY /.devspace /")
 	}
-
+	
 	return CreateTempDockerfile(dockerfile, entrypoint, cmd, additionalInstructions, target)
 }
 
@@ -216,62 +215,62 @@ func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, 
 	if entrypoint == nil && cmd == nil && len(additionalLines) == 0 {
 		return "", errors.New("entrypoint, cmd & additional lines are empty")
 	}
-
-	data, err := ioutil.ReadFile(dockerfile)
+	
+	data, err := os.ReadFile(dockerfile)
 	if err != nil {
 		return "", err
 	}
-
+	
 	// Overwrite entrypoint and cmd
-	tmpDir, err := ioutil.TempDir("", "example")
+	tmpDir, err := os.MkdirTemp("", "example")
 	if err != nil {
 		return "", err
 	}
-
+	
 	// add the new entrypoint
 	newData, err := addNewEntrypoint(string(data), entrypoint, cmd, additionalLines, target)
 	if err != nil {
 		return "", errors.Wrap(err, "add entrypoint")
 	}
-
+	
 	tmpfn := filepath.Join(tmpDir, "Dockerfile")
-	if err := ioutil.WriteFile(tmpfn, []byte(newData), 0666); err != nil {
+	if err := os.WriteFile(tmpfn, []byte(newData), 0666); err != nil {
 		return "", err
 	}
-
+	
 	return tmpfn, nil
 }
 
 // GetDockerfileTargets returns an array of names of all targets defined in a given Dockerfile
 func GetDockerfileTargets(dockerfile string) ([]string, error) {
 	targets := []string{}
-
+	
 	if dockerfile == "" {
 		dockerfile = DefaultDockerfilePath
 	}
-
-	data, err := ioutil.ReadFile(dockerfile)
+	
+	data, err := os.ReadFile(dockerfile)
 	if err != nil {
 		return targets, err
 	}
 	content := string(data)
-
+	
 	// Find all targets
 	targetFinder, err := regexp.Compile(fmt.Sprintf(DockerfileTargetRegexTemplate, "\\S+"))
 	if err != nil {
 		return targets, err
 	}
-
+	
 	rawTargets := targetFinder.FindAllStringSubmatch(content, -1)
 	for _, target := range rawTargets {
 		entrypoint, cmd, err := GetEntrypointAndCmd(content, target[3])
 		if err != nil || (len(entrypoint) == 0 && len(cmd) == 0) {
 			continue
 		}
-
+		
 		targets = append(targets, target[3])
 	}
-
+	
 	return targets, nil
 }
 
@@ -292,16 +291,16 @@ func addNewEntrypoint(content string, entrypoint []string, cmd []string, additio
 	} else if cmd != nil {
 		entrypointStr += "\n\nCMD []\n"
 	}
-
+	
 	if target == "" {
 		return content + entrypointStr, nil
 	}
-
+	
 	before, after, err := splitDockerfileAtTarget(content, target)
 	if err != nil {
 		return "", err
 	}
-
+	
 	return before + entrypointStr + after, nil
 }
 
@@ -311,20 +310,20 @@ func splitDockerfileAtTarget(content string, target string) (string, string, err
 	if err != nil {
 		return "", "", err
 	}
-
+	
 	matches := targetFinder.FindAllStringIndex(content, -1)
 	if len(matches) == 0 {
 		return "", "", errors.Errorf("Coulnd't find target '%s' in dockerfile", target)
 	} else if len(matches) > 1 {
 		return "", "", errors.Errorf("Multiple matches for target '%s' in dockerfile", target)
 	}
-
+	
 	// Find the next FROM statement
 	nextFrom := nextFromFinder.FindStringIndex(content[matches[0][1]:])
 	if len(nextFrom) != 2 {
 		return content, "", nil
 	}
-
+	
 	return content[:matches[0][1]+nextFrom[0]], content[matches[0][1]+nextFrom[0]:], nil
 }
 
@@ -335,23 +334,23 @@ func GetEntrypointAndCmd(content string, target string) ([]string, []string, err
 	if target == "" {
 		return parseLastOccurence(content)
 	}
-
+	
 	before, _, err := splitDockerfileAtTarget(content, target)
 	if err != nil {
 		return nil, nil, err
 	}
-
+	
 	return parseLastOccurence(before)
 }
 
 func parseLastOccurence(content string) ([]string, []string, error) {
 	scanner := scanner2.NewScanner(strings.NewReader(content))
-
+	
 	var lastOccurenceEntrypoint []string
 	var lastOccurenceCmd []string
 	for scanner.Scan() {
 		line := scanner.Text()
-
+		
 		// is ENTRYPOINT?
 		if matches := entrypointLinePattern.FindStringSubmatch(line); len(matches) == 2 {
 			// exec or shell form?
@@ -364,7 +363,7 @@ func parseLastOccurence(content string) ([]string, []string, error) {
 			} else {
 				lastOccurenceEntrypoint = []string{"/bin/sh", "-c", matches[1]}
 			}
-
+			
 			// reset CMD
 			lastOccurenceCmd = nil
 		} else if matches := cmdLinePattern.FindStringSubmatch(line); len(matches) == 2 {
@@ -380,6 +379,6 @@ func parseLastOccurence(content string) ([]string, []string, error) {
 			}
 		}
 	}
-
+	
 	return lastOccurenceEntrypoint, lastOccurenceCmd, scanner.Err()
 }

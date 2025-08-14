@@ -13,6 +13,7 @@ import (
 type QuestionOptions struct {
 	Question               string
 	DefaultValue           string
+	DefaultValueSet        bool
 	ValidationRegexPattern string
 	ValidationMessage      string
 	ValidationFunc         func(value string) error

@@ -350,7 +350,7 @@ As you can see, if a field name has a `json:""` or `yaml:""` tag set, the `key` 
 
 Sometimes it can be useful to have custom JSON Marshal and Unmarshal methods in your structs that automatically convert for example a string into an object.
 
-To override auto-generating an object type for your type, implement the `JSONSchema() *Type` method and whatever is defined will be provided in the schema definitions.
+To override auto-generating an object type for your type, implement the `JSONSchema() *Schema` method and whatever is defined will be provided in the schema definitions.
 
 Take the following simplified example of a `CompactDate` that only includes the Year and Month:
 
@@ -384,8 +384,8 @@ func (d *CompactDate) MarshalJSON() ([]byte, error) {
   return buf.Bytes(), nil
 }
 
-func (CompactDate) JSONSchema() *Type {
-	return &Type{
+func (CompactDate) JSONSchema() *Schema {
+	return &Schema{
 		Type:        "string",
 		Title:       "Compact Date",
 		Description: "Short date that only includes year and month",

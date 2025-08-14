@@ -5,7 +5,7 @@ on:
     types: [created]
   pull_request:
     branches:
-      - master
+      - main
       - v6
     paths:
       - "Dockerfile"
@@ -21,18 +21,28 @@ env:
 jobs:
   test-e2e:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        kubernetes_version:
+          - v1.27.3
+          - v1.28.0
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - name: Checkout repo
       uses: actions/checkout@v2
 
+    - name: kubectl install
+      uses: azure/setup-kubectl@v3
+      with:
+        version: ${{ matrix.kubernetes_version }}
+
     # Creates KinD with using k8s versions from the matrix above
     - name: Set up kind with K8s version v1.22.4
       uses: engineerd/setup-kind@v0.5.0
       with:
-        version: "v0.11.1"
-        image: kindest/node:v1.22.4
+        version: "v0.20.0"
+        image: kindest/node:${{ matrix.kubernetes_version }}
+
     - name: Testing kind cluster set-up
       run: |
           kubectl cluster-info
@@ -41,10 +51,10 @@ jobs:
           echo "environment-kubeconfig:" ${KUBECONFIG}
 
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
-        go-version: 1.17
-
+        go-version: "1.24"
+        
     - name: Build devspacehelper
       run: |
         mkdir -p ~/.devspace/devspacehelper/latest
@@ -56,4 +66,4 @@ jobs:
     - name: e2e test
       working-directory: ./e2e
       run: |
-        go test -v -ginkgo.v -timeout 3600s
+        go test -v -ginkgo.v -ginkgo.fail-fast -timeout 3600s

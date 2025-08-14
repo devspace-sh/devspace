@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"golang.org/x/sync/errgroup"
+
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
 )
@@ -59,11 +60,22 @@ type Runner struct {
 
 	alias map[string]alias
 
+	// callHandler is a function allowing to replace a simple command's
+	// arguments. It may be nil.
+	callHandler CallHandlerFunc
+
 	// execHandler is a function responsible for executing programs. It must be non-nil.
 	execHandler ExecHandlerFunc
 
 	// openHandler is a function responsible for opening files. It must be non-nil.
 	openHandler OpenHandlerFunc
+
+	// readDirHandler is a function responsible for reading directories during
+	// glob expansion. It must be non-nil.
+	readDirHandler ReadDirHandlerFunc
+
+	// statHandler is a function responsible for getting file stat. It must be non-nil.
+	statHandler StatHandlerFunc
 
 	stdin  io.Reader
 	stdout io.Writer
@@ -71,6 +83,8 @@ type Runner struct {
 
 	ecfg *expand.Config
 	ectx context.Context // just so that Runner.Subshell can use it again
+
+	lastExpandExit int // used to surface exit codes while expanding fields
 
 	// didReset remembers whether the runner has ever been reset. This is
 	// used so that Reset is automatically called when running any program
@@ -159,9 +173,11 @@ func (r *Runner) optByFlag(flag byte) *bool {
 // standard output writer means that the output will be discarded.
 func New(opts ...RunnerOption) (*Runner, error) {
 	r := &Runner{
-		usedNew:     true,
-		execHandler: DefaultExecHandler(2 * time.Second),
-		openHandler: DefaultOpenHandler(),
+		usedNew:        true,
+		execHandler:    DefaultExecHandler(2 * time.Second),
+		openHandler:    DefaultOpenHandler(),
+		readDirHandler: DefaultReadDirHandler(),
+		statHandler:    DefaultStatHandler(),
 	}
 	r.dirStack = r.dirBootstrap[:0]
 	for _, opt := range opts {
@@ -239,6 +255,13 @@ func Params(args ...string) RunnerOption {
 		fp := flagParser{remaining: args}
 		for fp.more() {
 			flag := fp.flag()
+			if flag == "-" {
+				// TODO: implement "The -x and -v options are turned off."
+				if args := fp.args(); len(args) > 0 {
+					r.Params = args
+				}
+				return nil
+			}
 			enable := flag[0] == '-'
 			if flag[1] != 'o' {
 				opt := r.optByFlag(flag[1])
@@ -285,7 +308,15 @@ func Params(args ...string) RunnerOption {
 	}
 }
 
-// ExecHandler sets command execution handler. See ExecHandlerFunc for more info.
+// CallHandler sets the call handler. See CallHandlerFunc for more info.
+func CallHandler(f CallHandlerFunc) RunnerOption {
+	return func(r *Runner) error {
+		r.callHandler = f
+		return nil
+	}
+}
+
+// ExecHandler sets the command execution handler. See ExecHandlerFunc for more info.
 func ExecHandler(f ExecHandlerFunc) RunnerOption {
 	return func(r *Runner) error {
 		r.execHandler = f
@@ -297,6 +328,22 @@ func ExecHandler(f ExecHandlerFunc) RunnerOption {
 func OpenHandler(f OpenHandlerFunc) RunnerOption {
 	return func(r *Runner) error {
 		r.openHandler = f
+		return nil
+	}
+}
+
+// ReadDirHandler sets the read directory handler. See ReadDirHandlerFunc for more info.
+func ReadDirHandler(f ReadDirHandlerFunc) RunnerOption {
+	return func(r *Runner) error {
+		r.readDirHandler = f
+		return nil
+	}
+}
+
+// StatHandler sets the stat handler. See StatHandlerFunc for more info.
+func StatHandler(f StatHandlerFunc) RunnerOption {
+	return func(r *Runner) error {
+		r.statHandler = f
 		return nil
 	}
 }
@@ -348,6 +395,7 @@ var shellOptsTable = [...]struct {
 	{'n', "noexec"},
 	{'f', "noglob"},
 	{'u', "nounset"},
+	{'x', "xtrace"},
 	{' ', "pipefail"},
 }
 
@@ -367,6 +415,7 @@ const (
 	optNoExec
 	optNoGlob
 	optNoUnset
+	optXTrace
 	optPipeFail
 
 	optExpandAliases
@@ -395,9 +444,12 @@ func (r *Runner) Reset() {
 	}
 	// reset the internal state
 	*r = Runner{
-		Env:         r.Env,
-		execHandler: r.execHandler,
-		openHandler: r.openHandler,
+		Env:            r.Env,
+		callHandler:    r.callHandler,
+		execHandler:    r.execHandler,
+		openHandler:    r.openHandler,
+		readDirHandler: r.readDirHandler,
+		statHandler:    r.statHandler,
 
 		// These can be set by functions like Dir or Params, but
 		// builtins can overwrite them; reset the fields to whatever the
@@ -545,18 +597,21 @@ func (r *Runner) Subshell() *Runner {
 	// Keep in sync with the Runner type. Manually copy fields, to not copy
 	// sensitive ones like errgroup.Group, and to do deep copies of slices.
 	r2 := &Runner{
-		Dir:         r.Dir,
-		Params:      r.Params,
-		execHandler: r.execHandler,
-		openHandler: r.openHandler,
-		stdin:       r.stdin,
-		stdout:      r.stdout,
-		stderr:      r.stderr,
-		filename:    r.filename,
-		opts:        r.opts,
-		usedNew:     r.usedNew,
-		exit:        r.exit,
-		lastExit:    r.lastExit,
+		Dir:            r.Dir,
+		Params:         r.Params,
+		callHandler:    r.callHandler,
+		execHandler:    r.execHandler,
+		openHandler:    r.openHandler,
+		readDirHandler: r.readDirHandler,
+		statHandler:    r.statHandler,
+		stdin:          r.stdin,
+		stdout:         r.stdout,
+		stderr:         r.stderr,
+		filename:       r.filename,
+		opts:           r.opts,
+		usedNew:        r.usedNew,
+		exit:           r.exit,
+		lastExit:       r.lastExit,
 
 		origStdout: r.origStdout, // used for process substitutions
 	}

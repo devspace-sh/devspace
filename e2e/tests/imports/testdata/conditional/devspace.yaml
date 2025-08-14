@@ -1,0 +1,22 @@
+version: v2beta1
+name: base
+
+imports:
+  - path: ./${IMPORT1_PATH}
+  - path: ./import.yaml
+
+vars:
+  IMPORT1_PATH:
+    source: env
+    default: import1.yaml
+  TODAYS_MESSAGE:
+    source: command
+    command: echo ${NEW_MESSAGE}
+  HELLO_WORLD: ""
+
+pipelines:
+  deploy:
+    run: |-
+      echo ${IMPORT1} > import1.txt
+      echo ${TODAYS_MESSAGE} > message.txt
+      echo ${HELLO_WORLD} > hello.txt

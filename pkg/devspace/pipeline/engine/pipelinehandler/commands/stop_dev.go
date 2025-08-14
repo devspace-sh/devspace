@@ -6,6 +6,7 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/pkg/errors"
 	"strings"
 )
@@ -14,7 +15,8 @@ import (
 type StopDevOptions struct {
 	deploy.PurgeOptions
 
-	All bool `long:"all" description:"Stop all dev configurations"`
+	All    bool     `long:"all" description:"Stop all dev configurations"`
+	Except []string `long:"except" description:"If used with --all, will exclude the following dev configs"`
 }
 
 func StopDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []string) error {
@@ -38,6 +40,10 @@ func StopDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []string
 	if options.All {
 		// loop over all pods in dev manager
 		for _, a := range devManager.List() {
+			if stringutil.Contains(options.Except, a) {
+				continue
+			}
+
 			ctx = ctx.WithLogger(ctx.Log().WithPrefix("dev:" + a + " "))
 			ctx.Log().Infof("Stopping dev %s", a)
 			err = devManager.Reset(ctx, a, &options.PurgeOptions)
@@ -48,6 +54,10 @@ func StopDev(ctx devspacecontext.Context, pipeline types.Pipeline, args []string
 
 		// loop over all in cache
 		for _, a := range ctx.Config().RemoteCache().ListDevPods() {
+			if stringutil.Contains(options.Except, a.Name) {
+				continue
+			}
+
 			ctx = ctx.WithLogger(ctx.Log().WithPrefix("dev:" + a.Name + " "))
 			ctx.Log().Infof("Stopping dev %s", a.Name)
 			err = devManager.Reset(ctx, a.Name, &options.PurgeOptions)

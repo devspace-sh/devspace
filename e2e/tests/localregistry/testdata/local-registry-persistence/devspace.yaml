@@ -1,0 +1,21 @@
+version: v2beta1
+name: local-registry
+localRegistry:
+  enabled: true
+  name: registry-storage
+  persistence:
+    enabled: true
+    size: 5Gi
+images:
+  app:
+    image: my-docker-username/helloworld
+deployments:
+  app:
+    helm:
+      values:
+        containers:
+          - image: my-docker-username/helloworld
+dev:
+  app:
+    labelSelector:
+      app.kubernetes.io/component: app

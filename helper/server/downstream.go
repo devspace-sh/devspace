@@ -4,17 +4,17 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"github.com/loft-sh/devspace/helper/util/pingtimeout"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
-	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/helper/util/pingtimeout"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
@@ -31,10 +31,11 @@ const rescanPeriod = time.Minute * 15
 
 // DownstreamOptions holds the options for the downstream server
 type DownstreamOptions struct {
-	RemotePath   string
-	ExcludePaths []string
-	ExitOnClose  bool
-	Throttle     int64
+	RemotePath       string
+	ExcludePaths     []string
+	ExitOnClose      bool
+	NoRecursiveWatch bool
+	Throttle         int64
 
 	Polling bool
 	Ping    bool
@@ -78,7 +79,12 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 
 			go func() {
 				// set up a watchpoint listening for events within a directory tree rooted at specified directory
-				err := notify.WatchWithFilter(options.RemotePath+"/...", downStream.events, func(s string) bool {
+				watchPath := options.RemotePath + "/..."
+				if options.NoRecursiveWatch {
+					watchPath = options.RemotePath
+				}
+
+				err := notify.WatchWithFilter(watchPath, downStream.events, func(s string) bool {
 					if ignoreMatcher == nil || ignoreMatcher.RequireFullScan() {
 						return false
 					}
@@ -229,7 +235,7 @@ func (d *Downstream) ChangesCount(context.Context, *remote.Empty) (*remote.Chang
 
 	// Walk through the dir
 	if d.options.Polling {
-		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, throttle)
+		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, d.options.NoRecursiveWatch, throttle)
 	}
 
 	changeAmount := int64(0)
@@ -272,7 +278,7 @@ func (d *Downstream) getWatchState() map[string]*remote.Change {
 		d.lastRescan = &now
 
 		newState := make(map[string]*remote.Change)
-		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, 0)
+		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, d.options.NoRecursiveWatch, 0)
 		return newState
 	} else if changeAmount == 0 {
 		return nil
@@ -305,7 +311,7 @@ func (d *Downstream) Changes(empty *remote.Empty, stream remote.Downstream_Chang
 	if !d.options.Polling {
 		newState = d.getWatchState()
 	} else {
-		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, throttle)
+		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, d.options.NoRecursiveWatch, throttle)
 	}
 
 	if newState != nil {
@@ -384,7 +390,7 @@ func (d *Downstream) applyChange(newState map[string]*remote.Change, fullPath st
 			}
 		}
 
-		walkDir(d.options.RemotePath, fullPath, d.ignoreMatcher, newState, time.Duration(d.options.Throttle)*time.Millisecond)
+		walkDir(d.options.RemotePath, fullPath, d.ignoreMatcher, newState, d.options.NoRecursiveWatch, time.Duration(d.options.Throttle)*time.Millisecond)
 	} else {
 		if d.ignoreMatcher == nil || !d.ignoreMatcher.RequireFullScan() || !d.ignoreMatcher.Matches(relativePath, false) {
 			newState[fullPath] = &remote.Change{
@@ -525,14 +531,19 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 	return changeAmount, nil
 }
 
-func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnoreParser, state map[string]*remote.Change, throttle time.Duration) {
-	files, err := ioutil.ReadDir(path)
+func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnoreParser, state map[string]*remote.Change, noRecursive bool, throttle time.Duration) {
+	files, err := os.ReadDir(path)
 	if err != nil {
 		// We ignore errors here
 		return
 	}
 
-	for _, f := range files {
+	for _, dirEntry := range files {
+		f, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
 		absolutePath := filepath.Join(path, f.Name())
 		if fsutil.IsRecursiveSymlink(f, absolutePath) {
 			continue
@@ -566,7 +577,9 @@ func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnorePars
 				}
 			}
 
-			walkDir(basePath, absolutePath, ignoreMatcher, state, throttle)
+			if !noRecursive {
+				walkDir(basePath, absolutePath, ignoreMatcher, state, noRecursive, throttle)
+			}
 		} else {
 			// Check if not ignored
 			if ignoreMatcher == nil || !ignoreMatcher.RequireFullScan() || !ignoreMatcher.Matches(absolutePath[len(basePath):], false) {

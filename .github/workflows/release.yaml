@@ -5,7 +5,7 @@ on:
     types: [created]
   push:
     branches:
-      - master
+      - main
     paths:
       - "Dockerfile"
       - "**.go"
@@ -13,7 +13,7 @@ on:
       - ".github/workflows/release.yaml"
   pull_request:
     branches:
-      - master
+      - main
     paths:
       - "Dockerfile"
       - "**.go"
@@ -23,19 +23,19 @@ on:
 jobs:
   release-ui:
     if: startsWith(github.ref, 'refs/tags/v') == true
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: 20
           registry-url: https://registry.npmjs.org/
       - id: get_version
         run: |
           RELEASE_VERSION=$(echo $GITHUB_REF | sed -nE 's!refs/tags/!!p')
           echo "::set-output name=release_version::$RELEASE_VERSION"
       - name: Cache node modules
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: ui/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/ui/package-lock.json') }}
@@ -49,31 +49,31 @@ jobs:
           CI: "false"
         run: ./hack/build-ui.bash
       - name: Upload ui tar
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ui-tar
           path: release/ui.tar.gz
   release:
     if: startsWith(github.ref, 'refs/tags/v') == true
     needs: [ release-ui ]
-    runs-on: macos-11
+    runs-on: macos-latest
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.17
+          go-version: "1.22"
       - id: get_version
         run: |
           RELEASE_VERSION=$(echo $GITHUB_REF | sed -nE 's!refs/tags/!!p')
           echo "::set-output name=release_version::$RELEASE_VERSION"
       - name: install-go-bindata
-        run: go get -u github.com/go-bindata/go-bindata/...
+        run: go install github.com/go-bindata/go-bindata/go-bindata@latest
         env:
           GOPATH: /Users/runner/work/devspace/go
       - name: Check out code into the Go module directory
         uses: actions/checkout@v1
       - name: Download ui tar
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: ui-tar
       - name: install-upx
@@ -95,12 +95,12 @@ jobs:
   publish-npm:
     if: startsWith(github.ref, 'refs/tags/v') == true
     needs: [release, release-ui]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: 20 
           registry-url: https://registry.npmjs.org/
       - id: get_version
         run: |
@@ -115,8 +115,8 @@ jobs:
           RELEASE_VERSION: ${{ steps.get_version.outputs.release_version }}
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
   publish-next-image:
-    if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-18.04
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: jerray/publish-docker-action@v1.0.3
@@ -128,7 +128,7 @@ jobs:
   publish-release-images:
     if: startsWith(github.ref, 'refs/tags/v') == true
     needs: [release]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - id: get_version

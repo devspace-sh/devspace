@@ -5,7 +5,6 @@ package sync
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -596,7 +595,7 @@ func createTestFilesAndFolders(local string, remote string, outside string, file
 			return errors.Wrap(err, "get parent dir from "+f.path)
 		}
 
-		err = ioutil.WriteFile(path.Join(parentDir, f.path), []byte(fileContents), 0666)
+		err = os.WriteFile(path.Join(parentDir, f.path), []byte(fileContents), 0666)
 		if err != nil {
 			return errors.Wrap(err, "write file")
 		}

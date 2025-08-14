@@ -1,0 +1,7 @@
+version: v2beta1
+
+vars:
+  NEW_MESSAGE:
+    value: Life is Good!
+  HELLO_WORLD:
+    value: Hello World

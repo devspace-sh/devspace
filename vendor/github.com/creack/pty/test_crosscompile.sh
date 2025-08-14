@@ -4,23 +4,23 @@
 # Does not actually test the logic, just the compilation so we make sure we don't break code depending on the lib.
 
 echo2() {
-    echo $@ >&2
+  echo $@ >&2
 }
 
 trap end 0
 end() {
-    [ "$?" = 0 ] && echo2 "Pass." || (echo2 "Fail."; exit 1)
+  [ "$?" = 0 ] && echo2 "Pass." || (echo2 "Fail."; exit 1)
 }
 
 cross() {
-    os=$1
-    shift
-    echo2 "Build for $os."
-    for arch in $@; do
-      echo2 "  - $os/$arch"
-      GOOS=$os GOARCH=$arch go build
-    done
-    echo2
+  os=$1
+  shift
+  echo2 "Build for $os."
+  for arch in $@; do
+    echo2 "  - $os/$arch"
+    GOOS=$os GOARCH=$arch go build
+  done
+  echo2
 }
 
 set -e
@@ -41,8 +41,8 @@ cross windows amd64 386 arm
 
 # Some os/arch require a different compiler. Run in docker.
 if ! hash docker; then
-    # If docker is not present, stop here.
-    return
+  # If docker is not present, stop here.
+  return
 fi
 
 echo2 "Build for linux."

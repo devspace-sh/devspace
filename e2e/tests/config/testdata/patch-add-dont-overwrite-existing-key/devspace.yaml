@@ -1,0 +1,16 @@
+version: v1beta11
+images:
+  importme:
+    image: golang:1.17
+    context: ../..
+profiles:
+  - name: deploy
+    patches:
+      - op: add
+        path: images.importme.context
+        value: ../..
+  - name: patch-ok
+    patches:
+      - op: add
+        path: images.importme.rebuildStrategy
+        value: ignoreContextChanges

@@ -19,9 +19,13 @@
 .DS_STORE
 .idea
 .devspace/
+tags
 
 # VS Code
 .vscode/ipch
+
+# Vim
+*.vim
 
 /ui/node_modules
 /ui/build/static/js/*.js.map

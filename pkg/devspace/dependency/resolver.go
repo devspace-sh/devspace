@@ -18,12 +18,13 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/pkg/errors"
 )
 
 // ResolverInterface defines the resolver interface that takes dependency configs and resolves them
 type ResolverInterface interface {
-	Resolve(ctx devspacecontext.Context) ([]types.Dependency, error)
+	Resolve(ctx devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error)
 	WithParser(parser loader.Parser) ResolverInterface
 }
 
@@ -61,14 +62,14 @@ func NewResolver(ctx devspacecontext.Context, configOptions *loader.ConfigOption
 }
 
 // Resolve implements interface
-func (r *resolver) Resolve(ctx devspacecontext.Context) ([]types.Dependency, error) {
+func (r *resolver) Resolve(ctx devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error) {
 	currentWorkingDirectory, err := os.Getwd()
 	if err != nil {
 		return nil, errors.Wrap(err, "get current working directory")
 	}
 
 	// r.DependencyGraph.Root.ID == name here
-	err = r.resolveRecursive(ctx, currentWorkingDirectory, r.DependencyGraph.Root.ID, nil, transformMap(r.BaseConfig.Dependencies))
+	err = r.resolveRecursive(ctx, currentWorkingDirectory, r.DependencyGraph.Root.ID, nil, transformMap(r.BaseConfig.Dependencies), options)
 	if err != nil {
 		if _, ok := err.(*graph.CyclicError); ok {
 			return nil, err
@@ -102,11 +103,33 @@ func (r *resolver) WithParser(parser loader.Parser) ResolverInterface {
 	return &n
 }
 
-func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, parentConfigName string, currentDependency *Dependency, dependencies []*latest.DependencyConfig) error {
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, parentConfigName string, currentDependency *Dependency, dependencies []*latest.DependencyConfig, options ResolveOptions) error {
 	if currentDependency != nil {
 		currentDependency.children = []types.Dependency{}
 	}
 	for _, dependencyConfig := range dependencies {
+		if contains(options.SkipDependencies, dependencyConfig.Name) {
+			continue
+		}
+
+		if len(options.Dependencies) > 0 && !stringutil.Contains(options.Dependencies, dependencyConfig.Name) {
+			continue
+		}
+
+		if dependencyConfig.Disabled {
+			ctx.Log().Debugf("Skip dependency %s, because it is disabled", dependencyConfig.Name)
+			continue
+		}
+
 		dependencyConfigPath, err := util.DownloadDependency(ctx.Context(), basePath, dependencyConfig.Source, ctx.Log())
 		if err != nil {
 			return err
@@ -118,7 +141,7 @@ func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, paren
 		)
 		if n, ok := r.DependencyGraph.Nodes[dependencyConfig.Name]; ok {
 			child = n.Data.(*Dependency)
-			if child != nil && child.Config() != nil && child.Config().Path() != dependencyConfigPath {
+			if child != nil && child.Config() != nil && child.Config().Path() != dependencyConfigPath && !child.Root() {
 				ctx.Log().Warnf("Seems like you have multiple dependencies with name %s, but they use different source settings (%s != %s). This can lead to unexpected results and you should make sure that the devspace.yaml name is unique across your dependencies or that you use the dependencies.overrideName option", child.name, child.Config().Path(), dependencyConfigPath)
 			}
 
@@ -143,7 +166,7 @@ func (r *resolver) resolveRecursive(ctx devspacecontext.Context, basePath, paren
 
 			// load dependencies from dependency
 			if !dependencyConfig.IgnoreDependencies && child.localConfig.Config().Dependencies != nil && len(child.localConfig.Config().Dependencies) > 0 {
-				err = r.resolveRecursive(ctx, child.absolutePath, dependencyConfig.Name, child, transformMap(child.localConfig.Config().Dependencies))
+				err = r.resolveRecursive(ctx, child.absolutePath, dependencyConfig.Name, child, transformMap(child.localConfig.Config().Dependencies), options)
 				if err != nil {
 					return err
 				}

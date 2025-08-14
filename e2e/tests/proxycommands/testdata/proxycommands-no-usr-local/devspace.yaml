@@ -1,0 +1,30 @@
+version: v2beta1
+
+name: no-usr-local
+
+vars:
+  IMAGE: busybox
+
+deployments:
+  test:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+          - image: ${IMAGE}
+            command: ["sleep"]
+            args: ["infinity"]
+
+dev:
+  test:
+    imageSelector: ${IMAGE}
+    proxyCommands:
+      - command: helm
+
+pipelines:
+  dev:
+    run: |
+      run_default_pipeline dev
+      exec_container --image-selector ${IMAGE} -- sh -c 'helm version > helm-version.out'

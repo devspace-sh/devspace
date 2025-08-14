@@ -30,6 +30,7 @@ type EnterCmd struct {
 	Container     string
 	Pod           string
 	Pick          bool
+	TTY           bool
 	Wait          bool
 	Reconnect     bool
 	Screen        bool
@@ -78,6 +79,7 @@ devspace enter bash --image-selector "${runtime.images.app.image}:${runtime.imag
 	enterCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, ${runtime.images.app}, nginx:${runtime.images.app.tag})")
 	enterCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
+	enterCmd.Flags().BoolVar(&cmd.TTY, "tty", true, "If to use a tty to start the command")
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod / container if multiple are found")
 	enterCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "Wait for the pod(s) to start if they are not running")
 	enterCmd.Flags().BoolVar(&cmd.Reconnect, "reconnect", false, "Will reconnect the terminal if an unexpected return code is encountered")
@@ -114,9 +116,9 @@ func (cmd *EnterCmd) Run(f factory.Factory, args []string) error {
 			return err
 		}
 
-		// If the current kube context or namespace is different than old,
+		// If the current kube context or namespace is different from old,
 		// show warnings and reset kube client if necessary
-		client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, logger)
+		client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, false, logger)
 		if err != nil {
 			return err
 		}
@@ -158,7 +160,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, args []string) error {
 
 	// Start terminal
 	stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
-	exitCode, err := terminal.StartTerminalFromCMD(ctx, targetselector.NewTargetSelector(selectorOptions), command, cmd.Wait, cmd.Reconnect, cmd.Screen, cmd.ScreenSession, stdout, stderr, stdin)
+	exitCode, err := terminal.StartTerminalFromCMD(ctx, targetselector.NewTargetSelector(selectorOptions), command, cmd.Wait, cmd.Reconnect, cmd.TTY, cmd.Screen, cmd.ScreenSession, stdout, stderr, stdin)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

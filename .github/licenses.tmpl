@@ -1,0 +1,18 @@
+---
+title: Open Source Licenses
+sidebar_label: OSS Licenses
+---
+
+# devspace dependencies
+
+The following open source dependencies are used to build [devspace][].
+
+[devspace]: https://www.devspace.sh
+
+## Go Packages
+
+Some packages may only be included on certain architectures or operating systems.
+
+{{ range . }}
+ - [{{.Name}}](https://pkg.go.dev/{{.Name}}) ([{{.LicenseName}}]({{.LicenseURL}}))
+{{- end }}

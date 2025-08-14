@@ -2,28 +2,30 @@ package kubectl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/util/constraint"
-
-	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
+	"github.com/loft-sh/devspace/pkg/util/constraint"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/utils/pkg/command"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/kubectl/pkg/cmd/version"
+	"mvdan.cc/sh/v3/expand"
+	jsonyaml "sigs.k8s.io/yaml"
 )
 
 // Builder is the manifest builder interface
 type Builder interface {
-	Build(ctx context.Context, dir, manifest string) ([]*unstructured.Unstructured, error)
+	Build(ctx context.Context, environ expand.Environ, dir, manifest string) ([]*unstructured.Unstructured, error)
 }
 
 type kustomizeBuilder struct {
@@ -40,13 +42,13 @@ func NewKustomizeBuilder(path string, config *latest.DeploymentConfig, log log.L
 	}
 }
 
-func (k *kustomizeBuilder) Build(ctx context.Context, dir, manifest string) ([]*unstructured.Unstructured, error) {
+func (k *kustomizeBuilder) Build(ctx context.Context, environ expand.Environ, dir, manifest string) ([]*unstructured.Unstructured, error) {
 	args := []string{"build", manifest}
 	args = append(args, k.config.Kubectl.KustomizeArgs...)
 
 	// Execute command
 	k.log.Infof("Render manifests with 'kustomize %s'", strings.Join(args, " "))
-	output, err := command.Output(ctx, dir, k.path, args...)
+	output, err := command.Output(ctx, dir, environ, k.path, args...)
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
@@ -76,14 +78,20 @@ func NewKubectlBuilder(path string, config *latest.DeploymentConfig, kubeConfig 
 
 // this function is called in Build function
 // to decide the --dry-run value
-var useOldDryRun = func(ctx context.Context, dir, path string) (bool, error) {
+var useOldDryRun = func(ctx context.Context, environ expand.Environ, dir, path string) (bool, error) {
 	// compare kubectl version for --dry-run flag value
-	out, err := command.Output(ctx, dir, path, "version", "--client", "--short")
+	out, err := command.Output(ctx, dir, environ, path, "version", "--client", "--output=json")
 	if err != nil {
 		return false, err
 	}
 
-	v1, err := constraint.NewVersion(strings.TrimPrefix(strings.TrimSpace(string(out)), "Client Version: v"))
+	kubectlVersion := &version.Version{}
+	err = json.Unmarshal(out, kubectlVersion)
+	if err != nil {
+		return false, err
+	}
+
+	v1, err := constraint.NewVersion(strings.TrimPrefix(kubectlVersion.ClientVersion.GitVersion, "v"))
 	if err != nil {
 		return false, nil
 	}
@@ -100,8 +108,8 @@ var useOldDryRun = func(ctx context.Context, dir, path string) (bool, error) {
 	return false, nil
 }
 
-func (k *kubectlBuilder) Build(ctx context.Context, dir, manifest string) ([]*unstructured.Unstructured, error) {
-	tempFile, err := ioutil.TempFile("", "")
+func (k *kubectlBuilder) Build(ctx context.Context, environ expand.Environ, dir, manifest string) ([]*unstructured.Unstructured, error) {
+	tempFile, err := os.CreateTemp("", "")
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +129,7 @@ func (k *kubectlBuilder) Build(ctx context.Context, dir, manifest string) ([]*un
 	args := []string{"create"}
 
 	// decides which --dry-run value is to be used
-	uodr, err := useOldDryRun(ctx, dir, k.path)
+	uodr, err := useOldDryRun(ctx, environ, dir, k.path)
 	if err != nil {
 		return nil, err
 	}
@@ -142,9 +150,9 @@ func (k *kubectlBuilder) Build(ctx context.Context, dir, manifest string) ([]*un
 	args = append(args, k.config.Kubectl.CreateArgs...)
 
 	// Execute command
-	output, err := command.OutputWithEnv(ctx, dir, map[string]string{
+	output, err := command.Output(ctx, dir, env.NewVariableEnvProvider(environ, map[string]string{
 		"KUBECONFIG": tempFile.Name(),
-	}, k.path, args...)
+	}), k.path, args...)
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
@@ -166,7 +174,7 @@ func stringToUnstructuredArray(out string) ([]*unstructured.Unstructured, error)
 	var firstErr error
 	for _, part := range parts {
 		var objMap map[string]interface{}
-		err := yaml.Unmarshal([]byte(part), &objMap)
+		err := jsonyaml.Unmarshal([]byte(part), &objMap)
 		if err != nil {
 			if firstErr == nil {
 				firstErr = fmt.Errorf("failed to unmarshal manifest: %v", err)
@@ -178,7 +186,7 @@ func stringToUnstructuredArray(out string) ([]*unstructured.Unstructured, error)
 			continue
 		}
 		var obj unstructured.Unstructured
-		err = yaml.Unmarshal([]byte(part), &obj)
+		err = jsonyaml.Unmarshal([]byte(part), &obj)
 		if err != nil {
 			if firstErr == nil {
 				firstErr = fmt.Errorf("failed to unmarshal manifest: %v", err)

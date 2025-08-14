@@ -21,7 +21,7 @@ import (
 
 // Options describe how the deployments should be deployed
 type Options struct {
-	SkipDeploy  bool `long:"skip" description:"If enabled, will skip deploying"`
+	SkipDeploy  bool `long:"skip-deploy" description:"If enabled, will skip deploying"`
 	ForceDeploy bool `long:"force-redeploy" description:"Forces redeployment"`
 	Sequential  bool `long:"sequential" description:"Sequentially deploys the deployments"`
 
@@ -59,7 +59,7 @@ func (c *controller) Deploy(ctx devspacecontext.Context, deployments []string, o
 		return nil
 	}
 
-	if config.Deployments != nil && len(config.Deployments) > 0 {
+	if len(config.Deployments) > 0 {
 		// Execute before deployments deploy hook
 		err := hook.ExecuteHooks(ctx, nil, "before:"+event)
 		if err != nil {

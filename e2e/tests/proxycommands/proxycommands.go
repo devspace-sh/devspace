@@ -8,12 +8,13 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/onsi/ginkgo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -77,12 +78,11 @@ var _ = DevSpaceDescribe("proxyCommands", func() {
 
 		// Get the expected Pod hostname
 		var pods *corev1.PodList
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: "app.kubernetes.io/component=test"})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: "app.kubernetes.io/component=test"})
 			if err != nil {
 				return false, err
 			}
-			fmt.Printf("%+v\n", pods)
 			return len(pods.Items) > 0, nil
 		})
 		framework.ExpectNoError(err)
@@ -90,6 +90,51 @@ var _ = DevSpaceDescribe("proxyCommands", func() {
 
 		framework.ExpectLocalFileContents("host.out", stdout.String())
 		framework.ExpectRemoteFileContents("alpine", ns, "container.out", fmt.Sprintf("%s\n", podName))
+
+		cancel()
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("devspace dev should proxy commands to host machine without /usr/local/bin", func() {
+		tempDir, err := framework.CopyToTempDir("tests/proxycommands/testdata/proxycommands-no-usr-local")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("no-usr-local")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		// create a new dev command and start it
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			defer ginkgo.GinkgoRecover()
+
+			devCmd := &cmd.RunPipelineCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Pipeline: "dev",
+				Ctx:      cancelCtx,
+			}
+
+			done <- devCmd.RunDefault(f)
+		}()
+
+		// Check that the command is proxied to the host.
+		var stdout, stderr bytes.Buffer
+		cmd := exec.Command("helm", "version")
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err = cmd.Run()
+		framework.ExpectNoError(err)
+
+		framework.ExpectRemoteFileContents("busybox", ns, "helm-version.out", stdout.String())
 
 		cancel()
 

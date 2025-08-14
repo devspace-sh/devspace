@@ -1,0 +1,37 @@
+version: v2beta1
+name: local-registry
+localRegistry:
+  enabled: true
+pipelines:
+  dev:
+    run: |-
+      build_images app
+
+      echo $(get_image app) > get_image.out
+
+      create_deployments app --sequential
+
+      start_dev --all
+images:
+  app:
+    image: my-docker-username/helloworld
+    tags:
+      - latest
+    rebuildStrategy: default
+deployments:
+  app:
+    kubectl:
+      manifests:
+        - manifests/deployment.yaml
+dev:
+  app:
+    labelSelector:
+      app.kubernetes.io/component: app
+    container: container1
+hooks:
+  - command: |
+      echo -n ${runtime.images.app} > app.out
+    events: ["after:build"]
+  - command: |
+      echo -n ${runtime.images.app.image} > app_image.out
+    events: ["after:build"]

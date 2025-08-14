@@ -3,7 +3,7 @@ dependencies:                       # struct[]  | Array of dependencies (other p
 - source:                           # struct    | Defines where to find the dependency (exactly one source is allowed)
     git: https://github.com/my-repo # string    | HTTP(S) URL of the git repository (recommended method for referencing dependencies, must have the format of the git remote repo as usually checked out via git clone)
     subPath: repo/sub/path          # string    | Path within the git repo where devspace.yaml can be found
-    branch: master                  # string    | Git branch to checkout
+    branch: main                  # string    | Git branch to checkout
     tag: v1.2.3                     # string    | Git tag to checkout
     revision: ac66e49               # string    | Git revision (commit has) to checkout
     disableShallow: false           # bool      | Allows to disable shallow git clones using "--depth 1"

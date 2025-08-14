@@ -2,7 +2,6 @@ package commands
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -14,7 +13,7 @@ import (
 
 // this test implies to cat testFile
 func TestCat(t *testing.T) {
-	f, err := ioutil.TempFile(".", "testFile")
+	f, err := os.CreateTemp(".", "testFile")
 	if err != nil {
 		t.Fatal(err)
 	}

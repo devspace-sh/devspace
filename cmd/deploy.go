@@ -15,6 +15,10 @@ func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *
 		Pipeline:                "deploy",
 	}
 
+	var pipeline *latest.Pipeline
+	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
+		pipeline = rawConfig.Config.Pipelines["deploy"]
+	}
 	deployCmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploys the project",
@@ -28,15 +32,9 @@ devspace deploy
 devspace deploy -n some-namespace
 devspace deploy --kube-context=deploy-context
 #######################################################`,
-		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd, args, f, "deployCommand")
 		},
-	}
-
-	var pipeline *latest.Pipeline
-	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
-		pipeline = rawConfig.Config.Pipelines["deploy"]
 	}
 	cmd.AddPipelineFlags(f, deployCmd, pipeline)
 	return deployCmd

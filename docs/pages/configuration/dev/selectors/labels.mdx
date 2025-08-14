@@ -18,7 +18,7 @@ dev:
 ```
 
 :::caution Selects Pod, Not Container
-Because Kubernetes does not provide labels for container, DevSpace will select a pod if you specify the `labelSelector` field. If the pod has only one container, DevSpace will use that container. If the pod has multiple contianers, make sure to also specify the `container` field.
+Because Kubernetes does not provide labels for container, DevSpace will select a pod if you specify the `labelSelector` field. If the pod has only one container, DevSpace will use that container. If the pod has multiple containers, make sure to also specify the `container` field.
 :::
 
 
@@ -49,12 +49,10 @@ dev:
     # highlight-start
     containers:
       api:
-        container: api
         devImage: ghcr.io/org/project/image
-        reversePort:
+        reversePorts:
         - port: 3306
-      cache:
-        container: redis
+      redis:
         env:
           DEBUG: true
     # highlight-end

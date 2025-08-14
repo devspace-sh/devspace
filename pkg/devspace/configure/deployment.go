@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"mvdan.cc/sh/v3/expand"
+
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/sirupsen/logrus"
@@ -36,11 +38,14 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 			}
 
 			if isKustomization {
-				stat, err := os.Stat(path.Join(value, "kustomization.yaml"))
-				if err == nil && !stat.IsDir() {
-					return nil
+				fileNames := []string{"kustomization.yaml", "kustomization.yml"}
+				for _, fileName := range fileNames {
+					stat, err := os.Stat(path.Join(value, fileName))
+					if err == nil && !stat.IsDir() {
+						return nil
+					}
 				}
-				return fmt.Errorf("path `%s` is not a Kustomization (kustomization.yaml missing)", value)
+				return fmt.Errorf("path `%s` is not a Kustomization (kustomization.yaml or kustomization.yml missing)", value)
 			} else {
 				matches, err := filepath.Glob(value)
 				if err != nil {
@@ -140,11 +145,26 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				localChartPathRel = localChartPath
 			}
 
-			stat, err := os.Stat(path.Join(localChartPathRel, "Chart.yaml"))
-			if err != nil || stat.IsDir() {
+			pathStat, err := os.Stat(localChartPathRel)
+			if err != nil {
+				return err
+			}
+
+			if !pathStat.IsDir() {
 				m.log.WriteString(logrus.InfoLevel, "\n")
-				m.log.Errorf("Local path `%s` is not a Helm chart (Chart.yaml missing)", localChartPathRel)
+				m.log.Errorf("Local path `%s` is not a Helm chart (path is not a directory)", localChartPathRel)
 				continue
+			}
+
+			if _, err := os.Stat(path.Join(localChartPathRel, "Chart.yaml")); err != nil {
+				m.log.WriteString(logrus.InfoLevel, "\n")
+				if errors.Is(err, os.ErrNotExist) {
+					m.log.Errorf("Local path `%s` is not a Helm chart (Chart.yaml missing)", localChartPathRel)
+					continue
+				} else {
+					m.log.Errorf("Encountered unexpected error checking local path `%s`: %s", localChartPathRel, err.Error())
+					continue
+				}
 			}
 
 			helmConfig.Chart.Name = localChartPathRel
@@ -287,7 +307,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				m.log.WriteString(logrus.InfoLevel, "\n")
 				m.log.Infof("Cloning external repo `%s` containing to retrieve Helm chart", gitRepo)
 
-				err = engine.ExecuteSimpleShellCommand(context.TODO(), "", os.Stdout, os.Stderr, nil, nil, gitCommand)
+				err = engine.ExecuteSimpleShellCommand(context.TODO(), "", expand.ListEnviron(os.Environ()...), os.Stdout, os.Stderr, nil, gitCommand)
 				if err != nil {
 					m.log.WriteString(logrus.InfoLevel, "\n")
 					m.log.Errorf("Unable to clone repository `%s` (branch: %s)", gitRepo, gitBranch)

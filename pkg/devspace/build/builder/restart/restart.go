@@ -2,8 +2,9 @@ package restart
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -53,11 +54,11 @@ quit() {
   if [ -f "$pidFile" ]; then
     pidToKill="$(cat $pidFile)"
     kill -2 $((0-$pidToKill)) >/dev/null 2>&1
-    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+    timeout 5 sh -c "while [ -e /proc/$pidToKill ]; do sleep 1; done"
     kill -15 $((0-$pidToKill)) >/dev/null 2>&1
-    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+    timeout 5 sh -c "while [ -e /proc/$pidToKill ]; do sleep 1; done"
     kill -9 $((0-$pidToKill)) >/dev/null 2>&1
-    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+    timeout 5 sh -c "while [ -e /proc/$pidToKill ]; do sleep 1; done"
   fi
 
   if [ -f "$ppidFile" ]; then
@@ -103,7 +104,16 @@ while $restart; do
     pid="$(cat $pidFile)"
 
     screen -q -S "${sid}" -X colon "logfile flush 1^M"
-    tail --pid=$pid -f "$screenLogFile"
+
+    tail -f "$screenLogFile" &
+    tailPid=$!
+    # This is a workaround on tail --pid not supported in all
+	# minimal shells
+    while [ -e /proc/$pid ]; do
+		# Until $pid exist, let's wait
+        sleep 1
+    done
+    kill $tailPid
   else
     setsid "$@" &
     pid=$!
@@ -123,19 +133,58 @@ while $restart; do
 done
 `
 
+const LegacyRestartHelperScript = `#!/bin/sh
+#
+# A process wrapper script to simulate a container restart. This file was injected with devspace during the build process
+#
+set -e
+pid=""
+trap quit TERM INT
+quit() {
+  if [ -n "$pid" ]; then
+    kill $pid
+  fi
+}
+while true; do
+  setsid "$@" &
+  pid=$!
+  echo "$pid" > /.devspace/devspace-pid
+  set +e
+  wait $pid
+  exit_code=$?
+  if [ -f /.devspace/devspace-pid ]; then
+    rm -f /.devspace/devspace-pid 	
+    printf "\nContainer exited with $exit_code. Will restart in 7 seconds...\n"
+    sleep 7
+  fi
+  set -e
+  printf "\n\n############### Restart container ###############\n\n"
+done
+`
+
 // LoadRestartHelper loads the restart helper script from either
 // a path or returns the bundled version of it.
 func LoadRestartHelper(path string) (string, error) {
+	return loadRestartHelper(path, HelperScript)
+}
+
+// LoadLegacyRestartHelper loads the legacy restart helper script from either
+// a path or returns the bundled version of it.
+func LoadLegacyRestartHelper(path string) (string, error) {
+	return loadRestartHelper(path, LegacyRestartHelperScript)
+}
+
+func loadRestartHelper(path, defaultScript string) (string, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
-		return HelperScript, nil
+		return defaultScript, nil
 	} else if isRemoteHTTP(path) {
 		resp, err := http.Get(path)
 		if err != nil {
 			return "", err
 		}
 
-		out, err := ioutil.ReadAll(resp.Body)
+		out, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return "", err
 		} else if resp.StatusCode >= 400 {
@@ -145,7 +194,7 @@ func LoadRestartHelper(path string) (string, error) {
 		return string(out), nil
 	}
 
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}

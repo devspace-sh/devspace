@@ -1,0 +1,119 @@
+---
+title: Local Registry
+sidebar_label: localRegistry
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import ConfigPartial from '../_partials/v2beta1/localRegistry.mdx'
+
+DevSpace will detect when the local environment lacks push permissions for an image's registry. If the destination cluster is a local [KinD](https://kind.sigs.k8s.io/) cluster, images will be loaded using `kind load docker-image`. For other clusters, DevSpace will deploy a local image registry to the cluster and update the image URLs to use this local registry.
+
+Unless persistence is enabled, the local registry will be deployed using a `Deployment` and an `emptyDir` volume, meaning your registry images will not be persisted during local registry restarts. Persistence using a `StatefulSet` and persistent volumes can be configured if you wish to avoid repeated image pushes.
+
+Local registry configuration is defined in the `localRegistry` section of the `devspace.yaml`.
+
+:::note
+localRegistry currently only supports docker and buildkit
+:::
+
+<Tabs
+    defaultValue="default"
+    values={[
+        { label: 'Defaults', value: 'default', },
+        { label: 'Build locally with Docker/Podman', value: 'localbuild', },
+        { label: 'Force Local Registry', value: 'force', },
+        { label: 'Persistence', value: 'persistence', },
+    ]
+    }>
+<TabItem value="default">
+
+```yaml
+# If you do not configure anything, the local registry will be deployed with the following
+# defaults when the image cannot be pushed and 'kind load docker-image' cannot be used.
+# 
+# localRegistry:
+#   name: registry
+#   namespace: [KUBE CONTEXT NAMESPACE]
+#   localbuild: false
+#   image: registry:2.8.1
+#   port: 5000
+```
+
+</TabItem>
+<TabItem value="localbuild">
+
+```yaml
+# The local registry will not use buildkit on the cluster, but your docker/podman daemon
+# and then push it to the local registry in the cluster
+localRegistry:
+  localbuild: true
+```
+
+</TabItem>
+<TabItem value="persistence">
+
+```yaml
+# The local registry will use an emptyDir volume by default. If the registry is restarted all
+# previously pushed images will be lost. If you wish to add persistence, here is an example
+# using the cluster's default storage class and a 10Gi volume size.
+localRegistry:
+  persistence:
+    enabled: true
+    size: 10Gi
+```
+
+</TabItem>
+<TabItem value="force">
+
+```yaml
+# If you want to always use the local registry.
+localRegistry:
+  enabled: true
+```
+
+</TabItem>
+</Tabs>
+
+## Image URLs
+The local registry is deployed with a NodePort service and will be assigned a port by the Kubernetes control plane. DevSpace will transparently update all image URLs to refer to the local registry using **`localhost:[NODE_PORT]`**. This applies to every location the image is used, however no modifications will be saved to the `devspace.yaml` on disk.
+
+```yaml title=devspace.yaml
+images:
+  backend:
+    # highlight-start
+    image: ghcr.io/org/project/image           # localhost:[NODE_PORT]/org/project/image
+    # highlight-end
+  backend-dev:
+    # highlight-start
+    image: ghcr.io/org/project/image-dev       # localhost:[NODE_PORT]/org/project/image-dev
+    # highlight-end
+
+deployments:
+  backend:
+    helm:
+      values:
+        containers:
+          # highlight-start
+          - image: ghcr.io/org/project/image   # localhost:[NODE_PORT]/org/project/image
+          # highlight-end
+
+dev:
+  backend:
+    # highlight-start
+    imageSelector: ghcr.io/org/project/image   # localhost:[NODE_PORT]/org/project/image
+    devImage: ghcr.io/org/project/image-dev    # localhost:[NODE_PORT]/org/project/image-dev
+    # highlight-end
+```
+
+## Runtime Variables
+In addition to image URLs, the following runtime variables are updated to the local registry URL:
+- **`runtime.images.IMAGE_NAME`**
+- **`runtime.images.IMAGE_NAME.image`**
+
+Similarly, the following hook environment variable is updated to the local registry URL:
+- **`$DEVSPACE_HOOK_IMAGE_NAME`**
+
+## Configuration
+
+<ConfigPartial/>

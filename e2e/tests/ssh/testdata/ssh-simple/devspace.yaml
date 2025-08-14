@@ -1,4 +1,5 @@
 version: v2beta1
+name: ssh-simple
 vars:
   IMAGE: alpine
 deployments:
@@ -12,6 +13,10 @@ deployments:
           - image: ${IMAGE}
             command: ["sleep"]
             args: ["999999999999"]
+pipelines:
+  dev: |
+    run_default_pipeline dev
+    echo "started" > started
 dev:
   test:
     imageSelector: ${IMAGE}

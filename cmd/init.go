@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/ptr"
+	"mvdan.cc/sh/v3/expand"
 
 	"github.com/loft-sh/devspace/pkg/devspace/compose"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
@@ -28,12 +30,12 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/generator"
-	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
+	"github.com/loft-sh/loft-util/pkg/command"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -505,15 +507,17 @@ echo 'Anyone using this project can invoke it via "devspace run migrate-db"'`,
 	// Add pipeline: dev
 	config.Pipelines["dev"] = &latest.Pipeline{
 		Run: `run_dependencies --all       # 1. Deploy any projects this project needs (see "dependencies")
-create_deployments --all     # 2. Deploy Helm charts and manifests specfied as "deployments"
-start_dev ` + imageName + `                # 3. Start dev mode "` + imageName + `" (see "dev" section)`,
+ensure_pull_secrets --all    # 2. Ensure pull secrets
+create_deployments --all     # 3. Deploy Helm charts and manifests specfied as "deployments"
+start_dev ` + imageName + `                # 4. Start dev mode "` + imageName + `" (see "dev" section)`,
 	}
 
 	// Add pipeline: dev
 	config.Pipelines["deploy"] = &latest.Pipeline{
 		Run: `run_dependencies --all                            # 1. Deploy any projects this project needs (see "dependencies")
-build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
-create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"`,
+ensure_pull_secrets --all                         # 2. Ensure pull secrets
+build_images --all -t $(git describe --always)    # 3. Build, tag (git commit hash) and push all images (see "images")
+create_deployments --all                          # 4. Deploy Helm charts and manifests specfied as "deployments"`,
 	}
 
 	// Save config
@@ -617,7 +621,7 @@ func (cmd *InitCmd) initDockerCompose(f factory.Factory, composePath string) err
 }
 
 func annotateConfig(configPath string) error {
-	annotatedConfig, err := ioutil.ReadFile(configPath)
+	annotatedConfig, err := os.ReadFile(configPath)
 	if err != nil {
 		panic(err)
 	}
@@ -662,7 +666,7 @@ func annotateConfig(configPath string) error {
 #     path: ./ui        # Path-based dependencies (for monorepos)
 `)...)
 
-	err = ioutil.WriteFile(configPath, annotatedConfig, os.ModePerm)
+	err = os.WriteFile(configPath, annotatedConfig, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -734,6 +738,10 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		Path: "./",
 	}
 
+	if _, err := os.Stat("node_modules"); err == nil {
+		syncConfig.UploadExcludePaths = append(syncConfig.UploadExcludePaths, "node_modules")
+	}
+
 	if _, err := os.Stat(".dockerignore"); err == nil {
 		syncConfig.UploadExcludeFile = ".dockerignore"
 	}
@@ -752,7 +760,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 	devConfig.DevImage = devImage
 
 	devConfig.SSH = &latest.SSH{
-		Enabled: true,
+		Enabled: ptr.Bool(true),
 	}
 
 	if devConfig.ProxyCommands == nil {
@@ -770,7 +778,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 			Command: "helm",
 		},
 		{
-			Command: "git",
+			GitCredentials: true,
 		},
 	}...)
 
@@ -786,11 +794,15 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 		return "", errors.Wrap(err, "temp render.yaml")
 	}
 
+	silent := true
+	if cmd.Debug {
+		silent = false
+	}
 	// Use the render command to render it.
 	writer := &bytes.Buffer{}
 	renderCmd := &RunPipelineCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Silent:     true,
+			Silent:     silent,
 			ConfigPath: renderPath,
 		},
 		Pipeline:     "deploy",
@@ -834,7 +846,7 @@ func appendToIgnoreFile(ignoreFile, content string) error {
 	if os.IsNotExist(err) {
 		_ = fsutil.WriteToFile([]byte(content), ignoreFile)
 	} else {
-		fileContent, err := ioutil.ReadFile(ignoreFile)
+		fileContent, err := os.ReadFile(ignoreFile)
 		if err != nil {
 			return errors.Errorf("Error reading file %s: %v", ignoreFile, err)
 		}
@@ -858,7 +870,7 @@ func appendToIgnoreFile(ignoreFile, content string) error {
 func getProjectName() (string, string, error) {
 	projectName := ""
 	projectNamespace := ""
-	gitRemote, err := command.Output(context.TODO(), "", "git", "config", "--get", "remote.origin.url")
+	gitRemote, err := command.Output(context.TODO(), "", expand.ListEnviron(os.Environ()...), "git", "config", "--get", "remote.origin.url")
 	if err == nil {
 		sep := "/"
 		projectParts := strings.Split(string(regexp.MustCompile(`^.*?://[^/]+?/([^.]+)(\.git)?`).ReplaceAll(gitRemote, []byte("$1"))), sep)

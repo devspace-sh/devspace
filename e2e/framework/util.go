@@ -3,7 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	"os"
 	"path/filepath"
 	"sync"
@@ -16,7 +16,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/onsi/ginkgo"
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 )
@@ -100,7 +99,7 @@ func CleanupTempDir(initialDir, tempDir string) {
 }
 
 func CopyToTempDir(relativePath string) (string, error) {
-	dir, err := ioutil.TempDir("", "temp-*")
+	dir, err := os.MkdirTemp("", "temp-*")
 	if err != nil {
 		return "", err
 	}
@@ -126,7 +125,7 @@ func CopyToTempDir(relativePath string) (string, error) {
 }
 
 func ChangeToTempDir() (string, error) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}

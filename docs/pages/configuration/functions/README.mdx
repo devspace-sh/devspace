@@ -41,8 +41,9 @@ pipelines:
     create_deployments --all
   dev: |-
     hello_world
-    run_default_pipeline
+    run_default_pipeline dev
 ```
+Please note that custom functions can only be called from `pipelines` and other `functions` as these run in a `pipeline` context.
 
 
 ## Built-In Functions
@@ -50,8 +51,17 @@ DevSpace provides a set of built-in functions. There are two types of functions:
 1. [Pipeline-Only Functions](#pipeline-only-functions)
 2. [Global Functions](#global-functions)
 
+
 ### Pipeline-Only Functions
-Pipeline-only functions can only be used inside the scripts within the `pipelines` section of `devspace.yaml`.
+Pipeline-only functions can only be used inside the scripts within the `pipelines` section of `devspace.yaml`. They can be overridden through the functions section to avoid changing a default pipeline.
+
+Example:
+```yaml
+functions:
+  create_deployments: |-
+    echo "create_deployments was called with $@"
+    __create_deployments "$@"
+```
 
 <PipelineFunctionRef/>
 

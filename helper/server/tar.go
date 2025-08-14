@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -195,7 +194,7 @@ func recursiveTar(basePath, relativePath string, writtenFiles map[string]bool, t
 
 func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles map[string]bool, stat os.FileInfo, tw *tar.Writer, skipContents bool) error {
 	filepath := path.Join(basePath, fileInformation.Name)
-	files, err := ioutil.ReadDir(filepath)
+	files, err := os.ReadDir(filepath)
 	if err != nil {
 		// Ignore this error because it could happen the file is suddenly not there anymore
 		return nil
@@ -214,7 +213,12 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 	}
 
 	if !skipContents {
-		for _, f := range files {
+		for _, dirEntry := range files {
+			f, err := dirEntry.Info()
+			if err != nil {
+				continue
+			}
+
 			if fsutil.IsRecursiveSymlink(f, path.Join(fileInformation.Name, f.Name())) {
 				continue
 			}

@@ -3,6 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -15,8 +18,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
+	pipelinepkg "github.com/loft-sh/devspace/pkg/devspace/pipeline"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
@@ -24,13 +28,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"io"
-	"io/ioutil"
-	"os"
 )
 
 // RunPipelineCmd holds the command flags
@@ -43,8 +45,9 @@ type RunPipelineCmd struct {
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
 
-	Dependency     []string
-	SkipDependency []string
+	Dependency             []string
+	SkipDependency         []string
+	SequentialDependencies bool
 
 	ForceBuild          bool
 	SkipBuild           bool
@@ -67,6 +70,7 @@ type RunPipelineCmd struct {
 func (cmd *RunPipelineCmd) AddPipelineFlags(f factory.Factory, command *cobra.Command, pipeline *latest.Pipeline) {
 	command.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", cmd.SkipDependency, "Skips the following dependencies for deployment")
 	command.Flags().StringSliceVar(&cmd.Dependency, "dependency", cmd.Dependency, "Deploys only the specified named dependencies")
+	command.Flags().BoolVar(&cmd.SequentialDependencies, "sequential-dependencies", false, "If set set true dependencies will run sequentially")
 
 	command.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", cmd.ForceBuild, "Forces to build every image")
 	command.Flags().BoolVar(&cmd.SkipBuild, "skip-build", cmd.SkipBuild, "Skips building of images")
@@ -96,51 +100,34 @@ func (cmd *RunPipelineCmd) AddPipelineFlags(f factory.Factory, command *cobra.Co
 				usage = "Flag " + pipelineFlag.Name
 			}
 
-			var ok bool
 			if pipelineFlag.Type == "" || pipelineFlag.Type == latest.PipelineFlagTypeBoolean {
-				val := false
-				if pipelineFlag.Default != nil {
-					val, ok = pipelineFlag.Default.(bool)
-					if !ok {
-						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a boolean", pipelineFlag.Name, pipelineFlag.Default)
-						continue
-					}
+				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
+				if err != nil {
+					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a boolean", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
-				command.Flags().BoolP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+				command.Flags().BoolP(pipelineFlag.Name, pipelineFlag.Short, val.(bool), usage)
 			} else if pipelineFlag.Type == latest.PipelineFlagTypeString {
-				val := ""
-				if pipelineFlag.Default != nil {
-					val, ok = pipelineFlag.Default.(string)
-					if !ok {
-						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string", pipelineFlag.Name, pipelineFlag.Default)
-						continue
-					}
+				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
+				if err != nil {
+					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
-				command.Flags().StringP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+				command.Flags().StringP(pipelineFlag.Name, pipelineFlag.Short, val.(string), usage)
 			} else if pipelineFlag.Type == latest.PipelineFlagTypeInteger {
-				val := 0
-				if pipelineFlag.Default != nil {
-					val, ok = pipelineFlag.Default.(int)
-					if !ok {
-						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not an integer", pipelineFlag.Name, pipelineFlag.Default)
-						continue
-					}
+				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
+				if err != nil {
+					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not an integer", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
-				command.Flags().IntP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+				command.Flags().IntP(pipelineFlag.Name, pipelineFlag.Short, val.(int), usage)
 			} else if pipelineFlag.Type == latest.PipelineFlagTypeStringArray {
-				val := []string{}
-				if pipelineFlag.Default != nil {
-					val, ok = pipelineFlag.Default.([]string)
-					if !ok {
-						f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string array", pipelineFlag.Name, pipelineFlag.Default)
-						continue
-					}
+				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
+				if err != nil {
+					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string array", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
-				command.Flags().StringSliceP(pipelineFlag.Name, pipelineFlag.Short, val, usage)
+				command.Flags().StringSliceP(pipelineFlag.Name, pipelineFlag.Short, val.([]string), usage)
 			}
 		}
 	}
@@ -210,18 +197,11 @@ func (cmd *RunPipelineCmd) RunDefault(f factory.Factory) error {
 
 // Run executes the command logic
 func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory.Factory, hookName string) error {
-	dashArgs := []string{}
-	if cobraCmd != nil && cobraCmd.ArgsLenAtDash() > -1 {
-		dashArgs = args[cobraCmd.ArgsLenAtDash():]
-		args = args[:cobraCmd.ArgsLenAtDash()]
-	}
-
-	if len(args) > 1 {
-		return fmt.Errorf("please specify only 1 pipeline to execute (got %v). E.g. devspace run-pipeline my-pipe -- other args", args)
-	} else if len(args) == 0 && cmd.Pipeline == "" {
+	if len(args) == 0 && cmd.Pipeline == "" {
 		return fmt.Errorf("please specify a pipeline through --pipeline or argument")
-	} else if len(args) == 1 && cmd.Pipeline == "" {
+	} else if len(args) > 0 && cmd.Pipeline == "" {
 		cmd.Pipeline = args[0]
+		args = args[1:]
 	}
 
 	if cmd.Log == nil {
@@ -250,7 +230,7 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 
 	// set command in context
 	if cobraCmd != nil {
-		cmd.Ctx = values.WithFlags(cmd.Ctx, cobraCmd.Flags())
+		cmd.Ctx = values.WithCommandFlags(cmd.Ctx, cobraCmd.Flags())
 	}
 	options := cmd.BuildOptions(cmd.ToConfigOptions())
 	ctx, err := initialize(cmd.Ctx, f, options, cmd.Log)
@@ -259,7 +239,7 @@ func (cmd *RunPipelineCmd) Run(cobraCmd *cobra.Command, args []string, f factory
 	}
 
 	return runWithHooks(ctx, hookName, func() error {
-		return runPipeline(ctx, dashArgs, options)
+		return runPipeline(ctx, args, options)
 	})
 }
 
@@ -279,7 +259,7 @@ func initialize(ctx context.Context, f factory.Factory, options *CommandOptions,
 	log.StartFileLogging()
 
 	// create a temporary folder for us to use
-	tempFolder, err := ioutil.TempDir("", "devspace-")
+	tempFolder, err := os.MkdirTemp("", "devspace-")
 	if err != nil {
 		return nil, errors.Wrap(err, "create temporary folder")
 	}
@@ -316,7 +296,7 @@ func initialize(ctx context.Context, f factory.Factory, options *CommandOptions,
 	if client != nil {
 		// If the current kube context or namespace is different than old,
 		// show warnings and reset kube client if necessary
-		client, err = kubectl.CheckKubeContext(client, localCache, options.NoWarn, options.SwitchContext, logger)
+		client, err = kubectl.CheckKubeContext(client, localCache, options.NoWarn, options.SwitchContext, false, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -343,7 +323,7 @@ func initialize(ctx context.Context, f factory.Factory, options *CommandOptions,
 	}
 
 	// resolve dependencies
-	dependencies, err := f.NewDependencyManager(devCtx, options.ConfigOptions).ResolveAll(devCtx, dependency.ResolveOptions{})
+	dependencies, err := f.NewDependencyManager(devCtx, options.ConfigOptions).ResolveAll(devCtx, dependency.ResolveOptions{SkipDependencies: options.DependencyOptions.Exclude, Dependencies: options.DependencyOptions.Only})
 	if err != nil {
 		return nil, errors.Wrap(err, "deploy dependencies")
 	}
@@ -419,8 +399,9 @@ func (cmd *RunPipelineCmd) BuildOptions(configOptions *loader.ConfigOptions) *Co
 				ForcePurge: cmd.ForcePurge,
 			},
 			DependencyOptions: types.DependencyOptions{
-				Exclude: cmd.SkipDependency,
-				Only:    cmd.Dependency,
+				Exclude:    cmd.SkipDependency,
+				Only:       cmd.Dependency,
+				Sequential: cmd.SequentialDependencies,
 			},
 		},
 		ConfigOptions: configOptions,
@@ -433,6 +414,12 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	var configPipeline *latest.Pipeline
 	if ctx.Config().Config().Pipelines != nil && ctx.Config().Config().Pipelines[options.Pipeline] != nil {
 		configPipeline = ctx.Config().Config().Pipelines[options.Pipeline]
+		if configPipeline.Run == "" {
+			defaultPipeline, _ := types.GetDefaultPipeline(options.Pipeline)
+			if defaultPipeline != nil {
+				configPipeline.Run = defaultPipeline.Run
+			}
+		}
 	} else {
 		var err error
 		configPipeline, err = types.GetDefaultPipeline(options.Pipeline)
@@ -456,10 +443,20 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	defer devPodManager.Close()
 
 	// create dependency registry
-	dependencyRegistry := registry.NewDependencyRegistry(options.DeployOptions.Render)
+	dependencyRegistry := registry.NewDependencyRegistry(ctx.Config().Config().Name, options.DeployOptions.Render)
 
 	// get deploy pipeline
-	pipe := pipeline.NewPipeline(ctx.Config().Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
+	pipe := pipelinepkg.NewPipeline(ctx.Config().Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
+	kill.SetStopFunction(func(message string) {
+		if message != "" {
+			ctx.Log().WriteString(logrus.FatalLevel, "\n"+ansi.Color("fatal", "red+b")+" "+message+"\n")
+		}
+
+		err = pipe.Close()
+		if err != nil {
+			ctx.Log().Debugf("Error closing pipeline: %v", err)
+		}
+	})
 
 	// start ui & open
 	serv, err := dev.UI(ctx, options.UIPort, options.ShowUI, pipe)
@@ -479,6 +476,10 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	// start pipeline
 	err = pipe.Run(ctx.WithLogger(log.NewStreamLoggerWithFormat(stdoutWriter, stderrWriter, ctx.Log().GetLevel(), log.TimeFormat)), args)
 	if err != nil {
+		if err == context.Canceled {
+			return nil
+		}
+
 		return err
 	}
 	ctx.Log().Debugf("Wait for dev to finish")
@@ -486,6 +487,10 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	// wait for dev
 	err = pipe.WaitDev()
 	if err != nil {
+		if err == context.Canceled {
+			return nil
+		}
+
 		return err
 	}
 

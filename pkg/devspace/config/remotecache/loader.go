@@ -3,6 +3,9 @@ package remotecache
 import (
 	"context"
 	"encoding/base64"
+	"errors"
+	"syscall"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
@@ -115,7 +118,7 @@ type cacheLoader struct {
 func (c *cacheLoader) Load(ctx context.Context, client kubectl.Client) (Cache, error) {
 	remoteCache, err := NewCacheFromSecret(ctx, client, c.secretName)
 	if err != nil {
-		if !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) {
+		if !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) && !errors.Is(err, syscall.ECONNREFUSED) {
 			return nil, err
 		}
 

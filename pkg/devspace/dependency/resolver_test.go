@@ -217,7 +217,7 @@ func TestResolver(t *testing.T) {
 		testResolver := NewResolver(devCtx, &loader.ConfigOptions{})
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
 
-		dependencies, err := testResolver.Resolve(devCtx)
+		dependencies, err := testResolver.Resolve(devCtx, ResolveOptions{})
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Unexpected error in testCase %s", testCase.name)
 		} else {

@@ -42,7 +42,7 @@ type Factory struct {
 	PluginClient      plugin.Interface
 }
 
-// NewPluginsManager creates a new plugin manager
+// NewPluginManager creates a new plugin manager
 func (f *Factory) NewPluginManager(log log.Logger) plugin.Interface {
 	return f.PluginClient
 }
@@ -98,7 +98,7 @@ func (f *Factory) NewDockerClient(ctx context.Context, log log.Logger) (docker.C
 }
 
 // NewDockerClientWithMinikube implements interface
-func (f *Factory) NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
+func (f *Factory) NewDockerClientWithMinikube(ctx context.Context, kubeClient kubectl.Client, preferMinikube bool, log log.Logger) (docker.Client, error) {
 	return f.DockerClient, nil
 }
 
@@ -109,11 +109,6 @@ func (f *Factory) NewKubeDefaultClient() (kubectl.Client, error) {
 
 // NewKubeClientFromContext implements interface
 func (f *Factory) NewKubeClientFromContext(context, namespace string) (kubectl.Client, error) {
-	return f.KubeClient, nil
-}
-
-// NewKubeClientBySelect implements interface
-func (f *Factory) NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error) {
 	return f.KubeClient, nil
 }
 

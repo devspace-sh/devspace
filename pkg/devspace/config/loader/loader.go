@@ -3,19 +3,20 @@ package loader
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/context/values"
-	"github.com/loft-sh/devspace/pkg/util/encoding"
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/util/encoding"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
+	"mvdan.cc/sh/v3/expand"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/utils/pkg/command"
 
 	"github.com/loft-sh/devspace/pkg/util/constraint"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -148,7 +150,7 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 		var ok bool
 		name, ok = data["name"].(string)
 		if !ok {
-			return nil, fmt.Errorf("name is missing in " + filepath.Base(l.absConfigPath))
+			return nil, fmt.Errorf("name is missing in %s", filepath.Base(l.absConfigPath))
 		}
 	} else {
 		data["name"] = options.OverrideName
@@ -200,6 +202,8 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 		return nil
 	}
 
+	var aggregatedErrors []error
+
 	if config.Require.DevSpace != "" {
 		parsedConstraint, err := constraint.NewConstraint(config.Require.DevSpace)
 		if err != nil {
@@ -212,7 +216,7 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 		}
 
 		if !parsedConstraint.Check(v) {
-			return fmt.Errorf("DevSpace version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed DevSpace with version %s", upgrade.GetVersion(), config.Require.DevSpace, config.Require.DevSpace)
+			aggregatedErrors = append(aggregatedErrors, fmt.Errorf("DevSpace version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed DevSpace with version %s", upgrade.GetVersion(), config.Require.DevSpace, config.Require.DevSpace))
 		}
 	}
 
@@ -221,9 +225,11 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 		for index, p := range config.Require.Plugins {
 			_, metadata, err := pluginClient.GetByName(p.Name)
 			if err != nil {
-				return fmt.Errorf("cannot find plugin '%s' (%v), however it is required by the config. Please make sure you have installed the plugin '%s' with version %s", p.Name, err, p.Name, p.Version)
+				aggregatedErrors = append(aggregatedErrors, fmt.Errorf("cannot find plugin '%s' (%v), however it is required by the config. Please make sure you have installed the plugin '%s' with version %s", p.Name, err, p.Name, p.Version))
+				continue
 			} else if metadata == nil {
-				return fmt.Errorf("cannot find plugin '%s', however it is required by the config. Please make sure you have installed the plugin '%s' with version %s", p.Name, p.Name, p.Version)
+				aggregatedErrors = append(aggregatedErrors, fmt.Errorf("cannot find plugin '%s', however it is required by the config. Please make sure you have installed the plugin '%s' with version %s", p.Name, p.Name, p.Version))
+				continue
 			}
 
 			parsedConstraint, err := constraint.NewConstraint(p.Version)
@@ -237,7 +243,7 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 			}
 
 			if !parsedConstraint.Check(v) {
-				return fmt.Errorf("plugin '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed the plugin '%s' with version %s", p.Name, metadata.Version, p.Version, p.Name, p.Version)
+				aggregatedErrors = append(aggregatedErrors, fmt.Errorf("plugin '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed the plugin '%s' with version %s", p.Name, metadata.Version, p.Version, p.Name, p.Version))
 			}
 		}
 	}
@@ -263,9 +269,10 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 			return errors.Wrapf(err, "parsing require.commands[%d].version", index)
 		}
 
-		out, err := command.Output(ctx, filepath.Dir(l.absConfigPath), c.Name, versionArgs...)
+		out, err := command.Output(ctx, filepath.Dir(l.absConfigPath), expand.ListEnviron(os.Environ()...), c.Name, versionArgs...)
 		if err != nil {
-			return fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version)
+			aggregatedErrors = append(aggregatedErrors, fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version))
+			continue
 		}
 
 		matches := regEx.FindStringSubmatch(string(out))
@@ -279,11 +286,11 @@ func (l *configLoader) ensureRequires(ctx context.Context, config *latest.Config
 		}
 
 		if !parsedConstraint.Check(v) {
-			return fmt.Errorf("command '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have correctly installed '%s' with version %s", c.Name, matches[1], c.Version, c.Name, c.Version)
+			aggregatedErrors = append(aggregatedErrors, fmt.Errorf("command '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have correctly installed '%s' with version %s", c.Name, matches[1], c.Version, c.Name, c.Version))
 		}
 	}
 
-	return nil
+	return kerrors.NewAggregate(aggregatedErrors)
 }
 
 func (l *configLoader) parseConfig(
@@ -300,7 +307,7 @@ func (l *configLoader) parseConfig(
 	resolver, err := variable.NewResolver(localCache, &variable.PredefinedVariableOptions{
 		ConfigPath: l.absConfigPath,
 		KubeClient: client,
-		Profile:    GetLastProfile(options.Profiles),
+		Profile:    options.Profiles,
 	}, options.Vars, log)
 	if err != nil {
 		return nil, nil, nil, err
@@ -499,15 +506,6 @@ func prepareProfiles(ctx context.Context, config map[string]interface{}, resolve
 			profileMap["replace"] = replace
 		}
 
-		// Resolve strategicMerge field
-		if profileMap["strategicMerge"] != nil {
-			strategicMerge, err := resolve(ctx, profileMap["strategicMerge"], resolver)
-			if err != nil {
-				return nil, err
-			}
-			profileMap["strategicMerge"] = strategicMerge
-		}
-
 		// Validate that the profile doesn't use forbidden expressions
 		err = validateProfile(profileMap)
 		if err != nil {
@@ -529,7 +527,7 @@ func resolve(ctx context.Context, data interface{}, resolver variable.Resolver) 
 	}
 
 	// find and fill variables
-	return resolver.FillVariables(ctx, data)
+	return resolver.FillVariables(ctx, data, true)
 }
 
 func (l *configLoader) applyProfiles(ctx context.Context, data map[string]interface{}, options *ConfigOptions, resolver variable.Resolver, log log.Logger) (map[string]interface{}, error) {
@@ -566,13 +564,6 @@ func (l *configLoader) applyProfiles(ctx context.Context, data map[string]interf
 	return data, nil
 }
 
-func GetLastProfile(profiles []string) string {
-	if len(profiles) == 0 {
-		return ""
-	}
-	return profiles[len(profiles)-1]
-}
-
 // configExistsInPath checks whether a devspace configuration exists at a certain path
 func configExistsInPath(path string) bool {
 	_, err := os.Stat(path)
@@ -588,7 +579,7 @@ func (l *configLoader) LoadRaw() (map[string]interface{}, error) {
 		return nil, errors.Errorf("Couldn't load '%s': %v", configPath, err)
 	}
 
-	fileContent, err := ioutil.ReadFile(configPath)
+	fileContent, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}

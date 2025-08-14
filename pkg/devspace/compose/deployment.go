@@ -49,7 +49,6 @@ func (cb *configBuilder) AddDeployment(dockerCompose *composetypes.Project, serv
 			return fmt.Errorf("invalid protocol %s", port.Protocol)
 		}
 
-		// fmt.Println(port.Published)
 		if port.Published == "" {
 			cb.log.Warnf("Unassigned ports are not supported: %s", port.Target)
 			continue

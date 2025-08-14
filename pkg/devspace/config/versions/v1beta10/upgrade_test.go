@@ -1,12 +1,13 @@
 package v1beta10
 
 import (
-	"github.com/ghodss/yaml"
+	"reflect"
+	"testing"
+
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta11"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
-	"reflect"
-	"testing"
+	"sigs.k8s.io/yaml"
 )
 
 type testCase struct {

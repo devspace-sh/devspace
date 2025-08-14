@@ -1,16 +1,20 @@
 package podreplace
 
 import (
+	"context"
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	patch2 "github.com/loft-sh/devspace/pkg/util/patch"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"strconv"
-	"time"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -21,7 +25,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
@@ -172,13 +175,19 @@ func updateNeeded(ctx devspacecontext.Context, deployment *appsv1.Deployment, de
 
 	ctx.Log().Debugf("Update replaced deployment with patch:\n %s", string(patchBytes))
 
-	_, err = ctx.KubeClient().KubeClient().AppsV1().Deployments(deployment.Namespace).Patch(ctx.Context(), deployment.Name, patch.Type(), patchBytes, metav1.PatchOptions{})
+	deployment, err = ctx.KubeClient().KubeClient().AppsV1().Deployments(deployment.Namespace).Patch(ctx.Context(), deployment.Name, patch.Type(), patchBytes, metav1.PatchOptions{})
 	if err != nil {
 		if kerrors.IsInvalid(err) {
 			ctx.Log().Debugf("Recreate deployment because it is invalid: %v", err)
 			return true, deleteDeployment(ctx, deployment)
 		}
 
+		return false, err
+	}
+
+	// update persistent paths
+	err = updatePVC(ctx, deployment, devPod)
+	if err != nil {
 		return false, err
 	}
 
@@ -221,6 +230,10 @@ func (p *replacer) replace(ctx devspacecontext.Context, deploymentName string, t
 		return errors.Wrap(err, "create deployment")
 	}
 
+	return updatePVC(ctx, deployment, devPod)
+}
+
+func updatePVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPod *latest.DevPod) error {
 	// create a pvc if needed
 	hasPersistPath := false
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
@@ -230,15 +243,39 @@ func (p *replacer) replace(ctx devspacecontext.Context, deploymentName string, t
 		}
 		return true
 	})
+
 	if hasPersistPath {
+		name := getClaimName(deployment, devPod)
+		existingPVC, err := ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Get(ctx.Context(), name, metav1.GetOptions{})
+		if existingPVC != nil {
+			replicaSets, err := ctx.KubeClient().KubeClient().AppsV1().ReplicaSets(deployment.Namespace).List(ctx.Context(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+			if err != nil {
+				return errors.Wrap(err, "list replica sets")
+			}
+
+			for _, rs := range replicaSets.Items {
+				for _, v := range rs.Spec.Template.Spec.Volumes {
+					if v.PersistentVolumeClaim != nil && v.PersistentVolumeClaim.ClaimName == name {
+						ctx.Log().Debugf("Scaled down ReplicaSet %s to release persistent volume claim", rs.Name)
+						err = scaleDownTarget(ctx, &rs)
+						if err != nil {
+							return errors.Wrap(err, "scale down persistent volume claim replica sets")
+						}
+					}
+				}
+			}
+		} else if err != nil && !kerrors.IsNotFound(err) {
+			return errors.Wrap(err, "get existing persistent volume claim")
+		}
+
 		err = createPVC(ctx, deployment, devPod)
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				// delete the old one and wait
 				_ = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Delete(ctx.Context(), deployment.Name, metav1.DeleteOptions{})
 				ctx.Log().Infof("Waiting for old persistent volume claim to terminate")
-				err = wait.Poll(time.Second, time.Minute*2, func() (done bool, err error) {
-					_, err = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Get(ctx.Context(), deployment.Name, metav1.GetOptions{})
+				err = wait.PollUntilContextTimeout(ctx.Context(), time.Second, time.Minute*2, false, func(ctxPullUntil context.Context) (done bool, err error) {
+					_, err = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Get(ctxPullUntil, deployment.Name, metav1.GetOptions{})
 					return kerrors.IsNotFound(err), nil
 				})
 				if err != nil {
@@ -282,10 +319,7 @@ func createPVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPo
 		}
 	}
 
-	name := deployment.Name
-	if devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Name != "" {
-		name = devPod.PersistenceOptions.Name
-	}
+	name := getClaimName(deployment, devPod)
 
 	_, err = ctx.KubeClient().KubeClient().CoreV1().PersistentVolumeClaims(deployment.Namespace).Create(ctx.Context(), &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -303,7 +337,7 @@ func createPVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPo
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: accessModes,
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: map[corev1.ResourceName]resource.Quantity{
 					corev1.ResourceStorage: size,
 				},
@@ -312,8 +346,8 @@ func createPVC(ctx devspacecontext.Context, deployment *appsv1.Deployment, devPo
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {
-		if kerrors.IsAlreadyExists(err) && devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Name != "" {
-			ctx.Log().Infof("PVC %s already exists for replaced pod %s", name, deployment.Name)
+		if kerrors.IsAlreadyExists(err) {
+			ctx.Log().Debugf("PVC %s already exists for replaced pod %s", name, deployment.Name)
 			return nil
 		}
 
@@ -416,4 +450,13 @@ func scaleDownTarget(ctx devspacecontext.Context, obj runtime.Object) error {
 	}
 
 	return fmt.Errorf("unrecognized object")
+}
+
+func getClaimName(deployment *appsv1.Deployment, devPod *latest.DevPod) string {
+	name := deployment.Name
+	if devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Name != "" {
+		name = devPod.PersistenceOptions.Name
+	}
+
+	return name
 }

@@ -2,8 +2,8 @@ package init
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
@@ -17,7 +17,6 @@ import (
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/survey"
-	"github.com/onsi/ginkgo"
 	"gopkg.in/yaml.v3"
 )
 
@@ -59,7 +58,6 @@ var _ = DevSpaceDescribe("init", func() {
 				return "Skip / I don't know", nil
 			}
 
-			fmt.Println(params.DefaultValue)
 			return params.DefaultValue, nil
 		})
 
@@ -310,5 +308,5 @@ var _ = DevSpaceDescribe("init", func() {
 		err = deployCmd.RunDefault(f)
 
 		framework.ExpectNoError(err)
-	}, 120)
+	})
 })

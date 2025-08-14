@@ -7,20 +7,20 @@ import (
 
 // GlobalFlags is the flags that contains the global flags
 type GlobalFlags struct {
-	Silent bool
-	NoWarn bool
-	Debug  bool
-
+	Silent                   bool
+	NoWarn                   bool
+	NoColors                 bool
+	Debug                    bool
+	DisableProfileActivation bool
+	SwitchContext            bool
+	InactivityTimeout        int
+	KubeConfig               string
 	OverrideName             string
 	Namespace                string
 	KubeContext              string
-	Profiles                 []string
-	DisableProfileActivation bool
-	SwitchContext            bool
 	ConfigPath               string
+	Profiles                 []string
 	Vars                     []string
-
-	InactivityTimeout int
 
 	Flags *flag.FlagSet
 }
@@ -44,8 +44,9 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 		Flags: flags,
 	}
 
-	flags.StringVar(&globalFlags.OverrideName, "override-name", "", "If specified will override the devspace.yaml name")
+	flags.StringVar(&globalFlags.OverrideName, "override-name", "", "If specified will override the DevSpace project name provided in the devspace.yaml")
 	flags.BoolVar(&globalFlags.NoWarn, "no-warn", false, "If true does not show any warning when deploying into a different namespace or kube-context than before")
+	flags.BoolVar(&globalFlags.NoColors, "no-colors", false, "Do not show color highlighting in log output. This avoids invisible output with different terminal background colors")
 	flags.BoolVar(&globalFlags.Debug, "debug", false, "Prints the stack trace if an error occurs")
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devspace log output except panics & fatals")
 
@@ -55,6 +56,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")
 	flags.StringSliceVar(&globalFlags.Vars, "var", []string{}, "Variables to override during execution (e.g. --var=MYVAR=MYVALUE)")
+	flags.StringVar(&globalFlags.KubeConfig, "kubeconfig", "", "The kubeconfig path to use")
 
 	flags.IntVar(&globalFlags.InactivityTimeout, "inactivity-timeout", 0, "Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems")
 	flags.AddFlag(&flag.Flag{

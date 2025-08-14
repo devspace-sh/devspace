@@ -2,10 +2,11 @@
 <details className="config-field" data-expandable="false" open>
 <summary>
 
-## `name` <span className="config-field-required" data-required="true">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#name}
+## `name` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">string</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#name}
 
 Name specifies the name of the DevSpace project and uniquely identifies a project.
 DevSpace will not allow multiple active projects with the same name in the same Kubernetes namespace.
+If not provided, DevSpace will use the name of the current working directory.
 
 </summary>
 

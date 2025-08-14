@@ -1,0 +1,282 @@
+---
+title: Hooks
+sidebar_label: hooks
+---
+
+import ConfigPartialHooks from '../_partials/v2beta1/hooks.mdx'
+
+DevSpace allows you to define certain actions that should be executed during the pipeline. This makes it possible to customize the deployment and development process with DevSpace. The following actions can be executed with hooks:
+- Execute a command on the local machine (in a golang shell or directly on the system)
+- Execute a command in a container
+- Upload a file or folder into a container
+- Download a file or folder from a container
+- Wait for a container to start or terminate
+- Print the logs of container
+
+Hooks can be defined in the `hooks` section of `devspace.yaml`:
+```yaml
+hooks:
+# Execute the hook in a golang shell (cross operating system compatible)
+- name: "pre-image-build-hook"
+  command: "echo before image building"
+  events: ["before:build"]
+# Execute the hook in a golang shell (cross operating system compatible)
+- name: "post-image-build-hook"
+  command: |
+    echo Built Image image(image-1):tag(image-1)
+  events: ["after:build:image-1"]
+# Execute the hook directly on the system (echo binary must exist)
+- command: "echo"
+  args: ["before image building"]
+  events: ["before:build:image-1", "before:build:image-2"]
+# Execute the hook only on windows
+- command: "echo before each image"
+  os: windows
+  events: ["before:build:*"]
+```
+
+This tells DevSpace to execute the command `echo before image building` before any image will be built. 
+
+## Lifecycle Events  
+
+You are able to define hooks for the following lifecycle events:
+- `before:deploy`, `after:deploy`, `before:deploy:[name]`, `after:deploy:[name]`, `error:deploy:[name]`, `skip:deploy:[name]`: executed while DevSpace deploys `deployments`. `[name]` can be replaced with the config name of a deployment or `*` to match all.
+- `before:render`, `after:render`, `before:render:[name]`, `after:render:[name]`, `error:render:[name]`: executed while DevSpace renders `deployments` during `devspace render`. `[name]` can be replaced with the config name of a deployment or `*` to match all.
+- `before:purge`, `after:purge`, `before:purge:[name]`, `after:purge:[name]`, `error:purge:[name]`: executed while DevSpace purges `deployments` during `devspace purge`. `[name]` can be replaced with the config name of a deployment or `*` to match all.
+- `before:build`, `after:build`, `before:build:[name]`, `after:build:[name]`, `error:build:[name]`, `skip:build:[name]`: executed while DevSpace builds `images`. `[name]` can be replaced with the config name of an image or `*` to match all.
+- `start:sync:[name]`, `stop:sync:[name]`, `error:sync:[name]`, `restart:sync:[name]`, `before:initialSync:[name]`, `after:initialSync:[name]`, `error:initialSync:[name]`: executed while DevSpace syncs files with `dev.sync`. `[name]` can be replaced with the config name of a sync configuration or `*` to match all.
+- `start:portForwarding:[name]`, `restart:portForwarding:[name]`, `error:portForwarding:[name]`, `stop:portForwarding:[name]`: executed while DevSpace port forwards with `dev.ports`. `[name]` can be replaced with the config name of a port forwarding configuration or `*` to match all.
+- `start:reversePortForwarding:[name]`, `restart:reversePortForwarding:[name]`, `error:reversePortForwarding:[name]`, `stop:reversePortForwarding:[name]`: executed while DevSpace reverse port forwards with `dev.ports`. `[name]` can be replaced with the config name of a port forwarding configuration or `*` to match all.
+- `before:createPullSecrets`, `after:createPullSecrets`, `error:createPullSecrets`: executed while DevSpace creates `pullSecrets`
+
+:::info Errors in Hooks
+If any hook returns a non-zero exit code, DevSpace will abort and print an error message.
+:::
+
+For `error:` events the actual error will be passed to the hook via the environment variable `DEVSPACE_HOOK_ERROR`. For example:
+```yaml
+# This will print the error to the console that has occured during a deployment
+hooks:
+- events: ["error:deploy:*"]
+  command: "echo The following error has occurred during deploying $DEVSPACE_HOOK_DEPLOY_NAME: $DEVSPACE_HOOK_ERROR"
+  os: darwin,windows
+  name: "error-hook"
+```
+
+## Execute hooks in a container
+
+DevSpace allows you to execute commands directly in a container instead of the local system. You can specify this in the `container` section of the hook:
+
+```yaml
+...
+hooks:
+- command: |
+    echo Hello World!
+    echo From within the container!
+  container:
+    imageSelector: nginx
+    # Or select via labelSelector etc.
+    # labelSelector: ...
+    # namespace: ...
+    # containerName: ...
+    # pod: ...
+  events: ["after:deploy:my-deployment"]
+...
+```
+
+By default, DevSpace will wait for all pods / containers that were selected with the given selector to come up. As soon as all targets are running, DevSpace will execute the hook and wait for it to finish. You can define if DevSpace should wait and how long it should wait with `wait` and `timeout`:
+
+```yaml
+...
+hooks:
+- command: "echo"
+  args: ["Hello from within the container!"]
+  container:
+    imageSelector: image(app):tag(app)
+    # Or select via labelSelector etc.
+    # labelSelector: ...
+    # namespace: ...
+    # containerName: ...
+    # pod: ...
+    wait: true   # This is the default
+    timeout: 300 # Timeout in seconds
+  events: ["after:deploy:my-deployment"]
+...
+```
+
+## Upload or Download files from a container
+
+Hooks can be used to upload or download files from a container. In the background, DevSpace will basically do a `kubectl cp` to the specified container. Example:
+```yaml
+hooks:
+# Upload the complete local bin folder to the container path ./bin
+- upload:
+    localPath: bin
+    containerPath: bin
+  container:
+    imageSelector: image(test):tag(test)
+  events: ["after:deploy:my-deployment"]
+  name: "upload-hook"
+# Download a single file from the container to the local path
+- download:
+    localPath: build/artifact.jar
+    containerPath: /abs/path/build/artifact-test.jar
+  container:
+    imageSelector: image(java):tag(java)
+  events: ["after:deploy:my-deployment-2"]
+  name: "download-hook"
+```
+
+## Wait for a pod to be running
+
+This hook action can be useful if you want to ensure a certain pod is running before you continue with the pipeline. An example configuration could look like this:
+```yaml
+...
+deployments:
+  my-database:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+...
+hooks:
+# This hook will ensure that every time the deployment
+# my-database is deployed that DevSpace will wait until
+# all pods and containers that match the labelSelector
+# app.kubernetes.io/component: my-database are running
+- wait:
+    # DevSpace will wait for all containers that match the label selector below to become running. 
+    # If there are init containers, make sure to set terminatedWithCode as well.
+    running: true
+    # This can be needed if there are for example init containers
+    # that terminate instead of become running.
+    terminatedWithCode: 0
+  container:
+    labelSelector:
+      app.kubernetes.io/component: my-database
+      # You could also select just a specific container with
+      # containerName: database-container
+  events: ["after:deploy:my-database"]
+  name: "wait-for-pod-hook"
+...
+```
+
+## Print the logs of a container 
+
+This action can be useful to print logs of jobs or print the logs of init containers that would not be printed otherwise during `devspace dev`. An example configuration could look like this:
+
+`job.yaml`:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  labels:
+    app.kubernetes.io/component: my-job
+spec:
+  restartPolicy: Never
+  containers:
+    - command: ["sh"]
+      args: ["-c", "echo 'Job Start' && sleep 5 && echo 'Doing Things...' && sleep 5 && echo 'Job End'"]
+      image: alpine
+      name: job
+```
+
+`devspace.yaml`:
+```yaml
+version: ...
+deployments:
+  my-job:
+    kubectl:
+      manifests:
+      - job.yaml
+hooks:
+# This hook will wait until the selected container is either running or already  
+# terminated and then print the logs of it until it terminates.
+- logs: {}
+  container:
+    labelSelector:
+      app.kubernetes.io/component: my-job
+  events: ["after:deploy:my-job"]
+  name: "print-logs-hook"
+```
+
+## Execute hooks in the background
+
+By default, DevSpace will wait for a hook to finish and then move on with the pipeline. However, in some cases it might be desired that a hook is executed in the background to speed up a process. You can specify a background hook with the `background` option:
+
+```yaml
+...
+hooks:
+- command: "sh"
+  args: ["-c", "sleep 10 && echo 'Hello, I was run inside the background!'"]
+  background: true
+  events: ["after:deploy"]
+  name: "background-hook"
+...
+```
+
+If you do not want to stream the output of the hook to the console, you can also mark the hook as silent, which will prevent any hook output:
+```yaml
+...
+hooks:
+- command: "sh"
+  args: ["-c", "sleep 10 && echo 'Hello, I was run inside the background!'"]
+  background: true
+  silent: true
+  events: ["after:deploy"]
+  name: "silent-background-hook"
+...
+```
+
+## Execute hooks only on certain operating systems
+
+Hooks can be executed only on certain operating systems:
+
+```yaml {3,6}
+hooks:
+- command: echo before image building on windows
+  os: windows
+  events: ["after:build"]
+  name: windows-hook
+- command: echo before image building on mac and linux
+  os: darwin,linux
+  events: ["after:build"]
+  name: darwin-linux-hook
+```
+
+## Execute hooks once
+
+Hooks can be executed only once for each targeted container. This means as long as the container where the hook was executed stays running, the hook will not be executed for this container again until it restarts. This can be useful for running one-time development tasks without using init containers. In the following example, the command would only run once for the newest container running with the image `nginx:1.21`.
+
+```yaml {8}
+...
+hooks:
+- command: |
+    echo Hello World!
+    echo From within the container!
+  container:
+    imageSelector: nginx:1.21
+    once: true
+  events: ["after:deploy"]
+  name: one-time-hook
+...
+```
+
+If you run `devspace dev` or `devspace deploy` now multiple times and the container is not replaced or restarted, the hook is only executed once.
+
+## Hook Context Information
+
+DevSpace passes certain environment variables to the hook execution:
+- **DEVSPACE_HOOK_KUBE_CONTEXT**: the name of the kube context that was used
+- **DEVSPACE_HOOK_KUBE_NAMESPACE**: the name of the kube namespace that was used
+- **DEVSPACE_HOOK_OS_ARGS**: json encoded os.Args that were used to call devspace
+- **DEVSPACE_HOOK_ERROR**: if an error has occured contains the error string (only for onError hooks)
+- **DEVSPACE_HOOK_EVENT**: the event that has triggered the hook
+
+Depending on the hook there will be other context variables set that are prefixed with `DEVSPACE_HOOK_`. 
+
+## Config Reference
+
+<ConfigPartialHooks />

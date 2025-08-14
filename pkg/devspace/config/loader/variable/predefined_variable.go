@@ -6,13 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/context/values"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/utils/pkg/downloader"
+	"github.com/loft-sh/utils/pkg/downloader/commands"
+	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -26,48 +32,67 @@ import (
 type PredefinedVariableOptions struct {
 	ConfigPath string
 	KubeClient kubectl.Client
-	Profile    string
+	Profile    []string
 }
 
 // PredefinedVariableFunction is the definition of a predefined variable
-type PredefinedVariableFunction func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error)
+type PredefinedVariableFunction func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error)
 
 // predefinedVars holds all predefined variables that can be used in the config
 var predefinedVars = map[string]PredefinedVariableFunction{
-	"DEVSPACE_NAME": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_NAME": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		name, ok := values.NameFrom(ctx)
 		if !ok {
 			return "", nil
 		}
 		return name, nil
 	},
-	"DEVSPACE_TMPDIR": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_EXECUTABLE": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
+		ex, err := os.Executable()
+		if err != nil {
+			return nil, err
+		}
+		return ex, nil
+	},
+	"DEVSPACE_KUBECTL_EXECUTABLE": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
+		debugLog := log.WithLevel(logrus.DebugLevel)
+		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), debugLog, constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
+		if err != nil {
+			debugLog.Debugf("Error downloading kubectl: %v", err)
+			return "", nil
+		}
+		return path, nil
+	},
+	"DEVSPACE_TMPDIR": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		tempFolder, ok := values.TempFolderFrom(ctx)
 		if !ok {
 			return os.TempDir(), nil
 		}
 		return tempFolder, nil
 	},
-	"DEVSPACE_VERSION": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_VERSION": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		return upgrade.GetVersion(), nil
 	},
-	"DEVSPACE_RANDOM": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_RANDOM": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		return randutil.GenerateRandomString(6), nil
 	},
-	"DEVSPACE_PROFILE": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
-		return options.Profile, nil
+	"DEVSPACE_PROFILE": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
+		return GetLastProfile(options.Profile), nil
 	},
-	"DEVSPACE_USER_HOME": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_PROFILES": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
+		return strings.Join(options.Profile, " "), nil
+	},
+	"DEVSPACE_USER_HOME": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		homeDir, err := homedir.Dir()
 		if err != nil {
 			return nil, err
 		}
 		return homeDir, nil
 	},
-	"DEVSPACE_TIMESTAMP": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_TIMESTAMP": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		return strconv.FormatInt(time.Now().Unix(), 10), nil
 	},
-	"DEVSPACE_GIT_BRANCH": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_GIT_BRANCH": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		configPath := options.ConfigPath
 		branch, err := git.GetBranch(filepath.Dir(configPath))
 		if err != nil {
@@ -76,7 +101,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		return branch, nil
 	},
-	"DEVSPACE_GIT_COMMIT": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_GIT_COMMIT": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		configPath := options.ConfigPath
 		hash, err := git.GetHash(ctx, filepath.Dir(configPath))
 		if err != nil {
@@ -85,14 +110,14 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		return hash[:8], nil
 	},
-	"DEVSPACE_CONTEXT": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_CONTEXT": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		if options.KubeClient == nil {
 			return "", nil
 		}
 
 		return options.KubeClient.CurrentContext(), nil
 	},
-	"DEVSPACE_NAMESPACE": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+	"DEVSPACE_NAMESPACE": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 		if options.KubeClient == nil {
 			return "", nil
 		}
@@ -113,6 +138,9 @@ func init() {
 	predefinedVars["devspace.git.commit"] = predefinedVars["DEVSPACE_GIT_COMMIT"]
 	predefinedVars["devspace.context"] = predefinedVars["DEVSPACE_CONTEXT"]
 	predefinedVars["devspace.namespace"] = predefinedVars["DEVSPACE_NAMESPACE"]
+
+	// support migrating DevSpace Cloud users
+	predefinedVars["DEVSPACE_SPACE"] = predefinedVars["DEVSPACE_NAMESPACE"]
 }
 
 func IsPredefinedVariable(name string) bool {
@@ -126,7 +154,7 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 		pluginFolder := p.PluginFolder
 		for _, variable := range p.Vars {
 			v := variable
-			predefinedVars[variable.Name] = func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+			predefinedVars[variable.Name] = func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
 				args, err := json.Marshal(os.Args)
 				if err != nil {
 					return "", err
@@ -148,7 +176,7 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 
 // NewPredefinedVariable creates a new predefined variable for the given name or fails if there
 // is none with the given name
-func NewPredefinedVariable(name string, options *PredefinedVariableOptions) (Variable, error) {
+func NewPredefinedVariable(name string, options *PredefinedVariableOptions, log log.Logger) (Variable, error) {
 	if _, ok := predefinedVars[name]; !ok {
 		return nil, errors.New("predefined variable " + name + " not found")
 	}
@@ -156,12 +184,14 @@ func NewPredefinedVariable(name string, options *PredefinedVariableOptions) (Var
 	return &predefinedVariable{
 		name:    name,
 		options: options,
+		log:     log,
 	}, nil
 }
 
 type predefinedVariable struct {
 	name    string
 	options *PredefinedVariableOptions
+	log     log.Logger
 }
 
 func (p *predefinedVariable) Load(ctx context.Context, definition *latest.Variable) (interface{}, error) {
@@ -170,5 +200,12 @@ func (p *predefinedVariable) Load(ctx context.Context, definition *latest.Variab
 		return nil, errors.New("predefined variable " + p.name + " not found")
 	}
 
-	return getVar(ctx, p.options)
+	return getVar(ctx, p.options, p.log)
+}
+
+func GetLastProfile(profiles []string) string {
+	if len(profiles) == 0 {
+		return ""
+	}
+	return profiles[len(profiles)-1]
 }

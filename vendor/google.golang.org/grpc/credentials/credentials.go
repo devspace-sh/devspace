@@ -28,24 +28,24 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc/attributes"
 	icredentials "google.golang.org/grpc/internal/credentials"
+	"google.golang.org/protobuf/proto"
 )
 
 // PerRPCCredentials defines the common interface for the credentials which need to
 // attach security information to every RPC (e.g., oauth2).
 type PerRPCCredentials interface {
-	// GetRequestMetadata gets the current request metadata, refreshing
-	// tokens if required. This should be called by the transport layer on
-	// each request, and the data should be populated in headers or other
-	// context. If a status code is returned, it will be used as the status
-	// for the RPC. uri is the URI of the entry point for the request.
-	// When supported by the underlying implementation, ctx can be used for
-	// timeout and cancellation. Additionally, RequestInfo data will be
-	// available via ctx to this call.
-	// TODO(zhaoq): Define the set of the qualified keys instead of leaving
-	// it as an arbitrary string.
+	// GetRequestMetadata gets the current request metadata, refreshing tokens
+	// if required. This should be called by the transport layer on each
+	// request, and the data should be populated in headers or other
+	// context. If a status code is returned, it will be used as the status for
+	// the RPC (restricted to an allowable set of codes as defined by gRFC
+	// A54). uri is the URI of the entry point for the request.  When supported
+	// by the underlying implementation, ctx can be used for timeout and
+	// cancellation. Additionally, RequestInfo data will be available via ctx
+	// to this call.  TODO(zhaoq): Define the set of the qualified keys instead
+	// of leaving it as an arbitrary string.
 	GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error)
 	// RequireTransportSecurity indicates whether the credentials requires
 	// transport security.
@@ -118,6 +118,20 @@ type ProtocolInfo struct {
 // information about the credentials in it.
 type AuthInfo interface {
 	AuthType() string
+}
+
+// AuthorityValidator validates the authority used to override the `:authority`
+// header. This is an optional interface that implementations of AuthInfo can
+// implement if they support per-RPC authority overrides. It is invoked when the
+// application attempts to override the HTTP/2 `:authority` header using the
+// CallAuthority call option.
+type AuthorityValidator interface {
+	// ValidateAuthority checks the authority value used to override the
+	// `:authority` header. The authority parameter is the override value
+	// provided by the application via the CallAuthority option. This value
+	// typically corresponds to the server hostname or endpoint the RPC is
+	// targeting. It returns non-nil error if the validation fails.
+	ValidateAuthority(authority string) error
 }
 
 // ErrConnDispatched indicates that rawConn has been dispatched out of gRPC
@@ -207,12 +221,30 @@ type RequestInfo struct {
 	AuthInfo AuthInfo
 }
 
+// requestInfoKey is a struct to be used as the key to store RequestInfo in a
+// context.
+type requestInfoKey struct{}
+
 // RequestInfoFromContext extracts the RequestInfo from the context if it exists.
 //
 // This API is experimental.
 func RequestInfoFromContext(ctx context.Context) (ri RequestInfo, ok bool) {
-	ri, ok = icredentials.RequestInfoFromContext(ctx).(RequestInfo)
+	ri, ok = ctx.Value(requestInfoKey{}).(RequestInfo)
 	return ri, ok
+}
+
+// NewContextWithRequestInfo creates a new context from ctx and attaches ri to it.
+//
+// This RequestInfo will be accessible via RequestInfoFromContext.
+//
+// Intended to be used from tests for PerRPCCredentials implementations (that
+// often need to check connection's SecurityLevel). Should not be used from
+// non-test code: the gRPC client already prepares a context with the correct
+// RequestInfo attached when calling PerRPCCredentials.GetRequestMetadata.
+//
+// This API is experimental.
+func NewContextWithRequestInfo(ctx context.Context, ri RequestInfo) context.Context {
+	return context.WithValue(ctx, requestInfoKey{}, ri)
 }
 
 // ClientHandshakeInfo holds data to be passed to ClientHandshake. This makes
@@ -237,7 +269,7 @@ func ClientHandshakeInfoFromContext(ctx context.Context) ClientHandshakeInfo {
 }
 
 // CheckSecurityLevel checks if a connection's security level is greater than or equal to the specified one.
-// It returns success if 1) the condition is satisified or 2) AuthInfo struct does not implement GetCommonAuthInfo() method
+// It returns success if 1) the condition is satisfied or 2) AuthInfo struct does not implement GetCommonAuthInfo() method
 // or 3) CommonAuthInfo.SecurityLevel has an invalid zero value. For 2) and 3), it is for the purpose of backward-compatibility.
 //
 // This API is experimental.

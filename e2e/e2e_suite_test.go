@@ -1,11 +1,9 @@
 package e2e
 
 import (
-	"math/rand"
 	"testing"
-	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 
 	// Register tests
@@ -18,12 +16,14 @@ import (
 	_ "github.com/loft-sh/devspace/e2e/tests/hooks"
 	_ "github.com/loft-sh/devspace/e2e/tests/imports"
 	_ "github.com/loft-sh/devspace/e2e/tests/init"
+	_ "github.com/loft-sh/devspace/e2e/tests/localregistry"
 	_ "github.com/loft-sh/devspace/e2e/tests/pipelines"
 	_ "github.com/loft-sh/devspace/e2e/tests/portforward"
 	_ "github.com/loft-sh/devspace/e2e/tests/proxycommands"
 	_ "github.com/loft-sh/devspace/e2e/tests/pullsecret"
 	_ "github.com/loft-sh/devspace/e2e/tests/render"
 	_ "github.com/loft-sh/devspace/e2e/tests/replacepods"
+	_ "github.com/loft-sh/devspace/e2e/tests/restarthelper"
 	_ "github.com/loft-sh/devspace/e2e/tests/ssh"
 	_ "github.com/loft-sh/devspace/e2e/tests/sync"
 	_ "github.com/loft-sh/devspace/e2e/tests/terminal"
@@ -35,7 +35,6 @@ import (
 // generated in this directory, and cluster logs will also be saved.
 // This function is called on each Ginkgo node in parallel mode.
 func TestRunE2ETests(t *testing.T) {
-	rand.Seed(time.Now().UTC().UnixNano())
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	ginkgo.RunSpecs(t, "DevSpace e2e suite")
 }

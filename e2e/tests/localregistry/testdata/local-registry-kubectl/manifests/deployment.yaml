@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "app"
+  labels:
+    "app.kubernetes.io/name": "devspace-app"
+    "app.kubernetes.io/component": "app"
+    "app.kubernetes.io/managed-by": "Helm"
+  annotations:
+    "helm.sh/chart": "component-chart-0.8.6"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      "app.kubernetes.io/name": "devspace-app"
+      "app.kubernetes.io/component": "app"
+      "app.kubernetes.io/managed-by": "Helm"
+  template:
+    metadata:
+      labels:
+        "app.kubernetes.io/name": "devspace-app"
+        "app.kubernetes.io/component": "app"
+        "app.kubernetes.io/managed-by": "Helm"
+      annotations:
+        "helm.sh/chart": "component-chart-0.8.6"
+    spec:
+      imagePullSecrets:
+      nodeSelector:
+        null
+      nodeName:
+        null
+      affinity:
+        null
+      tolerations:
+        null
+      dnsConfig:
+        null
+      hostAliases:
+        null
+      overhead:
+        null
+      readinessGates:
+        null
+      securityContext:
+        null
+      topologySpreadConstraints:
+        null
+      terminationGracePeriodSeconds: 5
+      ephemeralContainers:
+        null
+      containers:
+        - image: my-docker-username/helloworld
+          name: "container1"
+        - image: image(app):tag(app)
+          name: "container2"
+      initContainers:
+      volumes:

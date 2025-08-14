@@ -1,0 +1,22 @@
+version: v2beta1
+name: local-registry
+localRegistry:
+  enabled: true
+images:
+  app:
+    image: my-docker-username/helloworld
+    buildKit: {}
+deployments:
+  app:
+    helm:
+      values:
+        containers:
+          - name: container1
+            image: image(app):tag(app)
+          - name: container2
+            image: my-docker-username/helloworld
+dev:
+  app:
+    labelSelector:
+      app.kubernetes.io/component: app
+    container: container1

@@ -3,15 +3,14 @@ package plugin
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/util/git"
 	"github.com/otiai10/copy"
+	"sigs.k8s.io/yaml"
 )
 
 type Installer interface {
@@ -43,7 +42,7 @@ func (i *installer) DownloadBinary(metadataPath, version, binaryPath, outFile st
 		return i.downloadTo(binaryPath, outFile)
 	}
 
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return err
 	}
@@ -61,6 +60,7 @@ func (i *installer) DownloadBinary(metadataPath, version, binaryPath, outFile st
 	if err != nil {
 		return err
 	}
+	_ = repo.Pull(context.Background())
 
 	return copy.Copy(filepath.Join(tempDir, binaryPath), outFile)
 }
@@ -83,7 +83,7 @@ func (i *installer) downloadTo(binaryPath, outFile string) error {
 
 func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 	if isLocalReference(path) {
-		out, err := ioutil.ReadFile(path)
+		out, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 			return nil, err
 		}
 
-		out, err := ioutil.ReadAll(resp.Body)
+		out, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,7 @@ func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 		return metadata, nil
 	}
 
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +133,9 @@ func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
+	_ = repo.Pull(context.Background())
 
-	out, err := ioutil.ReadFile(filepath.Join(tempDir, pluginYaml))
+	out, err := os.ReadFile(filepath.Join(tempDir, pluginYaml))
 	if err != nil {
 		return nil, err
 	}

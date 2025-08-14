@@ -3,7 +3,7 @@ package loader
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
@@ -16,6 +16,7 @@ import (
 )
 
 var ImportSections = []string{
+	"require",
 	"vars",
 	"dev",
 	"deployments",
@@ -27,6 +28,7 @@ var ImportSections = []string{
 	"dependencies",
 	"profiles",
 	"hooks",
+	"localRegistry",
 }
 
 func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath string, rawData map[string]interface{}, log log.Logger) (map[string]interface{}, error) {
@@ -46,7 +48,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
 	}
 
-	rawImportsInterface, err := resolver.FillVariablesInclude(ctx, rawImports, []string{"/imports/*/enabled"})
+	rawImportsInterface, err := resolver.FillVariablesInclude(ctx, rawImports, true, []string{"/imports/**"})
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +76,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 			return nil, errors.Wrap(err, "resolve import")
 		}
 
-		fileContent, err := ioutil.ReadFile(configPath)
+		fileContent, err := os.ReadFile(configPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "read import config")
 		}

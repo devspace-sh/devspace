@@ -3,21 +3,21 @@ package sync
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/juju/ratelimit"
-	"github.com/pkg/errors"
-
 	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"google.golang.org/grpc"
+
+	"github.com/fujiwara/shapeio"
+	"github.com/pkg/errors"
 )
 
 type downstream struct {
@@ -28,6 +28,7 @@ type downstream struct {
 	client remote.DownstreamClient
 
 	ignoreMatcher ignoreparser.IgnoreParser
+	conn          *grpc.ClientConn
 
 	unarchiver *Unarchiver
 }
@@ -43,10 +44,14 @@ func newDownstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*do
 
 	// Apply limits if specified
 	if sync.Options.DownstreamLimit > 0 {
-		clientReader = ratelimit.Reader(reader, ratelimit.NewBucketWithRate(float64(sync.Options.DownstreamLimit), sync.Options.DownstreamLimit))
+		limitedReader := shapeio.NewReader(reader)
+		limitedReader.SetRateLimit(float64(sync.Options.DownstreamLimit))
+		clientReader = limitedReader
 	}
 	if sync.Options.UpstreamLimit > 0 {
-		clientWriter = ratelimit.Writer(writer, ratelimit.NewBucketWithRate(float64(sync.Options.UpstreamLimit), sync.Options.UpstreamLimit))
+		limitedWriter := shapeio.NewWriter(writer)
+		limitedWriter.SetRateLimit(float64(sync.Options.UpstreamLimit))
+		clientWriter = limitedWriter
 	}
 
 	// Create client connection
@@ -68,6 +73,7 @@ func newDownstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*do
 		client:        remote.NewDownstreamClient(conn),
 		ignoreMatcher: ignoreMatcher,
 		unarchiver:    NewUnarchiver(sync, false, sync.log),
+		conn:          conn,
 	}, nil
 }
 
@@ -445,13 +451,18 @@ func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*r
 
 	// Delete directory from fileMap
 	defer delete(d.sync.fileIndex.fileMap, relativePath)
-	files, err := ioutil.ReadDir(absolutePath)
+	files, err := os.ReadDir(absolutePath)
 	if err != nil {
 		return
 	}
 
 	// Loop over directory contents and check if we should delete the contents
-	for _, f := range files {
+	for _, dirEntry := range files {
+		f, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
 		if fsutil.IsRecursiveSymlink(f, path.Join(relativePath, f.Name())) {
 			continue
 		}

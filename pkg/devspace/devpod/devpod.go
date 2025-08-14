@@ -2,11 +2,14 @@ package devpod
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	syncpkg "sync"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/mgutz/ansi"
@@ -144,7 +147,7 @@ func (d *devPod) startWithRetry(ctx devspacecontext.Context, devPodConfig *lates
 		// check if we need to restart
 		if selectedPod != nil {
 			shouldRestart := false
-			err := wait.PollImmediateUntil(time.Second, func() (bool, error) {
+			err := wait.PollUntilContextCancel(ctx.Context(), time.Second, true, func(context.Context) (bool, error) {
 				pod, err := ctx.KubeClient().KubeClient().CoreV1().Pods(selectedPod.Pod.Namespace).Get(ctx.Context(), selectedPod.Pod.Name, metav1.GetOptions{})
 				if err != nil {
 					if kerrors.IsNotFound(err) {
@@ -163,9 +166,11 @@ func (d *devPod) startWithRetry(ctx devspacecontext.Context, devPodConfig *lates
 				}
 
 				return true, nil
-			}, ctx.Context().Done())
+			})
 			if err != nil {
-				ctx.Log().Errorf("error restarting dev: %v", err)
+				if wait.Interrupted(err) {
+					ctx.Log().Errorf("error restarting dev: %v", err)
+				}
 			} else if shouldRestart {
 				d.restart(ctx, devPodConfig, options)
 				return
@@ -251,7 +256,32 @@ func (d *devPod) start(ctx devspacecontext.Context, devPodConfig *latest.DevPod,
 	if err != nil {
 		return errors.Wrap(err, "waiting for pod to become ready")
 	}
-	ctx.Log().Infof("Selected %s (%s)", ansi.Color(fmt.Sprintf("%s:%s", selectedPod.Pod.Name, selectedPod.Container.Name), "yellow+b"), ansi.Color("pod:container", "white+b"))
+
+	// check if the correct pod is matched
+	loader.EachDevContainer(devPodConfig, func(devContainer *latest.DevContainer) bool {
+		if devContainer.Container == "" {
+			return true
+		}
+
+		// check if the container exists in the pod
+		for _, container := range selectedPod.Pod.Spec.Containers {
+			if container.Name == devContainer.Container {
+				return true
+			}
+		}
+		for _, container := range selectedPod.Pod.Spec.InitContainers {
+			if container.Name == devContainer.Container {
+				return true
+			}
+		}
+
+		err = fmt.Errorf("selected pod '%s/%s' doesn't include container '%s', please make sure you don't have overlapping label selectors within the namespace and the pod you select contains container '%s'", selectedPod.Pod.Namespace, selectedPod.Pod.Name, devContainer.Container, devContainer.Container)
+		return false
+	})
+	if err != nil {
+		return errors.Wrap(err, "select pod")
+	}
+	ctx.Log().Infof("Selected pod %s", ansi.Color(selectedPod.Pod.Name, "yellow+b"))
 
 	// set selected pod
 	d.m.Lock()
@@ -315,7 +345,11 @@ func tryOpen(ctx context.Context, url string, log logpkg.Logger) error {
 		return err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -413,8 +447,8 @@ func (d *devPod) startAttach(ctx devspacecontext.Context, devContainer *latest.D
 		}
 
 		// kill ourselves here
-		if !opts.ContinueOnTerminalExit && opts.KillApplication != nil {
-			go opts.KillApplication()
+		if !opts.ContinueOnTerminalExit {
+			kill.StopDevSpace("")
 		} else {
 			parent.Kill(nil)
 		}
@@ -453,8 +487,8 @@ func (d *devPod) startTerminal(ctx devspacecontext.Context, devContainer *latest
 		}
 
 		// kill ourselves here
-		if !opts.ContinueOnTerminalExit && opts.KillApplication != nil {
-			go opts.KillApplication()
+		if !opts.ContinueOnTerminalExit {
+			kill.StopDevSpace("")
 		} else {
 			parent.Kill(nil)
 		}
@@ -492,6 +526,10 @@ func (d *devPod) startServices(ctx devspacecontext.Context, devPod *latest.DevPo
 		return portforwarding.StartPortForwarding(ctx, devPod, selector, parent)
 	})
 
+	// wait for both to finish
+	<-syncDone
+	<-portForwardingDone
+
 	// Start SSH
 	sshDone := parent.NotifyGo(func() error {
 		// add ssh prefix
@@ -506,9 +544,7 @@ func (d *devPod) startServices(ctx devspacecontext.Context, devPod *latest.DevPo
 		return proxycommands.StartProxyCommands(ctx, devPod, selector, parent)
 	})
 
-	// wait for both to finish
-	<-syncDone
-	<-portForwardingDone
+	// wait for ssh and reverse commands
 	<-sshDone
 	<-reverseCommandsDone
 
@@ -528,7 +564,7 @@ func needPodReplace(devPodConfig *latest.DevPod) bool {
 
 	needReplace := false
 	loader.EachDevContainer(devPodConfig, func(devContainer *latest.DevContainer) bool {
-		if needPodReplaceContainer(&devPodConfig.DevContainer) {
+		if needPodReplaceContainer(devContainer) {
 			needReplace = true
 			return false
 		}

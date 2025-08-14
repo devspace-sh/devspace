@@ -14,18 +14,17 @@ devspace sync [flags]
 ```
 
 ```
-#######################################################
-################### devspace sync #####################
-#######################################################
-Starts a bi-directionaly sync between the target container
-and the current path:
+#############################################################################
+################### devspace sync ###########################################
+#############################################################################
+Starts a bi-directional(default) sync between the target container path
+and local path:
 
-devspace sync
-devspace sync --local-path=subfolder --container-path=/app
-devspace sync --exclude=node_modules --exclude=test
-devspace sync --pod=my-pod --container=my-container
-devspace sync --container-path=/my-path
-#######################################################
+devspace sync --path=.:/app # localPath is current dir and remotePath is /app
+devspace sync --path=.:/app --image-selector nginx:latest
+devspace sync --path=.:/app --exclude=node_modules,test
+devspace sync --path=.:/app --pod=my-pod --container=my-container
+#############################################################################
 ```
 
 
@@ -57,9 +56,11 @@ devspace sync --container-path=/my-path
       --disable-profile-activation   If true will ignore all profile activations
       --inactivity-timeout int       Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems
       --kube-context string          The kubernetes context to use
+      --kubeconfig string            The kubeconfig path to use
   -n, --namespace string             The kubernetes namespace to use
+      --no-colors                    Do not show color highlighting in log output. This avoids invisible output with different terminal background colors
       --no-warn                      If true does not show any warning when deploying into a different namespace or kube-context than before
-      --override-name string         If specified will override the devspace.yaml name
+      --override-name string         If specified will override the DevSpace project name provided in the devspace.yaml
   -p, --profile strings              The DevSpace profiles to apply. Multiple profiles are applied in the order they are specified
       --silent                       Run in silent mode and prevents any devspace log output except panics & fatals
   -s, --switch-context               Switches and uses the last kube context and namespace that was used to deploy the DevSpace project

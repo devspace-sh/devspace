@@ -6,7 +6,6 @@ package server
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -154,7 +153,7 @@ func TestDownstreamServer(t *testing.T) {
 	}
 
 	// Change file
-	err = ioutil.WriteFile(filepath.Join(fromDir, "test.txt"), []byte("overidden"), 0755)
+	err = os.WriteFile(filepath.Join(fromDir, "test.txt"), []byte("overidden"), 0755)
 	if err != nil {
 		t.Fatal(err)
 	}

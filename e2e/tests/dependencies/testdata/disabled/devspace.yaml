@@ -1,0 +1,16 @@
+version: v1beta11
+vars:
+- name: DEP1_DISABLED
+  default: false
+deployments:
+- name: nginx1
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+dependencies:
+  - name: dep1
+    disabled: ${DEP1_DISABLED}
+    source:
+      git: https://github.com/doesntexist/youcantcloneme

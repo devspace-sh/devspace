@@ -671,7 +671,7 @@ type ChartConfig struct {
 	Git      *GitSource `yaml:"git,omitempty" json:"git,omitempty"`
 }
 
-//GitSource defines the git repository options
+// GitSource defines the git repository options
 type GitSource struct {
 	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
 	CloneArgs []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty"`
@@ -884,6 +884,7 @@ const (
 	InitialSyncStrategyPreferRemote InitialSyncStrategy = "preferRemote"
 	InitialSyncStrategyPreferNewest InitialSyncStrategy = "preferNewest"
 	InitialSyncStrategyKeepAll      InitialSyncStrategy = "keepAll"
+	InitialSyncStrategyDisabled     InitialSyncStrategy = "disabled"
 )
 
 // InitialSyncCompareBy is the type of how a change should be determined during the initial sync

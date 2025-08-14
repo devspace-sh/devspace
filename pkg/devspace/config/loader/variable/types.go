@@ -33,13 +33,13 @@ type Resolver interface {
 	FindVariables(haystack interface{}) ([]*latest.Variable, error)
 
 	// FillVariables finds the used variables first and then fills in those in the haystack
-	FillVariables(ctx context.Context, haystack interface{}) (interface{}, error)
+	FillVariables(ctx context.Context, haystack interface{}, skipUnused bool) (interface{}, error)
 
 	// FillVariablesExclude finds the used variables first and then fills in those that do not match the excluded paths in the haystack
-	FillVariablesExclude(ctx context.Context, haystack interface{}, excluded []string) (interface{}, error)
+	FillVariablesExclude(ctx context.Context, haystack interface{}, skipUnused bool, excluded []string) (interface{}, error)
 
 	// FillVariablesInclude finds the used variables first and then fills in those that match the included paths in the haystack
-	FillVariablesInclude(ctx context.Context, haystack interface{}, included []string) (interface{}, error)
+	FillVariablesInclude(ctx context.Context, haystack interface{}, skipUnused bool, included []string) (interface{}, error)
 
 	// ResolvedVariables returns the internal memory cache of the resolver with all resolved variables
 	ResolvedVariables() map[string]interface{}

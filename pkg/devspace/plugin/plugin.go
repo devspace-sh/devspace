@@ -3,22 +3,20 @@ package plugin
 import (
 	"encoding/base32"
 	"fmt"
-
-	"github.com/blang/semver"
-	"github.com/ghodss/yaml"
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/util/log"
-
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sync"
 
+	"github.com/blang/semver"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 )
 
 var encoding = base32.StdEncoding.WithPadding('0')
@@ -34,6 +32,9 @@ func init() {
 		PluginBinary += ".exe"
 	}
 }
+
+var devspaceVars = map[string]string{}
+var devspaceVarsOnce sync.Once
 
 type NewestVersionError struct {
 	version string
@@ -153,7 +154,7 @@ func (c *client) install(path, version string) (*Metadata, error) {
 		return nil, err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(pluginFolder, pluginYaml), out, 0666)
+	err = os.WriteFile(filepath.Join(pluginFolder, pluginYaml), out, 0666)
 	if err != nil {
 		return nil, err
 	}
@@ -243,15 +244,20 @@ func (c *client) List() ([]Metadata, error) {
 		return nil, err
 	}
 
-	plugins, err := ioutil.ReadDir(pluginFolder)
+	plugins, err := os.ReadDir(pluginFolder)
 	if err != nil {
 		return nil, err
 	}
 
 	retMetadatas := []Metadata{}
-	for _, plugin := range plugins {
+	for _, dirEntry := range plugins {
+		plugin, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
 		pFolder := filepath.Join(pluginFolder, plugin.Name())
-		metadataFileContents, err := ioutil.ReadFile(filepath.Join(pFolder, pluginYaml))
+		metadataFileContents, err := os.ReadFile(filepath.Join(pFolder, pluginYaml))
 		if os.IsNotExist(err) {
 			_ = os.RemoveAll(filepath.Join(pluginFolder, plugin.Name()))
 			continue
@@ -277,7 +283,7 @@ func (c *client) GetByName(name string) (string, *Metadata, error) {
 		return "", nil, err
 	}
 
-	plugins, err := ioutil.ReadDir(pluginFolder)
+	plugins, err := os.ReadDir(pluginFolder)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", nil, nil
@@ -286,8 +292,13 @@ func (c *client) GetByName(name string) (string, *Metadata, error) {
 		return "", nil, err
 	}
 
-	for _, plugin := range plugins {
-		metadataFileContents, err := ioutil.ReadFile(filepath.Join(pluginFolder, plugin.Name(), pluginYaml))
+	for _, dirEntry := range plugins {
+		plugin, err := dirEntry.Info()
+		if err != nil {
+			continue
+		}
+
+		metadataFileContents, err := os.ReadFile(filepath.Join(pluginFolder, plugin.Name(), pluginYaml))
 		if os.IsNotExist(err) {
 			_ = os.RemoveAll(filepath.Join(pluginFolder, plugin.Name()))
 			continue
@@ -320,7 +331,7 @@ func (c *client) Get(path string) (*Metadata, error) {
 		return nil, err
 	}
 
-	out, err := ioutil.ReadFile(filepath.Join(pluginFolder, Encode(path), pluginYaml))
+	out, err := os.ReadFile(filepath.Join(pluginFolder, Encode(path), pluginYaml))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -346,6 +357,23 @@ func Decode(encoded string) ([]byte, error) {
 	return encoding.DecodeString(encoded)
 }
 
+func AddDevspaceVarsToPluginEnv(vars interface{}) {
+	devspaceVarsOnce.Do(func() {
+		if vars != nil {
+			devspaceVar, isMapStringInterface := vars.(map[string]interface{})
+			if isMapStringInterface {
+				for key, value := range devspaceVar {
+					// only map[string]string will be processed, map[string]Variable will be skipped
+					vString, isString := value.(string)
+					if isString {
+						devspaceVars[key] = vString
+					}
+				}
+			}
+		}
+	})
+}
+
 func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand string) {
 	for _, plugin := range plugins {
 		pluginFolder := plugin.PluginFolder
@@ -364,7 +392,7 @@ func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand strin
 						newArgs := []string{}
 						newArgs = append(newArgs, md.BaseArgs...)
 						newArgs = append(newArgs, args...)
-						return CallPluginExecutable(filepath.Join(pluginFolder, PluginBinary), newArgs, nil, os.Stdout)
+						return CallPluginExecutable(filepath.Join(pluginFolder, PluginBinary), newArgs, devspaceVars, os.Stdout)
 					},
 					// This passes all the flags to the subcommand.
 					DisableFlagParsing: true,

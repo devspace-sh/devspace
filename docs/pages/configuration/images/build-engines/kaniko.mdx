@@ -151,6 +151,23 @@ images:
 
 ## Build Pod Configuration
 
+### `generateName`
+The `generateName` option expects a string that will be used as the generateName field of the build pod
+
+#### Default value for `generateName`
+```yaml
+generateName: devspace-build-kaniko-
+```
+
+#### Example: Add generateName to kaniko build pods
+```yaml
+images:
+  backend:
+    image: 123.456.789.0:5000/john/appbackend
+    kaniko:
+      generateName: devspace-build-kaniko-backend-
+```
+
 ### `annotations`
 The `annotations` option expects a key/value map of extra annotations that will be added to the build pod
 

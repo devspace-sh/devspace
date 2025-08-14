@@ -18,24 +18,29 @@ package platforms
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
-	"github.com/pkg/errors"
 )
 
 // Present the ARM instruction set architecture, eg: v7, v8
-var cpuVariant string
+// Don't use this value directly; call cpuVariant() instead.
+var cpuVariantValue string
 
-func init() {
-	if isArmArch(runtime.GOARCH) {
-		cpuVariant = getCPUVariant()
-	} else {
-		cpuVariant = ""
-	}
+var cpuVariantOnce sync.Once
+
+func cpuVariant() string {
+	cpuVariantOnce.Do(func() {
+		if isArmArch(runtime.GOARCH) {
+			cpuVariantValue = getCPUVariant()
+		}
+	})
+	return cpuVariantValue
 }
 
 // For Linux, the kernel has already detected the ABI, ISA and Features.
@@ -43,7 +48,7 @@ func init() {
 // by ourselves. We can just parse these information from /proc/cpuinfo
 func getCPUInfo(pattern string) (info string, err error) {
 	if !isLinuxOS(runtime.GOOS) {
-		return "", errors.Wrapf(errdefs.ErrNotImplemented, "getCPUInfo for OS %s", runtime.GOOS)
+		return "", fmt.Errorf("getCPUInfo for OS %s: %w", runtime.GOOS, errdefs.ErrNotImplemented)
 	}
 
 	cpuinfo, err := os.Open("/proc/cpuinfo")
@@ -70,7 +75,7 @@ func getCPUInfo(pattern string) (info string, err error) {
 		return "", err
 	}
 
-	return "", errors.Wrapf(errdefs.ErrNotFound, "getCPUInfo for pattern: %s", pattern)
+	return "", fmt.Errorf("getCPUInfo for pattern: %s: %w", pattern, errdefs.ErrNotFound)
 }
 
 func getCPUVariant() string {
@@ -107,12 +112,7 @@ func getCPUVariant() string {
 
 	switch strings.ToLower(variant) {
 	case "8", "aarch64":
-		// special case: if running a 32-bit userspace on aarch64, the variant should be "v7"
-		if runtime.GOARCH == "arm" {
-			variant = "v7"
-		} else {
-			variant = "v8"
-		}
+		variant = "v8"
 	case "7", "7m", "?(12)", "?(13)", "?(14)", "?(15)", "?(16)", "?(17)":
 		variant = "v7"
 	case "6", "6tej":

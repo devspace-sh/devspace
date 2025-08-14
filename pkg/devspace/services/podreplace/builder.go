@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
-
-	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
@@ -21,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -84,16 +83,16 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
 		podTemplate.Spec.Hostname = strings.ReplaceAll(t.Name+"-0", ".", "-")
 		for _, pvc := range t.Spec.VolumeClaimTemplates {
-			pvcName := pvc.Name
-			if pvcName == "" {
-				pvcName = "data"
+			volumeName := pvc.ObjectMeta.Name
+			if volumeName == "" {
+				volumeName = "data"
 			}
-			pvcName += "-" + t.Name + "-0"
+			claimName := volumeName + "-" + t.Name + "-0"
 			podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, corev1.Volume{
-				Name: "data",
+				Name: volumeName,
 				VolumeSource: corev1.VolumeSource{
 					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-						ClaimName: pvcName,
+						ClaimName: claimName,
 					},
 				},
 			})
@@ -124,7 +123,12 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 	}
 
 	// replace paths
-	if len(devPod.PersistPaths) > 0 {
+	persist := false
+	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		persist = len(devContainer.PersistPaths) > 0
+		return !persist
+	})
+	if persist {
 		err := persistPaths(name, devPod, podTemplate)
 		if err != nil {
 			return nil, err
@@ -160,6 +164,9 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 		deployment.Spec.Selector.MatchExpressions = nil
 	}
 	deployment.Spec.Selector.MatchLabels[selector.ReplacedLabel] = "true"
+	deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.RecreateDeploymentStrategyType,
+	}
 
 	// make sure labels etc are there
 	if ctx.Log().GetLevel() == logrus.DebugLevel {
@@ -199,6 +206,11 @@ func modifyDevContainer(ctx devspacecontext.Context, devPod *latest.DevPod, devC
 	err = replaceWorkingDir(ctx, devPod, devContainer, podTemplate)
 	if err != nil {
 		return errors.Wrap(err, "replace working dir")
+	}
+
+	err = replaceSecurityContext(ctx, devPod, devContainer, podTemplate)
+	if err != nil {
+		return errors.Wrap(err, "replace securitycontext")
 	}
 
 	err = replaceResources(ctx, devPod, devContainer, podTemplate)
@@ -253,6 +265,23 @@ func replaceWorkingDir(ctx devspacecontext.Context, devPod *latest.DevPod, devCo
 	return nil
 }
 
+func replaceSecurityContext(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+	if devContainer.Sync == nil {
+		return nil
+	}
+
+	index, container, err := getPodTemplateContainer(ctx, devPod, devContainer, podTemplate)
+	if err != nil {
+		return err
+	}
+
+	if container.SecurityContext != nil {
+		container.SecurityContext.ReadOnlyRootFilesystem = nil
+		podTemplate.Spec.Containers[index] = *container
+	}
+	return nil
+}
+
 func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
 	// replace with DevSpace helper
 	injectRestartHelper := devContainer.RestartHelper != nil && devContainer.RestartHelper.Inject != nil && *devContainer.RestartHelper.Inject
@@ -282,7 +311,8 @@ func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devConta
 
 	// should we inject devspace restart helper?
 	if injectRestartHelper {
-		annotationName := restartHelperAnnotation + container.Name
+		containerHash := strings.ToLower(hash.String(container.Name))[0:10]
+		annotationName := restartHelperAnnotation + containerHash
 		if podTemplate.Annotations == nil {
 			podTemplate.Annotations = map[string]string{}
 		}
@@ -298,7 +328,7 @@ func replaceCommand(ctx devspacecontext.Context, devPod *latest.DevPod, devConta
 		}
 		podTemplate.Annotations[annotationName] = restartHelperString
 
-		volumeName := "devspace-restart-" + container.Name
+		volumeName := "devspace-restart-" + containerHash
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, corev1.Volume{
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{

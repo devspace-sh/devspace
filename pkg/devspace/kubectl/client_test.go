@@ -208,7 +208,7 @@ func TestCheckKubeContext(t *testing.T) {
 
 		// checking kubeContext and reseting the client
 		isTerminalIn = true
-		client, err = CheckKubeContext(client, localCache, false, false, fakeLogger)
+		client, err = CheckKubeContext(client, localCache, false, false, true, fakeLogger)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -261,7 +261,7 @@ func TestCheckKubeContextNamespace(t *testing.T) {
 		fakeLogger.SetAnswer(n)
 		// checking kubeContext and reseting the client
 		isTerminalIn = true
-		client, err = CheckKubeContext(client, localCache, false, false, fakeLogger)
+		client, err = CheckKubeContext(client, localCache, false, false, true, fakeLogger)
 		if err != nil {
 			t.Fatal(err)
 		}

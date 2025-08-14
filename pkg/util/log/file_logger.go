@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"sync"
 
@@ -122,7 +121,7 @@ func (f *fileLogger) Debugf(format string, args ...interface{}) {
 		return
 	}
 
-	f.logger.Debugf(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
+	f.logger.Debug(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Info(args ...interface{}) {
@@ -292,7 +291,7 @@ func (f *fileLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
 	defer f.m.Unlock()
 
 	if f.level < level {
-		return &NopCloser{ioutil.Discard}
+		return &NopCloser{io.Discard}
 	}
 
 	return &NopCloser{f}

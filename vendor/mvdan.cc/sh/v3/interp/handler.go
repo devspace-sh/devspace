@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -49,19 +50,38 @@ type HandlerContext struct {
 	Stderr io.Writer
 }
 
-// ExecHandlerFunc is a handler which executes simple command. It is
-// called for all CallExpr nodes where the first argument is neither a
+// CallHandlerFunc is a handler which runs on every CallExpr.
+// It is called once variable assignments and field expansion have occurred.
+// The call's arguments are replaced by what the handler returns,
+// and then the call is executed by the Runner as usual.
+// At this time, returning an empty slice without an error is not supported.
+//
+// This handler is similar to ExecHandlerFunc, but has two major differences:
+//
+// First, it runs for all simple commands, including function calls and builtins.
+//
+// Second, it is not expected to execute the simple command, but instead to
+// allow running custom code which allows replacing the argument list.
+// Shell builtins touch on many internals of the Runner, after all.
+//
+// Returning a non-nil error will halt the Runner.
+type CallHandlerFunc func(ctx context.Context, args []string) ([]string, error)
+
+// ExecHandlerFunc is a handler which executes simple commands.
+// It is called for all CallExpr nodes where the first argument is neither a
 // declared function nor a builtin.
 //
-// Returning nil error sets commands exit status to 0. Other exit statuses
-// can be set with NewExitStatus. Any other error will halt an interpreter.
+// Returning a nil error means a zero exit status.
+// Other exit statuses can be set with NewExitStatus.
+// Any other error will halt the Runner.
 type ExecHandlerFunc func(ctx context.Context, args []string) error
 
-// DefaultExecHandler returns an ExecHandlerFunc used by default.
+// DefaultExecHandler returns the ExecHandlerFunc used by default.
 // It finds binaries in PATH and executes them.
-// When context is cancelled, interrupt signal is sent to running processes.
-// KillTimeout is a duration to wait before sending kill signal.
+// When context is cancelled, an interrupt signal is sent to running processes.
+// killTimeout is a duration to wait before sending the kill signal.
 // A negative value means that a kill signal will be sent immediately.
+//
 // On Windows, the kill signal is always sent immediately,
 // because Go doesn't currently support sending Interrupt on Windows.
 // Runner.New sets killTimeout to 2 seconds by default.
@@ -280,5 +300,33 @@ func DefaultOpenHandler() OpenHandlerFunc {
 			path = filepath.Join(mc.Dir, path)
 		}
 		return os.OpenFile(path, flag, perm)
+	}
+}
+
+// ReadDirHandlerFunc is a handler which reads directories. It is called during
+// shell globbing, if enabled.
+//
+// TODO(v4): if this is kept in v4, it most likely needs to use fs.DirEntry for efficiency
+type ReadDirHandlerFunc func(ctx context.Context, path string) ([]os.FileInfo, error)
+
+// DefaultReadDirHandler returns a ReadDirHandlerFunc used by default. It uses ioutil.ReadDir().
+func DefaultReadDirHandler() ReadDirHandlerFunc {
+	return func(ctx context.Context, path string) ([]os.FileInfo, error) {
+		return ioutil.ReadDir(path)
+	}
+}
+
+// StatHandlerFunc is a handler which gets the file stat. the first argument provides directory to use as
+// basedir if name is relative path
+type StatHandlerFunc func(ctx context.Context, name string, followSymlinks bool) (os.FileInfo, error)
+
+// DefaultStatHandler returns a StatHandlerFunc used by default. It uses os.Stat()
+func DefaultStatHandler() StatHandlerFunc {
+	return func(ctx context.Context, path string, followSymlinks bool) (os.FileInfo, error) {
+		if !followSymlinks {
+			return os.Lstat(path)
+		} else {
+			return os.Stat(path)
+		}
 	}
 }

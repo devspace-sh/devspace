@@ -18,4 +18,5 @@ deployments:
         - ${TEST_1}
         - ${TEST_2}
         - ${TEST_OVERRIDE}
+        - ${FROM_ENV}
 

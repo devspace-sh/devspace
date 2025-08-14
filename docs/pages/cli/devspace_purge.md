@@ -36,6 +36,7 @@ devspace purge
       --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
       --pipeline string             The pipeline to execute (default "purge")
       --render                      If true will render manifests and print them instead of actually deploying them
+      --sequential-dependencies     If set set true dependencies will run sequentially
       --show-ui                     Shows the ui server
       --skip-build                  Skips building of images
       --skip-dependency strings     Skips the following dependencies for deployment
@@ -53,9 +54,11 @@ devspace purge
       --disable-profile-activation   If true will ignore all profile activations
       --inactivity-timeout int       Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems
       --kube-context string          The kubernetes context to use
+      --kubeconfig string            The kubeconfig path to use
   -n, --namespace string             The kubernetes namespace to use
+      --no-colors                    Do not show color highlighting in log output. This avoids invisible output with different terminal background colors
       --no-warn                      If true does not show any warning when deploying into a different namespace or kube-context than before
-      --override-name string         If specified will override the devspace.yaml name
+      --override-name string         If specified will override the DevSpace project name provided in the devspace.yaml
   -p, --profile strings              The DevSpace profiles to apply. Multiple profiles are applied in the order they are specified
       --silent                       Run in silent mode and prevents any devspace log output except panics & fatals
   -s, --switch-context               Switches and uses the last kube context and namespace that was used to deploy the DevSpace project

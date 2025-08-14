@@ -101,7 +101,7 @@ func Ensure(config Config) Config {
 		retConfig = NewConfig(map[string]interface{}{}, retConfig.RawBeforeConversion(), retConfig.Config(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
 	}
 	if retConfig.RawBeforeConversion() == nil {
-		retConfig = NewConfig(retConfig.Raw(), map[string]interface{}{}, latest.NewRaw(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
+		retConfig = NewConfig(retConfig.Raw(), map[string]interface{}{}, retConfig.Config(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
 	}
 	if retConfig.Config() == nil {
 		retConfig = NewConfig(retConfig.Raw(), retConfig.RawBeforeConversion(), latest.NewRaw(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
@@ -111,6 +111,13 @@ func Ensure(config Config) Config {
 	}
 	if retConfig.Variables() == nil {
 		retConfig = NewConfig(retConfig.Raw(), retConfig.RawBeforeConversion(), retConfig.Config(), retConfig.LocalCache(), retConfig.RemoteCache(), map[string]interface{}{}, retConfig.Path())
+	}
+
+	if config != nil {
+		runtimeVars := config.ListRuntimeVariables()
+		for k, v := range runtimeVars {
+			retConfig.SetRuntimeVariable(k, v)
+		}
 	}
 
 	return retConfig

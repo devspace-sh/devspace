@@ -18,3 +18,5 @@ Deploying the above example would roughly be equivalent to this command:
 ```bash
 kustomize build --timeout=10s --grace-period=30 -f backend/
 ```
+
+**Note:** Directly copying the example shown above would result in your deploy failing (it would result in `Error: unknown flag: --timeout`).

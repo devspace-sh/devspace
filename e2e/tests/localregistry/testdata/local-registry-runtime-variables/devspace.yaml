@@ -1,0 +1,68 @@
+version: v2beta1
+name: local-registry
+localRegistry: 
+  enabled: true
+images:
+  app:
+    image: my-docker-username/helloworld
+  app-dev:
+    image: my-docker-username/helloworld-dev
+deployments:
+  app:
+    helm:
+      values:
+        containers:
+          - image: my-docker-username/helloworld
+          - image: my-docker-username/helloworld-dev
+dev:
+  app:
+    imageSelector: my-docker-username/helloworld
+    devImage: my-docker-username/helloworld-dev
+pipelines:
+  dev:
+    run: |-
+      build_images --all
+
+      echo $(get_image app) > get_image.out
+      echo $(get_image app-dev) > get_image_dev.out
+
+      create_deployments --all --sequential
+
+      start_dev --all
+hooks:
+  - command: |
+      echo -n ${runtime.images.app} > before_app.out
+    events: ["before:build"]
+  - command: |
+      echo -n ${runtime.images.app-dev} > before_app_dev.out
+    events: ["before:build"]
+  - command: |
+      echo -n ${runtime.images.app.image} > before_app_image.out
+    events: ["before:build"]
+  - command: |
+      echo -n ${runtime.images.app-dev.image} > before_app_dev_image.out
+    events: ["before:build"]
+  - command: |
+      echo -n ${runtime.images.app} > after_app.out
+    events: ["after:build"]
+  - command: |
+      echo -n ${runtime.images.app-dev} > after_app_dev.out
+    events: ["after:build"]
+  - command: |
+      echo -n ${runtime.images.app.image} > after_app_image.out
+    events: ["after:build"]
+  - command: |
+      echo -n ${runtime.images.app-dev.image} > after_app_dev_image.out
+    events: ["after:build"]
+  - command: |
+      echo -n $DEVSPACE_HOOK_IMAGE_NAME > before_build_app.out
+    events: ["before:build:app"]
+  - command: |
+      echo -n $DEVSPACE_HOOK_IMAGE_NAME > after_build_app.out
+    events: ["after:build:app"]
+  - command: |
+      echo -n $DEVSPACE_HOOK_IMAGE_NAME > before_build_app_dev.out
+    events: ["before:build:app-dev"]
+  - command: |
+      echo -n $DEVSPACE_HOOK_IMAGE_NAME > after_build_app_dev.out
+    events: ["after:build:app-dev"]

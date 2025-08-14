@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
+	"sort"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -194,6 +195,9 @@ func printExtraInfo(config config.Config, dependencies []types.Dependency, log l
 			fmt.Sprintf("%v", varValue),
 		})
 	}
+	sort.Slice(values, func(i, j int) bool {
+		return values[i][0] < values[j][0]
+	})
 
 	if len(values) > 0 {
 		logger.PrintTable(log, headerColumnNames, values)

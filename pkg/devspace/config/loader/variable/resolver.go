@@ -3,6 +3,7 @@ package variable
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -19,7 +20,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var AlwaysResolvePredefinedVars = []string{"DEVSPACE_NAME", "DEVSPACE_TMPDIR", "DEVSPACE_VERSION", "DEVSPACE_RANDOM", "DEVSPACE_PROFILE", "DEVSPACE_USER_HOME", "DEVSPACE_TIMESTAMP", "devspace.context", "DEVSPACE_CONTEXT", "devspace.namespace", "DEVSPACE_NAMESPACE"}
+var AlwaysResolvePredefinedVars = []string{"DEVSPACE_NAME", "DEVSPACE_EXECUTABLE", "DEVSPACE_KUBECTL_EXECUTABLE", "DEVSPACE_TMPDIR", "DEVSPACE_VERSION", "DEVSPACE_RANDOM", "DEVSPACE_PROFILE", "DEVSPACE_PROFILES", "DEVSPACE_USER_HOME", "DEVSPACE_TIMESTAMP", "devspace.context", "DEVSPACE_CONTEXT", "devspace.namespace", "DEVSPACE_NAMESPACE", "DEVSPACE_SPACE"}
 
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
 func NewResolver(localCache localcache.Cache, predefinedVariableOptions *PredefinedVariableOptions, flags []string, log log.Logger) (Resolver, error) {
@@ -55,9 +56,10 @@ func MergeVarsWithFlags(vars map[string]interface{}, flags []string) error {
 type resolver struct {
 	vars        map[string]*latest.Variable
 	memoryCache map[string]interface{}
-	localCache  localcache.Cache
-	options     *PredefinedVariableOptions
-	log         log.Logger
+
+	localCache localcache.Cache
+	options    *PredefinedVariableOptions
+	log        log.Logger
 }
 
 func varMatchFn(key, value string) bool {
@@ -115,7 +117,7 @@ func (r *resolver) replaceString(ctx context.Context, str string) (interface{}, 
 	})
 }
 
-func (r *resolver) findVariablesInclude(haystack interface{}, include []*regexp.Regexp) ([]*latest.Variable, error) {
+func (r *resolver) findVariables(haystack interface{}, skipUnused bool, include []*regexp.Regexp) ([]*latest.Variable, error) {
 	// find out what vars are really used
 	varsUsed := map[string]bool{}
 	switch t := haystack.(type) {
@@ -142,16 +144,19 @@ func (r *resolver) findVariablesInclude(haystack interface{}, include []*regexp.
 		}
 	}
 
-	// add always resolve variables
-	for _, v := range r.vars {
-		if v.AlwaysResolve {
-			varsUsed[v.Name] = true
+	// add always resolve variables. If skip unused is true, we don't
+	// resolve by default and instead only resolve the actually found variables
+	if !skipUnused {
+		for _, v := range r.vars {
+			if v.AlwaysResolve == nil || *v.AlwaysResolve {
+				varsUsed[v.Name] = true
+			}
 		}
 	}
 
 	// filter out runtime environment variables
 	for k := range varsUsed {
-		if !strings.HasPrefix(k, "runtime.") && !IsPredefinedVariable(k) && r.vars[k] == nil {
+		if !strings.HasPrefix(k, "runtime.") && !IsPredefinedVariable(k) && r.getVariableDefinition(k) == nil {
 			delete(varsUsed, k)
 		}
 	}
@@ -160,7 +165,24 @@ func (r *resolver) findVariablesInclude(haystack interface{}, include []*regexp.
 }
 
 func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, error) {
-	return r.findVariablesInclude(haystack, nil)
+	return r.findVariables(haystack, false, nil)
+}
+
+func (r *resolver) getVariableDefinition(name string) *latest.Variable {
+	definition, ok := r.vars[name]
+	if !ok {
+		value := os.Getenv(name)
+		if value != "" {
+			return &latest.Variable{
+				Name:  name,
+				Value: value,
+			}
+		}
+
+		return nil
+	}
+
+	return definition
 }
 
 func (r *resolver) orderVariables(vars map[string]bool) ([]*latest.Variable, error) {
@@ -173,9 +195,8 @@ func (r *resolver) orderVariables(vars map[string]bool) ([]*latest.Variable, err
 			definition = &latest.Variable{Name: name}
 		} else {
 			// check if has definition
-			var ok bool
-			definition, ok = r.vars[name]
-			if !ok {
+			definition = r.getVariableDefinition(name)
+			if definition == nil {
 				continue
 			}
 		}
@@ -205,6 +226,7 @@ func (r *resolver) orderVariables(vars map[string]bool) ([]*latest.Variable, err
 	for i, j := 0, len(retVars)-1; i < j; i, j = i+1, j-1 {
 		retVars[i], retVars[j] = retVars[j], retVars[i]
 	}
+
 	return retVars, nil
 }
 
@@ -218,8 +240,8 @@ func (r *resolver) insertVariableGraph(g *graph.Graph, node *latest.Variable) er
 
 	parents := r.findVariablesInDefinition(node)
 	for parent := range parents {
-		parentDefinition, ok := r.vars[parent]
-		if !ok {
+		parentDefinition := r.getVariableDefinition(parent)
+		if parentDefinition == nil {
 			continue
 		}
 
@@ -239,12 +261,12 @@ func (r *resolver) insertVariableGraph(g *graph.Graph, node *latest.Variable) er
 	return nil
 }
 
-func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{}, includedPaths []string) (interface{}, error) {
+func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{}, skipUnused bool, includedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range includedPaths {
-		path = strings.ReplaceAll(path, "*", "[^/]+")
 		path = strings.ReplaceAll(path, "**", ".+")
-		path = "^" + path
+		path = strings.ReplaceAll(path, "*", "[^/]+")
+		path = "^" + path + "$"
 		expr, err := regexp.Compile(path)
 		if err != nil {
 			return nil, err
@@ -254,7 +276,7 @@ func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{
 	}
 
 	// fill variables
-	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, nil, paths)
+	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, skipUnused, nil, paths)
 	if err != nil {
 		return nil, err
 	}
@@ -266,15 +288,15 @@ func (r *resolver) FillVariablesInclude(ctx context.Context, haystack interface{
 	}
 
 	// fill in variables again
-	return r.findAndFillVariables(ctx, preparedConfigInterface, nil, paths)
+	return r.findAndFillVariables(ctx, preparedConfigInterface, skipUnused, nil, paths)
 }
 
-func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{}, excludedPaths []string) (interface{}, error) {
+func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{}, skipUnused bool, excludedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range excludedPaths {
-		path = strings.ReplaceAll(path, "*", "[^/]+")
 		path = strings.ReplaceAll(path, "**", ".+")
-		path = "^" + path
+		path = strings.ReplaceAll(path, "*", "[^/]+")
+		path = "^" + path + "$"
 		expr, err := regexp.Compile(path)
 		if err != nil {
 			return nil, err
@@ -284,7 +306,7 @@ func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{
 	}
 
 	// fill variables
-	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, paths, nil)
+	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, skipUnused, paths, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -296,15 +318,15 @@ func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{
 	}
 
 	// fill in variables again
-	return r.findAndFillVariables(ctx, preparedConfigInterface, paths, nil)
+	return r.findAndFillVariables(ctx, preparedConfigInterface, skipUnused, paths, nil)
 }
 
-func (r *resolver) FillVariables(ctx context.Context, haystack interface{}) (interface{}, error) {
-	return r.FillVariablesExclude(ctx, haystack, nil)
+func (r *resolver) FillVariables(ctx context.Context, haystack interface{}, skipUnused bool) (interface{}, error) {
+	return r.FillVariablesExclude(ctx, haystack, skipUnused, nil)
 }
 
-func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{}, exclude, include []*regexp.Regexp) (interface{}, error) {
-	varsUsed, err := r.findVariablesInclude(haystack, include)
+func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{}, skipUnused bool, exclude, include []*regexp.Regexp) (interface{}, error) {
+	varsUsed, err := r.findVariables(haystack, skipUnused, include)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +361,7 @@ func (r *resolver) resolve(ctx context.Context, name string, definition *latest.
 	}
 
 	// is predefined variable?
-	variable, err := NewPredefinedVariable(name, r.options)
+	variable, err := NewPredefinedVariable(name, r.options, r.log)
 	if err == nil {
 		value, err := variable.Load(ctx, definition)
 		if err != nil {
@@ -427,7 +449,7 @@ func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[st
 
 	// filter out runtime environment variables and non existing ones
 	for k := range varsUsed {
-		if !strings.HasPrefix(k, "runtime.") && !IsPredefinedVariable(k) && r.vars[k] == nil {
+		if !strings.HasPrefix(k, "runtime.") && !IsPredefinedVariable(k) && r.getVariableDefinition(k) == nil {
 			delete(varsUsed, k)
 		}
 	}
@@ -507,9 +529,9 @@ func (r *resolver) resolveDefinitionString(ctx context.Context, str string, defi
 		v, ok := r.memoryCache[varName]
 		if !ok {
 			// check if its a predefined variable
-			variable, err := NewPredefinedVariable(varName, r.options)
+			variable, err := NewPredefinedVariable(varName, r.options, r.log)
 			if err != nil {
-				if r.vars[varName] == nil {
+				if r.getVariableDefinition(varName) == nil {
 					return "${" + varName + "}", nil
 				}
 

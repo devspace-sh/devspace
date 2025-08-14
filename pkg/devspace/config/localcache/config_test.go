@@ -1,7 +1,6 @@
 package localcache
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -160,7 +159,7 @@ func TestSave(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
 
-		fileContent, err := ioutil.ReadFile(testCase.expectedConfigFileName)
+		fileContent, err := os.ReadFile(testCase.expectedConfigFileName)
 		assert.NilError(t, err, "Error reading file in testCase %s", testCase.name)
 		expectedAsYaml, err := yaml.Marshal(testCase.expectedConfigFile)
 		assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)

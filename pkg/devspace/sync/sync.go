@@ -25,7 +25,8 @@ const waitForMoreChangesTimeout = time.Minute
 
 // Options holds the sync options
 type Options struct {
-	Polling bool
+	Polling          bool
+	NoRecursiveWatch bool
 
 	Exec []latest.SyncExec
 
@@ -85,7 +86,7 @@ type Sync struct {
 	readyChan chan bool
 }
 
-// NewSync creates a new sync for the given
+// NewSync creates a new sync for the given local path
 func NewSync(ctx context.Context, localPath string, options Options) (*Sync, error) {
 	cancelCtx, cancel := context.WithCancel(ctx)
 
@@ -233,7 +234,11 @@ func (s *Sync) startUpstream() {
 	s.tree = notify.NewTree()
 
 	// Set up a watchpoint listening for events within a directory tree rooted at specified directory
-	err := s.tree.Watch(s.LocalPath+"/...", s.upstream.events, func(path string) bool {
+	watchPath := s.LocalPath + "/..."
+	if s.Options.NoRecursiveWatch {
+		watchPath = s.LocalPath
+	}
+	err := s.tree.Watch(watchPath, s.upstream.events, func(path string) bool {
 		if s.ignoreMatcher == nil || s.ignoreMatcher.RequireFullScan() {
 			return false
 		}
@@ -308,13 +313,21 @@ func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone ch
 			}
 
 			if onInitUploadDone != nil {
-				s.log.Info("Upstream - Initial sync completed")
+				if s.Options.InitialSync == latest.InitialSyncStrategyDisabled {
+					s.log.Info("Upstream - Initial sync disabled")
+				} else {
+					s.log.Info("Upstream - Initial sync completed")
+				}
 				close(onInitUploadDone)
 			}
 		},
 		DownstreamDone: func() {
 			if onInitDownloadDone != nil {
-				s.log.Info("Downstream - Initial sync completed")
+				if s.Options.InitialSync == latest.InitialSyncStrategyDisabled {
+					s.log.Info("Downstream - Initial sync disabled")
+				} else {
+					s.log.Info("Downstream - Initial sync completed")
+				}
 				close(onInitDownloadDone)
 			}
 		},
@@ -410,6 +423,9 @@ func (s *Sync) Stop(fatalError error) {
 			if s.upstream.reader != nil {
 				s.upstream.reader.Close()
 			}
+			if s.upstream.conn != nil {
+				s.upstream.conn.Close()
+			}
 		}
 
 		if s.downstream != nil {
@@ -418,6 +434,9 @@ func (s *Sync) Stop(fatalError error) {
 			}
 			if s.downstream.reader != nil {
 				s.downstream.reader.Close()
+			}
+			if s.downstream.conn != nil {
+				s.downstream.conn.Close()
 			}
 		}
 

@@ -1,52 +1,43 @@
 // Package registry contains client primitives to interact with a remote Docker registry.
-package registry // import "github.com/docker/docker/registry"
+package registry
 
 import (
+	"context"
 	"crypto/tls"
-	"errors"
-	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
+	"github.com/containerd/log"
 	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/go-connections/tlsconfig"
-	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-var (
-	// ErrAlreadyExists is an error returned if an image being pushed
-	// already exists on the remote side
-	ErrAlreadyExists = errors.New("Image already exists")
-)
-
-// HostCertsDir returns the config directory for a specific host
-func HostCertsDir(hostname string) (string, error) {
-	certsDir := CertsDir()
-
-	hostDir := filepath.Join(certsDir, cleanPath(hostname))
-
-	return hostDir, nil
+// HostCertsDir returns the config directory for a specific host.
+//
+// Deprecated: this function was only used internally, and will be removed in a future release.
+func HostCertsDir(hostname string) string {
+	return hostCertsDir(hostname)
 }
 
-func newTLSConfig(hostname string, isSecure bool) (*tls.Config, error) {
+// hostCertsDir returns the config directory for a specific host.
+func hostCertsDir(hostname string) string {
+	return filepath.Join(CertsDir(), cleanPath(hostname))
+}
+
+// newTLSConfig constructs a client TLS configuration based on server defaults
+func newTLSConfig(ctx context.Context, hostname string, isSecure bool) (*tls.Config, error) {
 	// PreferredServerCipherSuites should have no effect
 	tlsConfig := tlsconfig.ServerDefault()
-
 	tlsConfig.InsecureSkipVerify = !isSecure
 
-	if isSecure && CertsDir() != "" {
-		hostDir, err := HostCertsDir(hostname)
-		if err != nil {
-			return nil, err
-		}
-
-		logrus.Debugf("hostDir: %s", hostDir)
-		if err := ReadCertsDirectory(tlsConfig, hostDir); err != nil {
+	if isSecure {
+		hostDir := hostCertsDir(hostname)
+		log.G(ctx).Debugf("hostDir: %s", hostDir)
+		if err := loadTLSConfig(ctx, hostDir, tlsConfig); err != nil {
 			return nil, err
 		}
 	}
@@ -54,7 +45,7 @@ func newTLSConfig(hostname string, isSecure bool) (*tls.Config, error) {
 	return tlsConfig, nil
 }
 
-func hasFile(files []os.FileInfo, name string) bool {
+func hasFile(files []os.DirEntry, name string) bool {
 	for _, f := range files {
 		if f.Name() == name {
 			return true
@@ -67,46 +58,58 @@ func hasFile(files []os.FileInfo, name string) bool {
 // including roots and certificate pairs and updates the
 // provided TLS configuration.
 func ReadCertsDirectory(tlsConfig *tls.Config, directory string) error {
-	fs, err := ioutil.ReadDir(directory)
-	if err != nil && !os.IsNotExist(err) {
-		return err
+	return loadTLSConfig(context.TODO(), directory, tlsConfig)
+}
+
+// loadTLSConfig reads the directory for TLS certificates including roots and
+// certificate pairs, and updates the provided TLS configuration.
+func loadTLSConfig(ctx context.Context, directory string, tlsConfig *tls.Config) error {
+	fs, err := os.ReadDir(directory)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return invalidParam(err)
 	}
 
 	for _, f := range fs {
-		if strings.HasSuffix(f.Name(), ".crt") {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		switch filepath.Ext(f.Name()) {
+		case ".crt":
 			if tlsConfig.RootCAs == nil {
 				systemPool, err := tlsconfig.SystemCertPool()
 				if err != nil {
-					return fmt.Errorf("unable to get system cert pool: %v", err)
+					return invalidParamWrapf(err, "unable to get system cert pool")
 				}
 				tlsConfig.RootCAs = systemPool
 			}
-			logrus.Debugf("crt: %s", filepath.Join(directory, f.Name()))
-			data, err := ioutil.ReadFile(filepath.Join(directory, f.Name()))
+			fileName := filepath.Join(directory, f.Name())
+			log.G(ctx).Debugf("crt: %s", fileName)
+			data, err := os.ReadFile(fileName)
 			if err != nil {
 				return err
 			}
 			tlsConfig.RootCAs.AppendCertsFromPEM(data)
-		}
-		if strings.HasSuffix(f.Name(), ".cert") {
+		case ".cert":
 			certName := f.Name()
 			keyName := certName[:len(certName)-5] + ".key"
-			logrus.Debugf("cert: %s", filepath.Join(directory, f.Name()))
+			log.G(ctx).Debugf("cert: %s", filepath.Join(directory, certName))
 			if !hasFile(fs, keyName) {
-				return fmt.Errorf("missing key %s for client certificate %s. Note that CA certificates should use the extension .crt", keyName, certName)
+				return invalidParamf("missing key %s for client certificate %s. CA certificates must use the extension .crt", keyName, certName)
 			}
 			cert, err := tls.LoadX509KeyPair(filepath.Join(directory, certName), filepath.Join(directory, keyName))
 			if err != nil {
 				return err
 			}
 			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
-		}
-		if strings.HasSuffix(f.Name(), ".key") {
+		case ".key":
 			keyName := f.Name()
 			certName := keyName[:len(keyName)-4] + ".cert"
-			logrus.Debugf("key: %s", filepath.Join(directory, f.Name()))
+			log.G(ctx).Debugf("key: %s", filepath.Join(directory, keyName))
 			if !hasFile(fs, certName) {
-				return fmt.Errorf("Missing client certificate %s for key %s", certName, keyName)
+				return invalidParamf("missing client certificate %s for key %s", certName, keyName)
 			}
 		}
 	}
@@ -128,72 +131,24 @@ func Headers(userAgent string, metaHeaders http.Header) []transport.RequestModif
 	return modifiers
 }
 
-// HTTPClient returns an HTTP client structure which uses the given transport
-// and contains the necessary headers for redirected requests
-func HTTPClient(transport http.RoundTripper) *http.Client {
-	return &http.Client{
-		Transport:     transport,
-		CheckRedirect: addRequiredHeadersToRedirectedRequests,
-	}
-}
-
-func trustedLocation(req *http.Request) bool {
-	var (
-		trusteds = []string{"docker.com", "docker.io"}
-		hostname = strings.SplitN(req.Host, ":", 2)[0]
-	)
-	if req.URL.Scheme != "https" {
-		return false
-	}
-
-	for _, trusted := range trusteds {
-		if hostname == trusted || strings.HasSuffix(hostname, "."+trusted) {
-			return true
-		}
-	}
-	return false
-}
-
-// addRequiredHeadersToRedirectedRequests adds the necessary redirection headers
-// for redirected requests
-func addRequiredHeadersToRedirectedRequests(req *http.Request, via []*http.Request) error {
-	if len(via) != 0 && via[0] != nil {
-		if trustedLocation(req) && trustedLocation(via[0]) {
-			req.Header = via[0].Header
-			return nil
-		}
-		for k, v := range via[0].Header {
-			if k != "Authorization" {
-				for _, vv := range v {
-					req.Header.Add(k, vv)
-				}
-			}
-		}
-	}
-	return nil
-}
-
-// NewTransport returns a new HTTP transport. If tlsConfig is nil, it uses the
+// newTransport returns a new HTTP transport. If tlsConfig is nil, it uses the
 // default TLS configuration.
-func NewTransport(tlsConfig *tls.Config) *http.Transport {
+func newTransport(tlsConfig *tls.Config) http.RoundTripper {
 	if tlsConfig == nil {
 		tlsConfig = tlsconfig.ServerDefault()
 	}
 
-	direct := &net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-		DualStack: true,
-	}
-
-	base := &http.Transport{
-		Proxy:               http.ProxyFromEnvironment,
-		DialContext:         direct.DialContext,
-		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:     tlsConfig,
-		// TODO(dmcgowan): Call close idle connections when complete and use keep alive
-		DisableKeepAlives: true,
-	}
-
-	return base
+	return otelhttp.NewTransport(
+		&http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout: 10 * time.Second,
+			TLSClientConfig:     tlsConfig,
+			// TODO(dmcgowan): Call close idle connections when complete and use keep alive
+			DisableKeepAlives: true,
+		},
+	)
 }

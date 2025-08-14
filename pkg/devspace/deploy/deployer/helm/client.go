@@ -2,10 +2,10 @@ package helm
 
 import (
 	"fmt"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 
 	"github.com/loft-sh/devspace/assets"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -23,7 +23,7 @@ const ComponentChartFolder = "component-chart"
 // DevSpaceChartConfig is the config that holds the devspace chart information
 var DevSpaceChartConfig = &latest.ChartConfig{
 	Name:    "component-chart",
-	Version: "0.8.4",
+	Version: "0.9.1",
 	RepoURL: "https://charts.devspace.sh",
 }
 
@@ -53,7 +53,7 @@ func New(helmClient helmtypes.Client, deployConfig *latest.DeploymentConfig) (de
 				}
 
 				// write file
-				err = ioutil.WriteFile(completePath, componentChartBytes, 0666)
+				err = os.WriteFile(completePath, componentChartBytes, 0666)
 				if err != nil {
 					return nil, fmt.Errorf("error writing component chart to file: %v", err)
 				}

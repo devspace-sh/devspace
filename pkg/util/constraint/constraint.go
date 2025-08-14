@@ -2,7 +2,6 @@ package constraint
 
 import (
 	"fmt"
-	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -180,11 +179,6 @@ func parseSingle(v string) (*Constraint, error) {
 
 func prereleaseCheck(v, c *Version) bool {
 	switch vPre, cPre := v.Prerelease() != "", c.Prerelease() != ""; {
-	case cPre && vPre:
-		// A constraint with a pre-release can only match a pre-release version
-		// with the same base segments.
-		return reflect.DeepEqual(c.Segments64(), v.Segments64())
-
 	case !cPre && vPre:
 		// OK
 	case cPre && !vPre:

@@ -214,11 +214,18 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			path = r.envGet("HOME")
 		case 1:
 			path = args[0]
+
+			// replicate the commonly implemented behavior of `cd -`
+			// ref: https://www.man7.org/linux/man-pages/man1/cd.1p.html#OPERANDS
+			if path == "-" {
+				path = r.envGet("OLDPWD")
+				r.outf("%s\n", path)
+			}
 		default:
 			r.errf("usage: cd [dir]\n")
 			return 2
 		}
-		return r.changeDir(path)
+		return r.changeDir(ctx, path)
 	case "wait":
 		if len(args) > 0 {
 			panic("wait with args not handled yet")
@@ -486,13 +493,13 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 				return 1
 			}
 			newtop := swap()
-			if code := r.changeDir(newtop); code != 0 {
+			if code := r.changeDir(ctx, newtop); code != 0 {
 				return code
 			}
 			r.builtinCode(ctx, syntax.Pos{}, "dirs", nil)
 		case 1:
 			if change {
-				if code := r.changeDir(args[0]); code != 0 {
+				if code := r.changeDir(ctx, args[0]); code != 0 {
 					return code
 				}
 				r.dirStack = append(r.dirStack, r.Dir)
@@ -521,7 +528,7 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			r.dirStack = r.dirStack[:len(r.dirStack)-1]
 			if change {
 				newtop := r.dirStack[len(r.dirStack)-1]
-				if code := r.changeDir(newtop); code != 0 {
+				if code := r.changeDir(ctx, newtop); code != 0 {
 					return code
 				}
 			} else {
@@ -845,12 +852,12 @@ func (r *Runner) readLine(raw bool) ([]byte, error) {
 	}
 }
 
-func (r *Runner) changeDir(path string) int {
+func (r *Runner) changeDir(ctx context.Context, path string) int {
 	if path == "" {
 		path = "."
 	}
 	path = r.absPath(path)
-	info, err := r.stat(path)
+	info, err := r.stat(ctx, path)
 	if err != nil || !info.IsDir() {
 		return 1
 	}

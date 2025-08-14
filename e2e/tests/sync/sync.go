@@ -2,12 +2,13 @@ package sync
 
 import (
 	"context"
-	"github.com/pkg/errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/onsi/ginkgo/v2"
+	"github.com/pkg/errors"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -15,7 +16,6 @@ import (
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
-	"github.com/onsi/ginkgo"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -211,7 +211,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// wait until files were synced
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/file1.txt"})
 			if err != nil {
 				return false, nil
@@ -232,11 +232,11 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "file3.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "file3.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 
 		// wait for sync
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/file3.txt"})
 			if err != nil {
 				return false, nil
@@ -247,13 +247,13 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// check if file was downloaded through before hook
-		_, err = ioutil.ReadFile(filepath.Join(tempDir, "file4.txt"))
+		_, err = os.ReadFile(filepath.Join(tempDir, "file4.txt"))
 		framework.ExpectError(err)
 		framework.ExpectEqual(os.IsNotExist(err), true)
 
 		// check if file was downloaded through after hook
-		err = wait.PollImmediate(time.Second, time.Minute, func() (done bool, err error) {
-			out, err := ioutil.ReadFile(filepath.Join(tempDir, "file5.txt"))
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
+			out, err := os.ReadFile(filepath.Join(tempDir, "file5.txt"))
 			if err != nil {
 				if !os.IsNotExist(err) {
 					return false, err
@@ -311,7 +311,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// wait until files were synced
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/file1.txt"})
 			if err != nil {
 				return false, nil
@@ -332,10 +332,10 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload1 := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "/project1/app/file3.txt"), []byte(payload1), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "/project1/app/file3.txt"), []byte(payload1), 0666)
 		framework.ExpectNoError(err)
 
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/file3.txt"})
 			if err != nil {
 				return false, nil
@@ -347,10 +347,10 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file to symlink path and check that it got synced
 		payload2 := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "/project2/file4.txt"), []byte(payload2), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "/project2/file4.txt"), []byte(payload2), 0666)
 		framework.ExpectNoError(err)
 
-		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/watch/app/file4.txt"})
 			if err != nil {
 				return false, nil
@@ -424,7 +424,7 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteFileContents("node", ns, "/watch/watching.txt", payload)
 
@@ -540,7 +540,7 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteContainerFileContents("e2e=sync-containers", "container2", ns, "/app2/watching.txt", payload)
 
@@ -596,7 +596,9 @@ var _ = DevSpaceDescribe("sync", func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
 			err = syncCmd.Run(f)
-			framework.ExpectNoError(err)
+			if !errors.Is(err, context.Canceled) {
+				framework.ExpectNoError(err)
+			}
 		}()
 
 		// check that uploadExcludePaths folder was not synced
@@ -607,7 +609,7 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteFileContents("alpine", ns, "/app/watching.txt", payload)
 
@@ -685,9 +687,158 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// write a file and check that it got synced
 		payload := randutil.GenerateRandomString(10000)
-		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteFileContents("node", ns, "/app/watching.txt", payload)
+
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
+	})
+
+	ginkgo.It("should sync single file to a container", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-single-file")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "single.yaml",
+			},
+			Pipeline: "deploy",
+		}
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		cancelCtx, stop := context.WithCancel(context.Background())
+		defer stop()
+
+		// sync command
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "single.yaml",
+			},
+			Wait: true,
+			Ctx:  cancelCtx,
+		}
+
+		// start the command
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+			err = syncCmd.Run(f)
+			framework.ExpectNoError(err)
+		}()
+
+		// check that uploadExcludePaths folder was not synced
+		framework.ExpectRemoteFileContents("alpine", ns, "/watch/test.txt", "Hello World")
+		framework.ExpectRemoteFileNotFound("alpine", ns, "/watch/single.yaml")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = os.WriteFile(filepath.Join(tempDir, "other-folder", "test.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		err = os.WriteFile(filepath.Join(tempDir, "other-folder", "test123.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteFileContents("alpine", ns, "/watch/test.txt", payload)
+		framework.ExpectRemoteFileNotFound("alpine", ns, "/watch/test123.txt")
+
+		// check that file is not created but updated
+		_, err = kubeClient.ExecByImageSelector("alpine", ns, []string{
+			"sh", "-c", "echo -n 'Hello World' > /watch/test.test",
+		})
+		framework.ExpectNoError(err)
+		_, err = kubeClient.ExecByImageSelector("alpine", ns, []string{
+			"sh", "-c", "echo -n 'Hello DevSpace' > /watch/test.txt",
+		})
+		framework.ExpectNoError(err)
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "other-folder", "test.txt"), "Hello DevSpace")
+		framework.ExpectLocalFileNotFound(filepath.Join(tempDir, "other-folder", "test.test"))
+
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
+	})
+
+	ginkgo.It("devspace sync should work with initialSync:disabled", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-initial-disabled")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Pipeline: "deploy",
+		}
+		err = deployCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		cancelCtx, stop := context.WithCancel(context.Background())
+		defer stop()
+
+		// sync command
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Wait: true,
+			Ctx:  cancelCtx,
+		}
+
+		// start the command
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+			err = syncCmd.Run(f)
+			if !errors.Is(err, context.Canceled) {
+				framework.ExpectNoError(err)
+			}
+		}()
+
+		// check that node_modules folder was not synced
+		framework.ExpectRemoteFileNotFound("alpine", ns, "/app/node_modules")
+
+		// check that included file was not synced
+		framework.ExpectRemoteFileNotFound("alpine", ns, "/app/syncme/file.txt")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteFileContents("alpine", ns, "/app/watching.txt", payload)
 
 		// stop command
 		stop()

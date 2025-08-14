@@ -14,22 +14,27 @@ import (
 var Locations = []string{
 	"/images/*/build/custom/command",
 	"/images/*/build/custom/commands/*/command",
-	"/images/*/build/custom/args/*",
-	"/images/*/build/custom/appendArgs/*",
+	"/images/*/build/custom/args/**",
+	"/images/*/build/custom/appendArgs/**",
 	"/deployments/*/helm/values/**",
+	"/deployments/*/kubectl/inlineManifest/**",
 	"/hooks/*/command",
 	"/hooks/*/args/*",
 	"/hooks/*/container/imageSelector",
 	"/dev/*/imageSelector",
 	"/dev/*/replaceImage",
+	"/dev/*/devImage",
 	"/dev/*/containers/*/replaceImage",
+	"/dev/*/containers/*/devImage",
 	"/dev/ports/*/imageSelector",
 	"/dev/sync/*/imageSelector",
 	"/dev/logs/*/selectors/*/imageSelector",
 	"/dev/replacePods/*/imageSelector",
 	"/dev/replacePods/*/replaceImage",
 	"/dev/terminal/imageSelector",
-	"/pipelines/**",
+	"/pipelines/*",
+	"/pipelines/*/flags/**",
+	"/pipelines/*/run",
 	"/commands/*",
 	"/commands/*/command",
 	"/functions/**",
@@ -148,16 +153,15 @@ func GetImage(c config.Config, imageName string, onlyImage, onlyTag bool) (bool,
 }
 
 func BuildImageString(c config.Config, name string, fallbackImage string, fallbackTag string, onlyImage, onlyTag bool) (bool, string) {
-	cache := c.LocalCache()
-	imageCache, _ := cache.GetImageCache(name)
+	imageCache, _ := c.LocalCache().GetImageCache(name)
 
 	// try to find the image
-	image := ""
-	if imageCache.ImageName != "" {
-		image = imageCache.ImageName
-	} else if fallbackImage != "" {
+	image := imageCache.ResolveImage()
+	if image == "" && fallbackImage != "" {
 		image = fallbackImage
-	} else {
+	}
+
+	if image == "" {
 		return false, ""
 	}
 

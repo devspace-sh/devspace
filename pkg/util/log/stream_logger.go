@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -465,7 +464,7 @@ func (s *StreamLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
 	defer s.m.Unlock()
 
 	if s.level < level {
-		return &NopCloser{ioutil.Discard}
+		return &NopCloser{io.Discard}
 	}
 
 	reader, writer := io.Pipe()
@@ -516,8 +515,10 @@ func (s *StreamLogger) Question(params *survey.QuestionOptions) (string, error) 
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	if !s.isTerminal {
-		return "", fmt.Errorf("cannot ask question '%s' because you are not currently using a terminal", params.Question)
+	if !s.isTerminal && !params.DefaultValueSet {
+		return "", fmt.Errorf("cannot ask question '%s' because currently you're not using devspace in a terminal and default value is also not provided", params.Question)
+	} else if !s.isTerminal && params.DefaultValueSet {
+		return params.DefaultValue, nil
 	}
 
 	// Check if we can ask the question

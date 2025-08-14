@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/moby/patternmatcher"
 	"hash/crc32"
 	"hash/fnv"
 	"io"
@@ -13,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker/pkg/fileutils"
 	"github.com/docker/docker/pkg/longpath"
 	"github.com/pkg/errors"
 )
@@ -73,7 +73,6 @@ func Directory(path string) (string, error) {
 
 		return nil
 	})
-
 	if err != nil {
 		return "", err
 	}
@@ -90,13 +89,28 @@ func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (str
 
 	hash := sha256.New()
 
+	// Stat dir / file
+	fileInfo, err := os.Stat(srcPath)
+	if err != nil {
+		return "", err
+	}
+
+	// Hash file
+	if !fileInfo.IsDir() {
+		size := strconv.FormatInt(fileInfo.Size(), 10)
+		mTime := strconv.FormatInt(fileInfo.ModTime().UnixNano(), 10)
+		_, _ = io.WriteString(hash, srcPath+";"+size+";"+mTime)
+
+		return fmt.Sprintf("%x", hash.Sum(nil)), nil
+	}
+
 	// Fix the source path to work with long path names. This is a no-op
 	// on platforms other than Windows.
 	if runtime.GOOS == "windows" {
 		srcPath = longpath.AddPrefix(srcPath)
 	}
 
-	pm, err := fileutils.NewPatternMatcher(excludePatterns)
+	pm, err := patternmatcher.New(excludePatterns)
 	if err != nil {
 		return "", err
 	}
@@ -139,7 +153,7 @@ func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (str
 		// is asking for that file no matter what - which is true
 		// for some files, like .dockerignore and Dockerfile (sometimes)
 		if relFilePath != "." {
-			skip, err = pm.Matches(relFilePath)
+			skip, err = pm.MatchesOrParentMatches(relFilePath)
 			if err != nil {
 				return errors.Errorf("Error matching %s: %v", relFilePath, err)
 			}

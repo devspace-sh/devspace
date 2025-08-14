@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,20 +14,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
-
-	"github.com/bmatcuk/doublestar"
-	"github.com/juju/ratelimit"
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/loft-sh/devspace/helper/util/crc32"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"google.golang.org/grpc"
+
 	"github.com/loft-sh/notify"
+	"github.com/loft-sh/utils/pkg/command"
+
+	"github.com/bmatcuk/doublestar"
+	"github.com/fujiwara/shapeio"
 	"github.com/pkg/errors"
+	"mvdan.cc/sh/v3/expand"
 )
 
 var (
@@ -56,6 +58,8 @@ type upstream struct {
 	initialSyncChanges        []string
 	initialSyncCompleted      bool
 	initialSyncTouchOnce      sync.Once
+
+	conn *grpc.ClientConn
 }
 
 const (
@@ -72,10 +76,14 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 
 	// Apply limits if specified
 	if sync.Options.DownstreamLimit > 0 {
-		clientReader = ratelimit.Reader(reader, ratelimit.NewBucketWithRate(float64(sync.Options.DownstreamLimit), sync.Options.DownstreamLimit))
+		limitedReader := shapeio.NewReader(reader)
+		limitedReader.SetRateLimit(float64(sync.Options.DownstreamLimit))
+		clientReader = limitedReader
 	}
 	if sync.Options.UpstreamLimit > 0 {
-		clientWriter = ratelimit.Writer(writer, ratelimit.NewBucketWithRate(float64(sync.Options.UpstreamLimit), sync.Options.UpstreamLimit))
+		limitedWriter := shapeio.NewWriter(writer)
+		limitedWriter.SetRateLimit(float64(sync.Options.UpstreamLimit))
+		clientWriter = limitedWriter
 	}
 
 	// Create client
@@ -106,6 +114,8 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 		client: remote.NewUpstreamClient(conn),
 
 		ignoreMatcher: ignoreMatcher,
+
+		conn: conn,
 	}, nil
 }
 
@@ -372,9 +382,9 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 			out = &bytes.Buffer{}
 		)
 		if exec.Args == nil {
-			err = engine.ExecuteSimpleShellCommand(u.sync.ctx, u.sync.LocalPath, out, out, nil, nil, execCommand)
+			err = engine.ExecuteSimpleShellCommand(u.sync.ctx, u.sync.LocalPath, expand.ListEnviron(os.Environ()...), out, out, nil, execCommand)
 		} else {
-			err = command.CommandWithEnv(u.sync.ctx, u.sync.LocalPath, out, out, nil, nil, execCommand, exec.Args...)
+			err = command.Command(u.sync.ctx, u.sync.LocalPath, expand.ListEnviron(os.Environ()...), out, out, nil, execCommand, exec.Args...)
 		}
 		if err != nil {
 			if exec.FailOnError {
@@ -407,6 +417,7 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 	_, err := u.client.Execute(ctx, &remote.Command{
 		Cmd:  cmd,
 		Args: args,
+		Once: exec.Once,
 	})
 	if err != nil {
 		if exec.FailOnError {
@@ -537,7 +548,7 @@ func (u *upstream) evaluateChange(relativePath, fullPath string) ([]*FileInforma
 		return []*FileInformation{fileInfo}, nil
 	} else if stat.IsDir() {
 		// if the change is a directory we walk the directory for other potential changes
-		files, err := ioutil.ReadDir(fullPath)
+		files, err := os.ReadDir(fullPath)
 		if err != nil {
 			// Remove symlinks
 			u.RemoveSymlinks(fullPath)
@@ -556,7 +567,12 @@ func (u *upstream) evaluateChange(relativePath, fullPath string) ([]*FileInforma
 		}
 
 		changes := []*FileInformation{}
-		for _, f := range files {
+		for _, dirEntry := range files {
+			f, err := dirEntry.Info()
+			if err != nil {
+				continue
+			}
+
 			newFullPath := filepath.Join(fullPath, f.Name())
 			newRelativePath := path.Join(relativePath, f.Name())
 			if fsutil.IsRecursiveSymlink(f, newFullPath) {
@@ -821,6 +837,9 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 			continue
 		} else if f.IsDirectory || u.sync.fileIndex.fileMap[f.Name] == nil || u.sync.fileIndex.fileMap[f.Name].Size != f.Size {
 			newChanges = append(newChanges, f)
+			alreadyUsed[f.Name] = true
+			continue
+		} else if f.Size == 0 {
 			alreadyUsed[f.Name] = true
 			continue
 		}

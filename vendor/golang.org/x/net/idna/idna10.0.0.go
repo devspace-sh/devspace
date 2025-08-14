@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build go1.10
-// +build go1.10
 
 // Package idna implements IDNA2008 using the compatibility processing
 // defined by UTS (Unicode Technical Standard) #46, which defines a standard to
@@ -59,10 +58,10 @@ type Option func(*options)
 // Transitional sets a Profile to use the Transitional mapping as defined in UTS
 // #46. This will cause, for example, "ß" to be mapped to "ss". Using the
 // transitional mapping provides a compromise between IDNA2003 and IDNA2008
-// compatibility. It is used by most browsers when resolving domain names. This
+// compatibility. It is used by some browsers when resolving domain names. This
 // option is only meaningful if combined with MapForLookup.
 func Transitional(transitional bool) Option {
-	return func(o *options) { o.transitional = true }
+	return func(o *options) { o.transitional = transitional }
 }
 
 // VerifyDNSLength sets whether a Profile should fail if any of the IDN parts
@@ -284,7 +283,7 @@ var (
 
 	punycode = &Profile{}
 	lookup   = &Profile{options{
-		transitional: true,
+		transitional: transitionalLookup,
 		useSTD3Rules: true,
 		checkHyphens: true,
 		checkJoiners: true,

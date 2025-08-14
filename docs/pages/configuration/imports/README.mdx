@@ -17,7 +17,7 @@ Let's say we have a `devspace.yaml` in `project-a` with the following content:
 ```yaml title="File: github.com/project-a/devspace.yaml"
 version: v2beta1
 imports:
-- git: github.com/project-b/devspace.yaml
+- git: github.com/project-b.git
   tag: v1.2.0
 - ...
 functions:
@@ -50,7 +50,7 @@ The following table clarifies when to use `imports` and when to use `dependencie
 | Difference | `imports`                                                                                                                                                                           | `dependencies`                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Use Case   | Importing shared/standardized functionality (e.g. `functions`, `pipelines`, `commands`) into **independent** projects                                                               | Defining logical dependencies between **inter-dependent** projects (app A requiring app B to be deployed)                                                                                                                                                  |
-| Example    | If projects A and B should both have some shared functionality that is defined in a shared `devspace.yaml`                                                                          | If a project A with requires projectd B and C to be deployed in order to work correctly                                                                                                                              |
+| Example    | If projects A and B should both have some shared functionality that is defined in a shared `devspace.yaml`                                                                          | If a project A with requires projects B and C to be deployed in order to work correctly                                                                                                                              |
 | Impact     | If project A imports a `devspace.yaml` from another `devspace.yaml`, then everything defined in this imported `devspace.yaml` will be merged into the `devspace.yaml` of project A. | If project A has a `devspace.yaml` that defines project B as a git-based `dependency`, then DevSpace will `git clone` project B and deploy it when you run `run_dependency_pipelines b` inside your pipeline script. |
 
 
@@ -61,7 +61,7 @@ Let's assume the following `devspace.yaml` inside `project-a`:
 ```yaml title="File: github.com/project-a/devspace.yaml"
 version: v2beta1
 imports:
-- git: github.com/project-b/devspace.yaml
+- git: github.com/project-b.git
 functions:
   function_x: |-
     echo "This is a function_x from project-a"
@@ -83,6 +83,25 @@ functions:
     echo "This is a function_x from project-a"
 ```
 
+## Import Sections
+The following DevSpace config sections are allowed to be imported:
+```
+/require/*
+/vars/*
+/dev/*
+/deployments/*
+/images/*
+/localRegistry/*
+/pipelines/*
+/commands/*
+/functions/*
+/pullSecrets/*
+/dependencies/*
+/profiles/*
+/hooks/*
+```
+
+All other config sections will be ignored during import.
 
 ## Config Reference
 The `imports` section in your `devspace.yaml` file is an array and each entry (import) supports the following fields:

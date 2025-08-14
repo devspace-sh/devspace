@@ -2,12 +2,14 @@ package versions
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
+	"unicode"
 
-	jsonyaml "github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
+	jsonyaml "sigs.k8s.io/yaml"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"
@@ -23,6 +25,7 @@ func ValidInitialSyncStrategy(strategy latest.InitialSyncStrategy) bool {
 		strategy == latest.InitialSyncStrategyKeepAll ||
 		strategy == latest.InitialSyncStrategyPreferLocal ||
 		strategy == latest.InitialSyncStrategyPreferRemote ||
+		strategy == latest.InitialSyncStrategyDisabled ||
 		strategy == latest.InitialSyncStrategyPreferNewest
 }
 
@@ -89,6 +92,34 @@ func Validate(config *latest.Config) error {
 	err = validateDependencies(config)
 	if err != nil {
 		return err
+	}
+
+	err = validateFunctions(config.Functions)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func isReservedFunctionName(name string) bool {
+	switch name {
+	case "true", ":", "false", "exit", "set", "shift", "unset",
+		"echo", "printf", "break", "continue", "pwd", "cd",
+		"wait", "builtin", "trap", "type", "source", ".", "command",
+		"dirs", "pushd", "popd", "umask", "alias", "unalias",
+		"fg", "bg", "getopts", "eval", "test", "devspace", "[", "exec",
+		"return", "read", "shopt":
+		return true
+	}
+	return false
+}
+
+func validateFunctions(functions map[string]string) error {
+	for name := range functions {
+		if isReservedFunctionName(name) {
+			return fmt.Errorf("you cannot use '%s' as a function name as its an internally used special function. Please choose another name", name)
+		}
 	}
 
 	return nil
@@ -228,11 +259,31 @@ func validateDeployments(config *latest.Config) error {
 		if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
 			return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 		}
-		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
-			return errors.Errorf("deployments[%s].kubectl.manifests is required", index)
+		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil && deployConfig.Kubectl.InlineManifest == "" {
+			return errors.Errorf("deployments[%s].kubectl.manifests or deployments[%s].kubectl.InlineManifest is required", index, index)
+		}
+		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests != nil && deployConfig.Kubectl.InlineManifest != "" {
+			return errors.Errorf("deployments[%s].kubectl.manifests and deployments[%s].kubectl.inlineManifest cannot be used together", index, index)
 		}
 		if deployConfig.Kubectl != nil && deployConfig.Helm != nil {
 			return errors.Errorf("deployments[%s].kubectl and deployments[%s].helm cannot be used together", index, index)
+		}
+		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Patches != nil {
+			for patch := range deployConfig.Kubectl.Patches {
+				if deployConfig.Kubectl.Patches[patch].Target.Name == "" {
+					return errors.Errorf("deployments[%s].kubectl.patches[%d].target.name is required", index, patch)
+				}
+				if deployConfig.Kubectl.Patches[patch].Operation == "" {
+					return errors.Errorf("deployments[%s].kubectl.patches[%d].op is required", index, patch)
+				}
+				if deployConfig.Kubectl.Patches[patch].Path == "" {
+					return errors.Errorf("deployments[%s].kubectl.patches[%d].path is required", index, patch)
+				}
+				if deployConfig.Kubectl.Patches[patch].Operation != "remove" &&
+					deployConfig.Kubectl.Patches[patch].Value == nil {
+					return errors.Errorf("deployments[%s].kubectl.patches[%d].value is required", index, patch)
+				}
+			}
 		}
 	}
 
@@ -334,13 +385,13 @@ func validateDev(config *latest.Config) error {
 			return errors.Errorf("dev.%s: image selector and label selector cannot be used together", devPodName)
 		}
 
-		err := validateDevContainer(fmt.Sprintf("dev.%s", devPodName), &devPod.DevContainer, false)
+		err := validateDevContainer(fmt.Sprintf("dev.%s", devPodName), &devPod.DevContainer, devPod, false)
 		if err != nil {
 			return err
 		}
 		if len(devPod.Containers) > 0 {
 			for i, c := range devPod.Containers {
-				err := validateDevContainer(fmt.Sprintf("dev.%s.containers[%s]", devPodName, i), c, true)
+				err := validateDevContainer(fmt.Sprintf("dev.%s.containers[%s]", devPodName, i), c, devPod, true)
 				if err != nil {
 					return err
 				}
@@ -351,7 +402,7 @@ func validateDev(config *latest.Config) error {
 	return nil
 }
 
-func validateDevContainer(path string, devContainer *latest.DevContainer, nameRequired bool) error {
+func validateDevContainer(path string, devContainer *latest.DevContainer, devPod *latest.DevPod, nameRequired bool) error {
 	if nameRequired && devContainer.Container == "" {
 		return errors.Errorf("%s.container is required", path)
 	}
@@ -359,6 +410,13 @@ func validateDevContainer(path string, devContainer *latest.DevContainer, nameRe
 	if !ValidContainerArch(devContainer.Arch) {
 		return errors.Errorf("%s.arch is not valid '%s'", path, devContainer.Arch)
 	}
+
+	// check if there are values from devContainers that are overwriting values from devPod
+	err := validatePodContainerDuplicates(path, devContainer, devPod)
+	if err != nil {
+		return err
+	}
+
 	for index, sync := range devContainer.Sync {
 		// Validate initial sync strategy
 		if !ValidInitialSyncStrategy(sync.InitialSync) {
@@ -395,6 +453,39 @@ func validateDevContainer(path string, devContainer *latest.DevContainer, nameRe
 	for j, p := range devContainer.PersistPaths {
 		if p.Path == "" {
 			return errors.Errorf("%s.persistPaths[%d].path is required", path, j)
+		}
+	}
+
+	return nil
+}
+
+func validatePodContainerDuplicates(path string, devContainer *latest.DevContainer, devPod *latest.DevPod) error {
+	if devContainer.Container == "" {
+		return nil
+	}
+
+	// Extract list of fields from DevContainer struct
+	fields := reflect.VisibleFields(reflect.TypeOf(struct{ latest.DevContainer }{}))
+
+	// Make possible to retrieve fields from struct programmatically
+	devContainerField := reflect.ValueOf(*devContainer)
+	devPodField := reflect.ValueOf(*devPod)
+
+	// iterate trough fields, if a devContainer field is set in devPod,
+	// then report error about overwriting
+	for _, field := range fields {
+		// skip the DevContainer field, check then if a field is valid and set
+		if field.Name != "DevContainer" && field.Name != "Container" &&
+			devPodField.FieldByName(field.Name).IsValid() && !devPodField.FieldByName(field.Name).IsZero() &&
+			!reflect.DeepEqual(devPodField.FieldByName(field.Name).Interface(), devContainerField.FieldByName(field.Name).Interface()) {
+
+			// get DevPod path
+			fieldName := string(unicode.ToLower(rune(field.Name[0]))) + field.Name[1:]
+			pathFields := strings.Split(path, ".")
+			pathFields = pathFields[:len(pathFields)-1]
+			sourcepath := strings.Join(pathFields, ".")
+
+			return errors.Errorf("%s.%s will be overwritten by %s, please specify %s.%s instead", sourcepath, fieldName, path, path, fieldName)
 		}
 	}
 

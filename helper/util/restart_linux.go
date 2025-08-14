@@ -4,15 +4,18 @@
 package util
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 type containerRestarter struct {
@@ -42,7 +45,7 @@ func (*containerRestarter) RestartContainer() error {
 	}
 
 	// read current active process id
-	pgidBytes, err := ioutil.ReadFile(pidFilePath)
+	pgidBytes, err := os.ReadFile(pidFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -69,6 +72,23 @@ func (*containerRestarter) RestartContainer() error {
 	}
 
 	// kill the process group
-	_ = syscall.Kill(-pgid, syscall.SIGKILL)
+	procPath := "/proc/" + strconv.Itoa(pgid)
+
+	for _, sig := range []syscall.Signal{syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL} {
+		stderrlog.Infof("Sending %s signal...", sig.String())
+		err = syscall.Kill(-pgid, sig)
+		if err != nil {
+			return nil
+		}
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 5*time.Second, true, func(_ context.Context) (done bool, err error) {
+			_, err = os.Stat(procPath)
+			return os.IsNotExist(err), nil
+		})
+		if err == nil {
+			return nil
+		}
+	}
+
+	stderrlog.Errorf("Timeout waiting for the process to terminate")
 	return nil
 }

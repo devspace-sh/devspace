@@ -8,8 +8,8 @@ package http2
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
+	"net"
 	"net/http"
 	"sync"
 )
@@ -139,7 +139,6 @@ func (p *clientConnPool) getStartDialLocked(ctx context.Context, addr string) *d
 func (c *dialCall) dial(ctx context.Context, addr string) {
 	const singleUse = false // shared conn
 	c.res, c.err = c.p.t.dialClientConn(ctx, addr, singleUse)
-	close(c.done)
 
 	c.p.mu.Lock()
 	delete(c.p.dialing, addr)
@@ -147,6 +146,8 @@ func (c *dialCall) dial(ctx context.Context, addr string) {
 		c.p.addConnLocked(addr, c.res)
 	}
 	c.p.mu.Unlock()
+
+	close(c.done)
 }
 
 // addConnIfNeeded makes a NewClientConn out of c if a connection for key doesn't
@@ -157,7 +158,7 @@ func (c *dialCall) dial(ctx context.Context, addr string) {
 // This code decides which ones live or die.
 // The return value used is whether c was used.
 // c is never closed.
-func (p *clientConnPool) addConnIfNeeded(key string, t *Transport, c *tls.Conn) (used bool, err error) {
+func (p *clientConnPool) addConnIfNeeded(key string, t *Transport, c net.Conn) (used bool, err error) {
 	p.mu.Lock()
 	for _, cc := range p.conns[key] {
 		if cc.CanTakeNewRequest() {
@@ -193,8 +194,8 @@ type addConnCall struct {
 	err  error
 }
 
-func (c *addConnCall) run(t *Transport, key string, tc *tls.Conn) {
-	cc, err := t.NewClientConn(tc)
+func (c *addConnCall) run(t *Transport, key string, nc net.Conn) {
+	cc, err := t.NewClientConn(nc)
 
 	p := c.p
 	p.mu.Lock()

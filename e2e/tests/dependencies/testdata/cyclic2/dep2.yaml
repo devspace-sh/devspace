@@ -1,0 +1,10 @@
+version: v2beta1
+name: dep2
+
+dependencies:
+  main:
+    path: ./devspace.yaml
+  dep1:
+    path: ./dep1.yaml
+  dep3:
+    path: ./dep3.yaml

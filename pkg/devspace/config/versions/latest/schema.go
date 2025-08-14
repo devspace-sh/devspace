@@ -49,7 +49,8 @@ type Config struct {
 
 	// Name specifies the name of the DevSpace project and uniquely identifies a project.
 	// DevSpace will not allow multiple active projects with the same name in the same Kubernetes namespace.
-	Name string `yaml:"name" json:"name" jsonschema:"required"`
+	// If not provided, DevSpace will use the name of the current working directory.
+	Name string `yaml:"name" json:"name"`
 
 	// Imports merges specified config files into this one. This is very useful to split up your DevSpace configuration
 	// into multiple files and reuse those through git, a remote url or common local path.
@@ -117,7 +118,10 @@ type Config struct {
 
 	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
 	// in the order they are specified. They are deprecated and pipelines should be used instead.
-	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty" jsonschema:"-"`
+	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+
+	// LocalRegistry specifies the configuration for a local image registry
+	LocalRegistry *LocalRegistryConfig `yaml:"localRegistry,omitempty" json:"localRegistry,omitempty"`
 }
 
 // Import specifies the source of the devspace config to merge
@@ -245,7 +249,7 @@ type Image struct {
 
 	// Dockerfile specifies a path (relative or absolute) to the dockerfile. Defaults
 	// to ./Dockerfile
-	Dockerfile string `yaml:"dockerfile" json:"dockerfile" jsonschema:"default=./Dockerfile" jsonschema_extras:"group=buildConfig"`
+	Dockerfile string `yaml:"dockerfile,omitempty" json:"dockerfile,omitempty" jsonschema:"default=./Dockerfile" jsonschema_extras:"group=buildConfig" jsonschema_description:"Dockerfile specifies a path (relative or absolute) to the dockerfile. Defaults to ./Dockerfile."`
 
 	// Context is the context path to build with. Defaults to the current working directory
 	Context string `yaml:"context,omitempty" json:"context,omitempty" jsonschema:"default=./" jsonschema_extras:"group=buildConfig"`
@@ -305,6 +309,11 @@ type Image struct {
 	// Please make sure you either have an Entrypoint defined in the devspace config or in the
 	// dockerfile for this image, otherwise devspace will fail.
 	InjectRestartHelper bool `yaml:"injectRestartHelper,omitempty" json:"injectRestartHelper,omitempty" jsonschema:"-"`
+
+	// InjectLegacyRestartHelper instructs DevSpace to use the pre version 6 restart helper when upgrading from v1beta11
+	// and prior schemas. This allows containers to start without the /.devspace/start file being written to the
+	// container, which is a post version 6 feature.
+	InjectLegacyRestartHelper bool `yaml:"injectLegacyRestartHelper,omitempty" json:"injectLegacyRestartHelper,omitempty" jsonschema:"-"`
 
 	// RestartHelperPath will load the restart helper from this location instead of using the bundled
 	// one within DevSpace. Can be either a local path or an URL where to find the restart helper.
@@ -428,6 +437,9 @@ type KanikoConfig struct {
 
 	// ServiceAccount the service account to use for the kaniko pod
 	ServiceAccount string `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
+
+	// GenerateName is the optional prefix that will be set to the generateName field of the build pod
+	GenerateName string `yaml:"generateName,omitempty" json:"generateName,omitempty"`
 
 	// Annotations are extra annotations that will be added to the build pod
 	Annotations map[string]string `yaml:"annotations,omitempty" json:"annotations,omitempty"`
@@ -582,6 +594,48 @@ type CustomConfigCommand struct {
 	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
 }
 
+// LocalRegistryConfig holds the configuration of the local image registry
+type LocalRegistryConfig struct {
+	// Enabled enables the local registry for pushing images.
+	// When unset the local registry will be used as a fallback if there are no push permissions for the registry.
+	// When `true` the local registry will always be used.
+	// When `false` the local registry will never be used.
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// LocalBuild enables use of local docker builder instead of building in the cluster
+	LocalBuild bool `yaml:"localbuild,omitempty" json:"localbuild,omitempty"`
+
+	// Namespace where the local registry is deployed. Default is the current context's namespace
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+
+	// Name of the deployment and service of the local registry. Default is `registry`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Image of the local registry. Default is `registry:2.8.1`
+	Image string `yaml:"image,omitempty" json:"image,omitempty"`
+
+	// BuildKitImage of the buildkit sidecar. Default is `moby/buildkit:master-rootless`
+	BuildKitImage string `yaml:"buildKitImage,omitempty" json:"buildKitImage,omitempty"`
+
+	// Port that the registry image listens on. Default is `5000`
+	Port *int `yaml:"port,omitempty" json:"port,omitempty"`
+
+	// Persistence settings for the local registry
+	Persistence *LocalRegistryPersistence `yaml:"persistence,omitempty" json:"persistence,omitempty"`
+}
+
+// LocalRegistryPersistence configures persistence settings for the local registry
+type LocalRegistryPersistence struct {
+	// Enable enables persistence for the local registry
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// Size of the persistent volume for local docker registry storage. Default is `5Gi`
+	Size string `yaml:"size,omitempty" json:"size,omitempty"`
+
+	// StorageClassName of the persistent volume. Default is your cluster's configured default storage class
+	StorageClassName string `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
+}
+
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
 	// Name of the deployment
@@ -594,7 +648,7 @@ type DeploymentConfig struct {
 
 	// UpdateImageTags lets you define if DevSpace should update the tags of the images defined in the
 	// images section with their most recent built tag.
-	UpdateImageTags *bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty"`
+	UpdateImageTags *bool `yaml:"updateImageTags,omitempty" json:"updateImageTags,omitempty" jsonschema:"default=true"`
 
 	// Namespace where to deploy this deployment
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -780,6 +834,8 @@ type RollingUpdateConfig struct {
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
+	// ReleaseName of the helm configuration
+	ReleaseName string `yaml:"releaseName,omitempty" json:"releaseName,omitempty"`
 	// Chart holds the chart configuration and where DevSpace can find the chart
 	Chart *ChartConfig `yaml:"chart,omitempty" json:"chart,omitempty" jsonschema:"required"`
 	// Values are additional values that should get passed to deploying this chart
@@ -793,19 +849,22 @@ type HelmConfig struct {
 	UpgradeArgs []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
 	// TemplateArgs are additional arguments to pass to `helm template`
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
+
+	// DisableDependencyUpdate disables helm dependencies update, default to false
+	DisableDependencyUpdate *bool `yaml:"disableDependencyUpdate,omitempty" json:"disableDependencyUpdate,omitempty"`
 }
 
 // ChartConfig defines the helm chart options
 type ChartConfig struct {
-	// Name is the name of the helm chart to deploy. Can also be a local path
+	// Name is the name of the helm chart to deploy. Can also be a local path or an oci url
 	Name string `yaml:"name,omitempty" json:"name,omitempty" jsonschema:"required" jsonschema_extras:"group=repo,group_name=Source: Helm Repository"`
 	// Version is the version of the helm chart to deploy
 	Version string `yaml:"version,omitempty" json:"version,omitempty" jsonschema_extras:"group=repo"`
 	// RepoURL is the url of the repo to deploy the chart from
 	RepoURL string `yaml:"repo,omitempty" json:"repo,omitempty" jsonschema_extras:"group=repo"`
-	// Username is the username to authenticate to the chart repo
+	// Username is the username to authenticate to the chart repo. When using an OCI chart, used for registry auth
 	Username string `yaml:"username,omitempty" json:"username,omitempty" jsonschema_extras:"group=repo"`
-	// Password is the password to authenticate to the chart repo
+	// Password is the password to authenticate to the chart repo, When using an OCI chart, used for registry auth
 	Password string `yaml:"password,omitempty" json:"password,omitempty" jsonschema_extras:"group=repo"`
 	// Source can be used to reference an helm chart from a distant location
 	// such as a git repository
@@ -821,15 +880,20 @@ type KubectlConfig struct {
 	ApplyArgs []string `yaml:"applyArgs,omitempty" json:"applyArgs,omitempty"`
 	// CreateArgs are extra arguments for `kubectl create` which will be run before `kubectl apply`
 	CreateArgs []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
-	// KubectlBinaryPath is the optional path where to finde the kubectl binary
+	// KubectlBinaryPath is the optional path where to find the kubectl binary
 	KubectlBinaryPath string `yaml:"kubectlBinaryPath,omitempty" json:"kubectlBinaryPath,omitempty"`
 
-	// Kustomize can be used to enabdevle kustomize instead of kubectl
+	// InlineManifests is a block containing the manifest to deploy
+	InlineManifest string `yaml:"inlineManifest,omitempty" json:"inlineManifest,omitempty"`
+	// Kustomize can be used to enable kustomize instead of kubectl
 	Kustomize *bool `yaml:"kustomize,omitempty" json:"kustomize,omitempty" jsonschema_extras:"group=kustomize,group_name=Kustomize"`
 	// KustomizeArgs are extra arguments for `kustomize build` which will be run before `kubectl apply`
 	KustomizeArgs []string `yaml:"kustomizeArgs,omitempty" json:"kustomizeArgs,omitempty" jsonschema_extras:"group=kustomize"`
 	// KustomizeBinaryPath is the optional path where to find the kustomize binary
 	KustomizeBinaryPath string `yaml:"kustomizeBinaryPath,omitempty" json:"kustomizeBinaryPath,omitempty" jsonschema_extras:"group=kustomize"`
+
+	// Patches are additional changes to the pod spec that should be applied
+	Patches []*PatchTarget `yaml:"patches,omitempty" json:"patches,omitempty" jsonschema_extras:"group=modifications"`
 }
 
 // DevPod holds configurations for selecting a pod and starting dev services for that pod
@@ -894,8 +958,8 @@ type DevContainer struct {
 
 	// Sync allows you to sync certain local paths with paths inside the container
 	Sync []*SyncConfig `yaml:"sync,omitempty" json:"sync,omitempty" jsonschema_extras:"group=sync,group_name=File Sync"`
-	// SSH allows you to create an SSH tunnel to this container
-	PersistPaths []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty" jsonschema_extras:"group=modifications"`
+	// PersistPaths allows you to persist certain paths within this container with a persistent volume claim
+	PersistPaths []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
 
 	// Terminal allows you to tell DevSpace to open a terminal with screen support to this container
 	Terminal *Terminal `yaml:"terminal,omitempty" json:"terminal,omitempty" jsonschema_extras:"group=workflows,group_name=Foreground Dev Workflows"`
@@ -903,8 +967,8 @@ type DevContainer struct {
 	Logs *Logs `yaml:"logs,omitempty" json:"logs,omitempty" jsonschema_extras:"group=workflows"`
 	// Attach allows you to tell DevSpace to attach to this container
 	Attach *Attach `yaml:"attach,omitempty" json:"attach,omitempty" jsonschema_extras:"group=workflows"`
-	// PersistPaths allows you to persist certain paths within this container with a persistent volume claim
-	SSH *SSH `yaml:"ssh,omitempty" json:"ssh,omitempty" jsonschema_extras:"group=workflows_background"`
+	// SSH allows you to create an SSH tunnel to this container
+	SSH *SSH `yaml:"ssh,omitempty" json:"ssh,omitempty"`
 	// ProxyCommands allow you to proxy certain local commands to the container
 	ProxyCommands []*ProxyCommand `yaml:"proxyCommands,omitempty" json:"proxyCommands,omitempty" jsonschema_extras:"group=workflows_background"`
 	// RestartHelper holds restart helper specific configuration. The restart helper is used to delay starting of
@@ -944,7 +1008,7 @@ type SSH struct {
 	// Enabled can be used to enable the ssh server within the container. By default,
 	// DevSpace will generate the required keys and create an entry in your ~/.ssh/config
 	// for this container that can be used via `ssh dev-config-name.dev-project-name.devspace`
-	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
 	// LocalHostname is the local ssh host to write to the ~/.ssh/config
 	LocalHostname string `yaml:"localHostname,omitempty" json:"localHostname,omitempty"`
@@ -954,6 +1018,11 @@ type SSH struct {
 
 	// RemoteAddress is the address to listen to inside the container
 	RemoteAddress string `yaml:"remoteAddress,omitempty" json:"remoteAddress,omitempty"`
+
+	// UseInclude tells DevSpace to use a the file ~/.ssh/devspace_config for its ssh entries. DevSpace
+	// will also create an import for its own entries inside ~/.ssh/config, this is a cleaner way,
+	// but unfortunately not all SSH clients support this.
+	UseInclude bool `yaml:"useInclude,omitempty" json:"useInclude,omitempty"`
 }
 
 type EnvVar struct {
@@ -1093,8 +1162,11 @@ type SyncConfig struct {
 	// NoWatch will terminate the sync after the initial sync is done
 	NoWatch bool `yaml:"noWatch,omitempty" json:"noWatch,omitempty"`
 
+	// File signals DevSpace that this is a single file that should get synced instead of a whole directory
+	File bool `yaml:"file,omitempty" json:"file,omitempty"`
+
 	// PrintLogs defines if sync logs should be displayed on the terminal
-	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty"`
+	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty" jsonschema:"-"`
 }
 
 type ContainerArchitecture string
@@ -1115,8 +1187,8 @@ type SyncOnUpload struct {
 	Exec []SyncExec `yaml:"exec,omitempty" json:"exec,omitempty"`
 
 	// Defines what commands should be executed on the container side if a change is uploaded and applied in the target
-	// container
-	ExecRemote *SyncExecCommand `yaml:"execRemote,omitempty" json:"execRemote,omitempty"`
+	// container. Deprecated, use `Exec`.
+	ExecRemote *SyncExecCommand `yaml:"execRemote,omitempty" json:"execRemote,omitempty" jsonschema:"-"`
 }
 
 type SyncExec struct {
@@ -1136,6 +1208,10 @@ type SyncExec struct {
 	// Local specifies if the command should be executed locally instead of within the
 	// container
 	Local bool `yaml:"local,omitempty" json:"local,omitempty"`
+
+	// Once executes this command only once in the container's life. Can be used to initialize
+	// a container before starting it, but after everything was synced.
+	Once bool `yaml:"once,omitempty" json:"once,omitempty"`
 
 	// OnChange is an array of file patterns that trigger this command execution
 	OnChange []string `yaml:"onChange,omitempty" json:"onChange,omitempty"`
@@ -1182,6 +1258,7 @@ const (
 	InitialSyncStrategyPreferRemote InitialSyncStrategy = "preferRemote"
 	InitialSyncStrategyPreferNewest InitialSyncStrategy = "preferNewest"
 	InitialSyncStrategyKeepAll      InitialSyncStrategy = "keepAll"
+	InitialSyncStrategyDisabled     InitialSyncStrategy = "disabled"
 )
 
 // InitialSyncCompareBy is the type of how a change should be determined during the initial sync
@@ -1224,12 +1301,18 @@ type Terminal struct {
 	// DisableScreen will disable screen which is used by DevSpace by default to preserve
 	// sessions if connections interrupt or the session is lost.
 	DisableScreen bool `yaml:"disableScreen,omitempty" json:"disableScreen,omitempty"`
+
+	// DisableTTY will disable a tty shell for terminal command execution
+	DisableTTY bool `yaml:"disableTTY,omitempty" json:"disableTTY,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
 	// Name is used internally
-	Name string `yaml:"name" json:"name"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Disabled excludes this dependency from variable resolution and pipeline runs
+	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 
 	// Source holds the dependency project
 	Source *SourceConfig `yaml:",inline" json:",inline"`
@@ -1388,8 +1471,8 @@ type HookContainer struct {
 	// Wait can be used to disable waiting
 	Wait *bool `yaml:"wait,omitempty" json:"wait,omitempty"`
 
-	// Timeout how long to wait
-	Timeout int64 `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	// Timeout is how long to wait (in seconds) for the container to start. Default is 150 seconds.
+	Timeout int64 `yaml:"timeout,omitempty" json:"timeout,omitempty" jsonschema:"default=150"`
 
 	// Once only executes an hook once in the container until it is restarted
 	Once *bool `yaml:"once,omitempty" json:"once,omitempty"`
@@ -1455,7 +1538,7 @@ func (c *CommandConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // Variable describes the var definition
 type Variable struct {
 	// Name is the name of the variable
-	Name string `yaml:"name" json:"name"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// Value is a shortcut for using source: none and default: my-value
 	Value interface{} `yaml:"value,omitempty" json:"value,omitempty" jsonschema:"oneof_type=string;integer;boolean" jsonschema_extras:"group=static,group_name=Static Value"`
@@ -1492,8 +1575,8 @@ type Variable struct {
 	// system.
 	Commands []VariableCommand `yaml:"commands,omitempty" json:"commands,omitempty" jsonschema_extras:"group=execution"`
 
-	// AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere
-	AlwaysResolve bool `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
+	// AlwaysResolve makes sure this variable will always be resolved and not only if it is used somewhere. Defaults to false.
+	AlwaysResolve *bool `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
 
 	// Source defines where the variable should be taken from
 	Source VariableSource `yaml:"source,omitempty" json:"source,omitempty" jsonschema:"enum=all,enum=env,enum=input,enum=command,enum=none"`
@@ -1640,6 +1723,23 @@ type ProfileActivation struct {
 	// Vars defines key/value pairs where the key is the name of the variable and the value is a regular expression used to match the variable's value.
 	// When multiple keys are specified, they must all evaluate to true to activate the profile.
 	Vars map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
+}
+
+// PatchTarget describes a config patch and how it should be applied
+type PatchTarget struct {
+	// Target describes where to apply a config patch
+	Target      Target `yaml:"target" json:"target"`
+	PatchConfig `yaml:",inline" json:",inline"`
+}
+
+// Target describes where to apply a config patch
+type Target struct {
+	// ApiVersion is the Kubernetes api of the target resource
+	APIVersion string `yaml:"apiVersion" json:"apiVersion,omitempty"`
+	// Kind is the kind of the target resource (eg: Deployment, Service ...)
+	Kind string `yaml:"kind" json:"kind,omitempty"`
+	// Name is the name of the target resource
+	Name string `yaml:"name" json:"name"  jsonschema:"required"`
 }
 
 // PatchConfig describes a config patch and how it should be applied

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -69,7 +68,7 @@ func main() {
 		anchorName := function.Name
 		functionContent := importContent + "\n" + fmt.Sprintf(util.TemplateFunctionRef, flagContent != "", "", "### ", function.Name, function.Args, argEnum, function.Return, !function.IsGlobal, anchorName, function.Description, flagContent)
 
-		err = ioutil.WriteFile(functionFile, []byte(functionContent), os.ModePerm)
+		err = os.WriteFile(functionFile, []byte(functionContent), os.ModePerm)
 		if err != nil {
 			panic(err)
 		}
@@ -163,17 +162,17 @@ func main() {
 
 	util.ProcessGroups(groups)
 
-	err := ioutil.WriteFile(functionRefFile, []byte(functionRefContent), os.ModePerm)
+	err := os.WriteFile(functionRefFile, []byte(functionRefContent), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(globalFunctionRefFile, []byte(globalFunctionRefContent), os.ModePerm)
+	err = os.WriteFile(globalFunctionRefFile, []byte(globalFunctionRefContent), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(pipelineFunctionRefFile, []byte(pipelineFunctionRefContent), os.ModePerm)
+	err = os.WriteFile(pipelineFunctionRefFile, []byte(pipelineFunctionRefContent), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
@@ -210,7 +209,7 @@ func getFlagReference(functionName, functionFile string, flagRef reflect.Type, p
 			panic(err)
 		}
 
-		err = ioutil.WriteFile(flagFile, []byte(flagContent), os.ModePerm)
+		err = os.WriteFile(flagFile, []byte(flagContent), os.ModePerm)
 		if err != nil {
 			panic(err)
 		}
@@ -312,46 +311,54 @@ var Functions = []Function{
 	},
 	{
 		Name:        "is_dependency",
-		Description: `Returns true if the pipeline currently being executed is run because the project is a dependency of another project`,
+		Description: `Returns exit code 0 if the pipeline currently being executed is run because the project is a dependency of another project`,
 		Handler:     commands.IsDependency,
-		Return:      reflect.Bool.String(),
+		Return:      reflect.Int.String(),
 		Group:       groupChecks,
-		IsGlobal:    true,
 	},
 	{
 		Name:        "is_empty",
-		Description: `Returns true if the value of the argument is empty string`,
+		Description: `Returns exit code 0 if the value of the argument is empty string`,
 		Args:        `[value]`,
 		Handler:     basiccommands.IsEmpty,
-		Return:      reflect.Bool.String(),
+		Return:      reflect.Int.String(),
 		Group:       groupChecks,
 		IsGlobal:    true,
 	},
 	{
 		Name:        "is_equal",
-		Description: `Returns true if the values of both arguments provided are equal`,
+		Description: `Returns exit code 0 if the values of both arguments provided are equal`,
 		Args:        `[value-1] [value-2]`,
 		Handler:     basiccommands.IsEqual,
-		Return:      reflect.Bool.String(),
+		Return:      reflect.Int.String(),
+		Group:       groupChecks,
+		IsGlobal:    true,
+	},
+	{
+		Name:        "is_in",
+		Description: "Returns exit code 0 if the value of the first argument can be found in the second argument (second argument being a blank-separated list of strings e.g `\"bananas apples peaches\"`)",
+		Args:        `[value-1] [value-2]`,
+		Handler:     basiccommands.IsIn,
+		Return:      reflect.Int.String(),
 		Group:       groupChecks,
 		IsGlobal:    true,
 	},
 	{
 		Name:        "is_os",
-		Description: `Returns true if the current operating system equals the value provided as argument`,
+		Description: `Returns exit code 0 if the current operating system equals the value provided as argument`,
 		Args:        `[os]`,
 		ArgEnum:     []string{"darwin", "linux", "windows", "aix", "android", "dragonfly", "freebsd", "hurd", "illumos", "ios", "js", "nacl", "netbsd", "openbsd", "plan9", "solaris", "zos"},
 		Handler:     basiccommands.IsOS,
-		Return:      reflect.Bool.String(),
+		Return:      reflect.Int.String(),
 		Group:       groupChecks,
 		IsGlobal:    true,
 	},
 	{
 		Name:        "is_true",
-		Description: `Returns true if the value of the argument is "true"`,
+		Description: `Returns exit code 0 if the value of the argument is "true"`,
 		Args:        `[value]`,
 		Handler:     basiccommands.IsTrue,
-		Return:      reflect.Bool.String(),
+		Return:      reflect.Int.String(),
 		Group:       groupChecks,
 		IsGlobal:    true,
 	},
@@ -361,6 +368,14 @@ var Functions = []Function{
 		Handler:     commands.SelectPod,
 		Flags:       commands.SelectPodOptions{},
 		Return:      reflect.String.String(),
+		Group:       groupOther,
+	},
+	{
+		Name:        "wait_pod",
+		Description: "Waits for a pod to become running",
+		Args:        `[command]`,
+		Handler:     commands.WaitPod,
+		Flags:       commands.WaitPodOptions{},
 		Group:       groupOther,
 	},
 	{

@@ -2,13 +2,14 @@
 
 ### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Documentation](https://devspace.sh/cli/docs/introduction)** • **[Blog](https://loft.sh/blog)** • **[Twitter](https://twitter.com/devspace)**
 
-![Build Status Passing](https://img.shields.io/github/workflow/status/loft-sh/devspace/Test%20&%20Release%20CLI%20Version/master?style=for-the-badge)
+![Build Status Passing](https://img.shields.io/github/actions/workflow/status/loft-sh/devspace/release.yaml?branch=main&style=for-the-badge)
 ![Latest Release](https://img.shields.io/github/v/release/loft-sh/devspace?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
 ![License: Apache-2.0](https://img.shields.io/github/license/loft-sh/devspace?style=for-the-badge&color=%23007ec6)
 ![Total Downloads (GitHub Releases)](https://img.shields.io/github/downloads/loft-sh/devspace/total?style=for-the-badge&label=Total%20Downloads&color=%23007ec6)
 ![NPM Installs per Month](https://img.shields.io/npm/dm/devspace?label=NPM%20Installs&style=for-the-badge&color=%23007ec6)
+![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/6945/badge)
 
-[![Join us on Slack!](docs/static/img/slack.svg)](https://slack.k8s.io/#devspace)
+[![Join us on Slack!](docs/static/img/slack.svg)](https://slack.loft.sh/)
 
 ### Client-Only Developer Tool for Cloud-Native Development with Kubernetes
 - **Build, test and debug applications directly inside Kubernetes**
@@ -26,6 +27,9 @@
 ⭐️ <strong>Do you like DevSpace? Support the project with a star</strong> ⭐️
 </p>
 
+<br>
+
+DevSpace was created by [Loft Labs](https://loft.sh) and is a [Cloud Native Computing Foundation (CNCF) sandbox project](https://www.cncf.io/sandbox-projects/).
 
 <br>
 
@@ -123,7 +127,7 @@ DevSpace runs as a single binary CLI tool directly on your computer and ideally,
 
 Help us make DevSpace the best tool for developing, deploying and debugging Kubernetes apps.
 
-[![Join us on Slack!](docs/static/img/slack.svg)](https://slack.k8s.io/#devspace)
+[![Join us on Slack!](docs/static/img/slack.svg)](https://slack.loft.sh/)
 
 ### Reporting Issues
 
@@ -153,6 +157,8 @@ This project is mainly written in Golang. If you want to contribute code:
 6. Evaluate and test your changes `./devspace [SOME_COMMAND]`
 
 See [Contributing Guidelines](CONTRIBUTING.md) for more information.
+
+The DevSpace project follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/main/code-of-conduct.md).
 
 <br>
 
@@ -196,4 +202,12 @@ DevSpace is an open-source command-line tool that provides everything you need t
 <br>
 <br>
 
-You can use the DevSpace for any private or commercial projects because it is licensed under the Apache 2.0 open source license.
+## License
+
+DevSpace is released under the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.
+
+DevSpace is a [Cloud Native Computing Foundation (CNCF) sandbox project](https://www.cncf.io/sandbox-projects/) and was contributed by [Loft Labs](https://www.loft.sh).
+
+<div align="center">
+    <img src="https://raw.githubusercontent.com/cncf/artwork/master/other/cncf-sandbox/horizontal/color/cncf-sandbox-horizontal-color.svg" width="300" alt="CNCF Sandbox Project">
+</div>

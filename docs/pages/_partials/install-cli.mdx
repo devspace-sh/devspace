@@ -12,7 +12,8 @@ DevSpace is a client-only binary. It is super lightweight, does not require any 
     { label: 'brew', value: 'brew', },
     { label: 'Mac', value: 'mac', },
     { label: 'Linux', value: 'linux', },
-    { label: 'Windows Powershell', value: 'windows', },
+    { label: 'Windows Powershell', value: 'windows-ps', },
+    { label: 'Windows Scoop', value: 'windows-scoop', },
   ]
 }>
 <TabItem value="npm">
@@ -40,12 +41,10 @@ brew install devspace
 
 ```bash
 # AMD64 / Intel
-curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
-sudo install devspace /usr/local/bin;
+curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-darwin-amd64" && sudo install -c -m 0755 devspace /usr/local/bin
 
 # ARM64 / Silicon Mac
-curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-arm64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
-sudo install devspace /usr/local/bin;
+curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-darwin-arm64" && sudo install -c -m 0755 devspace /usr/local/bin
 ```
 
 </TabItem>
@@ -53,34 +52,28 @@ sudo install devspace /usr/local/bin;
 
 ```bash
 # AMD64
-curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
-sudo install devspace /usr/local/bin;
+curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-linux-amd64" && sudo install -c -m 0755 devspace /usr/local/bin
 
 # ARM64
-curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-arm64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
-sudo install devspace /usr/local/bin;
+curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-linux-arm64" && sudo install -c -m 0755 devspace /usr/local/bin
 ```
 
 </TabItem>
-<TabItem value="windows">
+<TabItem value="windows-ps">
 
-```powershell {4}
+```powershell
 md -Force "$Env:APPDATA\devspace"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
-Invoke-WebRequest -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/loft-sh/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe;
+Invoke-WebRequest -URI "https://github.com/loft-sh/devspace/releases/latest/download/devspace-windows-amd64.exe" -o $Env:APPDATA\devspace\devspace.exe;
 $env:Path += ";" + $Env:APPDATA + "\devspace";
 [Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
 ```
 
-:::info Check Environment Variable $PATH
-Line 4 of this install script adds the install directory `%APPDATA%\devspace` to the `$PATH` environment variable. This is only effective for the current powershell session, i.e. when opening a new terminal window, `devspace` may not be found. 
+</TabItem>
+<TabItem value="windows-scoop">
 
-**Make sure to add the folder `%APPDATA%\devspace` to the `PATH` environment variable after installing DevSpace via Powershell. Afterwards, a reboot might be necessary.**
-
-To confirm that DevSpace is successfully installed, reboot and test via:
-```bash
-devspace --version
+```powershell
+scoop install devspace
 ```
-:::
 
 </TabItem>
 </Tabs>

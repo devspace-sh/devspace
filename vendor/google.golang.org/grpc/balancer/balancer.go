@@ -27,8 +27,11 @@ import (
 	"net"
 	"strings"
 
+	"google.golang.org/grpc/channelz"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
+	estats "google.golang.org/grpc/experimental/stats"
+	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/internal"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/resolver"
@@ -38,6 +41,8 @@ import (
 var (
 	// m is a map from name to balancer builder.
 	m = make(map[string]Builder)
+
+	logger = grpclog.Component("balancer")
 )
 
 // Register registers the balancer builder to the balancer map. b.Name
@@ -50,7 +55,14 @@ var (
 // an init() function), and is not thread-safe. If multiple Balancers are
 // registered with the same name, the one registered last will take effect.
 func Register(b Builder) {
-	m[strings.ToLower(b.Name())] = b
+	name := strings.ToLower(b.Name())
+	if name != b.Name() {
+		// TODO: Skip the use of strings.ToLower() to index the map after v1.59
+		// is released to switch to case sensitive balancer registry. Also,
+		// remove this warning and update the docstrings for Register and Get.
+		logger.Warningf("Balancer registered with name %q. grpc-go will be switching to case sensitive balancer registries soon", b.Name())
+	}
+	m[name] = b
 }
 
 // unregisterForTesting deletes the balancer with the given name from the
@@ -63,52 +75,24 @@ func unregisterForTesting(name string) {
 
 func init() {
 	internal.BalancerUnregister = unregisterForTesting
+	internal.ConnectedAddress = connectedAddress
+	internal.SetConnectedAddress = setConnectedAddress
 }
 
 // Get returns the resolver builder registered with the given name.
 // Note that the compare is done in a case-insensitive fashion.
 // If no builder is register with the name, nil will be returned.
 func Get(name string) Builder {
+	if strings.ToLower(name) != name {
+		// TODO: Skip the use of strings.ToLower() to index the map after v1.59
+		// is released to switch to case sensitive balancer registry. Also,
+		// remove this warning and update the docstrings for Register and Get.
+		logger.Warningf("Balancer retrieved for name %q. grpc-go will be switching to case sensitive balancer registries soon", name)
+	}
 	if b, ok := m[strings.ToLower(name)]; ok {
 		return b
 	}
 	return nil
-}
-
-// A SubConn represents a single connection to a gRPC backend service.
-//
-// Each SubConn contains a list of addresses.
-//
-// All SubConns start in IDLE, and will not try to connect. To trigger the
-// connecting, Balancers must call Connect.  If a connection re-enters IDLE,
-// Balancers must call Connect again to trigger a new connection attempt.
-//
-// gRPC will try to connect to the addresses in sequence, and stop trying the
-// remainder once the first connection is successful. If an attempt to connect
-// to all addresses encounters an error, the SubConn will enter
-// TRANSIENT_FAILURE for a backoff period, and then transition to IDLE.
-//
-// Once established, if a connection is lost, the SubConn will transition
-// directly to IDLE.
-//
-// This interface is to be implemented by gRPC. Users should not need their own
-// implementation of this interface. For situations like testing, any
-// implementations should embed this interface. This allows gRPC to add new
-// methods to this interface.
-type SubConn interface {
-	// UpdateAddresses updates the addresses used in this SubConn.
-	// gRPC checks if currently-connected address is still in the new list.
-	// If it's in the list, the connection will be kept.
-	// If it's not in the list, the connection will gracefully closed, and
-	// a new connection will be created.
-	//
-	// This will trigger a state transition for the SubConn.
-	//
-	// Deprecated: This method is now part of the ClientConn interface and will
-	// eventually be removed from here.
-	UpdateAddresses([]resolver.Address)
-	// Connect starts the connecting for this SubConn.
-	Connect()
 }
 
 // NewSubConnOptions contains options to create new SubConn.
@@ -123,6 +107,11 @@ type NewSubConnOptions struct {
 	// HealthCheckEnabled indicates whether health check service should be
 	// enabled on this SubConn
 	HealthCheckEnabled bool
+	// StateListener is called when the state of the subconn changes.  If nil,
+	// Balancer.UpdateSubConnState will be called instead.  Will never be
+	// invoked until after Connect() is called on the SubConn created with
+	// these options.
+	StateListener func(SubConnState)
 }
 
 // State contains the balancer's state relevant to the gRPC ClientConn.
@@ -140,20 +129,35 @@ type State struct {
 // brand new implementation of this interface. For the situations like
 // testing, the new implementation should embed this interface. This allows
 // gRPC to add new methods to this interface.
+//
+// NOTICE: This interface is intended to be implemented by gRPC, or intercepted
+// by custom load balancing polices.  Users should not need their own complete
+// implementation of this interface -- they should always delegate to a
+// ClientConn passed to Builder.Build() by embedding it in their
+// implementations. An embedded ClientConn must never be nil, or runtime panics
+// will occur.
 type ClientConn interface {
 	// NewSubConn is called by balancer to create a new SubConn.
 	// It doesn't block and wait for the connections to be established.
 	// Behaviors of the SubConn can be controlled by options.
+	//
+	// Deprecated: please be aware that in a future version, SubConns will only
+	// support one address per SubConn.
 	NewSubConn([]resolver.Address, NewSubConnOptions) (SubConn, error)
 	// RemoveSubConn removes the SubConn from ClientConn.
 	// The SubConn will be shutdown.
+	//
+	// Deprecated: use SubConn.Shutdown instead.
 	RemoveSubConn(SubConn)
 	// UpdateAddresses updates the addresses used in the passed in SubConn.
 	// gRPC checks if the currently connected address is still in the new list.
 	// If so, the connection will be kept. Else, the connection will be
 	// gracefully closed, and a new connection will be created.
 	//
-	// This will trigger a state transition for the SubConn.
+	// This may trigger a state transition for the SubConn.
+	//
+	// Deprecated: this method will be removed.  Create new SubConns for new
+	// addresses instead.
 	UpdateAddresses(SubConn, []resolver.Address)
 
 	// UpdateState notifies gRPC that the balancer's internal state has
@@ -170,6 +174,17 @@ type ClientConn interface {
 	//
 	// Deprecated: Use the Target field in the BuildOptions instead.
 	Target() string
+
+	// MetricsRecorder provides the metrics recorder that balancers can use to
+	// record metrics. Balancer implementations which do not register metrics on
+	// metrics registry and record on them can ignore this method. The returned
+	// MetricsRecorder is guaranteed to never be nil.
+	MetricsRecorder() estats.MetricsRecorder
+
+	// EnforceClientConnEmbedding is included to force implementers to embed
+	// another implementation of this interface, allowing gRPC to add methods
+	// without breaking users.
+	internal.EnforceClientConnEmbedding
 }
 
 // BuildOptions contains additional information for Build.
@@ -191,8 +206,8 @@ type BuildOptions struct {
 	// implementations which do not communicate with a remote load balancer
 	// server can ignore this field.
 	Authority string
-	// ChannelzParentID is the parent ClientConn's channelz ID.
-	ChannelzParentID int64
+	// ChannelzParent is the parent ClientConn's channelz channel.
+	ChannelzParent channelz.Identifier
 	// CustomUserAgent is the custom user agent set on the parent ClientConn.
 	// The balancer should set the same custom user agent if it creates a
 	// ClientConn.
@@ -243,8 +258,8 @@ type DoneInfo struct {
 	// ServerLoad is the load received from server. It's usually sent as part of
 	// trailing metadata.
 	//
-	// The only supported type now is *orca_v1.LoadReport.
-	ServerLoad interface{}
+	// The only supported type now is *orca_v3.LoadReport.
+	ServerLoad any
 }
 
 var (
@@ -273,6 +288,14 @@ type PickResult struct {
 	// type, Done may not be called.  May be nil if the balancer does not wish
 	// to be notified when the RPC completes.
 	Done func(DoneInfo)
+
+	// Metadata provides a way for LB policies to inject arbitrary per-call
+	// metadata. Any metadata returned here will be merged with existing
+	// metadata added by the client application.
+	//
+	// LB policies with child policies are responsible for propagating metadata
+	// injected by their children to the ClientConn, as part of Pick().
+	Metadata metadata.MD
 }
 
 // TransientFailureError returns e.  It exists for backward compatibility and
@@ -329,10 +352,18 @@ type Balancer interface {
 	ResolverError(error)
 	// UpdateSubConnState is called by gRPC when the state of a SubConn
 	// changes.
+	//
+	// Deprecated: Use NewSubConnOptions.StateListener when creating the
+	// SubConn instead.
 	UpdateSubConnState(SubConn, SubConnState)
-	// Close closes the balancer. The balancer is not required to call
-	// ClientConn.RemoveSubConn for its existing SubConns.
+	// Close closes the balancer. The balancer is not currently required to
+	// call SubConn.Shutdown for its existing SubConns; however, this will be
+	// required in a future release, so it is recommended.
 	Close()
+	// ExitIdle instructs the LB policy to reconnect to backends / exit the
+	// IDLE state, if appropriate and possible.  Note that SubConns that enter
+	// the IDLE state will not reconnect until SubConn.Connect is called.
+	ExitIdle()
 }
 
 // ExitIdler is an optional interface for balancers to implement.  If
@@ -340,22 +371,13 @@ type Balancer interface {
 // the ClientConn is idle.  If unimplemented, ClientConn.Connect will cause
 // all SubConns to connect.
 //
-// Notice: it will be required for all balancers to implement this in a future
-// release.
+// Deprecated: All balancers must implement this interface. This interface will
+// be removed in a future release.
 type ExitIdler interface {
 	// ExitIdle instructs the LB policy to reconnect to backends / exit the
 	// IDLE state, if appropriate and possible.  Note that SubConns that enter
 	// the IDLE state will not reconnect until SubConn.Connect is called.
 	ExitIdle()
-}
-
-// SubConnState describes the state of a SubConn.
-type SubConnState struct {
-	// ConnectivityState is the connectivity state of the SubConn.
-	ConnectivityState connectivity.State
-	// ConnectionError is set if the ConnectivityState is TransientFailure,
-	// describing the reason the SubConn failed.  Otherwise, it is nil.
-	ConnectionError error
 }
 
 // ClientConnState describes the state of a ClientConn relevant to the
@@ -370,56 +392,3 @@ type ClientConnState struct {
 // ErrBadResolverState may be returned by UpdateClientConnState to indicate a
 // problem with the provided name resolver data.
 var ErrBadResolverState = errors.New("bad resolver state")
-
-// ConnectivityStateEvaluator takes the connectivity states of multiple SubConns
-// and returns one aggregated connectivity state.
-//
-// It's not thread safe.
-type ConnectivityStateEvaluator struct {
-	numReady            uint64 // Number of addrConns in ready state.
-	numConnecting       uint64 // Number of addrConns in connecting state.
-	numTransientFailure uint64 // Number of addrConns in transient failure state.
-	numIdle             uint64 // Number of addrConns in idle state.
-}
-
-// RecordTransition records state change happening in subConn and based on that
-// it evaluates what aggregated state should be.
-//
-//  - If at least one SubConn in Ready, the aggregated state is Ready;
-//  - Else if at least one SubConn in Connecting, the aggregated state is Connecting;
-//  - Else if at least one SubConn is TransientFailure, the aggregated state is Transient Failure;
-//  - Else if at least one SubConn is Idle, the aggregated state is Idle;
-//  - Else there are no subconns and the aggregated state is Transient Failure
-//
-// Shutdown is not considered.
-func (cse *ConnectivityStateEvaluator) RecordTransition(oldState, newState connectivity.State) connectivity.State {
-	// Update counters.
-	for idx, state := range []connectivity.State{oldState, newState} {
-		updateVal := 2*uint64(idx) - 1 // -1 for oldState and +1 for new.
-		switch state {
-		case connectivity.Ready:
-			cse.numReady += updateVal
-		case connectivity.Connecting:
-			cse.numConnecting += updateVal
-		case connectivity.TransientFailure:
-			cse.numTransientFailure += updateVal
-		case connectivity.Idle:
-			cse.numIdle += updateVal
-		}
-	}
-
-	// Evaluate.
-	if cse.numReady > 0 {
-		return connectivity.Ready
-	}
-	if cse.numConnecting > 0 {
-		return connectivity.Connecting
-	}
-	if cse.numTransientFailure > 0 {
-		return connectivity.TransientFailure
-	}
-	if cse.numIdle > 0 {
-		return connectivity.Idle
-	}
-	return connectivity.TransientFailure
-}

@@ -3,11 +3,12 @@ package proxycommands
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/mitchellh/go-homedir"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
 
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/pkg/errors"
@@ -18,12 +19,14 @@ var (
 	sshPrivateKeyPath = "/tmp/ssh_private_key"
 	sshPublicKeyPath  = "/tmp/ssh_public_key"
 	proxyCommandsPath = "/tmp/proxy_commands"
+	portPath          = "/tmp/port"
 )
 
 // ConfigureCmd holds the ssh cmd flags
 type ConfigureCmd struct {
 	PublicKey  string
 	PrivateKey string
+	Port       int
 	WorkingDir string
 
 	GitCredentials bool
@@ -43,6 +46,7 @@ func NewConfigureCmd() *cobra.Command {
 
 	configureCmd.Flags().StringVar(&cmd.PublicKey, "public-key", "", "Public key to use")
 	configureCmd.Flags().StringVar(&cmd.PrivateKey, "private-key", "", "Private key to use")
+	configureCmd.Flags().IntVar(&cmd.Port, "port", 0, "Port inside the container to connect to")
 	configureCmd.Flags().StringVar(&cmd.WorkingDir, "working-dir", "", "Working dir to use")
 	configureCmd.Flags().StringSliceVar(&cmd.Commands, "commands", []string{}, "Commands to overwrite")
 	configureCmd.Flags().BoolVar(&cmd.GitCredentials, "git-credentials", false, "If git credentials should get configured")
@@ -53,17 +57,31 @@ func NewConfigureCmd() *cobra.Command {
 func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 	// try to load the old commands
 	oldCommands := []string{}
-	out, err := ioutil.ReadFile(proxyCommandsPath)
+	out, err := os.ReadFile(proxyCommandsPath)
 	if err == nil {
 		oldCommands = strings.Split(string(out), ",")
 	}
 
 	// first configure the commands
 	for _, c := range cmd.Commands {
-		filePath := "/usr/local/bin/" + c
+		fileDir := "/usr/local/bin/"
+		filePath := fileDir + c
+
+		_, err := os.Stat(fileDir)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return fmt.Errorf("error checking for command path '%s': %v", fileDir, err)
+			}
+
+			err := os.MkdirAll(fileDir, 0755)
+			if err != nil {
+				return fmt.Errorf("error creating command path '%s': %v", fileDir, err)
+			}
+		}
+
 		executeCommand := fmt.Sprintf(`#!/bin/sh
 /tmp/devspacehelper proxy-commands run %s "$@"`, c)
-		err := ioutil.WriteFile(filePath, []byte(executeCommand), 0777)
+		err = os.WriteFile(filePath, []byte(executeCommand), 0777)
 		if err != nil {
 			return fmt.Errorf("error writing command '%s': %v", filePath, err)
 		}
@@ -83,7 +101,7 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 			_ = os.Remove("/usr/local/bin/" + oldCommand)
 		}
 	}
-	err = ioutil.WriteFile(proxyCommandsPath, []byte(strings.Join(cmd.Commands, ",")), 0644)
+	err = os.WriteFile(proxyCommandsPath, []byte(strings.Join(cmd.Commands, ",")), 0644)
 	if err != nil {
 		stderrlog.Errorf("error writing %s: %v", proxyCommandsPath, err)
 	}
@@ -96,7 +114,7 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 			return errors.Wrap(err, "decode public key")
 		}
 
-		err = ioutil.WriteFile(sshPublicKeyPath, decodedPublicKey, 0644)
+		err = os.WriteFile(sshPublicKeyPath, decodedPublicKey, 0644)
 		if err != nil {
 			return errors.Wrap(err, "write public key")
 		}
@@ -107,9 +125,17 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 			return errors.Wrap(err, "decode private key")
 		}
 
-		err = ioutil.WriteFile(sshPrivateKeyPath, decodedPrivateKey, 0600)
+		err = os.WriteFile(sshPrivateKeyPath, decodedPrivateKey, 0600)
 		if err != nil {
 			return errors.Wrap(err, "write private key")
+		}
+	}
+
+	// now configure the port
+	if cmd.Port > 0 {
+		err = os.WriteFile(portPath, []byte(strconv.Itoa(cmd.Port)), 0644)
+		if err != nil {
+			return errors.Wrap(err, "write port file")
 		}
 	}
 
@@ -131,10 +157,10 @@ func (cmd *ConfigureCmd) Run(_ *cobra.Command, _ []string) error {
 		}
 
 		gitConfigPath := filepath.Join(homeDir, ".gitconfig")
-		out, err = ioutil.ReadFile(gitConfigPath)
+		out, err = os.ReadFile(gitConfigPath)
 		if err != nil || !strings.Contains(string(out), "helper = \"/tmp/devspacehelper proxy-commands git-credentials\"") {
 			content := string(out) + "\n" + "[credential]" + "\n" + "        helper = \"/tmp/devspacehelper proxy-commands git-credentials\"\n"
-			err = ioutil.WriteFile(gitConfigPath, []byte(content), 0644)
+			err = os.WriteFile(gitConfigPath, []byte(content), 0644)
 			if err != nil {
 				return errors.Wrap(err, "write git config")
 			}

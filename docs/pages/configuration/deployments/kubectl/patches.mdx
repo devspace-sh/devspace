@@ -1,0 +1,218 @@
+---
+title: "Manifests: Patches"
+sidebar_label: Patches
+---
+
+import ConfigPartialCommands from '../../_partials/v2beta1/deployments/kubectl/patches.mdx'
+
+Patches are a way to perform minor overrides to the configuration without having to create a separate config file. Patch functionality follows JSON Patch([RFC](https://tools.ietf.org/html/rfc6902)) semantics, as well as enhanced `path` selectors, as implemented by the [yaml-jsonpath](https://github.com/vmware-labs/yaml-jsonpath) library.
+
+Patches are compatible with [kubectl manifests](./manifests.mdx) and [inlineManifest](./inline_manifests.mdx).
+
+## Example
+Patches are ideal for reflecting changes between different environments, e.g. dev, staging and production.
+```yaml {9-17}
+version: v2beta1
+name: nginx-k8s
+
+deployments:
+  example:
+    kubectl:
+      manifests:
+        - ./deployment.yaml
+      patches:
+        - target:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: nginx-deployment
+          op: replace
+          path: spec.template.spec.containers[0].image
+          value: nginx:1.23.3
+```
+**Explanation:**  
+- The above example defines 1 patch for the `deployment.yaml` manifest
+- During deployment, the patches are applied in-memory, changing in this case the image of the container
+
+```yaml {18}
+# In-Memory deployment BEFORE Applying Patches 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.14.2
+          ports:
+            - containerPort: 80
+```
+
+```yaml {18}
+# In-Memory deployment AFTER Applying Patches 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.23.3
+          ports:
+            - containerPort: 80
+```
+
+:::tip Array Paths
+When you want to define a `path` that contains an array (e.g. `containers`), you have several options:
+
+1. Use the index of the array item you want to patch, e.g. `spec.template.spec.containers[0]`, `spec.template.spec.containers/0`
+2. Use a wildcard selector to match all array item(s), e.g. `spec.template.spec.containers.*`,`spec.template.spec.containers[*]` or `spec.template.spec.containers/*`
+
+:::
+
+:::info Value For Replace / Add
+If you use the `replace` or `add` operation, `value` is a mandatory property.
+:::
+
+:::info
+If `value` is defined, the new value must provide the correct type to be used when adding or replacing the existing value found under `path` using the newly provided `value`, e.g. an array must be replaced with an array.
+:::
+
+#### Example: Match patches
+```yaml {35-43}
+version: v2beta1
+name: nginx-k8s
+
+deployments:
+  example:
+    kubectl:
+      inlineManifest: |-
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: nginx-inline-deployment
+        spec:
+          selector:
+            matchLabels:
+              app: nginx
+          replicas: 4
+          template:
+            metadata:
+              labels:
+                app: nginx
+            spec:
+              containers:
+                - name: nginx
+                  image: nginx:1.14.2
+                  ports:
+                    - containerPort: 80
+                - name: busybox
+                  image: busybox
+                  command: ["sleep"]
+                  args: ["infinity"]
+                - name: alpine
+                  image: alpine
+                  command: ["sleep"]
+                  args: ["infinity"]
+      patches:
+        # wildcard match
+        - target:
+            apiVersion: apps/v1 # Optional
+            kind: Deployment    # Optional
+            name: nginx-inline-deployment # Required
+          op: add
+          path: spec.template.spec.containers[*].env
+          value: [{"name": "test", "value": "test123"}]
+```
+**Explanation:**  
+- The above example will patch and add an environment variable `test=test123` to all containers in the deployment.
+
+#### Example: Using target effectively
+```yaml {9,29,42-43,49-50}
+version: v2beta1
+name: nginx-k8s
+
+deployments:
+  example:
+    kubectl:
+      inlineManifest: |-
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: nginx-inline-deployment
+        spec:
+          selector:
+            matchLabels:
+              app: nginx
+          replicas: 4
+          template:
+            metadata:
+              labels:
+                app: nginx
+            spec:
+              containers:
+                - name: nginx
+                  image: nginx:1.14.2
+                  ports:
+                    - containerPort: 80
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: nginx-inline-deployment
+          labels:
+            app: nginx-inline-deployment
+        spec:
+          ports:
+          - port: 80
+            protocol: TCP
+          selector:
+            app: nginx-inline-deployment
+      patch:
+        - target:
+            apiVersion: apps/v1         # Optional
+            kind: Deployment    # Optional
+            name: nginx-inline-deployment # Required
+          op: add
+          path: spec.template.metadata.labels.test
+          value: test-deployment
+        - target:
+            apiVersion: v1 # Optional
+            kind: Service    # Optional
+            name: nginx-inline-deployment # Required
+          op: add
+          path: metadata.labels.test
+          value: test-service
+```
+
+**Explanation:**
+- The above example shows how you can address two resources with the same name, in this case `nginx-inline-deployment`.
+- By using `kind` and `apiVersion` we can narrow down one patch to be applied only on `apps/v1 - Deployment` and the other only to `v1 - Service`
+
+## Configuration
+
+<ConfigPartialCommands/>
+
+
+<br/>
+
+
+
+<FragmentInfoPrintConfig/>

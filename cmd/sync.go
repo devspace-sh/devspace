@@ -3,13 +3,14 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
-	"os"
 
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 
@@ -63,18 +64,17 @@ func NewSyncCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Comman
 		Use:   "sync",
 		Short: "Starts a bi-directional sync between the target container and the local path",
 		Long: `
-#######################################################
-################### devspace sync #####################
-#######################################################
-Starts a bi-directionaly sync between the target container
-and the current path:
+#############################################################################
+################### devspace sync ###########################################
+#############################################################################
+Starts a bi-directional(default) sync between the target container path
+and local path:
 
-devspace sync
-devspace sync --local-path=subfolder --container-path=/app
-devspace sync --exclude=node_modules --exclude=test
-devspace sync --pod=my-pod --container=my-container
-devspace sync --container-path=/my-path
-#######################################################`,
+devspace sync --path=.:/app # localPath is current dir and remotePath is /app
+devspace sync --path=.:/app --image-selector nginx:latest
+devspace sync --path=.:/app --exclude=node_modules,test
+devspace sync --path=.:/app --pod=my-pod --container=my-container
+#############################################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			// Print upgrade message if new version available
 			upgrade.PrintUpgradeMessage(f.GetLog())
@@ -152,7 +152,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 				return err
 			}
 		} else {
-			logger.Warnf("If you want to use the sync paths from `devspace.yaml`, use the `--config=devspace.yaml` flag for this command.")
+			logger.Warnf("If you want to use the sync paths from `devspace.yaml`, use the `DEVSPACE_CONFIG=devspace.yaml` environment variable for this command.")
 		}
 	}
 
@@ -162,9 +162,9 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 		return errors.Wrap(err, "new kube client")
 	}
 
-	// If the current kube context or namespace is different than old,
+	// If the current kube context or namespace is different from old,
 	// show warnings and reset kube client if necessary
-	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, logger)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, false, logger)
 	if err != nil {
 		return err
 	}

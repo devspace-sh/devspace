@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -84,6 +83,29 @@ func TestNew(t *testing.T) {
 					Kubectl: &latest.KubectlConfig{
 						KubectlBinaryPath: "someCmdPath2",
 						Manifests:         []string{},
+					},
+				},
+			},
+		},
+		{
+			name: "Inline Manifest",
+			deployConfig: &latest.DeploymentConfig{
+				Name: "someDeploy3",
+				Kubectl: &latest.KubectlConfig{
+					KubectlBinaryPath: "someCmdPath3",
+					InlineManifest:    "inline: manifest",
+				},
+			},
+			expectedDeployer: &DeployConfig{
+				Name:           "someDeploy3",
+				CmdPath:        "someCmdPath3",
+				InlineManifest: "inline: manifest",
+
+				DeploymentConfig: &latest.DeploymentConfig{
+					Name: "someDeploy3",
+					Kubectl: &latest.KubectlConfig{
+						KubectlBinaryPath: "someCmdPath3",
+						InlineManifest:    "inline: manifest",
 					},
 				},
 			},
@@ -183,7 +205,7 @@ func TestRender(t *testing.T) {
 			}
 		}()
 
-		streamOutput, err := ioutil.ReadAll(reader)
+		streamOutput, err := io.ReadAll(reader)
 		assert.NilError(t, err, "Error reading stream in testCase %s", testCase.name)
 		assert.Equal(t, string(streamOutput), testCase.expectedStreamOutput, "Unexpected stream output in testCase %s", testCase.name)
 	}
@@ -488,7 +510,7 @@ func TestGetReplacedManifest(t *testing.T) {
 
 		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithConfig(conf)
 
-		shouldRedeploy, replacedManifest, _, err := deployer.getReplacedManifest(devCtx, testCase.manifest)
+		shouldRedeploy, replacedManifest, _, err := deployer.getReplacedManifest(devCtx, false, testCase.manifest)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

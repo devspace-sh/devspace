@@ -3,18 +3,20 @@ package generic
 import (
 	"context"
 	"fmt"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/util/command"
-	"io/ioutil"
+	"os"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/utils/pkg/command"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/downloader"
-	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
-	"github.com/loft-sh/devspace/pkg/util/extract"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/utils/pkg/downloader"
+	"github.com/loft-sh/utils/pkg/downloader/commands"
+	"github.com/loft-sh/utils/pkg/extract"
 
 	"github.com/pkg/errors"
 )
@@ -32,7 +34,7 @@ func NewGenericClient(command commands.Command, log log.Logger) Client {
 		extract: extract.NewExtractor(),
 	}
 
-	c.downloader = downloader.NewDownloader(command, log)
+	c.downloader = downloader.NewDownloader(command, log, constants.DefaultHomeDevSpaceFolder)
 	return c
 }
 
@@ -45,7 +47,7 @@ type client struct {
 }
 
 func (c *client) WriteValues(values map[string]interface{}) (string, error) {
-	f, err := ioutil.TempFile("", "")
+	f, err := os.CreateTemp("", "")
 	if err != nil {
 		return "", err
 	}
@@ -74,10 +76,11 @@ func (c *client) Exec(ctx devspacecontext.Context, args []string) ([]byte, error
 	}
 
 	// disable log for list, because it prints same command multiple times if we've multiple deployments.
-	if args[0] != "list" {
-		c.log.Debugf("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
+	if args[0] != "list" && args[0] != "registry" && (len(args) == 1 || args[1] != "login") {
+		c.log.Debugf("Execute '%s %s' in directory %s", c.helmPath, strings.Join(args, " "), ctx.WorkingDir())
 	}
-	result, err := command.Output(ctx.Context(), ctx.WorkingDir(), c.helmPath, args...)
+
+	result, err := command.Output(ctx.Context(), ctx.WorkingDir(), ctx.Environ(), c.helmPath, args...)
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", string(result), err)
 	}

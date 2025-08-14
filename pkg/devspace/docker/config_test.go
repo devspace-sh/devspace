@@ -8,7 +8,7 @@ import (
 
 	"github.com/docker/cli/cli/config/configfile"
 	configtypes "github.com/docker/cli/cli/config/types"
-	"github.com/docker/docker/api/types"
+	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
@@ -19,7 +19,7 @@ type getAllAuthConfigsTestCase struct {
 
 	files map[string]interface{}
 
-	expectedAuthConfigs map[string]types.AuthConfig
+	expectedAuthConfigs map[string]dockerregistry.AuthConfig
 	expectedErr         bool
 }
 
@@ -44,7 +44,7 @@ func TestGetAllAuthConfigs(t *testing.T) {
 					},
 				},
 			},
-			expectedAuthConfigs: map[string]types.AuthConfig{
+			expectedAuthConfigs: map[string]dockerregistry.AuthConfig{
 				"key": {
 					Username:      "ValUser",
 					Password:      "ValPass",

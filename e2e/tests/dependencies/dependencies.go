@@ -1,11 +1,15 @@
 package dependencies
 
 import (
+	"bytes"
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
+
+	ginkgo "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
@@ -20,8 +24,8 @@ import (
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
-	"github.com/onsi/ginkgo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,6 +44,38 @@ var _ = DevSpaceDescribe("dependencies", func() {
 	ginkgo.BeforeEach(func() {
 		f = framework.NewDefaultFactory()
 		kubeClient, err = kube.NewKubeHelper()
+	})
+
+	ginkgo.It("should execute cyclic dependencies correctly", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/cyclic2")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dependencies")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command and start it
+		output := &bytes.Buffer{}
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Pipeline: "dev",
+			Log:      log.NewStreamLogger(output, output, logrus.DebugLevel),
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+
+		// Expect no multiple dependency warning
+		gomega.Expect(output.String()).NotTo(
+			gomega.ContainSubstring("Seems like you have multiple dependencies with name"),
+		)
 	})
 
 	ginkgo.It("should wait for dependencies", func() {
@@ -173,6 +209,47 @@ dep2dep2wait
 		framework.ExpectEqual(len(list.Items), 0)
 	})
 
+	ginkgo.It("should deploy dependency in custom namespace", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/namespace")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		depNamespace := "custon"
+
+		ns, err := kubeClient.CreateNamespace("dependencies")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+			err = kubeClient.DeleteNamespace(depNamespace)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command and start it
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		os.Setenv("DEP1_NAMESPACE", depNamespace)
+		defer os.Unsetenv("DEP1_NAMESPACE")
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+		cancel()
+
+		// now check if nonExistentNs got created
+		framework.ExpectNamespace(depNamespace)
+
+		framework.ExpectNoError(err)
+
+	})
+
 	ginkgo.It("should deploy git dependency", func() {
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/git")
 		framework.ExpectNoError(err)
@@ -224,7 +301,7 @@ dep2dep2wait
 		framework.ExpectRemoteFileContents("alpine", ns, "/app/test.txt", "dependency123")
 
 		// now check if sync is still working
-		err = ioutil.WriteFile(filepath.Join(dependencyPath, "test123.txt"), []byte("test123"), 0777)
+		err = os.WriteFile(filepath.Join(dependencyPath, "test123.txt"), []byte("test123"), 0777)
 		framework.ExpectNoError(err)
 
 		// now check if file gets synced
@@ -415,8 +492,8 @@ dep2dep2wait
 
 		// wait until a pod has started
 		var pods *corev1.PodList
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
 			if err != nil {
 				return false, err
 			}
@@ -438,8 +515,8 @@ dep2dep2wait
 		framework.ExpectNoError(err)
 
 		// wait until all pods are killed
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
 			if err != nil {
 				return false, err
 			}
@@ -453,7 +530,7 @@ dep2dep2wait
 		framework.ExpectEqual(len(list.Items), 0)
 	})
 
-	ginkgo.It("should resolve and deploy cyclic dependencies", func() {
+	ginkgo.It("should resolve and deploy cyclic git dependencies", func() {
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/cyclic")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -474,22 +551,109 @@ dep2dep2wait
 		framework.ExpectEqual(dependencies[0].Name(), "dependency")
 
 		// create a new deploy command
+		output := &bytes.Buffer{}
 		deployCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
 				Namespace: ns,
 			},
 			Pipeline: "deploy",
+			Log:      log.NewStreamLogger(output, output, logrus.DebugLevel),
 		}
 
 		// run the command
 		err = deployCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 
+		// Expect no multiple dependency warning
+		gomega.Expect(output.String()).NotTo(
+			gomega.ContainSubstring("Seems like you have multiple dependencies with name"),
+		)
+
 		// expect single deployment
 		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "nginx", metav1.GetOptions{})
 		framework.ExpectNoError(err)
 		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "nginx2", metav1.GetOptions{})
 		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should not resolve disabled dependencies", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/disabled")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dep")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		os.Setenv("DEP1_DISABLED", "true")
+		defer os.Unsetenv("DEP1_DISABLED")
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should not run disabled dependencies during run_dependencies --all", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/disabled")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dep")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		os.Setenv("DEP1_DISABLED", "true")
+		defer os.Unsetenv("DEP1_DISABLED")
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "devspace-all.yaml",
+				NoWarn:     true,
+				Namespace:  ns,
+			},
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should error on disabled dependencies during run_dependencies [NAME]", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/disabled")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dep")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		os.Setenv("DEP1_DISABLED", "true")
+		defer os.Unsetenv("DEP1_DISABLED")
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "devspace-name.yaml",
+				NoWarn:     true,
+				Namespace:  ns,
+			},
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
+			Log:      log.GetFileLogger("devspace-name"),
+		}
+		err = devCmd.RunDefault(f)
+		framework.ExpectError(err)
+		framework.ExpectLocalFileContainSubstringImmediately(".devspace/logs/devspace-name.log", "couldn't find dependency dep1")
 	})
 })

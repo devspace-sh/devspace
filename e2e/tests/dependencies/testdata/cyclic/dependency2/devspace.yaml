@@ -3,6 +3,9 @@ version: v2beta1
 dependencies:
   dependency:
     path: ../dependency
+  root:
+    git: https://github.com/devspace-sh/devspace.git
+    subPath: e2e/tests/dependencies/testdata/cyclic
 
 deployments:
   nginx2:

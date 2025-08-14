@@ -3,6 +3,9 @@ package proxycommands
 import (
 	"encoding/base64"
 	"fmt"
+	"strconv"
+	"strings"
+
 	sshpkg "github.com/gliderlabs/ssh"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -13,28 +16,30 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 var DefaultRemotePort = 10567
 
 // StartProxyCommands starts the reverse commands functionality
-func StartProxyCommands(ctx devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
+func StartProxyCommands(ctx devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx == nil || ctx.Config() == nil || ctx.Config().Config() == nil {
 		return fmt.Errorf("DevSpace config is nil")
 	}
 
 	// init done array is used to track when sync was initialized
 	initDoneArray := []chan struct{}{}
+	remotePort := DefaultRemotePort
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
 		if len(devContainer.ProxyCommands) == 0 {
 			return true
 		}
 
+		oldRemotePort := remotePort
 		initDone := parent.NotifyGo(func() error {
-			return startProxyCommands(ctx, devContainer, devPod.Name, string(devContainer.Arch), devContainer.ProxyCommands, selector.WithContainer(devContainer.Container), parent)
+			return startProxyCommands(ctx, devPod.Name, string(devContainer.Arch), oldRemotePort, devContainer.ProxyCommands, selector.WithContainer(devContainer.Container), parent)
 		})
 		initDoneArray = append(initDoneArray, initDone)
+		remotePort++
 		return true
 	})
 
@@ -45,7 +50,7 @@ func StartProxyCommands(ctx devspacecontext.Context, devPod *latest.DevPod, sele
 	return nil
 }
 
-func startProxyCommands(ctx devspacecontext.Context, devContainer *latest.DevContainer, name, arch string, reverseCommands []*latest.ProxyCommand, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func startProxyCommands(ctx devspacecontext.Context, name, arch string, remotePort int, reverseCommands []*latest.ProxyCommand, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -58,11 +63,8 @@ func startProxyCommands(ctx devspacecontext.Context, devContainer *latest.DevCon
 
 	defer ssh.GetInstance(ctx.Log()).ReleasePort(port)
 
-	// get remote port
-	defaultRemotePort := DefaultRemotePort
-
 	// start reverse port forwarding from that port
-	mapping := fmt.Sprintf("%d:%d", port, defaultRemotePort)
+	mapping := fmt.Sprintf("%d:%d", port, remotePort)
 	err = portforwarding.StartReversePortForwarding(ctx, name, arch, []*latest.PortMapping{
 		{
 			Port: mapping,
@@ -73,10 +75,10 @@ func startProxyCommands(ctx devspacecontext.Context, devContainer *latest.DevCon
 	}
 
 	// start ssh
-	return startLocalSSH(ctx, selector, devContainer, reverseCommands, fmt.Sprintf(":%d", port), parent)
+	return startLocalSSH(ctx, selector, reverseCommands, remotePort, fmt.Sprintf(":%d", port), parent)
 }
 
-func startLocalSSH(ctx devspacecontext.Context, selector targetselector.TargetSelector, devContainer *latest.DevContainer, reverseCommands []*latest.ProxyCommand, addr string, parent *tomb.Tomb) error {
+func startLocalSSH(ctx devspacecontext.Context, selector targetselector.TargetSelector, reverseCommands []*latest.ProxyCommand, remotePort int, addr string, parent *tomb.Tomb) error {
 	if ctx.IsDone() {
 		return nil
 	}
@@ -110,7 +112,7 @@ func startLocalSSH(ctx devspacecontext.Context, selector targetselector.TargetSe
 	}
 
 	// execute configure command in container
-	command := []string{inject.DevSpaceHelperContainerPath, "proxy-commands", "configure", "--public-key", base64.StdEncoding.EncodeToString([]byte(publicKey)), "--private-key", base64.StdEncoding.EncodeToString([]byte(privateKey))}
+	command := []string{inject.DevSpaceHelperContainerPath, "proxy-commands", "configure", "--port", strconv.Itoa(remotePort), "--public-key", base64.StdEncoding.EncodeToString([]byte(publicKey)), "--private-key", base64.StdEncoding.EncodeToString([]byte(privateKey))}
 	if len(commandsToReplace) > 0 {
 		command = append(command, "--commands", strings.Join(commandsToReplace, ","))
 	}

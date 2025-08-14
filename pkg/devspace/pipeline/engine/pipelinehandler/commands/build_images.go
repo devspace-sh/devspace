@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"strings"
 
 	flags "github.com/jessevdk/go-flags"
@@ -15,7 +16,8 @@ import (
 type BuildImagesOptions struct {
 	build.Options
 
-	All bool `long:"all" description:"Build all images"`
+	All    bool     `long:"all" description:"Build all images"`
+	Except []string `long:"except" description:"If used with --all, will exclude the following images"`
 
 	Set       []string `long:"set" description:"Set configuration"`
 	SetString []string `long:"set-string" description:"Set configuration as string"`
@@ -42,12 +44,20 @@ func BuildImages(ctx devspacecontext.Context, pipeline types.Pipeline, args []st
 	}
 
 	if options.All {
-		images := ctx.Config().Config().Images
-		for image := range images {
+		args = []string{}
+		for image := range ctx.Config().Config().Images {
+			if stringutil.Contains(options.Except, image) {
+				continue
+			}
+
+			args = append(args, image)
 			ctx, err = applySetValues(ctx, "images", image, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}
+		}
+		if len(args) == 0 {
+			return nil
 		}
 	} else if len(args) > 0 {
 		for _, image := range args {

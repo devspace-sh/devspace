@@ -1,0 +1,24 @@
+version: v2beta1
+name: local-registry
+localRegistry: 
+  enabled: true
+images:
+  app:
+    image: my-docker-username/helloworld
+  app-dev:
+    image: my-docker-username/helloworld-dev
+deployments:
+  app:
+    helm:
+      values:
+        containers:
+          - name: container1
+            image: image(app):tag(app)
+          - name: container2
+            image: my-docker-username/helloworld
+dev:
+  app:
+    imageSelector: my-docker-username/helloworld
+    devImage: my-docker-username/helloworld-dev
+    command: ["tail", "-f", "/dev/null"]
+    container: container1

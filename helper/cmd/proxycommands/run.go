@@ -2,7 +2,6 @@ package proxycommands
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 
 	"github.com/loft-sh/devspace/helper/types"
@@ -34,7 +33,7 @@ func (cmd *RunCmd) Run(_ *cobra.Command, args []string) error {
 }
 
 func runProxyCommand(args []string) error {
-	key, err := ioutil.ReadFile(sshPrivateKeyPath)
+	key, err := os.ReadFile(sshPrivateKeyPath)
 	if err != nil {
 		return errors.Wrap(err, "read private key")
 	}
@@ -51,19 +50,27 @@ func runProxyCommand(args []string) error {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	client, err := ssh.Dial("tcp", "localhost:10567", clientConfig)
+	// get port
+	port, err := os.ReadFile(portPath)
+	if err != nil {
+		return errors.Wrap(err, "read port")
+	}
+
+	// dial ssh
+	client, err := ssh.Dial("tcp", "localhost:"+string(port), clientConfig)
 	if err != nil {
 		return errors.Wrap(err, "dial ssh")
 	}
 	defer client.Close()
 
+	// create new session
 	session, err := client.NewSession()
 	if err != nil {
 		return errors.Wrap(err, "new session")
 	}
 	defer session.Close()
 
-	// check if we should use a pty#
+	// check if we should use a pty
 	var (
 		width  = 0
 		height = 0

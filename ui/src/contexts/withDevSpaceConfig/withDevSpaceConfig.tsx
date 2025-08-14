@@ -41,15 +41,16 @@ interface Config {
   version: string;
 
   images: { [key: string]: ImageConfig };
+  commands: { [key: string]: Command };
 }
 
 interface RawConfig {
-  commands: Command[];
+  commands: { [key: string]: Command };
 }
 
 export interface Command {
   command: string;
-  name: string;
+  internal?: boolean;
 }
 
 interface ImageConfig {

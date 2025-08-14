@@ -2,6 +2,8 @@ package dependency
 
 import (
 	"bytes"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -11,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"strings"
 )
 
 // Manager can update, build, deploy and purge dependencies.
@@ -43,7 +44,7 @@ type ResolveOptions struct {
 }
 
 func (m *manager) ResolveAll(ctx devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error) {
-	dependencies, err := m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, "Resolve", func(ctx devspacecontext.Context, dependency *Dependency) error {
+	dependencies, err := m.handleDependencies(ctx, options, "Resolve", func(ctx devspacecontext.Context, dependency *Dependency) error {
 		return nil
 	})
 	if err != nil {
@@ -62,7 +63,7 @@ type BuildOptions struct {
 	Verbose          bool
 }
 
-func (m *manager) handleDependencies(ctx devspacecontext.Context, skipDependencies, filterDependencies []string, actionName string, action func(ctx devspacecontext.Context, dependency *Dependency) error) ([]types.Dependency, error) {
+func (m *manager) handleDependencies(ctx devspacecontext.Context, options ResolveOptions, actionName string, action func(ctx devspacecontext.Context, dependency *Dependency) error) ([]types.Dependency, error) {
 	if ctx.Config() == nil || ctx.Config().Config() == nil || len(ctx.Config().Config().Dependencies) == 0 {
 		return nil, nil
 	}
@@ -73,12 +74,12 @@ func (m *manager) handleDependencies(ctx devspacecontext.Context, skipDependenci
 	}
 
 	// Resolve all dependencies
-	dependencies, err := m.resolver.Resolve(ctx)
+	dependencies, err := m.resolver.Resolve(ctx, options)
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve dependencies")
 	}
 
-	executedDependencies, err := m.executeDependenciesRecursive(ctx, "", dependencies, skipDependencies, filterDependencies, actionName, action, map[string]bool{})
+	executedDependencies, err := m.executeDependenciesRecursive(ctx, "", dependencies, options, actionName, action, map[string]bool{})
 	if err != nil {
 		hooksErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"error": err,
@@ -98,15 +99,7 @@ func (m *manager) handleDependencies(ctx devspacecontext.Context, skipDependenci
 	return executedDependencies, nil
 }
 
-func (m *manager) executeDependenciesRecursive(
-	ctx devspacecontext.Context,
-	base string,
-	dependencies []types.Dependency,
-	skipDependencies, filterDependencies []string,
-	actionName string,
-	action func(ctx devspacecontext.Context, dependency *Dependency) error,
-	executedDependenciesIDs map[string]bool,
-) ([]types.Dependency, error) {
+func (m *manager) executeDependenciesRecursive(ctx devspacecontext.Context, base string, dependencies []types.Dependency, options ResolveOptions, actionName string, action func(ctx devspacecontext.Context, dependency *Dependency) error, executedDependenciesIDs map[string]bool) ([]types.Dependency, error) {
 	// Execute all dependencies
 	i := 0
 	executedDependencies := []types.Dependency{}
@@ -142,7 +135,7 @@ func (m *manager) executeDependenciesRecursive(
 				return nil, hooksErr
 			}
 
-			_, err := m.executeDependenciesRecursive(dependencyCtx, dependencyName, dependency.Children(), skipDependencies, filterDependencies, actionName, action, executedDependenciesIDs)
+			_, err := m.executeDependenciesRecursive(dependencyCtx, dependencyName, dependency.Children(), options, actionName, action, executedDependenciesIDs)
 			if err != nil {
 				hooksErr := hook.ExecuteHooks(dependencyCtx, map[string]interface{}{
 					"error": err,
@@ -161,9 +154,9 @@ func (m *manager) executeDependenciesRecursive(
 		}
 
 		// Check if we should act on this dependency
-		if !foundDependency(dependencyName, filterDependencies) {
+		if !foundDependency(dependencyName, options.Dependencies) {
 			continue
-		} else if skipDependency(dependencyName, skipDependencies) {
+		} else if skipDependency(dependencyName, options.SkipDependencies) {
 			ctx.Log().Infof("Skip dependency %s", dependencyName)
 			continue
 		}

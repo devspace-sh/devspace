@@ -2,9 +2,11 @@ package variable
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"os"
 	"strconv"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -47,12 +49,22 @@ func (d *defaultVariable) Load(ctx context.Context, definition *latest.Variable)
 		}
 	}
 
-	// Now ask the question
-	value, err := askQuestion(definition, d.log)
-	if err != nil {
-		return nil, err
+	// is logger silent
+	if d.log == log.Discard || d.log.GetLevel() < logrus.InfoLevel {
+		if definition.Default != nil {
+			return definition.Default, nil
+		}
+
+		return valueByType(value, definition.Default)
+	} else {
+		var err error
+		value, err = askQuestion(definition, d.log)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	// Now ask the question
 	if !definition.NoCache {
 		d.localCache.SetVar(d.name, value)
 	}

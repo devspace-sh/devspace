@@ -2,6 +2,7 @@ package list
 
 import (
 	"context"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -57,7 +58,7 @@ func (cmd *syncCmd) RunListSync(f factory.Factory, cobraCmd *cobra.Command, args
 	syncPaths := make([][]string, 0)
 
 	for _, dev := range config.Dev {
-		if dev.Sync == nil || len(dev.Sync) == 0 {
+		if len(dev.Sync) == 0 {
 			logger.Info("No sync paths are configured.")
 			return nil
 		}

@@ -3,11 +3,15 @@ package variable
 import (
 	"bytes"
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"os"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"mvdan.cc/sh/v3/expand"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/utils/pkg/command"
 	"github.com/pkg/errors"
 )
 
@@ -51,10 +55,13 @@ func execCommand(ctx context.Context, varName string, definition *latest.Variabl
 	writer := &bytes.Buffer{}
 	stdErrWriter := &bytes.Buffer{}
 	var err error
+	envVars := []string{}
+	envVars = append(envVars, expression.DevSpaceSkipPreloadEnv+"=true")
+	envVars = append(envVars, os.Environ()...)
 	if args == nil {
-		err = engine.ExecuteSimpleShellCommand(ctx, dir, writer, stdErrWriter, nil, nil, cmd)
+		err = engine.ExecuteSimpleShellCommand(ctx, dir, expand.ListEnviron(envVars...), writer, stdErrWriter, nil, cmd, os.Args[1:]...)
 	} else {
-		err = command.Command(ctx, dir, writer, stdErrWriter, nil, cmd, args...)
+		err = command.Command(ctx, dir, expand.ListEnviron(envVars...), writer, stdErrWriter, nil, cmd, args...)
 	}
 	if err != nil {
 		errMsg := "fill variable " + varName + " with command '" + cmd + "': " + err.Error()

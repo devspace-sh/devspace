@@ -31,7 +31,6 @@ type Factory interface {
 	// NewKubeDefaultClient creates a new kube client
 	NewKubeDefaultClient() (kubectl.Client, error)
 	NewKubeClientFromContext(context, namespace string) (kubectl.Client, error)
-	NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error)
 
 	// NewHelmClient creates a new helm client
 	NewHelmClient(log log.Logger) (types.Client, error)
@@ -41,7 +40,7 @@ type Factory interface {
 
 	// NewDockerClient creates a new docker API client
 	NewDockerClient(ctx context.Context, log log.Logger) (docker.Client, error)
-	NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
+	NewDockerClientWithMinikube(ctx context.Context, client kubectl.Client, preferMinikube bool, log log.Logger) (docker.Client, error)
 
 	// NewBuildController & NewDeployController
 	NewBuildController() build.Controller
@@ -119,8 +118,8 @@ func (f *DefaultFactoryImpl) NewDockerClient(ctx context.Context, log log.Logger
 }
 
 // NewDockerClientWithMinikube implements interface
-func (f *DefaultFactoryImpl) NewDockerClientWithMinikube(ctx context.Context, currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
-	return docker.NewClientWithMinikube(ctx, currentKubeContext, preferMinikube, log)
+func (f *DefaultFactoryImpl) NewDockerClientWithMinikube(ctx context.Context, kubectlClient kubectl.Client, preferMinikube bool, log log.Logger) (docker.Client, error) {
+	return docker.NewClientWithMinikube(ctx, kubectlClient, preferMinikube, log)
 }
 
 // NewKubeDefaultClient implements interface
@@ -138,12 +137,6 @@ func (f *DefaultFactoryImpl) NewKubeClientFromContext(context, namespace string)
 
 	plugin.SetPluginKubeContext(client.CurrentContext(), client.Namespace())
 	return client, nil
-}
-
-// NewKubeClientBySelect implements interface
-func (f *DefaultFactoryImpl) NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error) {
-	kubeLoader := f.NewKubeConfigLoader()
-	return kubectl.NewClientBySelect(allowPrivate, switchContext, kubeLoader, log)
 }
 
 // NewHelmClient implements interface

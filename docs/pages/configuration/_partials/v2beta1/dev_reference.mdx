@@ -3,7 +3,9 @@ import PartialGroupselector from "./dev/group_selector.mdx"
 import PartialGroupmodifications from "./dev/group_modifications.mdx"
 import PartialGroupports from "./dev/group_ports.mdx"
 import PartialGroupsync from "./dev/group_sync.mdx"
+import PartialPersistPathsreference from "./dev/persistPaths_reference.mdx"
 import PartialGroupworkflows from "./dev/group_workflows.mdx"
+import PartialSshreference from "./dev/ssh_reference.mdx"
 import PartialGroupworkflowsbackground from "./dev/group_workflows_background.mdx"
 
 <PartialGroupselector />
@@ -18,7 +20,39 @@ import PartialGroupworkflowsbackground from "./dev/group_workflows_background.md
 <PartialGroupsync />
 
 
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `persistPaths` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type">object[]</span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-persistPaths}
+
+PersistPaths allows you to persist certain paths within this container with a persistent volume claim
+
+</summary>
+
+<PartialPersistPathsreference />
+
+
+</details>
+
+
 <PartialGroupworkflows />
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `ssh` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#dev-ssh}
+
+SSH allows you to create an SSH tunnel to this container
+
+</summary>
+
+<PartialSshreference />
+
+
+</details>
 
 
 <PartialGroupworkflowsbackground />

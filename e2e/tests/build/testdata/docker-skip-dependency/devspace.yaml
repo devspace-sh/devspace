@@ -1,0 +1,10 @@
+version: v2beta1
+images:
+  app:
+    image: my-docker-username/helloworld
+    tags:
+    - latest
+dependencies:
+  fake-dep:
+    git: git@github.com:example/this-does-not-exist.git
+    branch: main

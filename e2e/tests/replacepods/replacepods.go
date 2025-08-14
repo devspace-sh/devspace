@@ -2,10 +2,11 @@ package replacepods
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/onsi/ginkgo/v2"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -13,7 +14,6 @@ import (
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/onsi/ginkgo"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,20 +69,20 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		}()
 
 		// check if file is there
-		framework.ExpectRemoteFileContents("ubuntu", ns, "/app/test2.txt", "Hello World 123")
+		framework.ExpectRemoteFileContents("alpine", ns, "/app/test2.txt", "Hello World 123")
 
 		// check if file is there
-		framework.ExpectRemoteFileContents("ubuntu", ns, "/test.txt", "Hello World\n")
+		framework.ExpectRemoteFileContents("alpine", ns, "/test.txt", "Hello World\n")
 
 		// upload a file and restart the container
-		err = ioutil.WriteFile("test1.txt", []byte("Hello World2!"), 0777)
+		err = os.WriteFile("test1.txt", []byte("Hello World2!"), 0777)
 		framework.ExpectNoError(err)
 
 		// wait for uploaded
-		framework.ExpectRemoteFileContents("ubuntu", ns, "/app/test1.txt", "Hello World2!")
+		framework.ExpectRemoteFileContents("alpine", ns, "/app/test1.txt", "Hello World2!")
 
 		// wait for restarted
-		framework.ExpectRemoteFileContents("ubuntu", ns, "/test.txt", "Hello World\nHello World\n")
+		framework.ExpectRemoteFileContents("alpine", ns, "/test.txt", "Hello World\nHello World\n")
 
 		cancel()
 		err = <-done
@@ -116,8 +116,8 @@ var _ = DevSpaceDescribe("replacepods", func() {
 
 		// wait until a pod has started
 		var pods *corev1.PodList
-		err = wait.Poll(time.Second, time.Minute*3, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*3, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
 			if err != nil {
 				return false, err
 			}
@@ -133,11 +133,11 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectEqual(out, "test-statefulset-0")
 
 		// now make a change to the config
-		fileContents, err := ioutil.ReadFile("devspace.yaml")
+		fileContents, err := os.ReadFile("devspace.yaml")
 		framework.ExpectNoError(err)
 
 		newString := strings.ReplaceAll(string(fileContents), "ubuntu:18.04", "alpine:3.14")
-		err = ioutil.WriteFile("devspace.yaml", []byte(newString), 0666)
+		err = os.WriteFile("devspace.yaml", []byte(newString), 0666)
 		framework.ExpectNoError(err)
 
 		// rerun
@@ -157,8 +157,8 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectEqual(len(list.Items), 1)
 
 		// wait until a pod has started
-		err = wait.Poll(time.Second, time.Minute*3, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*3, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
 			if err != nil {
 				return false, err
 			}
@@ -180,8 +180,8 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectNoError(err)
 
 		// wait until all pods are killed
-		err = wait.Poll(time.Second, time.Minute*3, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*3, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
 			if err != nil {
 				return false, err
 			}
@@ -223,8 +223,8 @@ var _ = DevSpaceDescribe("replacepods", func() {
 
 		// wait until a pod has started
 		var pods *corev1.PodList
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
 			if err != nil {
 				return false, err
 			}
@@ -235,11 +235,11 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectEqual(pods.Items[0].Spec.Containers[0].Image, "ubuntu:18.04")
 
 		// now make a change to the config
-		fileContents, err := ioutil.ReadFile("devspace.yaml")
+		fileContents, err := os.ReadFile("devspace.yaml")
 		framework.ExpectNoError(err)
 
 		newString := strings.ReplaceAll(string(fileContents), "ubuntu:18.04", "alpine:3.14")
-		err = ioutil.WriteFile("devspace.yaml", []byte(newString), 0666)
+		err = os.WriteFile("devspace.yaml", []byte(newString), 0666)
 		framework.ExpectNoError(err)
 
 		// rerun
@@ -259,8 +259,8 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectEqual(len(list.Items), 1)
 
 		// wait until a pod has started
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
 			if err != nil {
 				return false, err
 			}
@@ -313,8 +313,8 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectNoError(err)
 
 		// wait until all pods are killed
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
 			if err != nil {
 				return false, err
 			}

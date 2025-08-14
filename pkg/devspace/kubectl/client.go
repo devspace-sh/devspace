@@ -3,28 +3,33 @@ package kubectl
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
-	"io"
-	"net"
-	"net/url"
-	"os"
-	"sort"
-
+	"github.com/loft-sh/devspace/pkg/util/idle"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/loft-sh/devspace/pkg/util/terminal"
-
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+)
+
+var (
+	stopPingAfter = time.Second * 600
 )
 
 // Client holds all kubernetes related functions
@@ -108,6 +113,18 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 		return nil, err
 	}
 	restConfig.UserAgent = "DevSpace Version " + upgrade.GetVersion()
+	restConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+		return &devSpaceRoundTripper{
+			roundTripper: rt,
+			requestType:  "Regular",
+			callback: func(response *http.Response) {
+				if response.Header.Get("X-DevSpace-Response-Type") == "Blocked" {
+					kill.StopDevSpace("Targeted Kubernetes environment has begun sleeping. Please restart DevSpace to wake up the environment")
+				}
+			},
+		}
+	}
+
 	kubeClient, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "new client")
@@ -125,56 +142,6 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 	}, nil
 }
 
-// NewClientBySelect creates a new kubernetes client by user select @Factory
-func NewClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubeconfig.Loader, log log.Logger) (Client, error) {
-	kubeConfig, err := kubeLoader.LoadRawConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	// Get all kube contexts
-	options := make([]string, 0, len(kubeConfig.Contexts))
-	for context := range kubeConfig.Contexts {
-		options = append(options, context)
-	}
-	if len(options) == 0 {
-		return nil, errors.New("No kubectl context found. Make sure kubectl is installed and you have a working kubernetes context configured")
-	}
-
-	sort.Strings(options)
-	for {
-		kubeContext, err := log.Question(&survey.QuestionOptions{
-			Question:     "Which kube context do you want to use",
-			DefaultValue: kubeConfig.CurrentContext,
-			Options:      options,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		// Check if cluster is in private network
-		if !allowPrivate {
-			context := kubeConfig.Contexts[kubeContext]
-			cluster := kubeConfig.Clusters[context.Cluster]
-
-			url, err := url.Parse(cluster.Server)
-			if err != nil {
-				return nil, errors.Wrap(err, "url parse")
-			}
-
-			ip := net.ParseIP(url.Hostname())
-			if ip != nil {
-				if IsPrivateIP(ip) {
-					log.Infof("Clusters with private ips (%s) cannot be used", url.Hostname())
-					continue
-				}
-			}
-		}
-
-		return NewClientFromContext(kubeContext, "", switchContext, kubeLoader)
-	}
-}
-
 // ClientConfig returns the underlying kube client config
 func (client *client) ClientConfig() clientcmd.ClientConfig {
 	return client.clientConfig
@@ -186,7 +153,7 @@ func (client *client) IsInCluster() bool {
 }
 
 // CheckKubeContext prints a warning if the last kube context is different than this one
-func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, autoSwitch bool, log log.Logger) (Client, error) {
+func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, autoSwitch, skipWakeUpPing bool, log log.Logger) (Client, error) {
 	currentConfigContext := &localcache.LastContextConfig{
 		Namespace: client.Namespace(),
 		Context:   client.CurrentContext(),
@@ -311,7 +278,19 @@ func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, aut
 	log.Infof("Using namespace '%s'", ansi.Color(currentConfigContext.Namespace, "white+b"))
 	log.Infof("Using kube context '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
 	if resetClient {
-		return NewClientFromContext(currentConfigContext.Context, currentConfigContext.Namespace, true, client.KubeConfigLoader())
+		var err error
+		client, err = NewClientFromContext(currentConfigContext.Context, currentConfigContext.Namespace, true, client.KubeConfigLoader())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// wake up and ping
+	if !skipWakeUpPing {
+		err := wakeUpAndPing(context.TODO(), client, log)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return client, nil
@@ -335,4 +314,135 @@ func (client *client) RestConfig() *rest.Config {
 
 func (client *client) KubeConfigLoader() kubeconfig.Loader {
 	return client.kubeLoader
+}
+
+func wakeUpAndPing(ctx context.Context, client Client, log log.Logger) error {
+	err := wakeUp(ctx, client, log)
+	if err != nil {
+		return err
+	}
+
+	// create ping config
+	pingConfig := rest.CopyConfig(client.RestConfig())
+	pingConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+		return &devSpaceRoundTripper{
+			roundTripper: rt,
+			requestType:  "Ping",
+			callback: func(response *http.Response) {
+				if response.Header.Get("X-DevSpace-Response-Type") == "Blocked" {
+					kill.StopDevSpace("Targeted Kubernetes environment has begun sleeping. Please restart DevSpace to wake up the environment")
+				}
+			},
+		}
+	}
+
+	// create kube client
+	kubeClient, err := kubernetes.NewForConfig(pingConfig)
+	if err != nil {
+		return err
+	}
+
+	// start pinging
+	go func() {
+		getter, _ := idle.NewIdleGetter()
+		wait.UntilWithContext(ctx, func(ctx context.Context) {
+			if getter != nil {
+				amountIdle, err := getter.Idle()
+				if err == nil && amountIdle > stopPingAfter {
+					return
+				}
+			}
+
+			_, err = kubeClient.CoreV1().Pods(client.Namespace()).List(ctx, metav1.ListOptions{LabelSelector: "devspace=ping"})
+			if err != nil {
+				log.Debugf("Error pinging Kubernetes environment: %v", err)
+			}
+		}, time.Minute)
+	}()
+
+	return nil
+}
+
+func wakeUp(ctx context.Context, client Client, log log.Logger) error {
+	// check if environment is sleeping
+	var isSleeping bool
+	isSleepingConfig := rest.CopyConfig(client.RestConfig())
+	isSleepingConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+		return &devSpaceRoundTripper{
+			roundTripper: rt,
+			requestType:  "Ping",
+			callback: func(response *http.Response) {
+				if response.Header.Get("X-DevSpace-Response-Type") == "Blocked" {
+					isSleeping = true
+				}
+			},
+		}
+	}
+
+	// create kube client
+	kubeClient, err := kubernetes.NewForConfig(isSleepingConfig)
+	if err != nil {
+		return err
+	}
+
+	// wake up the environment
+	_, err = kubeClient.CoreV1().Pods(client.Namespace()).List(ctx, metav1.ListOptions{LabelSelector: "devspace=wakeup"})
+	if err != nil && !isSleeping {
+		return fmt.Errorf("please make sure you have an existing valid kube config. You might want to check one of the following things:\n\n* Make sure you can use 'kubectl get namespaces' locally\n* If you are using Loft, you might want to run 'devspace create space' or 'loft create space'")
+	} else if !isSleeping {
+		return nil
+	}
+
+	// wake up the environment
+	wakeUpConfig := rest.CopyConfig(client.RestConfig())
+	wakeUpConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+		return &devSpaceRoundTripper{
+			roundTripper: rt,
+			requestType:  "WakeUp",
+			callback: func(response *http.Response) {
+				if response.Header.Get("X-DevSpace-Response-Type") == "WokenUp" {
+					log.Infof("Successfully woken up Kubernetes environment")
+				}
+			},
+		}
+	}
+
+	// create kube client
+	kubeClient, err = kubernetes.NewForConfig(wakeUpConfig)
+	if err != nil {
+		return err
+	}
+
+	// print message if it takes too long
+	log.Infof("DevSpace is waking up the Kubernetes environment, please wait a moment...")
+
+	// wake up the environment
+	waitErr := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Second*30, true, func(_ context.Context) (done bool, err error) {
+		_, err = kubeClient.CoreV1().Pods(client.Namespace()).List(ctx, metav1.ListOptions{LabelSelector: "devspace=wakeup"})
+		if err != nil {
+			return false, nil
+		}
+
+		return true, nil
+	})
+	if waitErr != nil {
+		return errors.Wrap(err, "wake up environment")
+	}
+
+	return nil
+}
+
+type devSpaceRoundTripper struct {
+	roundTripper http.RoundTripper
+	requestType  string
+	callback     func(response *http.Response)
+}
+
+func (d *devSpaceRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("X-DevSpace-Request-Type", d.requestType)
+	response, err := d.roundTripper.RoundTrip(req)
+	if response != nil && d.callback != nil {
+		d.callback(response)
+	}
+	return response, err
 }

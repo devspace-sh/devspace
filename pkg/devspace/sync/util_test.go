@@ -4,7 +4,6 @@
 package sync
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -55,9 +54,7 @@ func (arr testCaseList) Less(i, j int) bool {
 }
 
 func (arr testCaseList) Swap(i, j int) {
-	x := arr[i]
-	arr[i] = arr[j]
-	arr[j] = x
+	arr[i], arr[j] = arr[j], arr[i]
 }
 
 const fileContents = "TestContents"
@@ -88,7 +85,7 @@ Outer:
 			localFile := path.Join(local, v.path)
 			remoteFile := path.Join(remote, v.path)
 
-			localData, err := ioutil.ReadFile(localFile)
+			localData, err := os.ReadFile(localFile)
 			if v.shouldExistInLocal && os.IsNotExist(err) {
 				missingFileOrFolder = localFile
 				continue Outer
@@ -101,7 +98,7 @@ Outer:
 				t.Fatal(err)
 			}
 
-			remoteData, err := ioutil.ReadFile(remoteFile)
+			remoteData, err := os.ReadFile(remoteFile)
 			if v.shouldExistInRemote && os.IsNotExist(err) {
 				missingFileOrFolder = remoteFile
 				continue Outer

@@ -7,7 +7,6 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -116,7 +115,7 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 			return err
 		}
 		if stat.IsDir() {
-			files, err := ioutil.ReadDir(fpath)
+			files, err := os.ReadDir(fpath)
 			if err != nil {
 				return err
 			}
@@ -128,7 +127,11 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 					return err
 				}
 			}
-			for _, f := range files {
+			for _, dirEntry := range files {
+				f, err := dirEntry.Info()
+				if err != nil {
+					continue
+				}
 				if fsutil.IsRecursiveSymlink(f, path.Join(fpath, f.Name())) {
 					continue
 				}

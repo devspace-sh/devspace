@@ -1,0 +1,122 @@
+
+import PartialName from "./hooks/name.mdx"
+import PartialDisabled from "./hooks/disabled.mdx"
+import PartialEvents from "./hooks/events.mdx"
+import PartialCommand from "./hooks/command.mdx"
+import PartialArgs from "./hooks/args.mdx"
+import PartialOs from "./hooks/os.mdx"
+import PartialUploadreference from "./hooks/upload_reference.mdx"
+import PartialDownloadreference from "./hooks/download_reference.mdx"
+import PartialLogsreference from "./hooks/logs_reference.mdx"
+import PartialWaitreference from "./hooks/wait_reference.mdx"
+import PartialBackground from "./hooks/background.mdx"
+import PartialSilent from "./hooks/silent.mdx"
+import PartialContainerreference from "./hooks/container_reference.mdx"
+
+<PartialName />
+
+
+<PartialDisabled />
+
+
+<PartialEvents />
+
+
+<PartialCommand />
+
+
+<PartialArgs />
+
+
+<PartialOs />
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `upload` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-upload}
+
+If Upload is specified, DevSpace will upload certain local files or folders into a
+remote container.
+
+</summary>
+
+<PartialUploadreference />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `download` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-download}
+
+Same as Upload, but with this option DevSpace will download files or folders from
+a remote container.
+
+</summary>
+
+<PartialDownloadreference />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `logs` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-logs}
+
+If logs is defined will print the logs of the target container. This is useful for containers
+that should finish like init containers or job pods. Otherwise this hook will never terminate.
+
+</summary>
+
+<PartialLogsreference />
+
+
+</details>
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `wait` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-wait}
+
+If wait is defined the hook will wait until the matched pod or container is running or is terminated
+with a certain exit code.
+
+</summary>
+
+<PartialWaitreference />
+
+
+</details>
+
+
+<PartialBackground />
+
+
+<PartialSilent />
+
+
+
+<details className="config-field" data-expandable="true">
+<summary>
+
+### `container` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-container}
+
+Container specifies where the hook should be run. If this is omitted DevSpace expects a
+local command hook.
+
+</summary>
+
+<PartialContainerreference />
+
+
+</details>

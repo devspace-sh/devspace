@@ -2,6 +2,9 @@ package list
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -12,6 +15,14 @@ import (
 
 type portsCmd struct {
 	*flags.GlobalFlags
+
+	Output string
+}
+
+type jsonOutput struct {
+	ImageSelector string `json:"imageSelector"`
+	LabelSelector string `json:"labelSelector"`
+	Port          string `json:"port"`
 }
 
 func newPortsCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
@@ -32,6 +43,7 @@ Lists the port forwarding configurations
 			return cmd.RunListPort(f, cobraCmd, args)
 		}}
 
+	portsCmd.Flags().StringVarP(&cmd.Output, "output", "o", "", "The output format of the command. Can be either empty or json")
 	return portsCmd
 }
 
@@ -56,9 +68,8 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 	config := configInterface.Config()
 	portForwards := make([][]string, 0)
 	for _, dev := range config.Dev {
-		if dev.Ports == nil || len(dev.Ports) == 0 {
-			logger.Info("No ports are forwarded.\n")
-			return nil
+		if len(dev.Ports) == 0 {
+			continue
 		}
 		selector := ""
 		for k, v := range dev.LabelSelector {
@@ -76,12 +87,34 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 			})
 		}
 	}
-
-	headerColumnNames := []string{
-		"ImageSelector",
-		"LabelSelector",
-		"Ports (Local:Remote)",
+	if len(portForwards) == 0 {
+		logger.Info("No ports are forwarded.\n")
+		return nil
 	}
-	log.PrintTable(logger, headerColumnNames, portForwards)
+
+	switch cmd.Output {
+	case "":
+		headerColumnNames := []string{
+			"ImageSelector",
+			"LabelSelector",
+			"Ports (Local:Remote)",
+		}
+		log.PrintTable(logger, headerColumnNames, portForwards)
+	case "json":
+		output := make([]jsonOutput, 0)
+		for _, portFoward := range portForwards {
+			output = append(output, jsonOutput{
+				ImageSelector: portFoward[0],
+				LabelSelector: portFoward[1],
+				Port:          portFoward[2],
+			})
+		}
+
+		out, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Print(string(out))
+	}
 	return nil
 }

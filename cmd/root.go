@@ -4,16 +4,21 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/env"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/message"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
+	"github.com/mgutz/ansi"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/env"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
 
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
@@ -62,6 +67,15 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 				log.SetLevel(logrus.DebugLevel)
 			}
 
+			ansi.DisableColors(globalFlags.NoColors)
+
+			if globalFlags.KubeConfig != "" {
+				err := os.Setenv("KUBECONFIG", globalFlags.KubeConfig)
+				if err != nil {
+					log.Errorf("Unable to set KUBECONFIG variable: %v", err)
+				}
+			}
+
 			// parse the .env file
 			envFile := env.GlobalGetEnv("DEVSPACE_ENV_FILE")
 			if envFile != "" {
@@ -101,7 +115,10 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 		},
 		Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
 	
-		devspace init`,
+		devspace init
+		# Develop an existing application
+		devspace dev
+		DEVSPACE_CONFIG=other-config.yaml devspace dev`,
 	}
 }
 
@@ -175,11 +192,18 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 	}
 
 	// try to parse the raw config
-	rawConfig, err := parseConfig(f)
-	if err != nil {
-		f.GetLog().Debugf("error parsing raw config: %v", err)
-	} else {
-		env.GlobalGetEnv = rawConfig.GetEnv
+	var rawConfig *RawConfig
+
+	// This check is necessary to avoid process loops where a variable inside
+	// the devspace.yaml would execute another devspace command which would again
+	// load the config and execute DevSpace config parsing etc.
+	if os.Getenv(expression.DevSpaceSkipPreloadEnv) == "" {
+		rawConfig, err = parseConfig(f)
+		if err != nil {
+			f.GetLog().Debugf("error parsing raw config: %v", err)
+		} else {
+			env.GlobalGetEnv = rawConfig.GetEnv
+		}
 	}
 
 	// build the root cmd
@@ -190,6 +214,13 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 	})
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
+	kill.SetStopFunction(func(message string) {
+		if message == "" {
+			os.Exit(1)
+		} else {
+			f.GetLog().Fatal(message)
+		}
+	})
 
 	rootCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
@@ -267,6 +298,9 @@ Additional run commands:
 	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags, rawConfig))
 
 	// Add plugin commands
+	if rawConfig != nil && rawConfig.OriginalRawConfig != nil {
+		plugin.AddDevspaceVarsToPluginEnv(rawConfig.OriginalRawConfig["vars"])
+	}
 	plugin.AddPluginCommands(rootCmd, plugins, "")
 	variable.AddPredefinedVars(plugins)
 	return rootCmd
@@ -276,12 +310,12 @@ func disableKlog() {
 	flagSet := &flag.FlagSet{}
 	klog.InitFlags(flagSet)
 	_ = flagSet.Set("logtostderr", "false")
-	klog.SetOutput(ioutil.Discard)
+	klog.SetOutput(io.Discard)
 
 	flagSet = &flag.FlagSet{}
 	klogv2.InitFlags(flagSet)
 	_ = flagSet.Set("logtostderr", "false")
-	klogv2.SetOutput(ioutil.Discard)
+	klogv2.SetOutput(io.Discard)
 }
 
 func parseConfig(f factory.Factory) (*RawConfig, error) {
@@ -313,7 +347,9 @@ func parseConfig(f factory.Factory) (*RawConfig, error) {
 	r := &RawConfig{
 		resolved: map[string]string{},
 	}
-	_, err = configLoader.LoadWithParser(timeoutCtx, nil, nil, r, &loader.ConfigOptions{Dry: true}, log.Discard)
+	_, err = configLoader.LoadWithParser(timeoutCtx, nil, nil, r, &loader.ConfigOptions{
+		Dry: true,
+	}, log.Discard)
 	if r.Resolver != nil {
 		return r, nil
 	}
@@ -370,7 +406,7 @@ func (r *RawConfig) GetEnv(name string) string {
 		}
 
 		varName := "${" + name + "}"
-		out, err := r.Resolver.FillVariables(r.Ctx, varName)
+		out, err := r.Resolver.FillVariables(r.Ctx, varName, true)
 		if err == nil {
 			value := fmt.Sprintf("%v", out)
 			if value != varName && value != "" {

@@ -1,10 +1,12 @@
 package pullsecrets
 
 import (
+	"context"
+	"time"
+
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -16,6 +18,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const AzureContainerRegistryUsername = "00000000-0000-0000-0000-000000000000"
 
 func (r *client) EnsurePullSecret(ctx devspacecontext.Context, dockerClient docker.Client, namespace, registryURL string) error {
 	pullSecret := &latest.PullSecretConfig{Registry: registryURL}
@@ -117,9 +121,9 @@ func (r *client) addPullSecretsToServiceAccount(ctx devspacecontext.Context, nam
 		serviceAccount = "default"
 	}
 
-	err := wait.PollImmediate(time.Second, time.Second*30, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx.Context(), time.Second, time.Second*30, true, func(ctxPollUntil context.Context) (bool, error) {
 		// Get default service account
-		sa, err := ctx.KubeClient().KubeClient().CoreV1().ServiceAccounts(namespace).Get(ctx.Context(), serviceAccount, metav1.GetOptions{})
+		sa, err := ctx.KubeClient().KubeClient().CoreV1().ServiceAccounts(namespace).Get(ctxPollUntil, serviceAccount, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				return false, nil
@@ -139,7 +143,7 @@ func (r *client) addPullSecretsToServiceAccount(ctx devspacecontext.Context, nam
 		}
 		if !found {
 			sa.ImagePullSecrets = append(sa.ImagePullSecrets, v1.LocalObjectReference{Name: pullSecretName})
-			_, err := ctx.KubeClient().KubeClient().CoreV1().ServiceAccounts(namespace).Update(ctx.Context(), sa, metav1.UpdateOptions{})
+			_, err := ctx.KubeClient().KubeClient().CoreV1().ServiceAccounts(namespace).Update(ctxPollUntil, sa, metav1.UpdateOptions{})
 			if err != nil {
 				if kerrors.IsConflict(err) {
 					return false, nil
@@ -162,10 +166,22 @@ func (r *client) createPullSecret(ctx devspacecontext.Context, dockerClient dock
 	username := pullSecret.Username
 	password := pullSecret.Password
 	if username == "" && password == "" && dockerClient != nil {
-		authConfig, _ := dockerClient.GetAuthConfig(ctx.Context(), pullSecret.Registry, true)
+		authConfig, err := dockerClient.GetAuthConfig(ctx.Context(), pullSecret.Registry, true)
 		if authConfig != nil {
 			username = authConfig.Username
 			password = authConfig.Password
+
+			if password == "" && authConfig.IdentityToken != "" {
+				password = authConfig.IdentityToken
+			}
+
+			// Handle Azure Container Registry (ACR) when credentials helper does not provide a username
+			// https://learn.microsoft.com/en-us/azure/container-registry/container-registry-authentication?tabs=azure-cli#az-acr-login-with---expose-token
+			if username == "" && IsAzureContainerRegistry(authConfig.ServerAddress) {
+				username = AzureContainerRegistryUsername
+			}
+		} else if err != nil {
+			ctx.Log().Debugf("Error retrieving docker credentials for registry %s: %v", pullSecret.Registry, err)
 		}
 	}
 
@@ -185,6 +201,13 @@ func (r *client) createPullSecret(ctx devspacecontext.Context, dockerClient dock
 		})
 		if err != nil {
 			return err
+		}
+	} else {
+		if username == "" {
+			ctx.Log().Warnf("Couldn't retrieve username for registry %s from docker store", pullSecret.Registry)
+		}
+		if password == "" {
+			ctx.Log().Warnf("Couldn't retrieve password for registry %s from docker store", pullSecret.Registry)
 		}
 	}
 

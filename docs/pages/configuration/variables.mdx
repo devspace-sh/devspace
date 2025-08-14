@@ -6,6 +6,7 @@ sidebar_label: ${VARIABLES}
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import ConfigPartial from './_partials/v2beta1/vars.mdx'
+import FragmentVarsForceString from '../_partials/vars-force-string.mdx';
 
 DevSpace allows you to make your configuration dynamic by using variables.
 
@@ -14,17 +15,20 @@ While there is no need to explicitly define a config variable, it allows you to 
 
 ## Built-In Variables
 DevSpace provides a set of built-in variables:
-- `${DEVSPACE_NAMESPACE}` contains the current namespace
+
 - `${DEVSPACE_CONTEXT}` contains the name of the current kube-context (e.g. `minikube`)
-- `${DEVSPACE_NAME}` contains the value of the `name` field of the current `devspace.yaml` file
+- `${DEVSPACE_EXECUTABLE}` contains the path to the devspace binary used
 - `${DEVSPACE_GIT_BRANCH}` contains the name of the local git branch that the user is currently on
 - `${DEVSPACE_GIT_COMMIT}` contains the hash of the latest git commit in the current repository
-- `${DEVSPACE_TIMESTAMP}` contains the current UNIX timestamp
-- `${DEVSPACE_USER_HOME}` contains the path to the current user's home directory
-- `${DEVSPACE_TMPDIR}` contains a path to a temporary folder that DevSpace cleans up after the `devspace` command terminates
+- `${DEVSPACE_KUBECTL_EXECUTABLE}` contains the path to the kubectl binary
+- `${DEVSPACE_NAME}` contains the value of the `name` field of the current `devspace.yaml` file
+- `${DEVSPACE_NAMESPACE}` contains the current namespace
 - `${DEVSPACE_PROFILE}` contains the profile that is currently active in DevSpace (e.g. the string provided via `-p / --profile` in a command such as `devspace dev -p my-profile`)
+- `${DEVSPACE_RANDOM}` contains a random 6 character long string
+- `${DEVSPACE_TIMESTAMP}` contains the current UNIX timestamp
+- `${DEVSPACE_TMPDIR}` contains a path to a temporary folder that DevSpace cleans up after the `devspace` command terminates
+- `${DEVSPACE_USER_HOME}` contains the path to the current user's home directory
 - `${DEVSPACE_VERSION}` contains the version of DevSpace that is currently running
-
 
 ## Custom Variables
 DevSpace lets you define custom varables inside `devspace.yaml` within the `vars` section.
@@ -32,6 +36,8 @@ DevSpace lets you define custom varables inside `devspace.yaml` within the `vars
 :::tip Mix & Match Variable Types
 You can define several types of variables in the same config file, e.g. one `devspace.yaml` can contain static variables, env variables and more.
 :::
+
+<FragmentVarsForceString/>
 
 ### With Static Value
 To add variables with static value, just provide the value for the respective variable:
@@ -47,8 +53,15 @@ If you want to overwrite a static variable, you can use the `--var MY_VAR=new-va
 
 
 ### From Env Vars
-To load variables from the user's environment variables, you can just use them in the config as `${VAR_NAME}` without the need to explictly define them.
+To load variables from the user's environment variables, you can just use them in the config as `${VAR_NAME}` without the need to explicitly define them.
 
+In order to specify a default value for an environment variable that is not defined, you can use:
+```yaml
+vars:
+  MY_ENV_VAR:
+    source: env
+    default: my-default
+```
 
 ### From Command
 You can load the values from commands from custom commands via [config expressions](./expressions.mdx) or using the long form by specifying the `command` field:
@@ -132,18 +145,31 @@ vars:
 </Tabs>
 
 
-### From `.env` File
-DevSpace also reads environment variables from the `.env` file inside your project. The syntax of the `.env` file is the [same as for docker-compose](https://docs.docker.com/compose/env-file/):
+### `$DEVSPACE_ENV_FILE` for `.env` File definition
+DevSpace can also read environment variables from an environment file such as `.env` inside your project. Point DevSpace to your env file via the `DEVSPACE_ENV_FILE` environment variable.
+This can also be used inside a `devspace.yaml` under the vars section:
+
+```yaml
+vars:
+  DEVSPACE_ENV_FILE: ".env"
+```
+
+The syntax of the `.env` file is the [same as for docker-compose](https://docs.docker.com/compose/env-file/):
 
 - Each line should have the format `VAR_NAME=VAR_VALUE`.
 - **There is *no* special handling of quotation marks. This means that they are part of the `VAR_VALUE`.**
 - Lines beginning with # are processed as comments and ignored.
 
 :::info Precedence
-- Environment variables defined in your terminal session (including system variables) always take precendence over the variables in your `.env` file.
-- Variables defined in your `.env` file take precende over the default values defined for config variables (configured in the `vars` section of `devspace.yaml`).
+- Environment variables defined in your terminal session (including system variables) always take precedence over the variables in your `.env` file.
+- Variables defined in your `.env` file take precedence over the default values defined for config variables (configured in the `vars` section of `devspace.yaml`).
 :::
 
+## `$DEVSPACE_CONFIG` For Config Path
+You can tell DevSpace to load a different config via the `DEVSPACE_CONFIG` environment variable. You can specify this before actually executing DevSpace via:
+```bash
+DEVSPACE_CONFIG=my-other-devspace.yaml devspace dev
+```
 
 ## `$DEVSPACE_FLAGS` For Default Flags
 A common use case for the `.env` file is to set default flags for the `devspace` commands such as `devspace dev` or `devspace deploy`. You can define the following environment variables to set default flags:
@@ -151,7 +177,7 @@ A common use case for the `.env` file is to set default flags for the `devspace`
 - `DEVSPACE_[COMMAND]_FLAGS` to add default flags for single commands (e.g. `DEVSPACE_DEV_FLAGS=-s --verbose-dependencies`)
 
 ```bash title="File: .env"
-DEVSPACE_FLAGS=-s -p dev
+DEVSPACE_FLAGS=-s -n default-namespace
 DEVSPACE_DEV_FLAGS=-s --verbose-dependencies
 ```
 
@@ -159,7 +185,11 @@ DEVSPACE_DEV_FLAGS=-s --verbose-dependencies
 Specifying flags for a command will overwrite the default flags, e.g. if `DEVSPACE_FLAGS=-s -p dev` is configured and you run `devspace dev -p production`, the following command would be executed: `devspace dev -s -p production`
 :::
 
-
+You can also use these default flags without a specialized `.env` file in a regular `devspace.yaml`:
+```
+vars:
+  DEVSPACE_FLAGS: '-n my-default-namespace'
+```
 
 ## Useful Commands
 

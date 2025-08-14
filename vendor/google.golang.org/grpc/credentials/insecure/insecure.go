@@ -18,11 +18,6 @@
 
 // Package insecure provides an implementation of the
 // credentials.TransportCredentials interface which disables transport security.
-//
-// Experimental
-//
-// Notice: This package is EXPERIMENTAL and may be changed or removed in a
-// later release.
 package insecure
 
 import (
@@ -35,7 +30,7 @@ import (
 // NewCredentials returns a credentials which disables transport security.
 //
 // Note that using this credentials with per-RPC credentials which require
-// transport security is incompatible and will cause grpc.Dial() to fail.
+// transport security is incompatible and will cause RPCs to fail.
 func NewCredentials() credentials.TransportCredentials {
 	return insecureTC{}
 }
@@ -45,7 +40,7 @@ func NewCredentials() credentials.TransportCredentials {
 // NoSecurity.
 type insecureTC struct{}
 
-func (insecureTC) ClientHandshake(ctx context.Context, _ string, conn net.Conn) (net.Conn, credentials.AuthInfo, error) {
+func (insecureTC) ClientHandshake(_ context.Context, _ string, conn net.Conn) (net.Conn, credentials.AuthInfo, error) {
 	return conn, info{credentials.CommonAuthInfo{SecurityLevel: credentials.NoSecurity}}, nil
 }
 
@@ -74,4 +69,36 @@ type info struct {
 // AuthType returns the type of info as a string.
 func (info) AuthType() string {
 	return "insecure"
+}
+
+// ValidateAuthority allows any value to be overridden for the :authority
+// header.
+func (info) ValidateAuthority(string) error {
+	return nil
+}
+
+// insecureBundle implements an insecure bundle.
+// An insecure bundle provides a thin wrapper around insecureTC to support
+// the credentials.Bundle interface.
+type insecureBundle struct{}
+
+// NewBundle returns a bundle with disabled transport security and no per rpc credential.
+func NewBundle() credentials.Bundle {
+	return insecureBundle{}
+}
+
+// NewWithMode returns a new insecure Bundle. The mode is ignored.
+func (insecureBundle) NewWithMode(string) (credentials.Bundle, error) {
+	return insecureBundle{}, nil
+}
+
+// PerRPCCredentials returns an nil implementation as insecure
+// bundle does not support a per rpc credential.
+func (insecureBundle) PerRPCCredentials() credentials.PerRPCCredentials {
+	return nil
+}
+
+// TransportCredentials returns the underlying insecure transport credential.
+func (insecureBundle) TransportCredentials() credentials.TransportCredentials {
+	return NewCredentials()
 }

@@ -1,27 +1,28 @@
 package ssh
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh"
 )
 
 var (
 	DevSpaceSSHFolder         = "ssh"
-	DevSpaceSSHHostKeyFile    = "id_devspace_host_rsa"
-	DevSpaceSSHPrivateKeyFile = "id_devspace_rsa"
-	DevSpaceSSHPublicKeyFile  = "id_devspace_rsa.pub"
+	DevSpaceSSHHostKeyFile    = "id_devspace_host_ecdsa"
+	DevSpaceSSHPrivateKeyFile = "id_devspace_ecdsa"
+	DevSpaceSSHPublicKeyFile  = "id_devspace_ecdsa.pub"
 )
 
 func init() {
@@ -34,32 +35,40 @@ func init() {
 
 var keyLock sync.Mutex
 
-func MakeHostKey() (string, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+func generatePrivateKey() (*ecdsa.PrivateKey, string, error) {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
 	// generate and write private key as PEM
-	var privKeyBuf strings.Builder
-	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
-	if err := pem.Encode(&privKeyBuf, privateKeyPEM); err != nil {
-		return "", err
+	var privateKeyBuf strings.Builder
+	b, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		return nil, "", err
+	}
+	privateKeyPEM := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: b,
+	}
+	if err := pem.Encode(&privateKeyBuf, privateKeyPEM); err != nil {
+		return nil, "", err
 	}
 
-	return privKeyBuf.String(), nil
+	return privateKey, privateKeyBuf.String(), nil
+}
+
+func MakeHostKey() (string, error) {
+	_, privKeyStr, err := generatePrivateKey()
+	if err != nil {
+		return "", err
+	}
+	return privKeyStr, nil
 }
 
 func MakeSSHKeyPair() (string, string, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privateKey, privKeyStr, err := generatePrivateKey()
 	if err != nil {
-		return "", "", err
-	}
-
-	// generate and write private key as PEM
-	var privKeyBuf strings.Builder
-	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
-	if err := pem.Encode(&privKeyBuf, privateKeyPEM); err != nil {
 		return "", "", err
 	}
 
@@ -71,7 +80,7 @@ func MakeSSHKeyPair() (string, string, error) {
 
 	var pubKeyBuf strings.Builder
 	pubKeyBuf.Write(ssh.MarshalAuthorizedKey(pub))
-	return pubKeyBuf.String(), privKeyBuf.String(), nil
+	return pubKeyBuf.String(), privKeyStr, nil
 }
 
 func getHostKey() (string, error) {
@@ -94,14 +103,14 @@ func getHostKey() (string, error) {
 			return "", errors.Wrap(err, "generate host key")
 		}
 
-		err = ioutil.WriteFile(DevSpaceSSHHostKeyFile, []byte(privateKey), 0600)
+		err = os.WriteFile(DevSpaceSSHHostKeyFile, []byte(privateKey), 0600)
 		if err != nil {
 			return "", errors.Wrap(err, "write host key")
 		}
 	}
 
 	// read public key
-	out, err := ioutil.ReadFile(DevSpaceSSHHostKeyFile)
+	out, err := os.ReadFile(DevSpaceSSHHostKeyFile)
 	if err != nil {
 		return "", errors.Wrap(err, "read host ssh key")
 	}
@@ -129,19 +138,19 @@ func getPublicKey() (string, error) {
 			return "", errors.Wrap(err, "generate key pair")
 		}
 
-		err = ioutil.WriteFile(DevSpaceSSHPublicKeyFile, []byte(pubKey), 0644)
+		err = os.WriteFile(DevSpaceSSHPublicKeyFile, []byte(pubKey), 0644)
 		if err != nil {
 			return "", errors.Wrap(err, "write public ssh key")
 		}
 
-		err = ioutil.WriteFile(DevSpaceSSHPrivateKeyFile, []byte(privateKey), 0600)
+		err = os.WriteFile(DevSpaceSSHPrivateKeyFile, []byte(privateKey), 0600)
 		if err != nil {
 			return "", errors.Wrap(err, "write private ssh key")
 		}
 	}
 
 	// read public key
-	out, err := ioutil.ReadFile(DevSpaceSSHPublicKeyFile)
+	out, err := os.ReadFile(DevSpaceSSHPublicKeyFile)
 	if err != nil {
 		return "", errors.Wrap(err, "read public ssh key")
 	}

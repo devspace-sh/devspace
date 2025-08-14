@@ -28,7 +28,7 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 		imageCache, _ := generated.GetImageCache(configImageName)
 		if imageCache.ImageName != "" && imageCache.Tag != "" && c.Images != nil && c.Images[configImageName] != nil {
 			return &ImageSelector{
-				Image: imageCache.ImageName + ":" + imageCache.Tag,
+				Image: imageCache.ResolveImage() + ":" + imageCache.Tag,
 			}, nil
 		}
 

@@ -10,9 +10,15 @@ import (
 // NewBuildCmd creates a new devspace build command
 func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *RawConfig) *cobra.Command {
 	cmd := &RunPipelineCmd{
-		GlobalFlags: globalFlags,
-		Pipeline:    "build",
-		ForceBuild:  true,
+		GlobalFlags:             globalFlags,
+		Pipeline:                "build",
+		ForceBuild:              true,
+		SkipPushLocalKubernetes: true,
+	}
+
+	var pipeline *latest.Pipeline
+	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
+		pipeline = rawConfig.Config.Pipelines["build"]
 	}
 	buildCmd := &cobra.Command{
 		Use:   "build",
@@ -26,11 +32,6 @@ Builds all defined images and pushes them
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd, args, f, "buildCommand")
 		},
-	}
-
-	var pipeline *latest.Pipeline
-	if rawConfig != nil && rawConfig.Config != nil && rawConfig.Config.Pipelines != nil {
-		pipeline = rawConfig.Config.Pipelines["build"]
 	}
 	cmd.AddPipelineFlags(f, buildCmd, pipeline)
 	return buildCmd

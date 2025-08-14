@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
@@ -12,7 +14,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/onsi/ginkgo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -65,8 +66,8 @@ var _ = DevSpaceDescribe("devspacehelper", func() {
 
 		// wait until nginx pod is reachable
 		var pods *corev1.PodList
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=curl-container"})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: "app=curl-container"})
 			if err != nil {
 				return false, err
 			} else if len(pods.Items) == 0 || len(pods.Items[0].Status.ContainerStatuses) == 0 {
@@ -116,8 +117,8 @@ var _ = DevSpaceDescribe("devspacehelper", func() {
 
 		// wait until nginx pod is reachable
 		var pods *corev1.PodList
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=non-curl-container"})
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, false, func(ctx context.Context) (done bool, err error) {
+			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: "app=non-curl-container"})
 			if err != nil {
 				return false, err
 			}

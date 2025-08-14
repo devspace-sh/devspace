@@ -10,7 +10,7 @@ If nothing is specified, DevSpace always tries to build the image using Docker a
 
 
 ## Kaniko Fallback
-When using `docker` as build tool, DevSpace checks if the Docker daemon is installed and running. If Docker is not installed or not running, DevSpace will use kaniko as fallback to build the image unless the option `disableFallback` is set to `false`.
+When using `docker` as build tool, DevSpace checks if the Docker daemon is installed and running. If Docker is not installed or not running, DevSpace will use kaniko as fallback to build the image unless the option `disableFallback` is set to `true`.
 
 #### Example: Disabling kaniko Fallback
 ```yaml

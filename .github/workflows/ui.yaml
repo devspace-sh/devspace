@@ -3,7 +3,7 @@ name: Test UI
 on:
   pull_request:
     branches:
-      - master
+      - main
     paths:
       - "ui/**"
       - "hack/build-ui.bash"
@@ -11,15 +11,15 @@ on:
 
 jobs:
   test-ui:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: 20
           registry-url: https://registry.npmjs.org/
       - name: Cache node modules
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: ui/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/ui/package-lock.json') }}

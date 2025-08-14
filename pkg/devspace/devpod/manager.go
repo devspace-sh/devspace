@@ -21,10 +21,7 @@ type Options struct {
 	DisableSync           bool `long:"disable-sync" description:"If enabled will not start any sync configuration"`
 	DisablePortForwarding bool `long:"disable-port-forwarding" description:"If enabled will not start any port forwarding configuration"`
 	DisablePodReplace     bool `long:"disable-pod-replace" description:"If enabled will not replace any pods"`
-	DisableOpen           bool `long:"disable-open" description:"If enabled will not replace any pods"`
-
-	// KillApplication kills the whole pipeline including all dev pods
-	KillApplication func()
+	DisableOpen           bool `long:"disable-open" description:"If enabled will not auto-open the URL"`
 }
 
 type Manager interface {

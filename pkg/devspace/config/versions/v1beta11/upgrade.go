@@ -5,6 +5,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
+
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
@@ -74,7 +76,8 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	// convert vars
 	if len(c.Vars) > 0 {
 		nextConfig.Vars = map[string]*next.Variable{}
-		for _, v := range c.Vars {
+		for _, variable := range c.Vars {
+			v := variable
 			nextConfig.Vars[v.Name] = &next.Variable{
 				Name:              v.Name,
 				Question:          v.Question,
@@ -83,7 +86,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				ValidationPattern: v.ValidationPattern,
 				ValidationMessage: v.ValidationMessage,
 				NoCache:           v.NoCache,
-				AlwaysResolve:     v.AlwaysResolve,
+				AlwaysResolve:     &v.AlwaysResolve,
 				Value:             v.Value,
 				Default:           v.Default,
 				Source:            next.VariableSource(v.Source),
@@ -104,7 +107,10 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	if nextConfig.Vars == nil {
 		nextConfig.Vars = map[string]*next.Variable{}
 	}
-	nextConfig.Vars["DEVSPACE_ENV_FILE"] = &next.Variable{Value: ".env"}
+	nextConfig.Vars["DEVSPACE_ENV_FILE"] = &next.Variable{
+		Value:         ".env",
+		AlwaysResolve: ptr.Bool(false),
+	}
 
 	deployPipeline := ""
 	buildPipeline := ""
@@ -141,6 +147,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			OverwriteVars:            dep.OverwriteVars,
 			IgnoreDependencies:       dep.IgnoreDependencies,
 			Namespace:                dep.Namespace,
+			Disabled:                 dep.Disabled,
 		}
 		if dep.Profile != "" {
 			nextConfig.Dependencies[name].Profiles = append(nextConfig.Dependencies[name].Profiles, dep.Profile)
@@ -172,9 +179,10 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	// pull secrets
 	pullSecrets := []string{}
 	nextConfig.PullSecrets = map[string]*next.PullSecretConfig{}
+	pullSecretsByRegistry := map[string]*next.PullSecretConfig{}
 	for idx, pullSecret := range c.PullSecrets {
 		pullSecretName := fmt.Sprintf("pull-secret-%d", idx)
-		nextConfig.PullSecrets[pullSecretName] = &next.PullSecretConfig{
+		pullSecretConfig := &next.PullSecretConfig{
 			Name:            pullSecretName,
 			Registry:        pullSecret.Registry,
 			Username:        pullSecret.Username,
@@ -183,9 +191,46 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			Secret:          pullSecret.Secret,
 			ServiceAccounts: pullSecret.ServiceAccounts,
 		}
+		nextConfig.PullSecrets[pullSecretName] = pullSecretConfig
+		pullSecretsByRegistry[pullSecret.Registry] = pullSecretConfig
+
 		if pullSecret.Disabled {
 			continue
 		}
+
+		pullSecrets = append(pullSecrets, pullSecretName)
+	}
+
+	// Add pull secrets for images for backwards compatibility
+	for k, image := range c.Images {
+		registryURL, err := pullsecrets.GetRegistryFromImageName(image.Image)
+		if err != nil {
+			return nil, err
+		}
+
+		if registryURL == "" {
+			// Skip
+			continue
+		}
+
+		if image.CreatePullSecret != nil && !*image.CreatePullSecret {
+			// Disabled
+			continue
+		}
+
+		if pullSecretsByRegistry[registryURL] != nil {
+			// Already configured
+			continue
+		}
+
+		// Create a default pull secret config for images without pull secrets.
+		pullSecretName := encoding.Convert(k)
+		pullSecretConfig := &next.PullSecretConfig{
+			Name:     pullSecretName,
+			Registry: registryURL,
+		}
+		nextConfig.PullSecrets[pullSecretName] = pullSecretConfig
+		pullSecretsByRegistry[registryURL] = pullSecretConfig
 
 		pullSecrets = append(pullSecrets, pullSecretName)
 	}
@@ -206,7 +251,8 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			Entrypoint:                   image.Entrypoint,
 			Cmd:                          image.Cmd,
 			CreatePullSecret:             image.CreatePullSecret,
-			InjectRestartHelper:          image.InjectRestartHelper,
+			InjectRestartHelper:          false,
+			InjectLegacyRestartHelper:    image.InjectRestartHelper,
 			RebuildStrategy:              next.RebuildStrategy(image.RebuildStrategy),
 			RestartHelperPath:            image.RestartHelperPath,
 			AppendDockerfileInstructions: image.AppendDockerfileInstructions,

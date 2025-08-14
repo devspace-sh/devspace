@@ -33,7 +33,8 @@ dependencies:
   auth-server:
     git: https://github.com/my-auth-server
     revision: c967392
-    profile: production
+    profiles:
+      - production
   database-server:
     git: https://github.com/my-database-server
     tag: v3.0.1
@@ -64,7 +65,7 @@ DevSpace is able to work with dependencies from the following sources:
 
 ## Execution Order
 
-Dependencies will be executed in the order that they are specified under `dependencies` and always before image building and deployments defined in the top-level `devspace.yaml`. `dev` configuration that should be reused from a dependency will be executed alongside regular `dev` configuration specified in the top-level `devspace.yaml` after the DevSpace deployment pipeline ran through. Example:
+Dependencies will be executed in parallel and always before image building and deployments defined in the top-level `devspace.yaml`. If you want to execute dependencies sequentially, you can define a pipeline to do so. `dev` configuration that should be reused from a dependency will be executed alongside regular `dev` configuration specified in the top-level `devspace.yaml` after the DevSpace deployment pipeline ran through. Example:
 ```yaml
 dependencies:
   dep1:
@@ -162,15 +163,6 @@ If DevSpace detects that two projects within the dependency tree define the same
 
 ### Circular Dependencies
 If DevSpace detects two projects which define each other as dependencies (either directly or via child-dependencies), DevSpace will print a warning showing the problematic dependency path within the dependency tree.
-
-## Useful Commands
-
-### `devspace update dependencies`
-If you want to force DevSpace to update the dependencies (e.g. git fetch & pull), you can run the following command:
-```bash
-devspace update dependencies
-```
-
 
 ## Configuration
 

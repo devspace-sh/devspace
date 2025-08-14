@@ -2,14 +2,15 @@ package portforwarding
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/helper/util/port"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/mgutz/ansi"
-	"strings"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -35,7 +36,7 @@ func StartPortForwarding(ctx devspacecontext.Context, devPod *latest.DevPod, sel
 
 	// reverse
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
-		if len(devPod.ReversePorts) > 0 {
+		if len(devContainer.ReversePorts) > 0 {
 			initDoneArray = append(initDoneArray, parent.NotifyGo(func() error {
 				return startReversePortForwardingWithHooks(ctx, devPod.Name, string(devContainer.Arch), devContainer.ReversePorts, selector.WithContainer(devContainer.Container), parent)
 			}))

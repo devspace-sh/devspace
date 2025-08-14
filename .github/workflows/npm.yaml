@@ -3,14 +3,14 @@ name: Test NPM Installer
 on:
   pull_request:
     branches:
-      - master
+      - main
     paths:
       - "dist/npm/**"
       - ".github/workflows/npm.yaml"
 
 jobs:
   linux:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1

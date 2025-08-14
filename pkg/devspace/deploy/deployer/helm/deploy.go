@@ -2,10 +2,11 @@ package helm
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
@@ -27,15 +28,29 @@ import (
 
 // Deploy deploys the given deployment with helm
 func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bool, error) {
-	var (
+	var releaseName string
+	if d.DeploymentConfig.Helm.ReleaseName != "" {
+		releaseName = d.DeploymentConfig.Helm.ReleaseName
+	} else {
 		releaseName = d.DeploymentConfig.Name
-		chartPath   = d.DeploymentConfig.Helm.Chart.Name
-		hash        = ""
+	}
+
+	var (
+		chartPath = d.DeploymentConfig.Helm.Chart.Name
+		hash      = ""
 	)
 
 	releaseNamespace := ctx.KubeClient().Namespace()
 	if d.DeploymentConfig.Namespace != "" {
 		releaseNamespace = d.DeploymentConfig.Namespace
+	}
+
+	if d.DeploymentConfig.Helm.Chart.Source != nil {
+		downloadPath, err := d.Helm.DownloadChart(ctx, d.DeploymentConfig.Helm)
+		if err != nil {
+			return false, errors.Wrap(err, "download chart")
+		}
+		chartPath = downloadPath
 	}
 
 	// Hash the chart directory if there is any
@@ -44,14 +59,17 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bo
 		chartPath = ctx.ResolvePath(chartPath)
 
 		// Check if the chart directory has changed
-		hash, err = hashpkg.Directory(chartPath)
+		hash, err = hashpkg.DirectoryExcludes(chartPath, []string{
+			".git/",
+			".devspace/",
+		}, true)
 		if err != nil {
 			return false, errors.Errorf("Error hashing chart directory: %v", err)
 		}
 	}
 
 	// Ensure deployment config is there
-	deployCache, _ := ctx.Config().RemoteCache().GetDeployment(d.DeploymentConfig.Name)
+	deployCache, _ := ctx.Config().RemoteCache().GetDeployment(releaseName)
 
 	// Check values files for changes
 	helmOverridesHash := ""
@@ -140,21 +158,24 @@ func (d *DeployConfig) Deploy(ctx devspacecontext.Context, forceDeploy bool) (bo
 		if rootName, ok := values.RootNameFrom(ctx.Context()); ok && !stringutil.Contains(deployCache.Projects, rootName) {
 			deployCache.Projects = append(deployCache.Projects, rootName)
 		}
-		ctx.Config().RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
+		ctx.Config().RemoteCache().SetDeployment(releaseName, deployCache)
 		return true, nil
 	}
 
 	if rootName, ok := values.RootNameFrom(ctx.Context()); ok && !stringutil.Contains(deployCache.Projects, rootName) {
 		deployCache.Projects = append(deployCache.Projects, rootName)
 	}
-	ctx.Config().RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
+	ctx.Config().RemoteCache().SetDeployment(releaseName, deployCache)
 	return false, nil
 }
 
 func (d *DeployConfig) internalDeploy(ctx devspacecontext.Context, overwriteValues map[string]interface{}, out io.Writer) (*types.Release, error) {
-	var (
+	var releaseName string
+	if d.DeploymentConfig.Helm.ReleaseName != "" {
+		releaseName = d.DeploymentConfig.Helm.ReleaseName
+	} else {
 		releaseName = d.DeploymentConfig.Name
-	)
+	}
 	releaseNamespace := ctx.KubeClient().Namespace()
 	if d.DeploymentConfig.Namespace != "" {
 		releaseNamespace = d.DeploymentConfig.Namespace
@@ -170,7 +191,7 @@ func (d *DeployConfig) internalDeploy(ctx devspacecontext.Context, overwriteValu
 		return nil, nil
 	}
 
-	ctx.Log().Infof("Deploying chart %s (%s) with helm...", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name)
+	ctx.Log().Infof("Deploying chart %s (%s) with helm...", d.DeploymentConfig.Helm.Chart.Name, releaseName)
 	valuesOut, _ := yaml.Marshal(overwriteValues)
 	ctx.Log().Debugf("Deploying chart with values:\n %v\n", string(valuesOut))
 

@@ -21,6 +21,7 @@ module.exports = {
         'configuration/imports/README',
         'configuration/functions/README',
         'configuration/pipelines/README',
+        'configuration/hooks/README',
         {
           type: 'category',
           label: 'images',
@@ -88,7 +89,17 @@ module.exports = {
               collapsible: false,
               link: { type: 'doc', id: 'configuration/deployments/kubectl/README' },
               items: [
-                'configuration/deployments/kubectl/manifests',
+                {
+                  type: 'category',
+                  label: 'Manifests',
+                  collapsible: false,
+                  link: { type: 'doc', id: 'configuration/deployments/kubectl/README' },
+                  items: [
+                    'configuration/deployments/kubectl/manifests',
+                    'configuration/deployments/kubectl/inline_manifests',
+                    'configuration/deployments/kubectl/patches',
+                  ],
+                },
                 'configuration/deployments/kubectl/kustomizations',
               ],
             },
@@ -154,10 +165,31 @@ module.exports = {
             'configuration/dependencies/local-folder',
           ],
         },
+        {
+          type: 'category',
+          label: 'profiles',
+          link: { type: 'doc', id: 'configuration/profiles/README' },
+          items: [
+            'configuration/profiles/activation',
+            'configuration/profiles/patches',
+            'configuration/profiles/merge',
+            'configuration/profiles/replace',
+          ],
+        },
         'configuration/pullSecrets/README',
+        'configuration/localRegistry/README',
         'configuration/require/README',
         'configuration/variables',
+        'configuration/runtime-variables',
         'configuration/expressions',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'IDE Integration',
+      link: { type: 'doc', id: 'ide-integration/visual-studio-code' },
+      items: [
+        'ide-integration/visual-studio-code',
       ],
     },
     {
@@ -174,5 +206,9 @@ module.exports = {
       ],
     },
     "plugins/README",
+    {
+        type: "doc",
+        id: "licenses/devspace",
+    },
   ],
 };

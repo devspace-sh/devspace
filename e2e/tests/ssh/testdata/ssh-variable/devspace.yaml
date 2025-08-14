@@ -1,0 +1,29 @@
+version: v2beta1
+name: ssh-variable
+vars:
+  IMAGE: alpine
+  SSH:
+    value: true
+deployments:
+  test:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+          - image: ${IMAGE}
+            command: ["sleep"]
+            args: ["999999999999"]
+pipelines:
+  dev: |
+    run_default_pipeline dev
+    echo "started" > started
+dev:
+  test:
+    imageSelector: ${IMAGE}
+    ssh:
+      enabled: ${SSH}
+      localHostname: test.ssh-variable.devspace
+      localPort: 10023
+      remoteAddress: 0.0.0.0:8023

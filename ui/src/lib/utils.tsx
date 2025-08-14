@@ -276,7 +276,7 @@ export const GetContainerStatus = (container: V1ContainerStatus) => {
 };
 
 export const configToYAML = (config: Config, reverse?: boolean) => {
-  const yamlString = yaml.safeDump(config, {
+  const yamlString = yaml.dump(config, {
     sortKeys: reverse ? (a, b) => (a < b ? 1 : a > b ? -1 : 0) : false,
   });
   return yamlString;

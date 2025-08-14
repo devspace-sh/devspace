@@ -3,6 +3,12 @@ package kubectl
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -11,15 +17,15 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/transport/spdy"
-	"net"
-	"net/http"
-	"strings"
 )
 
-const minikubeContext = "minikube"
-const kindContext = "kind-kind"
-const dockerDesktopContext = "docker-desktop"
-const dockerForDesktopContext = "docker-for-desktop"
+const (
+	minikubeContext         = "minikube"
+	minikubeProvider        = "minikube.sigs.k8s.io"
+	dockerDesktopContext    = "docker-desktop"
+	dockerForDesktopContext = "docker-for-desktop"
+	orbstackContext         = "orbstack"
+)
 
 // WaitStatus are the status to wait
 var WaitStatus = []string{
@@ -91,6 +97,8 @@ func GetPodStatus(pod *corev1.Pod) string {
 
 		switch {
 		case container.State.Terminated != nil && container.State.Terminated.ExitCode == 0:
+			continue
+		case container.State.Running != nil && pod.Spec.InitContainers[i].RestartPolicy != nil:
 			continue
 		case container.State.Terminated != nil:
 			// initialization is failed
@@ -201,20 +209,70 @@ func NewPortForwarder(client Client, pod *corev1.Pod, ports []string, addresses 
 }
 
 // IsLocalKubernetes returns true if the context belongs to a local Kubernetes cluster
-func IsLocalKubernetes(context string) bool {
-	if context == minikubeContext ||
-		context == kindContext ||
+func IsLocalKubernetes(kubeClient Client) bool {
+	if kubeClient == nil {
+		return false
+	}
+
+	if IsMinikubeKubernetes(kubeClient) {
+		return true
+	}
+
+	context := kubeClient.CurrentContext()
+	if strings.HasPrefix(context, "kind-") ||
+		context == orbstackContext ||
 		context == dockerDesktopContext ||
 		context == dockerForDesktopContext {
 		return true
-	} else if strings.HasPrefix(context, "vcluster_") && (strings.HasSuffix(context, minikubeContext) || strings.HasSuffix(context, dockerDesktopContext) || strings.HasSuffix(context, dockerForDesktopContext)) {
+	} else if strings.Contains(context, "vcluster_") &&
+		(strings.HasSuffix(context, dockerDesktopContext) ||
+			strings.HasSuffix(context, dockerForDesktopContext) ||
+			strings.Contains(context, "kind-")) {
 		return true
 	}
 
 	return false
 }
 
-// IsKindContext returns true if the context is a kind Kubernetes cluster
-func IsKindContext(context string) bool {
-	return context == kindContext
+func IsMinikubeKubernetes(kubeClient Client) bool {
+	if kubeClient == nil {
+		return false
+	}
+
+	if kubeClient.CurrentContext() == minikubeContext {
+		return true
+	}
+
+	if strings.Contains(kubeClient.CurrentContext(), "vcluster_") && strings.HasSuffix(kubeClient.CurrentContext(), minikubeContext) {
+		return true
+	}
+
+	if kubeClient.ClientConfig() == nil {
+		return false
+	}
+
+	if rawConfig, err := kubeClient.ClientConfig().RawConfig(); err == nil {
+		clusters := rawConfig.Clusters[rawConfig.Contexts[rawConfig.CurrentContext].Cluster]
+		for _, extension := range clusters.Extensions {
+			ext, err := runtime.DefaultUnstructuredConverter.ToUnstructured(extension)
+			if err == nil {
+				if provider, ok := ext["provider"].(string); ok {
+					if provider == minikubeProvider {
+						return true
+					}
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// GetKindContext returns the kind cluster name
+func GetKindContext(context string) string {
+	if !strings.HasPrefix(context, "kind-") {
+		return ""
+	}
+
+	return strings.TrimPrefix(context, "kind-")
 }
