@@ -4,37 +4,33 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	command2 "github.com/loft-sh/devspace/pkg/util/command"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/cli/cli/streams"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
-
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
-	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
-	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-
-	"github.com/docker/distribution/reference"
-
 	"github.com/docker/cli/cli/command/image/build"
+	"github.com/docker/cli/cli/streams"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
-
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
-	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
+	command2 "github.com/loft-sh/devspace/pkg/util/command"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 )
 
 // EngineName is the name of the building engine
@@ -199,7 +195,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 				defer writeCloser.Close()
 				err = command2.CommandWithEnv(ctx.Context(), ctx.WorkingDir(), writeCloser, writeCloser, nil, nil, command[0], completeArgs...)
 				if err != nil {
-					ctx.Log().Info(errors.Errorf("error during image load to kind cluster: %v", err))
+					return errors.Errorf("error during image load to kind cluster: %v", err)
 				}
 				ctx.Log().Info("Image loaded to kind cluster")
 			}
