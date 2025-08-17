@@ -463,6 +463,9 @@ type KanikoConfig struct {
 
 	// Resources are the resources that should be set on the kaniko pod
 	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
+
+	// Use the host's user namespace
+	HostUsers *bool `yaml:"hostUsers,omitempty" json:"hostUsers,omitempty"`
 }
 
 // PodResources describes the resources section of the started kaniko pod

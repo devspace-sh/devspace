@@ -1316,6 +1316,10 @@
               "resources": {
                 "$ref": "#/definitions/Config/$defs/PodResources",
                 "description": "Resources are the resources that should be set on the kaniko pod"
+              },
+              "hostUsers": {
+                "type": "boolean",
+                "description": "Use the host's user namespace"
               }
             },
             "type": "object",
