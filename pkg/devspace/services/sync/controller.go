@@ -5,8 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/tomb"
-	"github.com/mgutz/ansi"
 	"io"
 	"os"
 	"path"
@@ -14,6 +12,9 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/util/tomb"
+	"github.com/mgutz/ansi"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -267,9 +268,7 @@ func PrintPodError(ctx context.Context, kubeClient kubectl.Client, pod *v1.Pod, 
 }
 
 func (c *controller) startSync(ctx devspacecontext.Context, options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error) (*sync.Sync, *selector.SelectedPodContainer, error) {
-	var (
-		syncConfig = options.SyncConfig
-	)
+	syncConfig := options.SyncConfig
 
 	container, err := options.Selector.SelectSingleContainer(ctx.Context(), ctx.KubeClient(), ctx.Log())
 	if err != nil {
@@ -501,7 +500,7 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 	go func() {
 		err := StartStream(ctx.Context(), ctx.KubeClient(), pod, container, upstreamArgs, upStdinReader, upStdoutWriter, true, options.Log)
 		if err != nil {
-			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
+			syncClient.Stop(errors.Errorf("Upstream Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
 	}()
 
@@ -529,7 +528,7 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 	go func() {
 		err := StartStream(ctx.Context(), ctx.KubeClient(), pod, container, downstreamArgs, downStdinReader, downStdoutWriter, true, options.Log)
 		if err != nil {
-			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
+			syncClient.Stop(errors.Errorf("Downstream Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
 	}()
 
