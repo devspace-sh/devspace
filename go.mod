@@ -32,7 +32,7 @@ require (
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/loft-sh/go-github-selfupdate v1.0.0
 	github.com/loft-sh/loft-util v0.0.9-alpha
-	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
+	github.com/loft-sh/notify v0.0.0-20250811133046-d79ab32e79b2
 	github.com/loft-sh/programming-language-detection v0.0.5
 	github.com/loft-sh/utils v0.0.16
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
@@ -195,7 +195,7 @@ require (
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/term v0.33.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.34.0 // indirect

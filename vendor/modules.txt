@@ -422,7 +422,7 @@ github.com/loft-sh/go-github-selfupdate/selfupdate
 # github.com/loft-sh/loft-util v0.0.9-alpha
 ## explicit; go 1.19
 github.com/loft-sh/loft-util/pkg/command
-# github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
+# github.com/loft-sh/notify v0.0.0-20250811133046-d79ab32e79b2
 ## explicit; go 1.11
 github.com/loft-sh/notify
 # github.com/loft-sh/programming-language-detection v0.0.5
@@ -826,7 +826,7 @@ golang.org/x/oauth2/internal
 # golang.org/x/sync v0.16.0
 ## explicit; go 1.23.0
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.34.0
+# golang.org/x/sys v0.35.0
 ## explicit; go 1.23.0
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9

@@ -337,8 +337,8 @@ github.com/loft-sh/go-github-selfupdate v1.0.0 h1:YS8iSsIWXw3BygBdPK2xDO4K84XYu2
 github.com/loft-sh/go-github-selfupdate v1.0.0/go.mod h1:LDkR6J2QpqQLIMcYvNaSinVwvjPAkg8278oZBPGnrb8=
 github.com/loft-sh/loft-util v0.0.9-alpha h1:kGcyTQWxWHWy7bbjhS8Hsq/JRdlSztAU++anV6P+sqk=
 github.com/loft-sh/loft-util v0.0.9-alpha/go.mod h1:lsjG5Exh5iEf7Z/87nqwkxx3GRQTizFRLGuS1knF6Cg=
-github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee h1:hZ79+pKEbCBrH1dVmgZ4jtFrrDPxgM4zqEP1lHlSnvI=
-github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee/go.mod h1:pq83B8lgfCY7tKdegTTXU6DZxGQkcWMowUTOTpTQmqk=
+github.com/loft-sh/notify v0.0.0-20250811133046-d79ab32e79b2 h1:N3uX7AwEUUwBxt4rgvNIaYzb7cUvxDfjp7tD68yiavo=
+github.com/loft-sh/notify v0.0.0-20250811133046-d79ab32e79b2/go.mod h1:pq83B8lgfCY7tKdegTTXU6DZxGQkcWMowUTOTpTQmqk=
 github.com/loft-sh/programming-language-detection v0.0.5 h1:XiWlxtrf4t6Z7SQiob0JMKaCeMHCP3kWhB80wLt+EMY=
 github.com/loft-sh/programming-language-detection v0.0.5/go.mod h1:QGPQGKr9q1+rQS4OyisS5CPGY1a76SdNaZuk9oy+2cE=
 github.com/loft-sh/utils v0.0.16 h1:XnD6Sb6gRWIHgM34U94dHcQ5MtxN5kAGZQ5eddAxC+c=
@@ -680,8 +680,8 @@ golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.34.0 h1:H5Y5sJ2L2JRdyv7ROF1he/lPdvFsd0mJHFw2ThKHxLA=
-golang.org/x/sys v0.34.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
+golang.org/x/sys v0.35.0 h1:vz1N37gP5bs89s7He8XuIYXpyY0+QlsKmzipCbUtyxI=
+golang.org/x/sys v0.35.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
 golang.org/x/term v0.0.0-20201117132131-f5c789dd3221/go.mod h1:Nr5EML6q2oocZ2LXRh80K7BxOlk5/8JxuGnuhpl+muw=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210503060354-a79de5458b56/go.mod h1:tfny5GFUkzUvx4ps4ajbZsCe5lw1metzhBm9T3x7oIY=

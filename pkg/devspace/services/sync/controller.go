@@ -501,7 +501,7 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 	go func() {
 		err := StartStream(ctx.Context(), ctx.KubeClient(), pod, container, upstreamArgs, upStdinReader, upStdoutWriter, true, options.Log)
 		if err != nil {
-			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
+			syncClient.Stop(errors.Errorf("Downstream Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
 	}()
 
@@ -529,7 +529,7 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 	go func() {
 		err := StartStream(ctx.Context(), ctx.KubeClient(), pod, container, downstreamArgs, downStdinReader, downStdoutWriter, true, options.Log)
 		if err != nil {
-			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
+			syncClient.Stop(errors.Errorf("Upstream Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
 	}()
 

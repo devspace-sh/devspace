@@ -2,6 +2,7 @@
 // Use of this source code is governed by the MIT license that can be
 // found in the LICENSE file.
 
+//go:build darwin && !kqueue && cgo
 // +build darwin,!kqueue,cgo
 
 package notify
@@ -106,7 +107,7 @@ func gostream(_, info uintptr, n C.size_t, paths, flags, ids uintptr) {
 				ID:    *(*uint64)(unsafe.Pointer(ids + i*offid)),
 			})
 		}
-
+		
 	}
 	fn(ev)
 }
@@ -173,7 +174,7 @@ func (s *stream) Start() error {
 	if ref == nilstream {
 		return errCreate
 	}
-	C.FSEventStreamScheduleWithRunLoop(ref, runloop, C.kCFRunLoopDefaultMode)
+	C.FSEventStreamSetDispatchQueue(ref, C.dispatch_get_main_queue())
 	if C.FSEventStreamStart(ref) == C.Boolean(0) {
 		C.FSEventStreamInvalidate(ref)
 		return errStart
