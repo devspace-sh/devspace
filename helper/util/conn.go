@@ -14,10 +14,7 @@ func NewClientConnection(reader io.Reader, writer io.Writer) (*grpc.ClientConn, 
 	pipe := NewStdStreamJoint(reader, writer, false)
 
 	// Set up a connection to the server.
-	return grpc.NewClient("passthrough:///",
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
-			return pipe, nil
-		}),
-		grpc.WithLocalDNSResolution())
+	return grpc.Dial("", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+		return pipe, nil
+	}))
 }
