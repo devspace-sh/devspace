@@ -76,8 +76,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ui-tar
-      - name: install-upx
-        run: brew install upx
       - name: Compile binaries
         run: ./hack/build-all.bash
         env:
