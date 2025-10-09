@@ -125,6 +125,8 @@ DevSpace runs as a single binary CLI tool directly on your computer and ideally,
 
 ## Contributing
 
+Participation in the DevSpace project is governed by the [CNCF code of conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
+
 Help us make DevSpace the best tool for developing, deploying and debugging Kubernetes apps.
 
 [![Join us on Slack!](docs/static/img/slack.svg)](https://slack.loft.sh/)

@@ -5,5 +5,6 @@ This page lists all active members of the maintainers for the `ko` project and a
 - Fabian Kramm (@FabianKramm)
 - Lukas Gentele (@LukasGentele)
 - Russell Centanni (@lizardruss)
+- Ryan Swanson (@zerbitx)
 
 New projects and new maintainers can be added or removed with the consensus approval of the current maintainers.
