@@ -1,0 +1,49 @@
+# Dependabot configuration to exclude docs folder from dependency updates
+# This prevents Dependabot from creating PRs for dependencies in the docs directory
+
+version: 2
+updates:
+  # Check for Go module dependencies
+  - package-ecosystem: "gomod"
+    directory: "/"
+    # Exclude the docs folder and vendor/examples directories
+    exclude-paths:
+      - "docs/**"
+      - "vendor/**"
+      - "examples/**"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "go"
+
+  # Check for npm dependencies in UI folder
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "javascript"
+
+  # Check for npm dependencies in dist/npm
+  - package-ecosystem: "npm"
+    directory: "/dist/npm"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "javascript"
+
+  # Check for npm dependencies at root level (but exclude docs)
+  - package-ecosystem: "npm"
+    directory: "/"
+    # Exclude the docs folder from npm scanning
+    exclude-paths:
+      - "docs/**"
+      - "examples/**"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "javascript"
