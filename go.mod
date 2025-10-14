@@ -50,7 +50,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.6
+	github.com/spf13/pflag v1.0.10
 	github.com/vmware-labs/yaml-jsonpath v0.3.2
 	golang.org/x/crypto v0.40.0
 	golang.org/x/net v0.42.0
