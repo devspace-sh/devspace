@@ -14,7 +14,7 @@ import (
 type tracer struct {
 	buf       bytes.Buffer
 	printer   *syntax.Printer
-	stdout    io.Writer
+	output    io.Writer
 	needsPlus bool
 }
 
@@ -25,7 +25,7 @@ func (r *Runner) tracer() *tracer {
 
 	return &tracer{
 		printer:   syntax.NewPrinter(),
-		stdout:    r.stdout,
+		output:    r.stderr,
 		needsPlus: true,
 	}
 }
@@ -44,7 +44,7 @@ func (t *tracer) string(s string) {
 	t.buf.WriteString(s)
 }
 
-func (t *tracer) stringf(f string, a ...interface{}) {
+func (t *tracer) stringf(f string, a ...any) {
 	if t == nil {
 		return
 	}
@@ -74,7 +74,7 @@ func (t *tracer) flush() {
 		return
 	}
 
-	t.stdout.Write(t.buf.Bytes())
+	t.output.Write(t.buf.Bytes())
 	t.buf.Reset()
 }
 
@@ -102,7 +102,7 @@ func (t *tracer) call(cmd string, args ...string) {
 	if strings.TrimSpace(s) == "" {
 		// fields may be empty for function () {} declarations
 		t.string(cmd)
-	} else if isBuiltin(cmd) {
+	} else if IsBuiltin(cmd) {
 		if cmd == "set" {
 			// TODO: only first occurrence of set is not printed, succeeding calls are printed
 			return

@@ -7,16 +7,17 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	"mvdan.cc/sh/v3/expand"
+	"mvdan.cc/sh/v3/syntax"
 )
 
 // HandlerCtx returns HandlerContext value stored in ctx.
@@ -31,9 +32,24 @@ func HandlerCtx(ctx context.Context) HandlerContext {
 
 type handlerCtxKey struct{}
 
-// HandlerContext is the data passed to all the handler functions via a context value.
-// It contains some of the current state of the Runner.
+type handlerKind int
+
+const (
+	_                  handlerKind = iota
+	handlerKindExec                // [ExecHandlerFunc]
+	handlerKindCall                // [CallHandlerFunc]
+	handlerKindOpen                // [OpenHandlerFunc]
+	handlerKindReadDir             // [ReadDirHandlerFunc2]
+)
+
+// HandlerContext is the data passed to all the handler functions via [context.WithValue].
+// It contains some of the current state of the [Runner].
 type HandlerContext struct {
+	runner *Runner // for internal use only, e.g. [HandlerContext.Builtin]
+
+	// kind records which type of handler this context was built for.
+	kind handlerKind
+
 	// Env is a read-only version of the interpreter's environment,
 	// including environment variables, global variables, and local function
 	// variables.
@@ -42,7 +58,16 @@ type HandlerContext struct {
 	// Dir is the interpreter's current directory.
 	Dir string
 
+	// Pos is the source position which relates to the operation,
+	// such as a [syntax.CallExpr] when calling an [ExecHandlerFunc].
+	// It may be invalid if the operation has no relevant position information.
+	Pos syntax.Pos
+
+	// TODO(v4): use an os.File for stdin below directly.
+
 	// Stdin is the interpreter's current standard input reader.
+	// It is always an [*os.File], but the type here remains an [io.Reader]
+	// due to backwards compatibility.
 	Stdin io.Reader
 	// Stdout is the interpreter's current standard output writer.
 	Stdout io.Writer
@@ -50,13 +75,13 @@ type HandlerContext struct {
 	Stderr io.Writer
 }
 
-// CallHandlerFunc is a handler which runs on every CallExpr.
+// CallHandlerFunc is a handler which runs on every [syntax.CallExpr].
 // It is called once variable assignments and field expansion have occurred.
 // The call's arguments are replaced by what the handler returns,
 // and then the call is executed by the Runner as usual.
 // At this time, returning an empty slice without an error is not supported.
 //
-// This handler is similar to ExecHandlerFunc, but has two major differences:
+// This handler is similar to [ExecHandlerFunc], but has two major differences:
 //
 // First, it runs for all simple commands, including function calls and builtins.
 //
@@ -64,19 +89,24 @@ type HandlerContext struct {
 // allow running custom code which allows replacing the argument list.
 // Shell builtins touch on many internals of the Runner, after all.
 //
-// Returning a non-nil error will halt the Runner.
+// Returning a non-nil error will halt the [Runner] and will be returned via the API.
 type CallHandlerFunc func(ctx context.Context, args []string) ([]string, error)
 
+// TODO: consistently treat handler errors as non-fatal by default,
+// but have an interface or API to specify fatal errors which should make
+// the shell exit with a particular status code.
+
 // ExecHandlerFunc is a handler which executes simple commands.
-// It is called for all CallExpr nodes where the first argument is neither a
-// declared function nor a builtin.
+// It is called for all [syntax.CallExpr] nodes
+// where the first argument is neither a declared function nor a builtin.
 //
 // Returning a nil error means a zero exit status.
-// Other exit statuses can be set with NewExitStatus.
-// Any other error will halt the Runner.
+// Other exit statuses can be set by returning or wrapping a [NewExitStatus] error,
+// and such an error is returned via the API if it is the last statement executed.
+// Any other error will halt the [Runner] and will be returned via the API.
 type ExecHandlerFunc func(ctx context.Context, args []string) error
 
-// DefaultExecHandler returns the ExecHandlerFunc used by default.
+// DefaultExecHandler returns the [ExecHandlerFunc] used by default.
 // It finds binaries in PATH and executes them.
 // When context is cancelled, an interrupt signal is sent to running processes.
 // killTimeout is a duration to wait before sending the kill signal.
@@ -84,14 +114,14 @@ type ExecHandlerFunc func(ctx context.Context, args []string) error
 //
 // On Windows, the kill signal is always sent immediately,
 // because Go doesn't currently support sending Interrupt on Windows.
-// Runner.New sets killTimeout to 2 seconds by default.
+// [Runner] defaults to a killTimeout of 2 seconds.
 func DefaultExecHandler(killTimeout time.Duration) ExecHandlerFunc {
 	return func(ctx context.Context, args []string) error {
 		hc := HandlerCtx(ctx)
 		path, err := LookPathDir(hc.Dir, hc.Env, args[0])
 		if err != nil {
 			fmt.Fprintln(hc.Stderr, err)
-			return NewExitStatus(127)
+			return ExitStatus(127)
 		}
 		cmd := exec.Cmd{
 			Path:   path,
@@ -105,47 +135,38 @@ func DefaultExecHandler(killTimeout time.Duration) ExecHandlerFunc {
 
 		err = cmd.Start()
 		if err == nil {
-			if done := ctx.Done(); done != nil {
-				go func() {
-					<-done
-
-					if killTimeout <= 0 || runtime.GOOS == "windows" {
-						_ = cmd.Process.Signal(os.Kill)
-						return
-					}
-
-					// TODO: don't temporarily leak this goroutine
-					// if the program stops itself with the
-					// interrupt.
-					go func() {
-						time.Sleep(killTimeout)
-						_ = cmd.Process.Signal(os.Kill)
-					}()
-					_ = cmd.Process.Signal(os.Interrupt)
-				}()
-			}
+			stopf := context.AfterFunc(ctx, func() {
+				if killTimeout <= 0 || runtime.GOOS == "windows" {
+					_ = cmd.Process.Signal(os.Kill)
+					return
+				}
+				_ = cmd.Process.Signal(os.Interrupt)
+				// TODO: don't sleep in this goroutine if the program
+				// stops itself with the interrupt above.
+				time.Sleep(killTimeout)
+				_ = cmd.Process.Signal(os.Kill)
+			})
+			defer stopf()
 
 			err = cmd.Wait()
 		}
 
-		switch x := err.(type) {
+		switch err := err.(type) {
 		case *exec.ExitError:
-			// started, but errored - default to 1 if OS
-			// doesn't have exit statuses
-			if status, ok := x.Sys().(syscall.WaitStatus); ok {
-				if status.Signaled() {
-					if ctx.Err() != nil {
-						return ctx.Err()
-					}
-					return NewExitStatus(uint8(128 + status.Signal()))
+			// Windows and Plan9 do not have support for [syscall.WaitStatus]
+			// with methods like Signaled and Signal, so for those, [waitStatus] is a no-op.
+			// Note: [waitStatus] is an alias [syscall.WaitStatus]
+			if status, ok := err.Sys().(waitStatus); ok && status.Signaled() {
+				if ctx.Err() != nil {
+					return ctx.Err()
 				}
-				return NewExitStatus(uint8(status.ExitStatus()))
+				return ExitStatus(128 + status.Signal())
 			}
-			return NewExitStatus(1)
+			return ExitStatus(err.ExitCode())
 		case *exec.Error:
 			// did not start
 			fmt.Fprintf(hc.Stderr, "%v\n", err)
-			return NewExitStatus(127)
+			return ExitStatus(127)
 		default:
 			return err
 		}
@@ -203,12 +224,12 @@ func findFile(dir, file string, _ []string) (string, error) {
 	return checkStat(dir, file, false)
 }
 
-// LookPath is deprecated. See LookPathDir.
+// LookPath is deprecated; see [LookPathDir].
 func LookPath(env expand.Environ, file string) (string, error) {
 	return LookPathDir(env.Get("PWD").String(), env, file)
 }
 
-// LookPathDir is similar to os/exec.LookPath, with the difference that it uses the
+// LookPathDir is similar to [os/exec.LookPath], with the difference that it uses the
 // provided environment. env is used to fetch relevant environment variables
 // such as PWD and PATH.
 //
@@ -217,7 +238,7 @@ func LookPathDir(cwd string, env expand.Environ, file string) (string, error) {
 	return lookPathDir(cwd, env, file, findExecutable)
 }
 
-// findAny defines a function to pass to lookPathDir.
+// findAny defines a function to pass to [lookPathDir].
 type findAny = func(dir string, file string, exts []string) (string, error)
 
 func lookPathDir(cwd string, env expand.Environ, file string, find findAny) (string, error) {
@@ -253,7 +274,7 @@ func lookPathDir(cwd string, env expand.Environ, file string, find findAny) (str
 	return "", fmt.Errorf("%q: executable file not found in $PATH", file)
 }
 
-// scriptFromPathDir is similar to LookPathDir, with the difference that it looks
+// scriptFromPathDir is similar to [LookPathDir], with the difference that it looks
 // for both executable and non-executable files.
 func scriptFromPathDir(cwd string, env expand.Environ, file string) (string, error) {
 	return lookPathDir(cwd, env, file, findFile)
@@ -280,49 +301,79 @@ func pathExts(env expand.Environ) []string {
 	return exts
 }
 
-// OpenHandlerFunc is a handler which opens files. It is
-// called for all files that are opened directly by the shell, such as
-// in redirects. Files opened by executed programs are not included.
+// OpenHandlerFunc is a handler which opens files.
+// It is called for all files that are opened directly by the shell,
+// such as in redirects, except for named pipes created by process substitutions.
+// Files opened by executed programs are not included.
 //
-// The path parameter may be relative to the current directory, which can be
-// fetched via HandlerCtx.
+// The path parameter may be relative to the current directory,
+// which can be fetched via [HandlerCtx].
 //
-// Use a return error of type *os.PathError to have the error printed to
-// stderr and the exit status set to 1. If the error is of any other type, the
-// interpreter will come to a stop.
+// Use a return error of type [*os.PathError] to have the error printed to
+// stderr and the exit status set to 1.
+// Any other error will halt the [Runner] and will be returned via the API.
+//
+// Note that implementations which do not return [os.File] will cause
+// extra files and goroutines for input redirections; see [StdIO].
 type OpenHandlerFunc func(ctx context.Context, path string, flag int, perm os.FileMode) (io.ReadWriteCloser, error)
 
-// DefaultOpenHandler returns an OpenHandlerFunc used by default. It uses os.OpenFile to open files.
+// TODO: paths passed to [OpenHandlerFunc] should be cleaned.
+
+// DefaultOpenHandler returns the [OpenHandlerFunc] used by default.
+// It uses [os.OpenFile] to open files.
+//
+// For the sake of portability, /dev/null opens NUL on Windows.
 func DefaultOpenHandler() OpenHandlerFunc {
 	return func(ctx context.Context, path string, flag int, perm os.FileMode) (io.ReadWriteCloser, error) {
 		mc := HandlerCtx(ctx)
-		if path != "" && !filepath.IsAbs(path) {
+		if runtime.GOOS == "windows" && path == "/dev/null" {
+			path = "NUL"
+			// Work around https://go.dev/issue/71752, where Go 1.24 started giving
+			// "Invalid handle" errors when opening "NUL" with O_TRUNC.
+			// TODO: hopefully remove this in the future once the bug is fixed.
+			flag &^= os.O_TRUNC
+		} else if path != "" && !filepath.IsAbs(path) {
 			path = filepath.Join(mc.Dir, path)
 		}
 		return os.OpenFile(path, flag, perm)
 	}
 }
 
+// TODO(v4): if this is kept in v4, it most likely needs to use [io/fs.DirEntry] for efficiency
+
 // ReadDirHandlerFunc is a handler which reads directories. It is called during
 // shell globbing, if enabled.
 //
-// TODO(v4): if this is kept in v4, it most likely needs to use fs.DirEntry for efficiency
-type ReadDirHandlerFunc func(ctx context.Context, path string) ([]os.FileInfo, error)
+// Deprecated: use [ReadDirHandlerFunc2], which uses [fs.DirEntry].
+type ReadDirHandlerFunc func(ctx context.Context, path string) ([]fs.FileInfo, error)
 
-// DefaultReadDirHandler returns a ReadDirHandlerFunc used by default. It uses ioutil.ReadDir().
+// ReadDirHandlerFunc2 is a handler which reads directories. It is called during
+// shell globbing, if enabled.
+type ReadDirHandlerFunc2 func(ctx context.Context, path string) ([]fs.DirEntry, error)
+
+// DefaultReadDirHandler returns the [ReadDirHandlerFunc] used by default.
+// It makes use of [ioutil.ReadDir].
 func DefaultReadDirHandler() ReadDirHandlerFunc {
-	return func(ctx context.Context, path string) ([]os.FileInfo, error) {
+	return func(ctx context.Context, path string) ([]fs.FileInfo, error) {
 		return ioutil.ReadDir(path)
 	}
 }
 
-// StatHandlerFunc is a handler which gets the file stat. the first argument provides directory to use as
-// basedir if name is relative path
-type StatHandlerFunc func(ctx context.Context, name string, followSymlinks bool) (os.FileInfo, error)
+// DefaultReadDirHandler2 returns the [ReadDirHandlerFunc2] used by default.
+// It uses [os.ReadDir].
+func DefaultReadDirHandler2() ReadDirHandlerFunc2 {
+	return func(ctx context.Context, path string) ([]fs.DirEntry, error) {
+		return os.ReadDir(path)
+	}
+}
 
-// DefaultStatHandler returns a StatHandlerFunc used by default. It uses os.Stat()
+// StatHandlerFunc is a handler which gets a file's information.
+type StatHandlerFunc func(ctx context.Context, name string, followSymlinks bool) (fs.FileInfo, error)
+
+// DefaultStatHandler returns the [StatHandlerFunc] used by default.
+// It makes use of [os.Stat] and [os.Lstat], depending on followSymlinks.
 func DefaultStatHandler() StatHandlerFunc {
-	return func(ctx context.Context, path string, followSymlinks bool) (os.FileInfo, error) {
+	return func(ctx context.Context, path string, followSymlinks bool) (fs.FileInfo, error) {
 		if !followSymlinks {
 			return os.Lstat(path)
 		} else {

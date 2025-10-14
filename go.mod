@@ -11,7 +11,7 @@ require (
 	github.com/bmatcuk/doublestar v1.1.1
 	github.com/compose-spec/compose-go v1.2.2
 	github.com/containers/storage v1.59.0
-	github.com/creack/pty v1.1.18
+	github.com/creack/pty v1.1.24
 	github.com/distribution/reference v0.6.0
 	github.com/docker/cli v28.2.2+incompatible
 	github.com/docker/docker v28.3.3+incompatible
@@ -67,7 +67,7 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.110.1
 	k8s.io/kubectl v0.29.0
-	mvdan.cc/sh/v3 v3.5.1
+	mvdan.cc/sh/v3 v3.12.0
 	sigs.k8s.io/yaml v1.4.0
 )
 

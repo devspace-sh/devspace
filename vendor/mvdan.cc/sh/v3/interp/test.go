@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"regexp"
 
 	"golang.org/x/term"
@@ -64,10 +63,20 @@ func (r *Runner) binTest(ctx context.Context, op syntax.BinTestOperator, x, y st
 	case syntax.TsReMatch:
 		re, err := regexp.Compile(y)
 		if err != nil {
-			r.exit = 2
+			r.exit.code = 2
 			return false
 		}
-		return re.MatchString(x)
+		m := re.FindStringSubmatch(x)
+		if m == nil {
+			return false
+		}
+		vr := expand.Variable{
+			Set:  true,
+			Kind: expand.Indexed,
+			List: m,
+		}
+		r.setVar("BASH_REMATCH", vr)
+		return true
 	case syntax.TsNewer:
 		info1, err1 := r.stat(ctx, x)
 		info2, err2 := r.stat(ctx, y)
@@ -117,6 +126,13 @@ func (r *Runner) statMode(ctx context.Context, name string, mode os.FileMode) bo
 	return err == nil && info.Mode()&mode != 0
 }
 
+// These are copied from x/sys/unix as we can't import it here.
+const (
+	access_R_OK = 0x4
+	access_W_OK = 0x2
+	access_X_OK = 0x1
+)
+
 func (r *Runner) unTest(ctx context.Context, op syntax.UnTestOperator, x string) bool {
 	switch op {
 	case syntax.TsExists:
@@ -150,26 +166,17 @@ func (r *Runner) unTest(ctx context.Context, op syntax.UnTestOperator, x string)
 	// case syntax.TsUsrOwn:
 	// case syntax.TsModif:
 	case syntax.TsRead:
-		f, err := r.open(ctx, x, os.O_RDONLY, 0, false)
-		if err == nil {
-			f.Close()
-		}
-		return err == nil
+		return r.access(ctx, r.absPath(x), access_R_OK) == nil
 	case syntax.TsWrite:
-		f, err := r.open(ctx, x, os.O_WRONLY, 0, false)
-		if err == nil {
-			f.Close()
-		}
-		return err == nil
+		return r.access(ctx, r.absPath(x), access_W_OK) == nil
 	case syntax.TsExec:
-		_, err := exec.LookPath(r.absPath(x))
-		return err == nil
+		return r.access(ctx, r.absPath(x), access_X_OK) == nil
 	case syntax.TsNoEmpty:
 		info, err := r.stat(ctx, x)
 		return err == nil && info.Size() > 0
 	case syntax.TsFdTerm:
 		fd := atoi(x)
-		var f interface{}
+		var f any
 		switch fd {
 		case 0:
 			f = r.stdin
@@ -179,7 +186,7 @@ func (r *Runner) unTest(ctx context.Context, op syntax.UnTestOperator, x string)
 			f = r.stderr
 		}
 		if f, ok := f.(interface{ Fd() uintptr }); ok {
-			// Support Fd methods such as the one on *os.File.
+			// Support [os.File.Fd] methods such as the one on [*os.File].
 			return term.IsTerminal(int(f.Fd()))
 		}
 		// TODO: allow term.IsTerminal here too if running in the
@@ -190,7 +197,7 @@ func (r *Runner) unTest(ctx context.Context, op syntax.UnTestOperator, x string)
 	case syntax.TsNempStr:
 		return x != ""
 	case syntax.TsOptSet:
-		if opt := r.optByName(x, false); opt != nil {
+		if _, opt := r.optByName(x, false); opt != nil {
 			return *opt
 		}
 		return false
@@ -200,6 +207,8 @@ func (r *Runner) unTest(ctx context.Context, op syntax.UnTestOperator, x string)
 		return r.lookupVar(x).Kind == expand.NameRef
 	case syntax.TsNot:
 		return x == ""
+	case syntax.TsUsrOwn, syntax.TsGrpOwn:
+		return r.unTestOwnOrGrp(ctx, op, x)
 	default:
 		panic(fmt.Sprintf("unhandled unary test op: %v", op))
 	}
