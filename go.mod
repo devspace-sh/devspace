@@ -14,7 +14,7 @@ require (
 	github.com/creack/pty v1.1.18
 	github.com/distribution/reference v0.6.0
 	github.com/docker/cli v28.2.2+incompatible
-	github.com/docker/docker v28.3.3+incompatible
+	github.com/docker/docker v28.5.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/evanphx/json-patch v4.12.0+incompatible
 	github.com/evanphx/json-patch/v5 v5.1.0
