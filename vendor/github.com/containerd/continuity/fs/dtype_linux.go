@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -21,14 +20,13 @@ package fs
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"syscall"
 	"unsafe"
 )
 
 func locateDummyIfEmpty(path string) (string, error) {
-	children, err := ioutil.ReadDir(path)
+	children, err := os.ReadDir(path)
 	if err != nil {
 		return "", err
 	}
