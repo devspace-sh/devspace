@@ -28,7 +28,7 @@
     "isomorphic-unfetch": "^3.1.0",
     "jest": "^24.9.0",
     "js-sha256": "^0.9.0",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^4.1.1",
     "moment": "^2.30.1",
     "npm-run-all": "^4.1.5",
     "object-assign": "4.1.1",
