@@ -6,14 +6,18 @@ package expand
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"mvdan.cc/sh/v3/syntax"
 )
 
+// TODO(v4): the arithmetic APIs should return int64 for portability with 32-bit systems,
+// even if Bash only supports native int sizes.
+
 func Arithm(cfg *Config, expr syntax.ArithmExpr) (int, error) {
-	switch x := expr.(type) {
+	switch expr := expr.(type) {
 	case *syntax.Word:
-		str, err := Literal(cfg, x)
+		str, err := Literal(cfg, expr)
 		if err != nil {
 			return 0, err
 		}
@@ -30,33 +34,33 @@ func Arithm(cfg *Config, expr syntax.ArithmExpr) (int, error) {
 			str = val
 		}
 		// default to 0
-		return atoi(str), nil
+		return int(atoi(str)), nil
 	case *syntax.ParenArithm:
-		return Arithm(cfg, x.X)
+		return Arithm(cfg, expr.X)
 	case *syntax.UnaryArithm:
-		switch x.Op {
+		switch expr.Op {
 		case syntax.Inc, syntax.Dec:
-			name := x.X.(*syntax.Word).Lit()
+			name := expr.X.(*syntax.Word).Lit()
 			old := atoi(cfg.envGet(name))
 			val := old
-			if x.Op == syntax.Inc {
+			if expr.Op == syntax.Inc {
 				val++
 			} else {
 				val--
 			}
-			if err := cfg.envSet(name, strconv.Itoa(val)); err != nil {
+			if err := cfg.envSet(name, strconv.FormatInt(val, 10)); err != nil {
 				return 0, err
 			}
-			if x.Post {
-				return old, nil
+			if expr.Post {
+				return int(old), nil
 			}
-			return val, nil
+			return int(val), nil
 		}
-		val, err := Arithm(cfg, x.X)
+		val, err := Arithm(cfg, expr.X)
 		if err != nil {
 			return 0, err
 		}
-		switch x.Op {
+		switch expr.Op {
 		case syntax.Not:
 			return oneIf(val == 0), nil
 		case syntax.BitNegation:
@@ -67,34 +71,34 @@ func Arithm(cfg *Config, expr syntax.ArithmExpr) (int, error) {
 			return -val, nil
 		}
 	case *syntax.BinaryArithm:
-		switch x.Op {
+		switch expr.Op {
 		case syntax.Assgn, syntax.AddAssgn, syntax.SubAssgn,
 			syntax.MulAssgn, syntax.QuoAssgn, syntax.RemAssgn,
 			syntax.AndAssgn, syntax.OrAssgn, syntax.XorAssgn,
 			syntax.ShlAssgn, syntax.ShrAssgn:
-			return cfg.assgnArit(x)
+			return cfg.assgnArit(expr)
 		case syntax.TernQuest: // TernColon can't happen here
-			cond, err := Arithm(cfg, x.X)
+			cond, err := Arithm(cfg, expr.X)
 			if err != nil {
 				return 0, err
 			}
-			b2 := x.Y.(*syntax.BinaryArithm) // must have Op==TernColon
+			b2 := expr.Y.(*syntax.BinaryArithm) // must have Op==TernColon
 			if cond == 1 {
 				return Arithm(cfg, b2.X)
 			}
 			return Arithm(cfg, b2.Y)
 		}
-		left, err := Arithm(cfg, x.X)
+		left, err := Arithm(cfg, expr.X)
 		if err != nil {
 			return 0, err
 		}
-		right, err := Arithm(cfg, x.Y)
+		right, err := Arithm(cfg, expr.Y)
 		if err != nil {
 			return 0, err
 		}
-		return binArit(x.Op, left, right), nil
+		return binArit(expr.Op, left, right)
 	default:
-		panic(fmt.Sprintf("unexpected arithm expr: %T", x))
+		panic(fmt.Sprintf("unexpected arithm expr: %T", expr))
 	}
 }
 
@@ -105,20 +109,21 @@ func oneIf(b bool) int {
 	return 0
 }
 
-// atoi is just a shorthand for strconv.Atoi that ignores the error,
-// just like shells do.
-func atoi(s string) int {
-	n, _ := strconv.Atoi(s)
+// atoi is like [strconv.ParseInt](s, 10, 64), but it ignores errors and trims whitespace.
+func atoi(s string) int64 {
+	s = strings.TrimSpace(s)
+	n, _ := strconv.ParseInt(s, 10, 64)
 	return n
 }
 
 func (cfg *Config) assgnArit(b *syntax.BinaryArithm) (int, error) {
 	name := b.X.(*syntax.Word).Lit()
 	val := atoi(cfg.envGet(name))
-	arg, err := Arithm(cfg, b.Y)
+	arg_, err := Arithm(cfg, b.Y)
 	if err != nil {
 		return 0, err
 	}
+	arg := int64(arg_)
 	switch b.Op {
 	case syntax.Assgn:
 		val = arg
@@ -129,8 +134,14 @@ func (cfg *Config) assgnArit(b *syntax.BinaryArithm) (int, error) {
 	case syntax.MulAssgn:
 		val *= arg
 	case syntax.QuoAssgn:
+		if arg == 0 {
+			return 0, fmt.Errorf("division by zero")
+		}
 		val /= arg
 	case syntax.RemAssgn:
+		if arg == 0 {
+			return 0, fmt.Errorf("division by zero")
+		}
 		val %= arg
 	case syntax.AndAssgn:
 		val &= arg
@@ -143,10 +154,10 @@ func (cfg *Config) assgnArit(b *syntax.BinaryArithm) (int, error) {
 	case syntax.ShrAssgn:
 		val >>= uint(arg)
 	}
-	if err := cfg.envSet(name, strconv.Itoa(val)); err != nil {
+	if err := cfg.envSet(name, strconv.FormatInt(val, 10)); err != nil {
 		return 0, err
 	}
-	return val, nil
+	return int(val), nil
 }
 
 func intPow(a, b int) int {
@@ -161,48 +172,54 @@ func intPow(a, b int) int {
 	return p
 }
 
-func binArit(op syntax.BinAritOperator, x, y int) int {
+func binArit(op syntax.BinAritOperator, x, y int) (int, error) {
 	switch op {
 	case syntax.Add:
-		return x + y
+		return x + y, nil
 	case syntax.Sub:
-		return x - y
+		return x - y, nil
 	case syntax.Mul:
-		return x * y
+		return x * y, nil
 	case syntax.Quo:
-		return x / y
+		if y == 0 {
+			return 0, fmt.Errorf("division by zero")
+		}
+		return x / y, nil
 	case syntax.Rem:
-		return x % y
+		if y == 0 {
+			return 0, fmt.Errorf("division by zero")
+		}
+		return x % y, nil
 	case syntax.Pow:
-		return intPow(x, y)
+		return intPow(x, y), nil
 	case syntax.Eql:
-		return oneIf(x == y)
+		return oneIf(x == y), nil
 	case syntax.Gtr:
-		return oneIf(x > y)
+		return oneIf(x > y), nil
 	case syntax.Lss:
-		return oneIf(x < y)
+		return oneIf(x < y), nil
 	case syntax.Neq:
-		return oneIf(x != y)
+		return oneIf(x != y), nil
 	case syntax.Leq:
-		return oneIf(x <= y)
+		return oneIf(x <= y), nil
 	case syntax.Geq:
-		return oneIf(x >= y)
+		return oneIf(x >= y), nil
 	case syntax.And:
-		return x & y
+		return x & y, nil
 	case syntax.Or:
-		return x | y
+		return x | y, nil
 	case syntax.Xor:
-		return x ^ y
+		return x ^ y, nil
 	case syntax.Shr:
-		return x >> uint(y)
+		return x >> uint(y), nil
 	case syntax.Shl:
-		return x << uint(y)
+		return x << uint(y), nil
 	case syntax.AndArit:
-		return oneIf(x != 0 && y != 0)
+		return oneIf(x != 0 && y != 0), nil
 	case syntax.OrArit:
-		return oneIf(x != 0 || y != 0)
+		return oneIf(x != 0 || y != 0), nil
 	default: // syntax.Comma
 		// x is executed but its result discarded
-		return y
+		return y, nil
 	}
 }
