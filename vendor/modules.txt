@@ -109,8 +109,8 @@ github.com/containers/storage/pkg/unshare
 # github.com/cpuguy83/go-md2man/v2 v2.0.7
 ## explicit; go 1.12
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/creack/pty v1.1.18
-## explicit; go 1.13
+# github.com/creack/pty v1.1.24
+## explicit; go 1.18
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
