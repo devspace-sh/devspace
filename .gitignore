@@ -38,3 +38,5 @@ profile.out
 
 # Ignore DevSpace cache and log folder
 .devspace/
+
+.env
