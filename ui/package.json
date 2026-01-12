@@ -51,7 +51,7 @@
     "sass-loader": "10.2.0",
     "source-map-loader": "^0.2.4",
     "style-loader": "0.23.1",
-    "sw-precache-webpack-plugin": "0.11.5",
+    "sw-precache-webpack-plugin": "1.0.0",
     "ts-jest": "^24.3.0",
     "ts-loader": "6.0.4",
     "ts-node": "^8.10.2",
