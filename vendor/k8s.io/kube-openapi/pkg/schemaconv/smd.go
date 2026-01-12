@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sort"
 
-	"sigs.k8s.io/structured-merge-diff/v4/schema"
+	"sigs.k8s.io/structured-merge-diff/v6/schema"
 )
 
 const (
@@ -214,9 +214,6 @@ func makeUnion(extensions map[string]interface{}) (schema.Union, error) {
 		}
 	}
 
-	if union.Discriminator != nil && len(union.Fields) == 0 {
-		return schema.Union{}, fmt.Errorf("discriminator set to %v, but no fields in union", *union.Discriminator)
-	}
 	return union, nil
 }
 
