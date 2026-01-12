@@ -20,7 +20,7 @@
     "dependencies": {
         "cli-spinner": "^0.2.10",
         "find-process": "^1.4.7",
-        "inquirer": "^7.0.5",
+        "inquirer": "^13.2.0",
         "node-fetch": "^2.6.7"
     },
     "license": "Apache-2.0"
