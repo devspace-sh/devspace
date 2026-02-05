@@ -419,22 +419,18 @@ github.com/liggitt/tabwriter
 # github.com/loft-sh/go-github-selfupdate v1.0.0
 ## explicit; go 1.13
 github.com/loft-sh/go-github-selfupdate/selfupdate
-# github.com/loft-sh/loft-util v0.0.9-alpha
-## explicit; go 1.19
-github.com/loft-sh/loft-util/pkg/command
 # github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 ## explicit; go 1.11
 github.com/loft-sh/notify
 # github.com/loft-sh/programming-language-detection v0.0.5
 ## explicit; go 1.20
 github.com/loft-sh/programming-language-detection/pkg/detector
-# github.com/loft-sh/utils v0.0.16
-## explicit; go 1.19
+# github.com/loft-sh/utils v0.0.30
+## explicit; go 1.24
 github.com/loft-sh/utils/pkg/command
 github.com/loft-sh/utils/pkg/downloader
 github.com/loft-sh/utils/pkg/downloader/commands
 github.com/loft-sh/utils/pkg/extract
-github.com/loft-sh/utils/pkg/log
 # github.com/mailru/easyjson v0.7.7
 ## explicit; go 1.12
 github.com/mailru/easyjson/buffer
@@ -618,8 +614,8 @@ github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runtime-spec v1.2.1
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
-# github.com/otiai10/copy v1.7.0
-## explicit; go 1.14
+# github.com/otiai10/copy v1.11.0
+## explicit; go 1.18
 github.com/otiai10/copy
 # github.com/peterbourgon/diskv v2.0.1+incompatible
 ## explicit
@@ -1426,8 +1422,8 @@ k8s.io/utils/net
 k8s.io/utils/pointer
 k8s.io/utils/ptr
 k8s.io/utils/strings/slices
-# mvdan.cc/sh/v3 v3.5.1
-## explicit; go 1.17
+# mvdan.cc/sh/v3 v3.6.0
+## explicit; go 1.18
 mvdan.cc/sh/v3/expand
 mvdan.cc/sh/v3/fileutil
 mvdan.cc/sh/v3/interp

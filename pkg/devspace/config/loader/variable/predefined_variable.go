@@ -6,26 +6,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/utils/pkg/downloader"
-	"github.com/loft-sh/utils/pkg/downloader/commands"
-	"github.com/sirupsen/logrus"
-
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/git"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
+	"github.com/loft-sh/utils/pkg/downloader"
+	"github.com/loft-sh/utils/pkg/downloader/commands"
 	"github.com/mitchellh/go-homedir"
+	"github.com/sirupsen/logrus"
 )
 
 // PredefinedVariableOptions holds the options for a predefined variable to load
@@ -54,9 +53,9 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 		}
 		return ex, nil
 	},
-	"DEVSPACE_KUBECTL_EXECUTABLE": func(ctx context.Context, options *PredefinedVariableOptions, log log.Logger) (interface{}, error) {
-		debugLog := log.WithLevel(logrus.DebugLevel)
-		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), debugLog, constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
+	"DEVSPACE_KUBECTL_EXECUTABLE": func(ctx context.Context, options *PredefinedVariableOptions, logger log.Logger) (interface{}, error) {
+		debugLog := logger.WithLevel(logrus.DebugLevel)
+		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), log.ToLogr(debugLog), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
 		if err != nil {
 			debugLog.Debugf("Error downloading kubectl: %v", err)
 			return "", nil

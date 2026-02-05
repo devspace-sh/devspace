@@ -21,6 +21,7 @@ require (
 	github.com/fujiwara/shapeio v1.0.0
 	github.com/gertd/go-pluralize v0.2.0
 	github.com/gliderlabs/ssh v0.3.5
+	github.com/go-logr/logr v1.4.3
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/go-containerregistry v0.20.6
 	github.com/google/uuid v1.6.0
@@ -31,10 +32,9 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/loft-sh/go-github-selfupdate v1.0.0
-	github.com/loft-sh/loft-util v0.0.9-alpha
 	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 	github.com/loft-sh/programming-language-detection v0.0.5
-	github.com/loft-sh/utils v0.0.16
+	github.com/loft-sh/utils v0.0.30
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.11.4
@@ -43,7 +43,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.29.0
-	github.com/otiai10/copy v1.7.0
+	github.com/otiai10/copy v1.11.0
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/sftp v1.13.1
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
@@ -67,7 +67,7 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.110.1
 	k8s.io/kubectl v0.29.0
-	mvdan.cc/sh/v3 v3.5.1
+	mvdan.cc/sh/v3 v3.6.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -101,7 +101,6 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
-	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect

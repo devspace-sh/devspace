@@ -1,13 +1,14 @@
 package log
 
 import (
+	"io"
+	"os"
+	"runtime"
+
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/mgutz/ansi"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
-	"io"
-	"os"
-	"runtime"
 )
 
 var baseLog = NewStdoutLogger(os.Stdin, stdout, stderr, logrus.InfoLevel)
