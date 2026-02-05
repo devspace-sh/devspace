@@ -2,8 +2,9 @@ package log
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"sync"
+
+	"github.com/loft-sh/devspace/pkg/util/randutil"
 )
 
 var (

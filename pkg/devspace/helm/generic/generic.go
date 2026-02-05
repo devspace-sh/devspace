@@ -28,13 +28,13 @@ type Client interface {
 	WriteValues(values map[string]interface{}) (string, error)
 }
 
-func NewGenericClient(command commands.Command, log log.Logger) Client {
+func NewGenericClient(command commands.Command, logger log.Logger) Client {
 	c := &client{
-		log:     log,
+		log:     logger,
 		extract: extract.NewExtractor(),
 	}
 
-	c.downloader = downloader.NewDownloader(command, log, constants.DefaultHomeDevSpaceFolder)
+	c.downloader = downloader.NewDownloader(command, log.ToLogr(logger), constants.DefaultHomeDevSpaceFolder)
 	return c
 }
 

@@ -6,11 +6,11 @@ import (
 	"io"
 	"os"
 	"strings"
-
+	
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"mvdan.cc/sh/v3/expand"
-
+	
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -20,9 +20,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/loft-util/pkg/command"
+	"github.com/loft-sh/utils/pkg/command"
 	"mvdan.cc/sh/v3/interp"
-
+	
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -30,7 +30,7 @@ import (
 	flagspkg "github.com/loft-sh/devspace/pkg/util/flags"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/sirupsen/logrus"
-
+	
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +38,7 @@ import (
 // RunCmd holds the run cmd flags
 type RunCmd struct {
 	*flags.GlobalFlags
-
+	
 	Dependency string
 	Stdout     io.Writer
 	Stderr     io.Writer
@@ -51,7 +51,7 @@ func NewRunCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *Raw
 		Stdout:      os.Stdout,
 		Stderr:      os.Stderr,
 	}
-
+	
 	runCmd := &cobra.Command{
 		Use:                "run",
 		DisableFlagParsing: true,
@@ -75,11 +75,11 @@ devspace --dependency my-dependency run any-command --any-command-flag
 		if err != nil {
 			return err
 		}
-
+		
 		plugin.SetPluginCommand(cobraCmd, args)
 		return cmd.RunRun(f, args)
 	}
-
+	
 	if rawConfig != nil && rawConfig.Config != nil {
 		for _, cmd := range rawConfig.Config.Commands {
 			runCmd.AddCommand(NewSpecificRunCommand(cmd))
@@ -94,20 +94,20 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("run requires at least one argument")
 	}
-
+	
 	// check if dependency command
 	commandSplitted := strings.Split(args[0], ".")
 	if len(commandSplitted) > 1 {
 		cmd.Dependency = strings.Join(commandSplitted[:len(commandSplitted)-1], ".")
 		args[0] = commandSplitted[len(commandSplitted)-1]
 	}
-
+	
 	// Execute plugin hook
 	err := hook.ExecuteHooks(nil, nil, "run")
 	if err != nil {
 		return err
 	}
-
+	
 	// Set config root
 	configOptions := cmd.ToConfigOptions()
 	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
@@ -120,45 +120,45 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	} else if !configExists {
 		return errors.New(message.ConfigNotFound)
 	}
-
+	
 	// load the config
 	ctx, err := cmd.LoadCommandsConfig(f, configLoader, configOptions, f.GetLog())
 	if err != nil {
 		return err
 	}
-
+	
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
 		config, err := configLoader.LoadWithCache(context.Background(), ctx.Config().LocalCache(), nil, configOptions, f.GetLog())
 		if err != nil {
 			return err
 		}
-
+		
 		ctx = ctx.WithConfig(config)
 		dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 		if err != nil {
 			return err
 		}
-
+		
 		dep := dependency.GetDependencyByPath(dependencies, cmd.Dependency)
 		if dep == nil {
 			return fmt.Errorf("couldn't find dependency %s", cmd.Dependency)
 		}
-
+		
 		ctx = ctx.AsDependency(dep)
 		commandConfig, err := findCommand(ctx.Config(), args[0])
 		if err != nil {
 			return err
 		}
-
+		
 		return executeCommandWithAfter(ctx.Context(), commandConfig, args[1:], ctx.Config().Variables(), ctx.WorkingDir(), cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log())
 	}
-
+	
 	commandConfig, err := findCommand(ctx.Config(), args[0])
 	if err != nil {
 		return err
 	}
-
+	
 	return executeCommandWithAfter(ctx.Context(), commandConfig, args[1:], ctx.Config().Variables(), ctx.WorkingDir(), cmd.Stdout, cmd.Stderr, os.Stdin, ctx.Log())
 }
 
@@ -167,7 +167,7 @@ func findCommand(config config.Config, name string) (*latest.CommandConfig, erro
 	if config.Config().Commands == nil || config.Config().Commands[name] == nil {
 		return nil, errors.Errorf("couldn't find command '%s' in devspace config", name)
 	}
-
+	
 	return config.Config().Commands[name], nil
 }
 
@@ -194,7 +194,7 @@ func executeCommandWithAfter(ctx context.Context, command *latest.CommandConfig,
 			return errors.Wrap(err, "error executing after command")
 		}
 	}
-
+	
 	return originalErr
 }
 
@@ -209,28 +209,28 @@ func ParseArgs(cobraCmd *cobra.Command, globalFlags *flags.GlobalFlags, log log.
 	if index == -1 {
 		return nil, fmt.Errorf("error parsing command: couldn't find %s in command: %v", cobraCmd.Use, os.Args)
 	}
-
+	
 	// check if is help command
 	osArgs := os.Args[:index]
 	if len(os.Args) == index+1 && (os.Args[index] == "-h" || os.Args[index] == "--help") {
 		return nil, cobraCmd.Help()
 	}
-
+	
 	// enable flag parsing
 	cobraCmd.DisableFlagParsing = false
-
+	
 	// apply extra flags
 	_, err := flagspkg.ApplyExtraFlags(cobraCmd, osArgs, true)
 	if err != nil {
 		return nil, err
 	}
-
+	
 	if globalFlags.Silent {
 		log.SetLevel(logrus.FatalLevel)
 	} else if globalFlags.Debug {
 		log.SetLevel(logrus.DebugLevel)
 	}
-
+	
 	args := os.Args[index:]
 	return args, nil
 }
@@ -242,14 +242,14 @@ func (cmd *RunCmd) LoadCommandsConfig(f factory.Factory, configLoader loader.Con
 	if err != nil {
 		return nil, err
 	}
-
+	
 	// try to load client
 	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		log.Debugf("Unable to create new kubectl client: %v", err)
 		client = nil
 	}
-
+	
 	// verify client connectivity / authn / authz
 	if client != nil {
 		// If the current kube context or namespace is different than old,
@@ -260,13 +260,13 @@ func (cmd *RunCmd) LoadCommandsConfig(f factory.Factory, configLoader loader.Con
 			client = nil
 		}
 	}
-
+	
 	// Parse commands
 	commandsInterface, err := configLoader.LoadWithParser(context.Background(), localCache, client, loader.NewCommandsParser(), configOptions, log)
 	if err != nil {
 		return nil, err
 	}
-
+	
 	// create context
 	return devspacecontext.NewContext(context.Background(), commandsInterface.Variables(), log).
 		WithKubeClient(client).
@@ -278,7 +278,7 @@ func executeShellCommand(ctx context.Context, shellCommand string, variables map
 	for k, v := range variables {
 		extraEnv[k] = fmt.Sprintf("%v", v)
 	}
-
+	
 	// execute the command in a shell
 	err := engine.ExecuteSimpleShellCommand(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), extraEnv), stdout, stderr, stdin, shellCommand, args...)
 	if err != nil {
@@ -287,10 +287,10 @@ func executeShellCommand(ctx context.Context, shellCommand string, variables map
 				ExitCode: int(status),
 			}
 		}
-
+		
 		return errors.Wrap(err, "execute command")
 	}
-
+	
 	return nil
 }
 
@@ -299,7 +299,7 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 	shellCommand := strings.TrimSpace(cmd.Command)
 	shellArgs := cmd.Args
 	appendArgs := cmd.AppendArgs
-
+	
 	extraEnv := map[string]string{}
 	for k, v := range variables {
 		extraEnv[k] = fmt.Sprintf("%v", v)
@@ -309,11 +309,11 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 			// Append args to shell command
 			for _, arg := range args {
 				arg = strings.ReplaceAll(arg, "'", "'\"'\"'")
-
+				
 				shellCommand += " '" + arg + "'"
 			}
 		}
-
+		
 		// execute the command in a shell
 		err := engine.ExecuteSimpleShellCommand(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), extraEnv), stdout, stderr, stdin, shellCommand, args...)
 		if err != nil {
@@ -322,13 +322,13 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 					ExitCode: int(status),
 				}
 			}
-
+			
 			return errors.Wrap(err, "execute command")
 		}
-
+		
 		return nil
 	}
-
+	
 	shellArgs = append(shellArgs, args...)
 	return command.Command(ctx, dir, env.NewVariableEnvProvider(expand.ListEnviron(os.Environ()...), extraEnv), stdout, stderr, stdin, shellCommand, shellArgs...)
 }
@@ -336,10 +336,10 @@ func ExecuteCommand(ctx context.Context, cmd *latest.CommandConfig, variables ma
 // RunCommandCmd holds the cmd flags of a run command
 type RunCommandCmd struct {
 	*flags.GlobalFlags
-
+	
 	Command   *latest.CommandConfig
 	Variables map[string]interface{}
-
+	
 	Stdout io.Writer
 	Stderr io.Writer
 }
@@ -357,7 +357,7 @@ func NewSpecificRunCommand(command *latest.CommandConfig) *cobra.Command {
 			description = description[:61] + "..."
 		}
 	}
-
+	
 	runCmd := &cobra.Command{
 		Use:   command.Name,
 		Short: description,
