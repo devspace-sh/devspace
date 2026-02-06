@@ -132,5 +132,5 @@ func TestHelmDownload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Assert(t, strings.Contains(stdout1.String(), `Version:"v3`))
+	assert.Assert(t, strings.Contains(stdout1.String(), `Version:"v4`))
 }

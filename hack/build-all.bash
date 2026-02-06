@@ -41,9 +41,9 @@ fi
 # Create the release directory
 mkdir -p "${DEVSPACE_ROOT}/release"
 
-# Install Helm 3
+# Install Helm 4
 echo "Installing helm"
-curl -s https://get.helm.sh/helm-v3.3.4-darwin-amd64.tar.gz > helm3.tar.gz && tar -zxvf helm3.tar.gz darwin-amd64/helm && chmod +x darwin-amd64/helm
+curl -s https://get.helm.sh/helm-v4.0.4-darwin-amd64.tar.gz > helm4.tar.gz && tar -zxvf helm4.tar.gz darwin-amd64/helm && chmod +x darwin-amd64/helm
 
 # Pull the component chart
 COMPONENT_CHART_VERSION=$(cat pkg/devspace/deploy/deployer/helm/client.go | grep 'Version: "' | sed -nE 's/[^"]+"(.+)",\s*/\1/p')
