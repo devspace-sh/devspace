@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
+	
 	"github.com/onsi/ginkgo/v2"
-
+	
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
@@ -16,26 +16,26 @@ import (
 )
 
 var _ = DevSpaceDescribe("build", func() {
-
+	
 	initialDir, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
-
+	
 	// create a new factory
 	var f factory.Factory
-
+	
 	ginkgo.BeforeEach(func() {
 		f = framework.NewDefaultFactory()
 	})
-
+	
 	// Test cases:
-
+	
 	ginkgo.It("should render helm charts", func() {
 		tempDir, err := framework.CopyToTempDir("tests/render/testdata/helm")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
-
+		
 		stdout := &Buffer{}
 		// create build command
 		renderCmd := &cmd.RunPipelineCmd{
@@ -50,18 +50,18 @@ var _ = DevSpaceDescribe("build", func() {
 		err = renderCmd.RunDefault(f)
 		framework.ExpectNoError(err)
 		content := strings.TrimSpace(stdout.String()) + "\n"
-
+		
 		framework.ExpectLocalFileContentsImmediately(
 			filepath.Join(tempDir, "rendered.txt"),
 			content,
 		)
 	})
-
+	
 	ginkgo.It("should render kubectl deployments", func() {
 		tempDir, err := framework.CopyToTempDir("tests/render/testdata/kubectl")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
-
+		
 		stdout := &Buffer{}
 		// create build command
 		renderCmd := &cmd.RunPipelineCmd{

@@ -3,13 +3,14 @@ package engine
 import (
 	"bytes"
 	"context"
-	"mvdan.cc/sh/v3/expand"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
+	
 	"gotest.tools/assert"
+	"mvdan.cc/sh/v3/expand"
 )
 
 type testCaseShell struct {
@@ -23,11 +24,11 @@ func TestShellCat(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
-
+	
 	if _, err = file.WriteString("Hello DevSpace!"); err != nil {
 		t.Fatalf("Unable to write to temporary file %v", err)
 	}
-
+	
 	testCases := []testCaseShell{
 		{
 			command:        "cat " + filepath.ToSlash(file.Name()),
@@ -38,7 +39,7 @@ func TestShellCat(t *testing.T) {
 			expectedOutput: "123\n",
 		},
 	}
-
+	
 	for _, testCase := range testCases {
 		stdout := &bytes.Buffer{}
 		err := ExecuteSimpleShellCommand(context.Background(), ".", expand.ListEnviron(os.Environ()...), stdout, nil, nil, testCase.command)
@@ -56,7 +57,7 @@ func TestShellCatError(t *testing.T) {
 			expectedOutput: "cat: noFile.txt: No such file or directory\n",
 		},
 	}
-
+	
 	for _, testCase := range testCases {
 		stderr := &bytes.Buffer{}
 		err := ExecuteSimpleShellCommand(context.Background(), ".", expand.ListEnviron(os.Environ()...), stderr, stderr, nil, testCase.command)
@@ -69,7 +70,7 @@ func TestShellCatError(t *testing.T) {
 		} else {
 			t.Fatal("FAIL: TestShellCatError")
 		}
-
+		
 	}
 }
 
@@ -80,11 +81,11 @@ func TestShellCatEnforce(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
-
+	
 	if _, err = file.WriteString("Hello DevSpace!"); err != nil {
 		t.Fatalf("Unable to write to temporary file %v", err)
 	}
-
+	
 	testCases := []testCaseShell{
 		{
 			command:        "cat " + filepath.ToSlash(file.Name()),
@@ -95,7 +96,7 @@ func TestShellCatEnforce(t *testing.T) {
 			expectedOutput: "123\n",
 		},
 	}
-
+	
 	for _, testCase := range testCases {
 		stdout := &bytes.Buffer{}
 		err := ExecuteSimpleShellCommand(context.Background(), ".", expand.ListEnviron(os.Environ()...), stdout, nil, nil, testCase.command)
@@ -132,5 +133,8 @@ func TestHelmDownload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	
+	fmt.Println("👉:", stdout1.String())
+	
 	assert.Assert(t, strings.Contains(stdout1.String(), `Version:"v4`))
 }
