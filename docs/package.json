@@ -9,11 +9,11 @@
     "deploy": "docusaurus deploy"
   },
   "dependencies": {
-    "@docusaurus/core": "^2.4.1",
-    "@docusaurus/preset-classic": "^2.4.1",
+    "@docusaurus/core": "^3.8.0",
+    "@docusaurus/preset-classic": "^3.8.0",
     "@saucelabs/theme-github-codeblock": "^0.2.3",
     "classnames": "^2.2.6",
-    "docusaurus-plugin-sass": "^0.2.3",
+    "docusaurus-plugin-sass": "^0.2.6",
     "mdx-link-checker": "^0.1.1",
     "mdx-mermaid": "^v1.3.0",
     "mermaid": "^10.9.3",
