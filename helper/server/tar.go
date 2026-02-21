@@ -235,7 +235,7 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map[string]bool, stat os.FileInfo, tw *tar.Writer) error {
 	var err error
 	filepath := path.Join(basePath, fileInformation.Name)
-	if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
+	if fsutil.IsSymlink(stat.Mode()) {
 		if filepath, err = os.Readlink(filepath); err != nil {
 			return nil
 		}
