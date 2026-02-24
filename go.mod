@@ -16,7 +16,7 @@ require (
 	github.com/docker/cli v28.2.2+incompatible
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/evanphx/json-patch v4.12.0+incompatible
+	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/evanphx/json-patch/v5 v5.1.0
 	github.com/fujiwara/shapeio v1.0.0
 	github.com/gertd/go-pluralize v0.2.0
