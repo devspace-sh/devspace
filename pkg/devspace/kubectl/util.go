@@ -220,6 +220,7 @@ func IsLocalKubernetes(kubeClient Client) bool {
 
 	context := kubeClient.CurrentContext()
 	if strings.HasPrefix(context, "kind-") ||
+		strings.HasPrefix(context, "vcluster-docker_") ||
 		context == orbstackContext ||
 		context == dockerDesktopContext ||
 		context == dockerForDesktopContext {
