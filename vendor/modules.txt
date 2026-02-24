@@ -691,7 +691,7 @@ github.com/tonistiigi/units
 # github.com/tonistiigi/vt100 v0.0.0-20210615222946-8066bb97264f
 ## explicit; go 1.12
 github.com/tonistiigi/vt100
-# github.com/ulikunitz/xz v0.5.14
+# github.com/ulikunitz/xz v0.5.15
 ## explicit; go 1.12
 github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
