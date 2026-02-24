@@ -27,7 +27,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/invopop/jsonschema v0.4.0
 	github.com/jessevdk/go-flags v1.4.0
-	github.com/joho/godotenv v1.3.0
+	github.com/joho/godotenv v1.5.1
 	github.com/json-iterator/go v1.1.12
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/loft-sh/go-github-selfupdate v1.0.0
