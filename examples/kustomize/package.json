@@ -9,7 +9,7 @@
     },
     "dependencies": {
       "express": "^4.18.1",
-      "nodemon": "2.0.17"
+      "nodemon": "3.1.12"
     },
     "keywords": [
       "node",
