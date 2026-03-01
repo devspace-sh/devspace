@@ -9,8 +9,8 @@
     "deploy": "docusaurus deploy"
   },
   "dependencies": {
-    "@docusaurus/core": "^2.4.1",
-    "@docusaurus/preset-classic": "^2.4.1",
+    "@docusaurus/core": "^3.6.0",
+    "@docusaurus/preset-classic": "^3.6.0",
     "@saucelabs/theme-github-codeblock": "^0.2.3",
     "classnames": "^2.2.6",
     "docusaurus-plugin-sass": "^0.2.3",
