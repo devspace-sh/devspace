@@ -61,7 +61,7 @@
     "tslint-config-prettier": "^1.18.0",
     "tslint-react": "^3.6.0",
     "uglifyjs-webpack-plugin": "2.2.0",
-    "url-loader": "2.1.0",
+    "url-loader": "4.1.1",
     "webpack": "4.38.0",
     "webpack-dev-server": "4.15.2",
     "webpack-manifest-plugin": "2.0.4",
