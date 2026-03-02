@@ -87,7 +87,7 @@
     "react-hot-loader": "^4.13.1",
     "require-context.macro": "^1.2.2",
     "terser": "^4.8.1",
-    "terser-webpack-plugin": "^1.4.6",
+    "terser-webpack-plugin": "^5.3.16",
     "typescript": "3.5.3"
   },
   "jest": {
