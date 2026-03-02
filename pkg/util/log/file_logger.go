@@ -371,3 +371,15 @@ func (f *fileLogger) WithPrefixColor(prefix, color string) Logger {
 func (f *fileLogger) ErrorStreamOnly() Logger {
 	return f
 }
+
+func (f *fileLogger) Children() []Logger {
+	return nil
+}
+
+func (f *fileLogger) Fail(args ...interface{}) {
+	f.Error(args...)
+}
+
+func (f *fileLogger) Failf(format string, args ...interface{}) {
+	f.Errorf(format, args...)
+}

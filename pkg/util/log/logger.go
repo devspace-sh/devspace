@@ -4,7 +4,6 @@ import (
 	"io"
 
 	"github.com/loft-sh/devspace/pkg/util/survey"
-	"github.com/loft-sh/utils/pkg/log"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,7 +21,29 @@ const (
 
 // Logger defines the devspace common logging interface
 type Logger interface {
-	log.Logger
+	Debug(args ...interface{})
+	Debugf(format string, args ...interface{})
+	Info(args ...interface{})
+	Infof(format string, args ...interface{})
+	Warn(args ...interface{})
+	Warnf(format string, args ...interface{})
+	Error(args ...interface{})
+	Errorf(format string, args ...interface{})
+	Fatal(args ...interface{})
+	Fatalf(format string, args ...interface{})
+	Done(args ...interface{})
+	Donef(format string, args ...interface{})
+	Fail(args ...interface{})
+	Failf(format string, args ...interface{})
+	Print(level logrus.Level, args ...interface{})
+	Printf(level logrus.Level, format string, args ...interface{})
+	StartWait(message string)
+	StopWait()
+	SetLevel(level logrus.Level)
+	GetLevel() logrus.Level
+	Children() []Logger
+	Write(message []byte) (int, error)
+
 	// WithLevel creates a new logger with the given level
 	WithLevel(level logrus.Level) Logger
 	Question(params *survey.QuestionOptions) (string, error)

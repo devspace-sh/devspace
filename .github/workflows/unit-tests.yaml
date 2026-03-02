@@ -34,6 +34,10 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v1
 
+      - name: Uninstall Helm 3.x
+        run: |
+          sudo rm -rf $(which helm) || true
+        
       - name: Test
         run: ./hack/coverage.bash
 
