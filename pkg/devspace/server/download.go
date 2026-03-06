@@ -44,7 +44,7 @@ func downloadUI() (string, error) {
 		downloadDir, _ = homedir.Dir()
 	}
 	// Check if ui was already downloaded / extracted
-	uiFolder := filepath.Join(downloadDir, constants.DefaultHomeDevSpaceFolder, UITempFolder)
+	uiFolder := filepath.Join(downloadDir, constants.DefaultHomeDevSpaceFolder, UITempFolder, version)
 
 	// Download / extract if necessary
 	err := downloadUITar(uiFolder, version)
