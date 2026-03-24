@@ -18,13 +18,17 @@ limitations under the License.
 
 package v1alpha1
 
-// TypeCheckingApplyConfiguration represents an declarative configuration of the TypeChecking type for use
+// TypeCheckingApplyConfiguration represents a declarative configuration of the TypeChecking type for use
 // with apply.
+//
+// TypeChecking contains results of type checking the expressions in the
+// ValidatingAdmissionPolicy
 type TypeCheckingApplyConfiguration struct {
+	// The type checking warnings for each expression.
 	ExpressionWarnings []ExpressionWarningApplyConfiguration `json:"expressionWarnings,omitempty"`
 }
 
-// TypeCheckingApplyConfiguration constructs an declarative configuration of the TypeChecking type for use with
+// TypeCheckingApplyConfiguration constructs a declarative configuration of the TypeChecking type for use with
 // apply.
 func TypeChecking() *TypeCheckingApplyConfiguration {
 	return &TypeCheckingApplyConfiguration{}

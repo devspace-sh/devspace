@@ -23,15 +23,20 @@ import (
 	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
-// CronJobStatusApplyConfiguration represents an declarative configuration of the CronJobStatus type for use
+// CronJobStatusApplyConfiguration represents a declarative configuration of the CronJobStatus type for use
 // with apply.
+//
+// CronJobStatus represents the current state of a cron job.
 type CronJobStatusApplyConfiguration struct {
-	Active             []v1.ObjectReferenceApplyConfiguration `json:"active,omitempty"`
-	LastScheduleTime   *metav1.Time                           `json:"lastScheduleTime,omitempty"`
-	LastSuccessfulTime *metav1.Time                           `json:"lastSuccessfulTime,omitempty"`
+	// A list of pointers to currently running jobs.
+	Active []v1.ObjectReferenceApplyConfiguration `json:"active,omitempty"`
+	// Information when was the last time the job was successfully scheduled.
+	LastScheduleTime *metav1.Time `json:"lastScheduleTime,omitempty"`
+	// Information when was the last time the job successfully completed.
+	LastSuccessfulTime *metav1.Time `json:"lastSuccessfulTime,omitempty"`
 }
 
-// CronJobStatusApplyConfiguration constructs an declarative configuration of the CronJobStatus type for use with
+// CronJobStatusApplyConfiguration constructs a declarative configuration of the CronJobStatus type for use with
 // apply.
 func CronJobStatus() *CronJobStatusApplyConfiguration {
 	return &CronJobStatusApplyConfiguration{}

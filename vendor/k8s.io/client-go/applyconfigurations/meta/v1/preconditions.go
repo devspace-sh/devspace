@@ -22,14 +22,18 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 )
 
-// PreconditionsApplyConfiguration represents an declarative configuration of the Preconditions type for use
+// PreconditionsApplyConfiguration represents a declarative configuration of the Preconditions type for use
 // with apply.
+//
+// Preconditions must be fulfilled before an operation (update, delete, etc.) is carried out.
 type PreconditionsApplyConfiguration struct {
-	UID             *types.UID `json:"uid,omitempty"`
-	ResourceVersion *string    `json:"resourceVersion,omitempty"`
+	// Specifies the target UID.
+	UID *types.UID `json:"uid,omitempty"`
+	// Specifies the target ResourceVersion
+	ResourceVersion *string `json:"resourceVersion,omitempty"`
 }
 
-// PreconditionsApplyConfiguration constructs an declarative configuration of the Preconditions type for use with
+// PreconditionsApplyConfiguration constructs a declarative configuration of the Preconditions type for use with
 // apply.
 func Preconditions() *PreconditionsApplyConfiguration {
 	return &PreconditionsApplyConfiguration{}

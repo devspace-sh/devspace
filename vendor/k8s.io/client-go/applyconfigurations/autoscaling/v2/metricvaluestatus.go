@@ -22,15 +22,23 @@ import (
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
-// MetricValueStatusApplyConfiguration represents an declarative configuration of the MetricValueStatus type for use
+// MetricValueStatusApplyConfiguration represents a declarative configuration of the MetricValueStatus type for use
 // with apply.
+//
+// MetricValueStatus holds the current value for a metric
 type MetricValueStatusApplyConfiguration struct {
-	Value              *resource.Quantity `json:"value,omitempty"`
-	AverageValue       *resource.Quantity `json:"averageValue,omitempty"`
-	AverageUtilization *int32             `json:"averageUtilization,omitempty"`
+	// value is the current value of the metric (as a quantity).
+	Value *resource.Quantity `json:"value,omitempty"`
+	// averageValue is the current value of the average of the
+	// metric across all relevant pods (as a quantity)
+	AverageValue *resource.Quantity `json:"averageValue,omitempty"`
+	// currentAverageUtilization is the current value of the average of the
+	// resource metric across all relevant pods, represented as a percentage of
+	// the requested value of the resource for the pods.
+	AverageUtilization *int32 `json:"averageUtilization,omitempty"`
 }
 
-// MetricValueStatusApplyConfiguration constructs an declarative configuration of the MetricValueStatus type for use with
+// MetricValueStatusApplyConfiguration constructs a declarative configuration of the MetricValueStatus type for use with
 // apply.
 func MetricValueStatus() *MetricValueStatusApplyConfiguration {
 	return &MetricValueStatusApplyConfiguration{}

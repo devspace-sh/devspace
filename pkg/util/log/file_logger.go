@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -70,21 +71,21 @@ func OverrideRuntimeErrorHandler(discard bool) {
 	overrideOnce.Do(func() {
 		if discard {
 			if len(runtime.ErrorHandlers) > 0 {
-				runtime.ErrorHandlers[0] = func(err error) {}
+				runtime.ErrorHandlers[0] = func(_ context.Context, _ error, _ string, _ ...interface{}) {}
 			} else {
-				runtime.ErrorHandlers = []func(err error){
-					func(err error) {},
+				runtime.ErrorHandlers = []runtime.ErrorHandler{
+					func(_ context.Context, _ error, _ string, _ ...interface{}) {},
 				}
 			}
 		} else {
 			errorLog := GetFileLogger("errors")
 			if len(runtime.ErrorHandlers) > 0 {
-				runtime.ErrorHandlers[0] = func(err error) {
+				runtime.ErrorHandlers[0] = func(_ context.Context, err error, _ string, _ ...interface{}) {
 					errorLog.Errorf("Runtime error occurred: %s", err)
 				}
 			} else {
-				runtime.ErrorHandlers = []func(err error){
-					func(err error) {
+				runtime.ErrorHandlers = []runtime.ErrorHandler{
+					func(_ context.Context, err error, _ string, _ ...interface{}) {
 						errorLog.Errorf("Runtime error occurred: %s", err)
 					},
 				}

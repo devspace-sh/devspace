@@ -83,6 +83,7 @@ type HorizontalPodAutoscalerStatus struct {
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:prerelease-lifecycle-gen:introduced=1.2
 
 // configuration of a horizontal pod autoscaler.
 type HorizontalPodAutoscaler struct {
@@ -101,6 +102,7 @@ type HorizontalPodAutoscaler struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:prerelease-lifecycle-gen:introduced=1.2
 
 // list of horizontal pod autoscaler objects.
 type HorizontalPodAutoscalerList struct {
@@ -114,6 +116,8 @@ type HorizontalPodAutoscalerList struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:prerelease-lifecycle-gen:introduced=1.2
+// +k8s:isSubresource=/scale
 
 // Scale represents a scaling request for a resource.
 type Scale struct {
@@ -135,6 +139,9 @@ type Scale struct {
 type ScaleSpec struct {
 	// replicas is the desired number of instances for the scaled object.
 	// +optional
+	// +k8s:optional
+	// +default=0
+	// +k8s:minimum=0
 	Replicas int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
 }
 
@@ -190,8 +197,6 @@ const (
 type MetricSpec struct {
 	// type is the type of metric source.  It should be one of "ContainerResource",
 	// "External", "Object", "Pods" or "Resource", each mapping to a matching field in the object.
-	// Note: "ContainerResource" type is available on when the feature-gate
-	// HPAContainerMetrics is enabled
 	Type MetricSourceType `json:"type" protobuf:"bytes,1,name=type"`
 
 	// object refers to a metric describing a single kubernetes object
@@ -218,7 +223,6 @@ type MetricSpec struct {
 	// current scale target (e.g. CPU or memory). Such metrics are built in to
 	// Kubernetes, and have special scaling options on top of those available
 	// to normal per-pod metrics using the "pods" source.
-	// This is an alpha feature and can be enabled by the HPAContainerMetrics feature flag.
 	// +optional
 	ContainerResource *ContainerResourceMetricSource `json:"containerResource,omitempty" protobuf:"bytes,7,opt,name=containerResource"`
 
@@ -352,8 +356,6 @@ type ExternalMetricSource struct {
 type MetricStatus struct {
 	// type is the type of metric source.  It will be one of "ContainerResource",
 	// "External", "Object", "Pods" or "Resource", each corresponds to a matching field in the object.
-	// Note: "ContainerResource" type is available on when the feature-gate
-	// HPAContainerMetrics is enabled
 	Type MetricSourceType `json:"type" protobuf:"bytes,1,name=type"`
 
 	// object refers to a metric describing a single kubernetes object

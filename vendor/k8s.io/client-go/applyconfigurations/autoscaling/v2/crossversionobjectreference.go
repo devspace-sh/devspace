@@ -18,15 +18,20 @@ limitations under the License.
 
 package v2
 
-// CrossVersionObjectReferenceApplyConfiguration represents an declarative configuration of the CrossVersionObjectReference type for use
+// CrossVersionObjectReferenceApplyConfiguration represents a declarative configuration of the CrossVersionObjectReference type for use
 // with apply.
+//
+// CrossVersionObjectReference contains enough information to let you identify the referred resource.
 type CrossVersionObjectReferenceApplyConfiguration struct {
-	Kind       *string `json:"kind,omitempty"`
-	Name       *string `json:"name,omitempty"`
+	// kind is the kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+	Kind *string `json:"kind,omitempty"`
+	// name is the name of the referent; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+	Name *string `json:"name,omitempty"`
+	// apiVersion is the API version of the referent
 	APIVersion *string `json:"apiVersion,omitempty"`
 }
 
-// CrossVersionObjectReferenceApplyConfiguration constructs an declarative configuration of the CrossVersionObjectReference type for use with
+// CrossVersionObjectReferenceApplyConfiguration constructs a declarative configuration of the CrossVersionObjectReference type for use with
 // apply.
 func CrossVersionObjectReference() *CrossVersionObjectReferenceApplyConfiguration {
 	return &CrossVersionObjectReferenceApplyConfiguration{}

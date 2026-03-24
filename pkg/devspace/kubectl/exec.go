@@ -14,6 +14,20 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 )
 
+// termSizeQueueAdapter adapts k8s.io/kubectl/pkg/util/term.TerminalSizeQueue to
+// k8s.io/client-go/tools/remotecommand.TerminalSizeQueue, which diverged in v0.35.0.
+type termSizeQueueAdapter struct {
+	q term.TerminalSizeQueue
+}
+
+func (a *termSizeQueueAdapter) Next() *remotecommand.TerminalSize {
+	size := a.q.Next()
+	if size == nil {
+		return nil
+	}
+	return &remotecommand.TerminalSize{Width: size.Width, Height: size.Height}
+}
+
 // SubResource specifies with sub resources should be used for the container connection (exec or attach)
 type SubResource string
 
@@ -55,7 +69,7 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 			tty = true
 			if t.Raw && options.TerminalSizeQueue == nil {
 				// this call spawns a goroutine to monitor/update the terminal size
-				sizeQueue = t.MonitorSize(t.GetSize())
+				sizeQueue = &termSizeQueueAdapter{q: t.MonitorSize(t.GetSize())}
 			} else if options.TerminalSizeQueue != nil {
 				sizeQueue = options.TerminalSizeQueue
 				t.Raw = true

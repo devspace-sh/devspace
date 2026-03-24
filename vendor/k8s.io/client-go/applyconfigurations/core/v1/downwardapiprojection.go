@@ -18,13 +18,18 @@ limitations under the License.
 
 package v1
 
-// DownwardAPIProjectionApplyConfiguration represents an declarative configuration of the DownwardAPIProjection type for use
+// DownwardAPIProjectionApplyConfiguration represents a declarative configuration of the DownwardAPIProjection type for use
 // with apply.
+//
+// Represents downward API info for projecting into a projected volume.
+// Note that this is identical to a downwardAPI volume source without the default
+// mode.
 type DownwardAPIProjectionApplyConfiguration struct {
+	// Items is a list of DownwardAPIVolume file
 	Items []DownwardAPIVolumeFileApplyConfiguration `json:"items,omitempty"`
 }
 
-// DownwardAPIProjectionApplyConfiguration constructs an declarative configuration of the DownwardAPIProjection type for use with
+// DownwardAPIProjectionApplyConfiguration constructs a declarative configuration of the DownwardAPIProjection type for use with
 // apply.
 func DownwardAPIProjection() *DownwardAPIProjectionApplyConfiguration {
 	return &DownwardAPIProjectionApplyConfiguration{}

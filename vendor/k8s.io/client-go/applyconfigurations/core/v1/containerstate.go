@@ -18,15 +18,22 @@ limitations under the License.
 
 package v1
 
-// ContainerStateApplyConfiguration represents an declarative configuration of the ContainerState type for use
+// ContainerStateApplyConfiguration represents a declarative configuration of the ContainerState type for use
 // with apply.
+//
+// ContainerState holds a possible state of container.
+// Only one of its members may be specified.
+// If none of them is specified, the default one is ContainerStateWaiting.
 type ContainerStateApplyConfiguration struct {
-	Waiting    *ContainerStateWaitingApplyConfiguration    `json:"waiting,omitempty"`
-	Running    *ContainerStateRunningApplyConfiguration    `json:"running,omitempty"`
+	// Details about a waiting container
+	Waiting *ContainerStateWaitingApplyConfiguration `json:"waiting,omitempty"`
+	// Details about a running container
+	Running *ContainerStateRunningApplyConfiguration `json:"running,omitempty"`
+	// Details about a terminated container
 	Terminated *ContainerStateTerminatedApplyConfiguration `json:"terminated,omitempty"`
 }
 
-// ContainerStateApplyConfiguration constructs an declarative configuration of the ContainerState type for use with
+// ContainerStateApplyConfiguration constructs a declarative configuration of the ContainerState type for use with
 // apply.
 func ContainerState() *ContainerStateApplyConfiguration {
 	return &ContainerStateApplyConfiguration{}

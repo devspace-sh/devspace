@@ -19,18 +19,35 @@ limitations under the License.
 package v2beta2
 
 import (
-	v2beta2 "k8s.io/api/autoscaling/v2beta2"
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 )
 
-// HPAScalingRulesApplyConfiguration represents an declarative configuration of the HPAScalingRules type for use
+// HPAScalingRulesApplyConfiguration represents a declarative configuration of the HPAScalingRules type for use
 // with apply.
+//
+// HPAScalingRules configures the scaling behavior for one direction.
+// These Rules are applied after calculating DesiredReplicas from metrics for the HPA.
+// They can limit the scaling velocity by specifying scaling policies.
+// They can prevent flapping by specifying the stabilization window, so that the
+// number of replicas is not set instantly, instead, the safest value from the stabilization
+// window is chosen.
 type HPAScalingRulesApplyConfiguration struct {
-	StabilizationWindowSeconds *int32                               `json:"stabilizationWindowSeconds,omitempty"`
-	SelectPolicy               *v2beta2.ScalingPolicySelect         `json:"selectPolicy,omitempty"`
-	Policies                   []HPAScalingPolicyApplyConfiguration `json:"policies,omitempty"`
+	// stabilizationWindowSeconds is the number of seconds for which past recommendations should be
+	// considered while scaling up or scaling down.
+	// StabilizationWindowSeconds must be greater than or equal to zero and less than or equal to 3600 (one hour).
+	// If not set, use the default values:
+	// - For scale up: 0 (i.e. no stabilization is done).
+	// - For scale down: 300 (i.e. the stabilization window is 300 seconds long).
+	StabilizationWindowSeconds *int32 `json:"stabilizationWindowSeconds,omitempty"`
+	// selectPolicy is used to specify which policy should be used.
+	// If not set, the default value MaxPolicySelect is used.
+	SelectPolicy *autoscalingv2beta2.ScalingPolicySelect `json:"selectPolicy,omitempty"`
+	// policies is a list of potential scaling polices which can be used during scaling.
+	// At least one policy must be specified, otherwise the HPAScalingRules will be discarded as invalid
+	Policies []HPAScalingPolicyApplyConfiguration `json:"policies,omitempty"`
 }
 
-// HPAScalingRulesApplyConfiguration constructs an declarative configuration of the HPAScalingRules type for use with
+// HPAScalingRulesApplyConfiguration constructs a declarative configuration of the HPAScalingRules type for use with
 // apply.
 func HPAScalingRules() *HPAScalingRulesApplyConfiguration {
 	return &HPAScalingRulesApplyConfiguration{}
@@ -47,7 +64,7 @@ func (b *HPAScalingRulesApplyConfiguration) WithStabilizationWindowSeconds(value
 // WithSelectPolicy sets the SelectPolicy field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the SelectPolicy field is set to the value of the last call.
-func (b *HPAScalingRulesApplyConfiguration) WithSelectPolicy(value v2beta2.ScalingPolicySelect) *HPAScalingRulesApplyConfiguration {
+func (b *HPAScalingRulesApplyConfiguration) WithSelectPolicy(value autoscalingv2beta2.ScalingPolicySelect) *HPAScalingRulesApplyConfiguration {
 	b.SelectPolicy = &value
 	return b
 }

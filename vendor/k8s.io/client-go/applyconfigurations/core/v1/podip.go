@@ -18,13 +18,16 @@ limitations under the License.
 
 package v1
 
-// PodIPApplyConfiguration represents an declarative configuration of the PodIP type for use
+// PodIPApplyConfiguration represents a declarative configuration of the PodIP type for use
 // with apply.
+//
+// PodIP represents a single IP address allocated to the pod.
 type PodIPApplyConfiguration struct {
+	// IP is the IP address assigned to the pod
 	IP *string `json:"ip,omitempty"`
 }
 
-// PodIPApplyConfiguration constructs an declarative configuration of the PodIP type for use with
+// PodIPApplyConfiguration constructs a declarative configuration of the PodIP type for use with
 // apply.
 func PodIP() *PodIPApplyConfiguration {
 	return &PodIPApplyConfiguration{}

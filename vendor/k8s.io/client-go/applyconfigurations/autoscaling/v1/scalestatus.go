@@ -18,14 +18,21 @@ limitations under the License.
 
 package v1
 
-// ScaleStatusApplyConfiguration represents an declarative configuration of the ScaleStatus type for use
+// ScaleStatusApplyConfiguration represents a declarative configuration of the ScaleStatus type for use
 // with apply.
+//
+// ScaleStatus represents the current status of a scale subresource.
 type ScaleStatusApplyConfiguration struct {
-	Replicas *int32  `json:"replicas,omitempty"`
+	// replicas is the actual number of observed instances of the scaled object.
+	Replicas *int32 `json:"replicas,omitempty"`
+	// selector is the label query over pods that should match the replicas count. This is same
+	// as the label selector but in the string format to avoid introspection
+	// by clients. The string will be in the same format as the query-param syntax.
+	// More info about label selectors: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
 	Selector *string `json:"selector,omitempty"`
 }
 
-// ScaleStatusApplyConfiguration constructs an declarative configuration of the ScaleStatus type for use with
+// ScaleStatusApplyConfiguration constructs a declarative configuration of the ScaleStatus type for use with
 // apply.
 func ScaleStatus() *ScaleStatusApplyConfiguration {
 	return &ScaleStatusApplyConfiguration{}

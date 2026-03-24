@@ -18,14 +18,19 @@ limitations under the License.
 
 package v1
 
-// PodDNSConfigOptionApplyConfiguration represents an declarative configuration of the PodDNSConfigOption type for use
+// PodDNSConfigOptionApplyConfiguration represents a declarative configuration of the PodDNSConfigOption type for use
 // with apply.
+//
+// PodDNSConfigOption defines DNS resolver options of a pod.
 type PodDNSConfigOptionApplyConfiguration struct {
-	Name  *string `json:"name,omitempty"`
+	// Name is this DNS resolver option's name.
+	// Required.
+	Name *string `json:"name,omitempty"`
+	// Value is this DNS resolver option's value.
 	Value *string `json:"value,omitempty"`
 }
 
-// PodDNSConfigOptionApplyConfiguration constructs an declarative configuration of the PodDNSConfigOption type for use with
+// PodDNSConfigOptionApplyConfiguration constructs a declarative configuration of the PodDNSConfigOption type for use with
 // apply.
 func PodDNSConfigOption() *PodDNSConfigOptionApplyConfiguration {
 	return &PodDNSConfigOptionApplyConfiguration{}
