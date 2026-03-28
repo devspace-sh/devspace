@@ -98,3 +98,12 @@ func (k *KubeHelper) DeleteNamespace(name string) error {
 	}
 	return nil
 }
+
+// ExecInPod runs a command in an existing pod container (used when multiple pods match a selector).
+func (k *KubeHelper) ExecInPod(ctx context.Context, pod *corev1.Pod, containerName string, command []string) (string, error) {
+	stdout, stderr, err := k.client.ExecBuffered(ctx, pod, containerName, command, nil)
+	if err != nil {
+		return "", fmt.Errorf("exec error: %v %s", err, string(stderr))
+	}
+	return string(stdout), nil
+}

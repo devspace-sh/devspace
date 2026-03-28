@@ -846,4 +846,55 @@ var _ = DevSpaceDescribe("sync", func() {
 		// wait for the command to finish
 		waitGroup.Wait()
 	})
+
+	ginkgo.It("should sync to all replicas when syncReplicas is enabled", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-replicas")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		devCmd := &cmd.RunPipelineCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Pipeline: "dev",
+			Ctx:      cancelCtx,
+		}
+
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+			err = devCmd.RunDefault(f)
+			framework.ExpectNoError(err)
+		}()
+
+		const (
+			podLabel     = "app.kubernetes.io/name=sync-replicas"
+			container    = "app"
+			replicaCount = 2
+		)
+
+		framework.ExpectRemoteFileContentsOnAllPods(podLabel, container, ns, "/app/file1.txt", "Hello World", replicaCount)
+
+		payload := randutil.GenerateRandomString(5000)
+		err = os.WriteFile(filepath.Join(tempDir, "replica-upload.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+
+		framework.ExpectRemoteFileContentsOnAllPods(podLabel, container, ns, "/app/replica-upload.txt", payload, replicaCount)
+
+		cancel()
+		waitGroup.Wait()
+	})
 })

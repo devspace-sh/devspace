@@ -1,0 +1,19 @@
+version: v2beta1
+vars:
+  IMAGE: alpine:3.20
+deployments:
+  test:
+    kubectl:
+      manifests:
+        - k8s/deployment.yaml
+pipelines:
+  deploy: |-
+    run_dependencies --all
+    create_deployments --all
+dev:
+  test:
+    imageSelector: ${IMAGE}
+    sync:
+      - path: ./:/app
+        waitInitialSync: true
+        syncReplicas: true

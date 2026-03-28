@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/onsi/gomega"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -167,6 +168,52 @@ func ExpectRemoteContainerFileContents(labelSelector, container string, namespac
 		return out == contents, nil
 	})
 	ExpectNoErrorWithOffset(1, err)
+}
+
+func ExpectRemoteFileContentsOnAllPods(labelSelector, containerName, namespace, filePath, contents string, wantCount int) {
+	kubeClient, err := kube.NewKubeHelper()
+	ExpectNoErrorWithOffset(1, err)
+
+	want := strings.TrimSpace(contents)
+	err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*3, true, func(ctx context.Context) (done bool, err error) {
+		pods, err := kubeClient.RawClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+		if err != nil {
+			return false, nil
+		}
+		readyPods := make([]corev1.Pod, 0, len(pods.Items))
+		for _, p := range pods.Items {
+			if p.Status.Phase != corev1.PodRunning {
+				continue
+			}
+			if !podContainerReady(&p, containerName) {
+				continue
+			}
+			readyPods = append(readyPods, p)
+		}
+		if len(readyPods) < wantCount {
+			return false, nil
+		}
+		for i := range readyPods {
+			out, err := kubeClient.ExecInPod(ctx, &readyPods[i], containerName, []string{"cat", filePath})
+			if err != nil {
+				return false, nil
+			}
+			if strings.TrimSpace(out) != want {
+				return false, nil
+			}
+		}
+		return true, nil
+	})
+	ExpectNoErrorWithOffset(1, err)
+}
+
+func podContainerReady(pod *corev1.Pod, containerName string) bool {
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.Name == containerName {
+			return cs.Ready
+		}
+	}
+	return false
 }
 
 func ExpectLocalFileContentsImmediately(filePath string, contents string) {
