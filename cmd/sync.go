@@ -38,6 +38,7 @@ type SyncCmd struct {
 	ImageSelector string
 	Container     string
 	Pod           string
+	SyncReplicas  bool
 	Pick          bool
 	Wait          bool
 	Polling       bool
@@ -85,6 +86,7 @@ devspace sync --path=.:/app --pod=my-pod --container=my-container
 
 	syncCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to sync to")
 	syncCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to sync to")
+	syncCmd.Flags().BoolVar(&cmd.SyncReplicas, "sync-replicas", false, "Sync all replicas in the selected deployment")
 	syncCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	syncCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, ${runtime.images.app}, nginx:${runtime.images.app.tag})")
 	syncCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
@@ -270,6 +272,12 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	if err != nil {
 		return errors.Wrap(err, "apply flags to sync config")
 	}
+	if syncConfig.syncConfig.SyncReplicas {
+		cmd.SyncReplicas = true
+	}
+	if cmd.SyncReplicas {
+		options = options.WithPick(false)
+	}
 
 	// Start sync
 	options = options.WithSkipInitContainers(true)
@@ -312,6 +320,9 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig, option
 	}
 	if cmd.DownloadOnly {
 		syncConfig.DisableUpload = cmd.DownloadOnly
+	}
+	if cmd.SyncReplicas {
+		syncConfig.SyncReplicas = true
 	}
 
 	// if selection is specified through flags, we don't want to use the loaded
