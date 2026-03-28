@@ -364,6 +364,13 @@ func wakeUpAndPing(ctx context.Context, client Client, log log.Logger) error {
 }
 
 func wakeUp(ctx context.Context, client Client, log log.Logger) error {
+	// If DevSpace is executing from natively inside the cluster environment (e.g. CI pipeline),
+	// the target namespace is implicitly already awake. This correctly short-circuits the Kubernetes
+	// ping against clusters lacking basic RBAC permissions (e.g. self-hosted runners using inCluster: false).
+	if client.IsInCluster() {
+		return nil
+	}
+
 	// check if environment is sleeping
 	var isSleeping bool
 	isSleepingConfig := rest.CopyConfig(client.RestConfig())
