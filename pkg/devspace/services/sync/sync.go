@@ -124,7 +124,7 @@ func startSync(ctx devspacecontext.Context, name, arch string, syncConfig *lates
 		Arch:       arch,
 		Starter:    starter,
 
-		RestartOnError: true,
+		RestartOnError: !syncConfig.NoWatch,
 		Verbose:        ctx.Log().GetLevel() == logrus.DebugLevel,
 	}
 
