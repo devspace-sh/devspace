@@ -1,29 +1,21 @@
 import React from 'react';
-import { Route, Redirect } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 const ConditionalRoute = ({
   component: Component,
-  exact,
-  path,
   redirectTo,
   when,
-  condition,
   ...rest
 }: {
   component?: any;
-  exact?: true;
-  path: string;
   redirectTo: string;
   when: boolean;
   condition?: string;
 }) => {
-  const renderComponent = (props: any) => <Component {...props} />;
-  const redirectRoute = () => <Redirect to={redirectTo} />;
-
   if (when) {
-    return <Route {...rest} render={redirectRoute} />;
+    return <Navigate to={redirectTo} replace />;
   } else if (Component) {
-    return <Route {...rest} render={renderComponent} />;
+    return <Component {...rest} />;
   }
 
   return null;

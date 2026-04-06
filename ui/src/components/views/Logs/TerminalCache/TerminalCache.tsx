@@ -12,12 +12,12 @@ export interface TerminalCacheInterface {
     multiple: string[];
     props: InteractiveTerminalProps;
   };
-  terminals: Array<{
+  terminals: {
     pod: string;
     container: string;
     interactive: boolean;
     props: InteractiveTerminalProps;
-  }>;
+  }[];
 }
 
 interface Props extends DevSpaceConfigContext {

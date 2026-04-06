@@ -1,5 +1,5 @@
 import React from 'react';
-import { RouteComponentProps, withRouter } from 'react-router-dom';
+import { RouteComponentProps, withRouter } from 'lib/router-compat';
 import styles from '../LinkTabSelector.module.scss';
 import LinkTabSelector from 'components/basic/LinkTabSelector/LinkTabSelector';
 import CustomNavLink from 'components/basic/CustomNavLink/CustomNavLink';

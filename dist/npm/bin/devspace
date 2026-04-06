@@ -8,18 +8,20 @@ if [ ! -f "$BINARY" ] || [ "$STAT" -lt 10000 ]; then
 
     BINDIR="$(dirname $0)"
     BASEDIR="$(dirname $0)/.."
-    INDEX_FILE="/index.js"
+    INDEX_FILE="index.js"
 
     if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
-        BASEDIR="$(dirname $0)/../lib/node_modules/devspace"
+        BASEDIR="$(dirname $0)/../devspace"
 
         if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
-            BASEDIR="$(dirname $0)/node_modules/devspace"
+            BASEDIR="$(dirname $0)/../lib/node_modules/devspace"
 
             if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
-                BASEDIR=$(/usr/bin/env npm root -g)/devspace
+                BASEDIR="$(dirname $0)/node_modules/devspace"
 
                 if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
+                    BASEDIR=$(/usr/bin/env npm root -g)/devspace
+
                     if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
                         BASEDIR=$(/usr/bin/env yarn global dir)/node_modules/devspace
 

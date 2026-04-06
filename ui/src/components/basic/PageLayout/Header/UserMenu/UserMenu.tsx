@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './UserMenu.module.scss';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
-import { withRouter, RouteComponentProps } from 'react-router-dom';
+import { withRouter, RouteComponentProps } from 'lib/router-compat';
 import ErrorBoundary from 'components/basic/ErrorBoundary/ErrorBoundary';
 import Tooltip from 'components/basic/Tooltip/Tooltip';
 import GitHubButton from 'components/basic/GitHubButton/GitHubButton';

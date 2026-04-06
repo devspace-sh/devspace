@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './Breadcrumb.module.scss';
 import Arrow from 'images/breadcrumb-arrow.svg';
-import { withRouter, RouteComponentProps } from 'react-router';
+import { withRouter, RouteComponentProps } from 'lib/router-compat';
 import { Link } from 'react-router-dom';
 import ErrorBoundary from 'components/basic/ErrorBoundary/ErrorBoundary';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';

@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 const fs = require("fs");
 const path = require("path");
+const http = require("http");
+const https = require("https");
 const execSync = require("child_process").execSync;
-const fetch = require("node-fetch");
-const Spinner = require("cli-spinner").Spinner;
-const inquirer = require('inquirer');
-const findProcess = require('find-process');
 
 const downloadPathTemplate =
   "https://github.com/devspace-sh/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
@@ -62,6 +60,70 @@ const requestHeaders = {
 };
 let packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
 
+const request = function (requestUrl, options) {
+  const requestOptions = options || {};
+  const headers = requestOptions.headers || {};
+  const maxRedirects = requestOptions.maxRedirects == null ? 10 : requestOptions.maxRedirects;
+
+  return new Promise(function (resolve, reject) {
+    const makeRequest = function (currentUrl, redirectsRemaining) {
+      const parsedUrl = new URL(currentUrl);
+      const client = parsedUrl.protocol === "https:" ? https : http;
+      const req = client.request(parsedUrl, { headers }, function (res) {
+        const statusCode = res.statusCode || 0;
+
+        if (
+          statusCode >= 300 &&
+          statusCode < 400 &&
+          res.headers.location &&
+          redirectsRemaining > 0
+        ) {
+          const redirectUrl = new URL(res.headers.location, currentUrl).toString();
+          res.resume();
+          makeRequest(redirectUrl, redirectsRemaining - 1);
+          return;
+        }
+
+        resolve({
+          ok: statusCode >= 200 && statusCode < 300,
+          status: statusCode,
+          statusText: res.statusMessage || "",
+          url: currentUrl,
+          body: res,
+        });
+      });
+
+      req.on("error", reject);
+      req.end();
+    };
+
+    makeRequest(requestUrl, maxRedirects);
+  });
+};
+
+const getSpinner = function () {
+  try {
+    return require("cli-spinner").Spinner;
+  } catch (err) {
+    return function Spinner() {
+      this.setSpinnerString = function () { };
+      this.start = function () { };
+      this.stop = function () { };
+    };
+  }
+};
+
+const getInquirer = function () {
+  return require("inquirer");
+};
+
+const getFindProcess = function () {
+  const findProcessModule = require("find-process");
+  return typeof findProcessModule === "function"
+    ? findProcessModule
+    : findProcessModule.default;
+};
+
 const sanitizeVersion = function(version) {
   if (version == null) {
     return "latest"
@@ -81,9 +143,10 @@ const sanitizeVersion = function(version) {
 const getLatestVersion = function (callback) {
   const releasesURL = "https://github.com/devspace-sh/devspace/releases/latest";
 
-  fetch(releasesURL, { headers: requestHeaders, redirect: false })
+  request(releasesURL, { headers: requestHeaders })
     .then(function (res) {
       if (!res.ok) {
+        res.body.resume();
         console.error(
           "Error requesting URL " +
           releasesURL +
@@ -106,8 +169,10 @@ const getLatestVersion = function (callback) {
 
       const latestVersion = matches[1].replace('v', '')
       if (latestVersion) {
+        res.body.resume();
         callback(latestVersion);
       } else {
+        res.body.resume();
         console.error("Unable to identify latest devspace version");
         process.exit(2);
       }
@@ -320,6 +385,7 @@ let continueProcess = function (askRemoveGlobalFolder) {
         }
       };
 
+      const inquirer = getInquirer();
       inquirer
         .prompt([
           {
@@ -377,6 +443,7 @@ let continueProcess = function (askRemoveGlobalFolder) {
 
         console.log("Download DevSpace CLI release: " + downloadPath + "\n");
 
+        const Spinner = getSpinner();
         const spinner = new Spinner(
           "%s Downloading DevSpace CLI... (this may take a minute)"
         );
@@ -391,15 +458,10 @@ let continueProcess = function (askRemoveGlobalFolder) {
             showRootError(version);
           });
 
-        fetch(downloadPath, { headers: requestHeaders, encoding: null })
-          .catch(function (err) {
-            writeStream.end();
-            spinner.stop(true);
-            console.error("Error requesting URL: " + downloadPath);
-            process.exit(6);
-          })
+        request(downloadPath, { headers: requestHeaders })
           .then(function (res) {
             if (!res.ok) {
+              res.body.resume();
               writeStream.end();
               spinner.stop(true);
 
@@ -457,6 +519,12 @@ let continueProcess = function (askRemoveGlobalFolder) {
                 showRootError(version);
               }
             }
+          })
+          .catch(function (err) {
+            writeStream.end();
+            spinner.stop(true);
+            console.error("Error requesting URL: " + downloadPath);
+            process.exit(6);
           });
       };
 
@@ -466,6 +534,15 @@ let continueProcess = function (askRemoveGlobalFolder) {
 }
 
 if (process.ppid > 1) {
+  let findProcess;
+
+  try {
+    findProcess = getFindProcess();
+  } catch (err) {
+    continueProcess(true);
+    return;
+  }
+
   findProcess('pid', process.ppid)
     .then(function (list) {
       if (list.length === 1 && list[0].ppid > 1) {

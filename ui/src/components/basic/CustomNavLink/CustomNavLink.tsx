@@ -1,15 +1,14 @@
 import React from 'react';
 import { NavLink, NavLinkProps } from 'react-router-dom';
-import { formatURL } from 'lib/utils';
 
-const CustomNavLink = (props: NavLinkProps) => (
+interface Props extends NavLinkProps {
+  activeClassName?: string;
+}
+
+const CustomNavLink = ({ activeClassName, className, ...props }: Props) => (
   <NavLink
-    isActive={(_, { pathname }) =>
-      pathname.startsWith(
-        typeof props.to === 'object' ? formatURL(props.to.pathname) : formatURL(props.to.toString().replace(/\?.+$/, ''))
-      )
-    }
     {...props}
+    className={({ isActive }) => [className, isActive ? activeClassName : ''].filter(Boolean).join(' ')}
   />
 );
 
