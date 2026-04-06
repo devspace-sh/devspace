@@ -1,13 +1,15 @@
+version: "2"
+
 run:
   timeout: 10m
 
 issues:
   exclude-dirs:
-  - hack/
-  - docs/
+    - hack/
+    - docs/
 
 linters:
-  disable-all:  true
+  disable-all: true
   enable:
     # - deadcode # deprecated https://github.com/golangci/golangci-lint/issues/1841
     - gosimple
@@ -25,9 +27,8 @@ linters:
     # - gofmt
     # - golint
     # - structcheck # deprecated https://github.com/golangci/golangci-lint/issues/1841
-  
-linters-settings:
-  gofmt:
-    simplify: true
-  dupl:
-    threshold: 400
+  settings:
+    gofmt:
+      simplify: true
+    dupl:
+      threshold: 400
