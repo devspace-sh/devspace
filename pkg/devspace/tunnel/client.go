@@ -2,12 +2,15 @@ package tunnel
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
-	"github.com/mgutz/ansi"
 	"io"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
+	"github.com/mgutz/ansi"
+
+	"context"
 
 	"github.com/google/uuid"
 	"github.com/loft-sh/devspace/helper/remote"
@@ -16,7 +19,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 )
 
 func ReceiveData(stream remote.Tunnel_InitTunnelClient, closeStream <-chan bool, sessionsOut chan<- *tunnel.Session, port int32, scheme string, log logpkg.Logger) error {

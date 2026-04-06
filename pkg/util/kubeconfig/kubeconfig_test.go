@@ -31,12 +31,12 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 	//Make Backup of config file
 	err = fsutil.Copy(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), "configBackup", true)
 	if !os.IsNotExist(err) {
-		os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
+		_ = os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
 		defer func() {
 			_ = fsutil.Copy("configBackup", clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), true)
 		}()
 	} else if err != nil {
-		defer os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
+		defer os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()) //nolint:errcheck
 	} else {
 		t.Fatalf("Error making backup file: %v", err)
 	}

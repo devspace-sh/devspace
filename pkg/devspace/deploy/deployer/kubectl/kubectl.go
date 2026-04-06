@@ -213,7 +213,7 @@ func (d *DeployConfig) applyManifest(ctx devspacecontext.Context, kubeObjects []
 		return false, nil, errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
 	}
 	writer := ctx.Log().Writer(logrus.InfoLevel, false)
-	defer writer.Close()
+	defer writer.Close() //nolint:errcheck
 
 	kubeObjects = append(kubeObjects, parsedObjects...)
 	if shouldRedeploy || forceDeploy {

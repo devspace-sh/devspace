@@ -71,7 +71,7 @@ func (cg *LanguageHandler) GetDevImage() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer reader.Close()
+	defer reader.Close() //nolint:errcheck
 
 	tag := "latest"
 	sc := bufio.NewScanner(reader)

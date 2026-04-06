@@ -4,12 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gliderlabs/ssh"
-	sshhelper "github.com/loft-sh/devspace/helper/ssh"
-	"github.com/loft-sh/devspace/helper/types"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"os/exec"
@@ -17,6 +11,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/gliderlabs/ssh"
+	sshhelper "github.com/loft-sh/devspace/helper/ssh"
+	"github.com/loft-sh/devspace/helper/types"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 )
 
 func NewReverseCommandsServer(localWorkDir, containerWorkDir string, addr string, keys []ssh.PublicKey, commands []*latest.ProxyCommand, log log.Logger) *Server {
@@ -92,7 +93,7 @@ func (s *Server) handler(sess ssh.Session) {
 			return
 		}
 
-		defer l.Close()
+		defer l.Close() //nolint:errcheck
 		go ssh.ForwardAgentConnections(l, sess)
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "SSH_AUTH_SOCK", l.Addr().String()))
 	}

@@ -164,7 +164,7 @@ func TestPods(t *testing.T) {
 	for _, testCase := range testCases {
 		namespace := "testns"
 		kubeClient := &fakekube.Client{
-			Client: fake.NewSimpleClientset(),
+			Client: fake.NewClientset(),
 		}
 		_, _ = kubeClient.Client.CoreV1().Namespaces().Create(context.TODO(), &k8sv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{

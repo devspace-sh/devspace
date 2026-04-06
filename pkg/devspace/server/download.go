@@ -88,7 +88,7 @@ func downloadFile(version string, folder string) error {
 	if err != nil {
 		return errors.Wrap(err, "download ui archive")
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected response status: %d", resp.StatusCode)

@@ -73,7 +73,7 @@ func (h *handler) enter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer ws.Close()
+	defer ws.Close() //nolint:errcheck
 
 	// Open logs connection
 	stream := &wsStream{WebSocket: ws}

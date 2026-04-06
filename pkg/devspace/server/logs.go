@@ -91,7 +91,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer ws.Close()
+	defer ws.Close() //nolint:errcheck
 
 	// Open logs connection
 	reader, err := client.Logs(context.TODO(), namespace[0], name[0], container[0], false, ptr.Int64(100), true)
@@ -101,7 +101,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer reader.Close()
+	defer reader.Close() //nolint:errcheck
 
 	// Stream logs
 	stream := &wsStream{WebSocket: ws}

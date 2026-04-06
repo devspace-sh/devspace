@@ -51,7 +51,7 @@ func (c *client) WriteValues(values map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 	out, err := yaml.Marshal(values)
 	if err != nil {
 		return "", errors.Wrap(err, "marshal values")

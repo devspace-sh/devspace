@@ -565,7 +565,7 @@ func parseExcludeFile(path string) ([]string, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "open exclude file")
 	}
-	defer reader.Close()
+	defer reader.Close() //nolint:errcheck
 
 	paths, err := readAll(reader)
 	if err != nil {
@@ -630,10 +630,10 @@ func readAll(reader io.Reader) ([]string, error) {
 func StartStream(ctx context.Context, client kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, stdoutWriter io.Writer, buffer bool, log logpkg.Logger) error {
 	stderrBuffer := &bytes.Buffer{}
 	stderrReader, stderrWriter := io.Pipe()
-	defer stderrWriter.Close()
+	defer stderrWriter.Close() //nolint:errcheck
 
 	go func() {
-		defer stderrReader.Close()
+		defer stderrReader.Close() //nolint:errcheck
 		s := scanner.NewScanner(stderrReader)
 		for s.Scan() {
 			log.Debug("Helper - " + s.Text())

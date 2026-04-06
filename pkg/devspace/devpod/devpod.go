@@ -355,7 +355,7 @@ func tryOpen(ctx context.Context, url string, log logpkg.Logger) error {
 	}
 	defer func() {
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	}()
 

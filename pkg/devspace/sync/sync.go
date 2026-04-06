@@ -418,25 +418,25 @@ func (s *Sync) Stop(fatalError error) {
 				symlink.Stop()
 			}
 			if s.upstream.writer != nil {
-				s.upstream.writer.Close()
+				_ = s.upstream.writer.Close()
 			}
 			if s.upstream.reader != nil {
-				s.upstream.reader.Close()
+				_ = s.upstream.reader.Close()
 			}
 			if s.upstream.conn != nil {
-				s.upstream.conn.Close()
+				_ = s.upstream.conn.Close()
 			}
 		}
 
 		if s.downstream != nil {
 			if s.downstream.writer != nil {
-				s.downstream.writer.Close()
+				_ = s.downstream.writer.Close()
 			}
 			if s.downstream.reader != nil {
-				s.downstream.reader.Close()
+				_ = s.downstream.reader.Close()
 			}
 			if s.downstream.conn != nil {
-				s.downstream.conn.Close()
+				_ = s.downstream.conn.Close()
 			}
 		}
 

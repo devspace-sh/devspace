@@ -3,8 +3,9 @@ package kubectl
 import (
 	"context"
 	"fmt"
-	"k8s.io/client-go/discovery"
 	"strings"
+
+	"k8s.io/client-go/discovery"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,9 +92,10 @@ func (client *client) GenericRequest(ctx context.Context, options *GenericReques
 	}
 
 	var req *restclient.Request
-	if options.Method == "" || options.Method == "get" {
+	switch options.Method {
+	case "", "get":
 		req = restClient.Get()
-	} else if options.Method == "delete" {
+	case "delete":
 		req = restClient.Delete()
 	}
 	if options.Namespace != "" {

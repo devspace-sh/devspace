@@ -145,7 +145,7 @@ func runHook(ctx devspacecontext.Context, hookConfig *latest.HookConfig, extraEn
 	} else {
 		writer = ctx.Log().Writer(logrus.InfoLevel, false)
 	}
-	defer writer.Close()
+	defer writer.Close() //nolint:errcheck
 
 	// Decide which hook type to use
 	var hook Hook

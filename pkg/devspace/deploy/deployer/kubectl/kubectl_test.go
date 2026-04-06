@@ -191,10 +191,10 @@ func TestRender(t *testing.T) {
 		devCtx := devspacecontext.NewContext(context.Background(), nil, log.NewFakeLogger()).WithConfig(conf)
 
 		reader, writer := io.Pipe()
-		defer reader.Close()
+		defer reader.Close() //nolint:errcheck
 
 		go func() {
-			defer writer.Close()
+			defer writer.Close() //nolint:errcheck
 
 			err := deployer.Render(devCtx, writer)
 			fmt.Println(err)

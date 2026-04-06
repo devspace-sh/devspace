@@ -199,7 +199,7 @@ func TestResolver(t *testing.T) {
 			Dependencies: testCase.dependencyTasks,
 		}
 		generatedConfig := localcache.New(constants.DefaultConfigPath)
-		kube := fake.NewSimpleClientset()
+		kube := fake.NewClientset()
 		kubeClient := &fakekube.Client{
 			Client: kube,
 		}
@@ -234,7 +234,7 @@ func TestResolver(t *testing.T) {
 			err = os.Remove(path)
 			assert.NilError(t, err, "Error removing file in testCase %s", testCase.name)
 		}
-		os.RemoveAll(util.DependencyFolderPath) //No error catch because it doesn't need to exist
+		_ = os.RemoveAll(util.DependencyFolderPath) //No error catch because it doesn't need to exist
 
 	}
 }

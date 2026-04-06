@@ -61,14 +61,14 @@ func runProxyCommand(args []string) error {
 	if err != nil {
 		return errors.Wrap(err, "dial ssh")
 	}
-	defer client.Close()
+	defer client.Close() //nolint:errcheck
 
 	// create new session
 	session, err := client.NewSession()
 	if err != nil {
 		return errors.Wrap(err, "new session")
 	}
-	defer session.Close()
+	defer session.Close() //nolint:errcheck
 
 	// check if we should use a pty
 	var (

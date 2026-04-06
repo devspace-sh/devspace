@@ -22,13 +22,14 @@ const (
 )
 
 func getParentDir(localDir string, remoteDir string, outsideDir string, editLocation int) (string, error) {
-	if editLocation == editInLocal {
+	switch editLocation {
+	case editInLocal:
 		return localDir, nil
-	} else if editLocation == editInRemote {
+	case editInRemote:
 		return remoteDir, nil
-	} else if editLocation == editOutside {
+	case editOutside:
 		return outsideDir, nil
-	} else if editLocation == editSymLinkDir {
+	case editSymLinkDir:
 		return filepath.Join(outsideDir, "symlinkTargets"), nil
 	}
 

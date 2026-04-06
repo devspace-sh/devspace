@@ -107,7 +107,7 @@ func TestGetAllAuthConfigs(t *testing.T) {
 		assert.Equal(t, string(authsAsYaml), string(expectedAsYaml), "Unexpected authConfigs in testCase %s", testCase.name)
 
 		err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
-			os.RemoveAll(path)
+			_ = os.RemoveAll(path)
 			return nil
 		})
 		assert.NilError(t, err, "Error cleaning up in testCase %s", testCase.name)

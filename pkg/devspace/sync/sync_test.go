@@ -54,9 +54,9 @@ func TestInitialSync(t *testing.T) {
 	for _, initialSync := range []latest.InitialSyncStrategy{latest.InitialSyncStrategyPreferLocal, latest.InitialSyncStrategyMirrorLocal} {
 		t.Log("InitialSyncStrategy: " + initialSync)
 		remote, local, outside := initTestDirs(t)
-		defer os.RemoveAll(remote)
-		defer os.RemoveAll(local)
-		defer os.RemoveAll(outside)
+		defer os.RemoveAll(remote)  //nolint:errcheck
+		defer os.RemoveAll(local)   //nolint:errcheck
+		defer os.RemoveAll(outside) //nolint:errcheck
 
 		filesToCheck, foldersToCheck := makeBasicTestCases()
 		if initialSync == latest.InitialSyncStrategyMirrorLocal {
@@ -79,10 +79,10 @@ func TestInitialSync(t *testing.T) {
 		// Start the downstream server
 		downClientReader, downClientWriter, _ := os.Pipe()
 		downServerReader, downServerWriter, _ := os.Pipe()
-		defer downClientReader.Close()
-		defer downClientWriter.Close()
-		defer downServerReader.Close()
-		defer downServerWriter.Close()
+		defer downClientReader.Close() //nolint:errcheck
+		defer downClientWriter.Close() //nolint:errcheck
+		defer downServerReader.Close() //nolint:errcheck
+		defer downServerWriter.Close() //nolint:errcheck
 
 		t.Logf("Exclude paths: %#+v", syncClient.Options.ExcludePaths)
 		t.Logf("Upload Exclude paths: %#+v", syncClient.Options.UploadExcludePaths)
@@ -113,10 +113,10 @@ func TestInitialSync(t *testing.T) {
 		// Start upstream server
 		upClientReader, upClientWriter, _ := os.Pipe()
 		upServerReader, upServerWriter, _ := os.Pipe()
-		defer upClientReader.Close()
-		defer upClientWriter.Close()
-		defer upServerReader.Close()
-		defer upServerWriter.Close()
+		defer upClientReader.Close() //nolint:errcheck
+		defer upClientWriter.Close() //nolint:errcheck
+		defer upServerReader.Close() //nolint:errcheck
+		defer upServerWriter.Close() //nolint:errcheck
 
 		go func() {
 			err := server.StartUpstreamServer(upServerReader, upClientWriter, &server.UpstreamOptions{
@@ -155,9 +155,9 @@ func TestInitialSync(t *testing.T) {
 
 func TestNormalSync(t *testing.T) {
 	remote, local, outside := initTestDirs(t)
-	defer os.RemoveAll(remote)
-	defer os.RemoveAll(local)
-	defer os.RemoveAll(outside)
+	defer os.RemoveAll(remote)  //nolint:errcheck
+	defer os.RemoveAll(local)   //nolint:errcheck
+	defer os.RemoveAll(outside) //nolint:errcheck
 
 	filesToCheck, foldersToCheck := makeBasicTestCases()
 	filesToCheck, foldersToCheck = makeRemoveAndRenameTestCases(filesToCheck, foldersToCheck)
@@ -172,10 +172,10 @@ func TestNormalSync(t *testing.T) {
 	// Start the downstream server
 	downClientReader, downClientWriter, _ := os.Pipe()
 	downServerReader, downServerWriter, _ := os.Pipe()
-	defer downClientReader.Close()
-	defer downClientWriter.Close()
-	defer downServerReader.Close()
-	defer downServerWriter.Close()
+	defer downClientReader.Close() //nolint:errcheck
+	defer downClientWriter.Close() //nolint:errcheck
+	defer downServerReader.Close() //nolint:errcheck
+	defer downServerWriter.Close() //nolint:errcheck
 
 	// Build exclude paths
 	excludePaths := []string{}
@@ -202,10 +202,10 @@ func TestNormalSync(t *testing.T) {
 	// Start upstream server
 	upClientReader, upClientWriter, _ := os.Pipe()
 	upServerReader, upServerWriter, _ := os.Pipe()
-	defer upClientReader.Close()
-	defer upClientWriter.Close()
-	defer upServerReader.Close()
-	defer upServerWriter.Close()
+	defer upClientReader.Close() //nolint:errcheck
+	defer upClientWriter.Close() //nolint:errcheck
+	defer upServerReader.Close() //nolint:errcheck
+	defer upServerWriter.Close() //nolint:errcheck
 
 	go func() {
 		err := server.StartUpstreamServer(upServerReader, upClientWriter, &server.UpstreamOptions{

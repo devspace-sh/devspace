@@ -810,7 +810,7 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 
 			devContainer := getMatchingDevContainer(devPod, selector.ContainerName)
 			devContainer.Logs = &next.Logs{
-				Enabled: ptr.Bool(!(c.Dev.Logs.Disabled != nil && *c.Dev.Logs.Disabled)),
+				Enabled: ptr.Bool(c.Dev.Logs.Disabled == nil || !*c.Dev.Logs.Disabled),
 			}
 			if c.Dev.Logs.ShowLast != nil {
 				devContainer.Logs.LastLines = int64(*c.Dev.Logs.ShowLast)

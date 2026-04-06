@@ -113,7 +113,7 @@ func (k *kubectlBuilder) Build(ctx context.Context, environ expand.Environ, dir,
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(tempFile.Name())
+	defer os.Remove(tempFile.Name()) //nolint:errcheck
 
 	data, err := clientcmd.Write(k.kubeConfig)
 	if err != nil {

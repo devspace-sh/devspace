@@ -110,7 +110,7 @@ func TestDeploy(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		kube := fake.NewSimpleClientset()
+		kube := fake.NewClientset()
 		kubeClient := &fakekube.Client{
 			Client: kube,
 		}

@@ -130,16 +130,16 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	}
 
 	// Delete config & overwrite config
-	os.RemoveAll(".devspace")
+	_ = os.RemoveAll(".devspace")
 
 	// Delete configs path
-	os.Remove(constants.DefaultConfigsPath)
+	_ = os.Remove(constants.DefaultConfigsPath)
 
 	// Delete config & overwrite config
-	os.Remove(constants.DefaultConfigPath)
+	_ = os.Remove(constants.DefaultConfigPath)
 
 	// Delete config & overwrite config
-	os.Remove(constants.DefaultVarsPath)
+	_ = os.Remove(constants.DefaultVarsPath)
 
 	// Execute plugin hook
 	err = hook.ExecuteHooks(nil, nil, "init")
@@ -202,7 +202,7 @@ func (cmd *InitCmd) initDevspace(f factory.Factory, configLoader loader.ConfigLo
 	var config *latest.Config
 
 	// create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.GlobalFlags.KubeContext, cmd.GlobalFlags.Namespace)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err == nil {
 		configInterface, err := configLoader.Load(context.TODO(), client, &loader.ConfigOptions{}, cmd.log)
 		if err == nil {
@@ -789,15 +789,12 @@ func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, er
 	// Save temporary file to render it
 	renderPath := loader.ConfigPath("render.yaml")
 	err := loader.Save(renderPath, config)
-	defer os.Remove(renderPath)
+	defer os.Remove(renderPath) //nolint:errcheck
 	if err != nil {
 		return "", errors.Wrap(err, "temp render.yaml")
 	}
 
-	silent := true
-	if cmd.Debug {
-		silent = false
-	}
+	silent := !cmd.Debug
 	// Use the render command to render it.
 	writer := &bytes.Buffer{}
 	renderCmd := &RunPipelineCmd{
@@ -858,7 +855,7 @@ func appendToIgnoreFile(ignoreFile, content string) error {
 				return errors.Errorf("Error writing file %s: %v", ignoreFile, err)
 			}
 
-			defer file.Close()
+			defer file.Close() //nolint:errcheck
 			if _, err = file.WriteString(content); err != nil {
 				return errors.Errorf("Error writing file %s: %v", ignoreFile, err)
 			}

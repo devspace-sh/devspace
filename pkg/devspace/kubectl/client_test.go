@@ -95,7 +95,7 @@ func createTestResources(client kubernetes.Interface) error {
 
 func TestGetPodStatus(t *testing.T) {
 	// Create the fake client.
-	kubeClient := fake.NewSimpleClientset()
+	kubeClient := fake.NewClientset()
 
 	// Inject an event into the fake client.
 	err := createTestResources(kubeClient)

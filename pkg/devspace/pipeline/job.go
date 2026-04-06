@@ -1,6 +1,10 @@
 package pipeline
 
 import (
+	"io"
+	"os"
+	"sync"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
@@ -8,10 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
-	"io"
 	"mvdan.cc/sh/v3/expand"
-	"os"
-	"sync"
 )
 
 type Job struct {
@@ -96,7 +97,7 @@ func (j *Job) Run(ctx devspacecontext.Context, args []string, environ expand.Env
 func (j *Job) execute(ctx devspacecontext.Context, args []string, parent *tomb.Tomb, environ expand.Environ) error {
 	ctx = ctx.WithLogger(ctx.Log())
 	stdoutReader, stdoutWriter := io.Pipe()
-	defer stdoutWriter.Close()
+	defer stdoutWriter.Close() //nolint:errcheck
 
 	parent.Go(func() error {
 		s := scanner.NewScanner(stdoutReader)
@@ -107,7 +108,7 @@ func (j *Job) execute(ctx devspacecontext.Context, args []string, parent *tomb.T
 	})
 
 	stderrReader, stderrWriter := io.Pipe()
-	defer stderrWriter.Close()
+	defer stderrWriter.Close() //nolint:errcheck
 
 	parent.Go(func() error {
 		s := scanner.NewScanner(stderrReader)

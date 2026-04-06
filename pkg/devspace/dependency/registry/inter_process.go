@@ -50,7 +50,7 @@ func (d *requester) Ping(ctx context.Context, server string, pingPayload *PingPa
 	if err != nil {
 		return false, err
 	}
-	defer response.Body.Close()
+	defer response.Body.Close() //nolint:errcheck
 	if response.StatusCode == http.StatusOK {
 		return true, nil
 	}
@@ -72,7 +72,7 @@ func (d *requester) ExcludeDependency(ctx context.Context, server string, exclud
 	if err != nil {
 		return false, err
 	}
-	defer response.Body.Close()
+	defer response.Body.Close() //nolint:errcheck
 	if response.StatusCode == http.StatusForbidden {
 		return false, nil
 	}

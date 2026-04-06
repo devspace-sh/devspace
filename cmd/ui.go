@@ -4,20 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devspace/helper/util/port"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"io"
 	"net/http"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
-
-	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-
 	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/helper/util/port"
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -107,7 +105,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 					continue
 				}
 
-				defer response.Body.Close()
+				defer response.Body.Close() //nolint:errcheck
 				contents, err := io.ReadAll(response.Body)
 				if err != nil {
 					checkPort++

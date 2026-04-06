@@ -2,16 +2,17 @@ package ssh
 
 import (
 	"fmt"
-	"github.com/gliderlabs/ssh"
-	"github.com/loft-sh/devspace/helper/util/stderrlog"
-	"github.com/pkg/errors"
-	"github.com/pkg/sftp"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/gliderlabs/ssh"
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
+	"github.com/pkg/errors"
+	"github.com/pkg/sftp"
 )
 
 var DefaultPort = 8022
@@ -103,7 +104,7 @@ func (s *Server) handler(sess ssh.Session) {
 			return
 		}
 
-		defer l.Close()
+		defer l.Close() //nolint:errcheck
 		go ssh.ForwardAgentConnections(l, sess)
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "SSH_AUTH_SOCK", l.Addr().String()))
 	}
@@ -145,7 +146,7 @@ func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd, decorateReader func(reader io
 	stdoutDone := make(chan struct{})
 	go func() {
 		defer close(stdoutDone)
-		defer stdoutReader.Close()
+		defer stdoutReader.Close() //nolint:errcheck
 
 		var reader io.Reader = stdoutReader
 		if decorateReader != nil {
@@ -158,7 +159,7 @@ func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd, decorateReader func(reader io
 	stderrDone := make(chan struct{})
 	go func() {
 		defer close(stderrDone)
-		defer stderrReader.Close()
+		defer stderrReader.Close() //nolint:errcheck
 
 		var reader io.Reader = stderrReader
 		if decorateReader != nil {
@@ -169,7 +170,7 @@ func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd, decorateReader func(reader io
 	}()
 
 	go func() {
-		defer stdinWriter.Close()
+		defer stdinWriter.Close() //nolint:errcheck
 
 		_, _ = io.Copy(stdinWriter, sess)
 	}()
@@ -198,7 +199,7 @@ func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *e
 	if err != nil {
 		return errors.Wrap(err, "start pty")
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	go func() {
 		for win := range winCh {
@@ -207,7 +208,7 @@ func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *e
 	}()
 
 	go func() {
-		defer f.Close()
+		defer f.Close() //nolint:errcheck
 
 		// copy stdin
 		_, _ = io.Copy(f, sess)
@@ -215,7 +216,7 @@ func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *e
 
 	stdoutDoneChan := make(chan struct{})
 	go func() {
-		defer f.Close()
+		defer f.Close() //nolint:errcheck
 		defer close(stdoutDoneChan)
 
 		var reader io.Reader = f
@@ -283,7 +284,7 @@ func SftpHandler(sess ssh.Session) {
 		return
 	}
 	if err := server.Serve(); err == io.EOF {
-		server.Close()
+		_ = server.Close()
 		fmt.Println("sftp client exited session.")
 	} else if err != nil {
 		fmt.Println("sftp server completed with error:", err)

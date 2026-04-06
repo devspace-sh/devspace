@@ -27,7 +27,7 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer ws.Close()
+	defer ws.Close() //nolint:errcheck
 
 	// Open logs connection
 	stream := &wsStream{WebSocket: ws}
@@ -40,7 +40,7 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer stdinWriter.Close()
+	defer stdinWriter.Close() //nolint:errcheck
 
 	cmd.Stdout = stream
 	cmd.Stderr = stream

@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/moby/patternmatcher"
 	"hash/crc32"
 	"hash/fnv"
 	"io"
@@ -13,6 +12,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/moby/patternmatcher"
 
 	"github.com/docker/docker/pkg/longpath"
 	"github.com/pkg/errors"
@@ -30,7 +31,7 @@ func File(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	hash := sha256.New()
 	_, err = io.Copy(hash, file)
@@ -248,7 +249,7 @@ func hashFileCRC32(filePath string, polynomial uint32) (string, error) {
 	}
 
 	//Tell the program to close the file when the function returns
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	//Create the table with the given polynomial
 	tablePolynomial := crc32.MakeTable(polynomial)

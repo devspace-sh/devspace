@@ -34,7 +34,7 @@ func TestAnalyze(t *testing.T) {
 
 	for _, testCase := range testCases {
 		kubeClient := &fakekube.Client{
-			Client: fake.NewSimpleClientset(),
+			Client: fake.NewClientset(),
 		}
 		analyzer := NewAnalyzer(kubeClient, log.Discard)
 
@@ -150,7 +150,7 @@ func TestCreateReport(t *testing.T) {
 
 	for _, testCase := range testCases {
 		kubeClient := &fakekube.Client{
-			Client: fake.NewSimpleClientset(),
+			Client: fake.NewClientset(),
 		}
 		for _, namespace := range testCase.kubeNamespaces {
 			_, _ = kubeClient.Client.CoreV1().Namespaces().Create(context.TODO(), &k8sv1.Namespace{
@@ -161,7 +161,7 @@ func TestCreateReport(t *testing.T) {
 		}
 		for namespace, podList := range testCase.kubePods {
 			for _, pod := range podList {
-				pod.ObjectMeta.CreationTimestamp.Time = time.Now()
+				pod.CreationTimestamp.Time = time.Now()
 				_, _ = kubeClient.Client.CoreV1().Pods(namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 			}
 		}

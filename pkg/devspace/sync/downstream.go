@@ -170,7 +170,6 @@ func (d *downstream) mainLoop() error {
 		case <-d.sync.ctx.Done():
 			return nil
 		case <-time.After(time.Duration(recheckInterval) * time.Millisecond):
-			break
 		}
 
 		// Check for changes remotely
@@ -290,8 +289,8 @@ func (d *downstream) updateDownloadChanges(download []*remote.Change) []*remote.
 func (d *downstream) initDownload(download []*remote.Change) error {
 	reader, writer := io.Pipe()
 
-	defer reader.Close()
-	defer writer.Close()
+	defer reader.Close() //nolint:errcheck
+	defer writer.Close() //nolint:errcheck
 
 	errorChan := make(chan error)
 	go func() {
@@ -310,7 +309,7 @@ func (d *downstream) initDownload(download []*remote.Change) error {
 
 // downloadFiles downloads the given files from the remote server and writes the contents into the given writer
 func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Change) error {
-	defer writer.Close()
+	defer writer.Close() //nolint:errcheck
 
 	// cancel after 1 hour
 	ctx, cancel := context.WithTimeout(d.sync.ctx, time.Hour)

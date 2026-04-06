@@ -47,7 +47,7 @@ func (i *installer) DownloadBinary(metadataPath, version, binaryPath, outFile st
 		return err
 	}
 
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 	repo, err := git.NewGitCLIRepository(context.Background(), tempDir)
 	if err != nil {
 		return err
@@ -71,12 +71,12 @@ func (i *installer) downloadTo(binaryPath, outFile string) error {
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	out, err := os.Create(outFile)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer out.Close() //nolint:errcheck
 	_, err = io.Copy(out, resp.Body)
 	return err
 }
@@ -120,7 +120,7 @@ func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 		return nil, err
 	}
 
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 	repo, err := git.NewGitCLIRepository(context.Background(), tempDir)
 	if err != nil {
 		return nil, err

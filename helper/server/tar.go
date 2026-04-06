@@ -23,13 +23,13 @@ type fileInformation struct {
 }
 
 func untarAll(reader io.ReadCloser, options *UpstreamOptions) error {
-	defer reader.Close()
+	defer reader.Close() //nolint:errcheck
 
 	gzr, err := gzip.NewReader(reader)
 	if err != nil {
 		return errors.Errorf("error decompressing: %v", err)
 	}
-	defer gzr.Close()
+	defer gzr.Close() //nolint:errcheck
 
 	tarReader := tar.NewReader(gzr)
 	for {
@@ -121,7 +121,7 @@ func untarNext(tarReader *tar.Reader, options *UpstreamOptions) (bool, error) {
 		}
 	}
 
-	defer outFile.Close()
+	defer outFile.Close() //nolint:errcheck
 
 	if _, err := io.Copy(outFile, tarReader); err != nil {
 		return false, errors.Wrapf(err, "io copy tar reader %s", outFileName)
@@ -247,7 +247,7 @@ func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map
 		// We ignore this error here because it could happen that the file is suddenly not here anymore
 		return nil
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	hdr, err := tar.FileInfoHeader(stat, filepath)
 	if err != nil {

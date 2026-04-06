@@ -172,10 +172,8 @@ func (u *upstream) startEventsLoop(doneChan chan struct{}) {
 					select {
 					case event := <-u.events:
 						u.eventBuffer = append(u.eventBuffer, event)
-						break
 					default:
 						eventsLeft = false
-						break
 					}
 				}
 				u.eventBufferMutex.Unlock()
@@ -218,7 +216,6 @@ func (u *upstream) mainLoop() error {
 			case <-u.sync.ctx.Done():
 				return nil
 			case <-time.After(time.Millisecond * 600):
-				break
 			}
 
 			// retrieve the newest events
@@ -790,8 +787,8 @@ func (u *upstream) applyCreates(files []*FileInformation) (map[string]*FileInfor
 
 	// Create a pipe for reading and writing
 	reader, writer := io.Pipe()
-	defer reader.Close()
-	defer writer.Close()
+	defer reader.Close() //nolint:errcheck
+	defer writer.Close() //nolint:errcheck
 
 	var archiver *Archiver
 	errorChan := make(chan error)
@@ -940,15 +937,15 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 }
 
 func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ignoreMatcher ignoreparser.IgnoreParser) (*Archiver, error) {
-	defer writer.Close()
+	defer writer.Close() //nolint:errcheck
 
 	// Use compression
 	gw := gzip.NewWriter(writer)
-	defer gw.Close()
+	defer gw.Close() //nolint:errcheck
 
 	// Create tar writer
 	tarWriter := tar.NewWriter(gw)
-	defer tarWriter.Close()
+	defer tarWriter.Close() //nolint:errcheck
 
 	// Archive the given files
 	archiver := NewArchiver(u.sync.LocalPath, tarWriter, ignoreMatcher)
@@ -963,7 +960,7 @@ func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ign
 }
 
 func (u *upstream) uploadArchive(reader io.ReadCloser) error {
-	defer reader.Close()
+	defer reader.Close() //nolint:errcheck
 
 	// cancel after 1 hour
 	ctx, cancel := context.WithTimeout(u.sync.ctx, time.Hour)

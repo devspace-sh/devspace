@@ -158,7 +158,7 @@ func (b *Builder) Build(ctx devspacecontext.Context) error {
 	} else {
 		writer = ctx.Log().Writer(logrus.InfoLevel, false)
 	}
-	defer writer.Close()
+	defer writer.Close() //nolint:errcheck
 
 	ctx.Log().Infof("Build %s:%s with custom command", b.imageConf.Image, b.imageTags[0])
 	ctx.Log().Debugf("Build %s:%s with custom command '%s %s' in working dir %s", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "), ctx.WorkingDir)

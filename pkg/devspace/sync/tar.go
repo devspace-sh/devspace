@@ -3,7 +3,6 @@ package sync
 import (
 	"archive/tar"
 	"compress/gzip"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"os"
 	"path"
@@ -11,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 
@@ -38,7 +39,7 @@ func NewUnarchiver(syncConfig *Sync, forceOverride bool, log log.Logger) *Unarch
 
 // Untar untars the given reader into the destination directory
 func (u *Unarchiver) Untar(fromReader io.ReadCloser, toPath string) error {
-	defer fromReader.Close()
+	defer fromReader.Close() //nolint:errcheck
 
 	fileCounter := 0
 	gzr, err := gzip.NewReader(fromReader)
@@ -46,7 +47,7 @@ func (u *Unarchiver) Untar(fromReader io.ReadCloser, toPath string) error {
 		return errors.Errorf("error decompressing: %v", err)
 	}
 
-	defer gzr.Close()
+	defer gzr.Close() //nolint:errcheck
 
 	tarReader := tar.NewReader(gzr)
 	for {
@@ -128,7 +129,7 @@ func (u *Unarchiver) untarNext(destPath string, tarReader *tar.Reader) (bool, er
 		}
 	}
 
-	defer outFile.Close()
+	defer outFile.Close() //nolint:errcheck
 	if _, err := io.Copy(outFile, tarReader); err != nil {
 		return false, errors.Wrap(err, "copy file to reader")
 	}
@@ -308,7 +309,7 @@ func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) erro
 		// We ignore open file and just treat it as okay
 		return nil
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	hdr, err := tar.FileInfoHeader(targetStat, filepath)
 	if err != nil {

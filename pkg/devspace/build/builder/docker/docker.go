@@ -113,7 +113,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 
 	// create context stream
 	body, writer, outStream, buildOptions, err := b.helper.CreateContextStream(contextPath, dockerfilePath, entrypoint, cmd, ctx.Log())
-	defer writer.Close()
+	defer writer.Close() //nolint:errcheck
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 		if err != nil {
 			return err
 		}
-		defer response.Body.Close()
+		defer response.Body.Close() //nolint:errcheck
 
 		err = jsonmessage.DisplayJSONMessagesStream(response.Body, outStream, outStream.FD(), outStream.IsTerminal(), nil)
 		if err != nil {

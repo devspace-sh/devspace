@@ -106,7 +106,7 @@ func TestDownstreamServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer r.Close()
+	defer r.Close() //nolint:errcheck
 
 	for {
 		chunk, err := downloadClient.Recv()
@@ -122,7 +122,7 @@ func TestDownstreamServer(t *testing.T) {
 		}
 	}
 
-	w.Close()
+	_ = w.Close()
 	log.Println("Downloaded complete file")
 
 	err = untarAll(r, &UpstreamOptions{UploadPath: toDir})

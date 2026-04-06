@@ -3,11 +3,12 @@ package engine
 import (
 	"bytes"
 	"context"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"mvdan.cc/sh/v3/expand"
 
 	"gotest.tools/assert"
 )
@@ -22,7 +23,7 @@ func TestShellCat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer os.Remove(file.Name()) //nolint:errcheck
 
 	if _, err = file.WriteString("Hello DevSpace!"); err != nil {
 		t.Fatalf("Unable to write to temporary file %v", err)
@@ -79,7 +80,7 @@ func TestShellCatEnforce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer os.Remove(file.Name()) //nolint:errcheck
 
 	if _, err = file.WriteString("Hello DevSpace!"); err != nil {
 		t.Fatalf("Unable to write to temporary file %v", err)

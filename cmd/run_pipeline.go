@@ -100,28 +100,29 @@ func (cmd *RunPipelineCmd) AddPipelineFlags(f factory.Factory, command *cobra.Co
 				usage = "Flag " + pipelineFlag.Name
 			}
 
-			if pipelineFlag.Type == "" || pipelineFlag.Type == latest.PipelineFlagTypeBoolean {
+			switch pipelineFlag.Type {
+			case "", latest.PipelineFlagTypeBoolean:
 				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
 				if err != nil {
 					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a boolean", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
 				command.Flags().BoolP(pipelineFlag.Name, pipelineFlag.Short, val.(bool), usage)
-			} else if pipelineFlag.Type == latest.PipelineFlagTypeString {
+			case latest.PipelineFlagTypeString:
 				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
 				if err != nil {
 					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
 				command.Flags().StringP(pipelineFlag.Name, pipelineFlag.Short, val.(string), usage)
-			} else if pipelineFlag.Type == latest.PipelineFlagTypeInteger {
+			case latest.PipelineFlagTypeInteger:
 				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
 				if err != nil {
 					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not an integer", pipelineFlag.Name, pipelineFlag.Default)
 				}
 
 				command.Flags().IntP(pipelineFlag.Name, pipelineFlag.Short, val.(int), usage)
-			} else if pipelineFlag.Type == latest.PipelineFlagTypeStringArray {
+			case latest.PipelineFlagTypeStringArray:
 				val, err := pipelinepkg.GetDefaultValue(pipelineFlag)
 				if err != nil {
 					f.GetLog().Errorf("Error parsing default value for flag %s: %#v is not a string array", pipelineFlag.Name, pipelineFlag.Default)
@@ -467,11 +468,11 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 
 	// get a stdout writer
 	stdoutWriter := ctx.Log().Writer(ctx.Log().GetLevel(), true)
-	defer stdoutWriter.Close()
+	defer stdoutWriter.Close() //nolint:errcheck
 
 	// get a stderr writer
 	stderrWriter := ctx.Log().Writer(logrus.WarnLevel, true)
-	defer stderrWriter.Close()
+	defer stderrWriter.Close() //nolint:errcheck
 
 	// start pipeline
 	err = pipe.Run(ctx.WithLogger(log.NewStreamLoggerWithFormat(stdoutWriter, stderrWriter, ctx.Log().GetLevel(), log.TimeFormat)), args)

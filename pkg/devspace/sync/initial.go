@@ -182,9 +182,10 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation, localState 
 
 func (i *initialSyncer) CalculateDelta(remoteState map[string]*FileInformation, localState map[string]*FileInformation) ([]*FileInformation, error) {
 	strategy := i.o.Strategy
-	if i.o.Strategy == latest.InitialSyncStrategyMirrorRemote {
+	switch i.o.Strategy {
+	case latest.InitialSyncStrategyMirrorRemote:
 		strategy = latest.InitialSyncStrategyPreferRemote
-	} else if i.o.Strategy == latest.InitialSyncStrategyMirrorLocal {
+	case latest.InitialSyncStrategyMirrorLocal:
 		strategy = latest.InitialSyncStrategyPreferLocal
 	}
 
@@ -254,14 +255,15 @@ func (i *initialSyncer) deltaState(remoteState map[string]*FileInformation, loca
 			i.o.FileIndex.Lock()
 			action := i.decide(stat, strategy)
 			i.o.FileIndex.Unlock()
-			if action == uploadAction {
+			switch action {
+			case uploadAction:
 				// If we upload the file, don't download it
 				delete(remoteState, relativePath)
 
 				// Add file to upload
 				// Make sure we use remote mode here
 				changes = append(changes, stat)
-			} else if action == noAction {
+			case noAction:
 				delete(remoteState, relativePath)
 			}
 		}

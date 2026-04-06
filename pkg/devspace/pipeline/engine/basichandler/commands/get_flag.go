@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+
 	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"mvdan.cc/sh/v3/interp"
 )
@@ -22,7 +23,7 @@ func GetFlag(ctx context.Context, args []string) error {
 
 	value, found := flags[args[0]]
 	if !found {
-		_, _ = hc.Stderr.Write([]byte(fmt.Sprintf("couldn't find flag %s", args[0])))
+		_, _ = fmt.Fprintf(hc.Stderr, "couldn't find flag %s", args[0])
 		return interp.NewExitStatus(1)
 	}
 

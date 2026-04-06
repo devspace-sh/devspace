@@ -2,6 +2,13 @@ package server
 
 import (
 	"context"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
@@ -14,12 +21,6 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"io"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 // UpstreamOptions holds the upstream server options
@@ -241,8 +242,8 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 func (u *Upstream) Upload(stream remote.Upstream_UploadServer) error {
 	reader, writer := io.Pipe()
 
-	defer reader.Close()
-	defer writer.Close()
+	defer reader.Close() //nolint:errcheck
+	defer writer.Close() //nolint:errcheck
 
 	writerErrChan := make(chan error)
 	go func() {
@@ -263,7 +264,7 @@ func (u *Upstream) Upload(stream remote.Upstream_UploadServer) error {
 }
 
 func (u *Upstream) writeTar(writer io.WriteCloser, stream remote.Upstream_UploadServer) error {
-	defer writer.Close()
+	defer writer.Close() //nolint:errcheck
 
 	// Receive file
 	for {

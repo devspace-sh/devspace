@@ -20,17 +20,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/httpstream"
-	"k8s.io/apimachinery/pkg/util/runtime"
 	"net"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/loft-sh/devspace/pkg/util/log"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/httpstream"
+	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
 // PortForwardProtocolV1Name is the subprotocol used for port forwarding.
@@ -209,7 +210,7 @@ func (pf *PortForwarder) ForwardPorts(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error upgrading connection: %s", err)
 	}
-	defer pf.streamConn.Close()
+	defer pf.streamConn.Close() //nolint:errcheck
 
 	errChan := make(chan error)
 	go func() {
@@ -236,12 +237,12 @@ func (pf *PortForwarder) forward() error {
 	for i := range pf.ports {
 		port := &pf.ports[i]
 		err = pf.listenOnPort(port)
-		switch {
-		case err == nil:
+		switch err {
+		case nil:
 			listenSuccess = true
 		default:
 			if pf.errOut != nil {
-				fmt.Fprintf(pf.errOut, "Unable to listen on port %d: %v\n", port.Local, err)
+				_, _ = fmt.Fprintf(pf.errOut, "Unable to listen on port %d: %v\n", port.Local, err)
 			}
 		}
 	}
@@ -312,12 +313,12 @@ func (pf *PortForwarder) getListener(protocol string, hostname string, port *For
 	localPortUInt, err := strconv.ParseUint(localPort, 10, 16)
 
 	if err != nil {
-		fmt.Fprintf(pf.out, "Failed to forward from %s:%d -> %d\n", hostname, localPortUInt, port.Remote)
+		_, _ = fmt.Fprintf(pf.out, "Failed to forward from %s:%d -> %d\n", hostname, localPortUInt, port.Remote)
 		return nil, fmt.Errorf("error parsing local port: %s from %s (%s)", err, listenerAddress, host)
 	}
 	port.Local = uint16(localPortUInt)
 	if pf.out != nil {
-		fmt.Fprintf(pf.out, "Forwarding from %s -> %d\n", net.JoinHostPort(hostname, strconv.Itoa(int(localPortUInt))), port.Remote)
+		_, _ = fmt.Fprintf(pf.out, "Forwarding from %s -> %d\n", net.JoinHostPort(hostname, strconv.Itoa(int(localPortUInt))), port.Remote)
 	}
 
 	return listener, nil
@@ -355,10 +356,10 @@ func (pf *PortForwarder) nextRequestID() int {
 // handleConnection copies data between the local connection and the stream to
 // the remote server.
 func (pf *PortForwarder) handleConnection(conn io.ReadWriteCloser, port ForwardedPort) {
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck
 
 	if pf.out != nil {
-		fmt.Fprintf(pf.out, "Handling connection for %d\n", port.Local)
+		_, _ = fmt.Fprintf(pf.out, "Handling connection for %d\n", port.Local)
 	}
 
 	requestID := pf.nextRequestID()
@@ -375,7 +376,7 @@ func (pf *PortForwarder) handleConnection(conn io.ReadWriteCloser, port Forwarde
 		return
 	}
 	// we're not writing to this stream
-	errorStream.Close()
+	_ = errorStream.Close()
 
 	errorChan := make(chan error)
 	go func() {
@@ -415,7 +416,7 @@ func (pf *PortForwarder) handleConnection(conn io.ReadWriteCloser, port Forwarde
 
 	go func() {
 		// inform server we're not sending any more data after copy unblocks
-		defer dataStream.Close()
+		defer dataStream.Close() //nolint:errcheck
 
 		// Copy from the local port to the remote side.
 		if _, err := io.Copy(dataStream, conn); err != nil && !strings.Contains(err.Error(), "use of closed network connection") {

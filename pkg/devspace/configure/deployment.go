@@ -395,7 +395,7 @@ func (m *manager) IsRemoteDeployment(deploymentName string) bool {
 
 func chartRepoURL(url string) string {
 	repoURL := url
-	if !(strings.HasPrefix(url, "https://") || strings.HasPrefix(url, "http://")) {
+	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
 		repoURL = "https://" + url
 	}
 	return repoURL

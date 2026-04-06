@@ -1,13 +1,14 @@
 package log
 
 import (
+	"io"
+	"os"
+	"runtime"
+
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/mgutz/ansi"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
-	"io"
-	"os"
-	"runtime"
 )
 
 var baseLog = NewStdoutLogger(os.Stdin, stdout, stderr, logrus.InfoLevel)
@@ -29,7 +30,7 @@ func PrintLogo() {
      %#############%    |____/  \___|  \_/   \____/ |  __/  \__,_| \___\\___|
  %###############%                                  |_|
  %###########%`
-	stdout.Write([]byte(ansi.Color("\r\n"+logo+"\r\n\r\n", "cyan+b")))
+	_, _ = stdout.Write([]byte(ansi.Color("\r\n"+logo+"\r\n\r\n", "cyan+b")))
 }
 
 // StartFileLogging logs the output of the global logger to the file default.log
@@ -55,7 +56,7 @@ func PrintTable(s Logger, header []string, values [][]string) {
 // PrintTableWithOptions prints a table with header columns and string values
 func PrintTableWithOptions(s Logger, header []string, values [][]string, modify func(table *tablewriter.Table)) {
 	reader, writer := io.Pipe()
-	defer writer.Close()
+	defer writer.Close() //nolint:errcheck
 
 	done := make(chan struct{})
 	go func() {

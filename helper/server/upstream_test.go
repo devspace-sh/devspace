@@ -172,9 +172,9 @@ func TestUpstreamServer(t *testing.T) {
 	}
 
 	// Close writer
-	tarWriter.Close()
-	gw.Close()
-	w.Close()
+	_ = tarWriter.Close()
+	_ = gw.Close()
+	_ = w.Close()
 
 	log.Println("Wrote tar")
 

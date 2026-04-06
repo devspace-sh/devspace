@@ -3,32 +3,27 @@ version: "2"
 run:
   timeout: 10m
 
-issues:
-  exclude-dirs:
-    - hack/
-    - docs/
-
 linters:
-  disable-all: true
+  default: none
   enable:
     # - deadcode # deprecated https://github.com/golangci/golangci-lint/issues/1841
-    - gosimple
     - govet
     - ineffassign
     - misspell
     - unused
     # - varcheck # deprecated https://github.com/golangci/golangci-lint/issues/1841
-    - staticcheck
+    - staticcheck # includes gosimple and stylecheck in v2
     - errcheck
     # - goimports
     - dupl
     - nakedret
-    - stylecheck
     # - gofmt
     # - golint
     # - structcheck # deprecated https://github.com/golangci/golangci-lint/issues/1841
   settings:
-    gofmt:
-      simplify: true
     dupl:
       threshold: 400
+  exclusions:
+    paths:
+      - hack/
+      - docs/

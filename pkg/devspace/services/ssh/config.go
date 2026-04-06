@@ -115,7 +115,7 @@ func ParseDevSpaceHosts(path string) ([]DevSpaceSSHEntry, error) {
 		reader = strings.NewReader("")
 	} else {
 		reader = f
-		defer f.Close()
+		defer f.Close() //nolint:errcheck
 	}
 
 	configScanner := scanner.NewScanner(reader)
@@ -167,7 +167,7 @@ func includeDevSpaceConfig(path string) (string, error) {
 		reader = strings.NewReader("")
 	} else {
 		reader = f
-		defer f.Close()
+		defer f.Close() //nolint:errcheck
 	}
 
 	configScanner := scanner.NewScanner(reader)
@@ -204,7 +204,7 @@ func addHost(path, host, port string) (string, error) {
 		reader = strings.NewReader("")
 	} else {
 		reader = f
-		defer f.Close()
+		defer f.Close() //nolint:errcheck
 	}
 
 	configScanner := scanner.NewScanner(reader)

@@ -1,7 +1,7 @@
 package tomb
 
 import (
-	"golang.org/x/net/context"
+	"context"
 )
 
 // WithContext returns a new tomb that is killed when the provided parent

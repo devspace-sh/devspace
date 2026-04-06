@@ -184,7 +184,7 @@ func startSSHWithRestart(ctx devspacecontext.Context, arch, addr, sshHost string
 	// start ssh server
 	parent.Go(func() error {
 		writer := ctx.Log().Writer(logrus.DebugLevel, false)
-		defer writer.Close()
+		defer writer.Close() //nolint:errcheck
 		for !ctx.IsDone() {
 			buffer := &bytes.Buffer{}
 			multiWriter := io.MultiWriter(writer, buffer)

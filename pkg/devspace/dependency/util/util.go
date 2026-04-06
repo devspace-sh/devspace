@@ -175,7 +175,7 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 
 					return "", err
 				}
-				defer out.Close()
+				defer out.Close() //nolint:errcheck
 
 				// Get the data
 				resp, err := http.Get(source.Path)
@@ -187,7 +187,7 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 
 					return "", errors.Wrapf(err, "request %s", source.Path)
 				}
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// Write the body to file
 				_, err = io.Copy(out, resp.Body)

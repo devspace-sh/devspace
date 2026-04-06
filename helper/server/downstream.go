@@ -191,20 +191,20 @@ func (d *Downstream) Download(stream remote.Downstream_DownloadServer) error {
 		}
 	}
 
-	reader.Close()
+	_ = reader.Close()
 	return <-errorChan
 }
 
 // Compress compresses the given files and folders into a tar archive
 func (d *Downstream) compress(writer io.WriteCloser, files []string) error {
-	defer writer.Close()
+	defer writer.Close() //nolint:errcheck
 
 	// Use compression
 	gw := gzip.NewWriter(writer)
-	defer gw.Close()
+	defer gw.Close() //nolint:errcheck
 
 	tarWriter := tar.NewWriter(gw)
-	defer tarWriter.Close()
+	defer tarWriter.Close() //nolint:errcheck
 
 	writtenFiles := make(map[string]bool)
 	for _, path := range files {

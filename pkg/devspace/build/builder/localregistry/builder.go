@@ -45,7 +45,7 @@ func (b *Builder) Build(ctx devspacecontext.Context) error {
 func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath string, dockerfilePath string, entrypoint []string, cmd []string) error {
 	// create the context stream
 	body, writer, _, buildOptions, err := b.helper.CreateContextStream(contextPath, dockerfilePath, entrypoint, cmd, ctx.Log())
-	defer writer.Close()
+	defer writer.Close() //nolint:errcheck
 	if err != nil {
 		return errors.Wrap(err, "create context stream")
 	}

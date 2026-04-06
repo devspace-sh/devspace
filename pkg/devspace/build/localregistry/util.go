@@ -2,9 +2,10 @@ package localregistry
 
 import (
 	"fmt"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"net/http"
 	"strings"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -83,7 +84,7 @@ func UseLocalRegistry(client kubectl.Client, config *latest.Config, imageConfig 
 
 	// Determine if this is a local kubernetes cluster
 	isLocalKubernetes := kubectl.IsLocalKubernetes(client)
-	return !isLocalKubernetes && !(isVClusterContext && isLocalKubernetes)
+	return !isLocalKubernetes && (!isVClusterContext || !isLocalKubernetes)
 }
 
 func IsImageAvailableInLocalRegistry(ctx devspacecontext.Context, registryPod *corev1.Pod, imageName string) (bool, error) {

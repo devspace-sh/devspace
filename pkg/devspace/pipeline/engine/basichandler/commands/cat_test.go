@@ -17,7 +17,7 @@ func TestCat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(f.Name())
+	defer os.Remove(f.Name()) //nolint:errcheck
 
 	if _, err = f.WriteString("Hello DevSpace!"); err != nil {
 		t.Fatalf("Unable to write to temporary file %v", err)

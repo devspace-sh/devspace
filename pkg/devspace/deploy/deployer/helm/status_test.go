@@ -135,7 +135,7 @@ func TestStatus(t *testing.T) {
 			},
 		}
 
-		kube := fake.NewSimpleClientset()
+		kube := fake.NewClientset()
 		kubeClient := &fakekube.Client{
 			Client: kube,
 		}

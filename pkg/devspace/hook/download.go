@@ -6,12 +6,13 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -67,11 +68,11 @@ func download(ctx context.Context, client kubectl.Client, pod *k8sv1.Pod, contai
 	reader, writer := io.Pipe()
 	errorChan := make(chan error)
 	go func() {
-		defer writer.Close()
+		defer writer.Close() //nolint:errcheck
 		errorChan <- downloadFromPod(ctx, client, pod, container, containerPath, writer)
 	}()
 	go func() {
-		defer reader.Close()
+		defer reader.Close() //nolint:errcheck
 		errorChan <- untarAll(reader, localPath, prefix, log)
 	}()
 	err := <-errorChan
@@ -157,7 +158,7 @@ func untarAll(reader io.Reader, destDir, prefix string, log logpkg.Logger) error
 		if err != nil {
 			return err
 		}
-		defer outFile.Close()
+		defer outFile.Close() //nolint:errcheck
 		if _, err := io.Copy(outFile, tarReader); err != nil {
 			return err
 		}

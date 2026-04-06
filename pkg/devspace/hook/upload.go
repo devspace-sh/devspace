@@ -4,12 +4,13 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -60,11 +61,11 @@ func upload(ctx context.Context, client kubectl.Client, pod *v1.Pod, container s
 	reader, writer := io.Pipe()
 	errorChan := make(chan error)
 	go func() {
-		defer reader.Close()
+		defer reader.Close() //nolint:errcheck
 		errorChan <- uploadFromReader(ctx, client, pod, container, containerPath, reader)
 	}()
 	go func() {
-		defer writer.Close()
+		defer writer.Close() //nolint:errcheck
 		errorChan <- makeTar(localPath, containerPath, writer)
 	}()
 	err := <-errorChan
@@ -94,9 +95,9 @@ func uploadFromReader(ctx context.Context, client kubectl.Client, pod *v1.Pod, c
 
 func makeTar(srcPath, destPath string, writer io.Writer) error {
 	gw := gzip.NewWriter(writer)
-	defer gw.Close()
+	defer gw.Close() //nolint:errcheck
 	tarWriter := tar.NewWriter(gw)
-	defer tarWriter.Close()
+	defer tarWriter.Close() //nolint:errcheck
 
 	srcPath = path.Clean(srcPath)
 	destPath = path.Clean(destPath)
@@ -170,7 +171,7 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 			if err != nil {
 				return err
 			}
-			defer f.Close()
+			defer f.Close() //nolint:errcheck
 
 			if _, err := io.Copy(tw, f); err != nil {
 				return err

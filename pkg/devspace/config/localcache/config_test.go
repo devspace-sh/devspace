@@ -61,7 +61,7 @@ func TestLoad(t *testing.T) {
 func testLoad(testCase loadTestCase, t *testing.T) {
 	defer func() {
 		for _, path := range []string{".devspace/cache.yaml"} {
-			os.Remove(path)
+			_ = os.Remove(path)
 		}
 	}()
 	for path, data := range testCase.files {

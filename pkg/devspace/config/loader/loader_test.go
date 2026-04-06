@@ -78,7 +78,7 @@ func TestExists(t *testing.T) {
 func testExists(testCase existsTestCase, t *testing.T) {
 	defer func() {
 		for _, path := range []string{".devspace/generated.yaml"} {
-			os.Remove(path)
+			_ = os.Remove(path)
 		}
 	}()
 	for path, data := range testCase.files {
@@ -216,7 +216,7 @@ func TestLoad(t *testing.T) {
 func testLoad(testCase *loadTestCase, t *testing.T) {
 	defer func() {
 		for _, path := range []string{".devspace/generated.yaml", "devspace.yaml", "custom.yaml"} {
-			os.Remove(path)
+			_ = os.Remove(path)
 		}
 	}()
 	for path, data := range testCase.files {
@@ -433,7 +433,7 @@ func TestGetProfiles(t *testing.T) {
 func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
 	defer func() {
 		for _, path := range []string{".devspace/generated.yaml", "devspace.yaml", "custom.yaml"} {
-			os.Remove(path)
+			_ = os.Remove(path)
 		}
 	}()
 	for path, data := range testCase.files {
@@ -448,7 +448,7 @@ func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
 	}
 	c, err := loader.LoadWithParser(context.Background(),
 		localcache.New(constants.DefaultCacheFolder),
-		&fakekubectl.Client{Client: fake.NewSimpleClientset()},
+		&fakekubectl.Client{Client: fake.NewClientset()},
 		NewProfilesParser(),
 		&ConfigOptions{},
 		log.Discard)
@@ -494,7 +494,7 @@ func TestParseCommands(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			defer os.Remove(f.Name())
+			defer os.Remove(f.Name()) //nolint:errcheck
 
 			out, err := yaml.Marshal(testCase.data)
 			if err != nil {
@@ -507,14 +507,14 @@ func TestParseCommands(t *testing.T) {
 			}
 
 			// Close before reading
-			f.Close()
+			_ = f.Close()
 			loader := &configLoader{
 				absConfigPath: f.Name(),
 			}
 
 			commandsInterface, err := loader.LoadWithParser(context.Background(),
 				localcache.New(constants.DefaultConfigPath),
-				&fakekubectl.Client{Client: fake.NewSimpleClientset()},
+				&fakekubectl.Client{Client: fake.NewClientset()},
 				NewCommandsParser(),
 				nil, log.Discard)
 			if testCase.expectedErr == "" {

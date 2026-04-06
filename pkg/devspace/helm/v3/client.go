@@ -44,7 +44,7 @@ func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, r
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(valuesFile)
+	defer os.Remove(valuesFile) //nolint:errcheck
 
 	if releaseNamespace == "" {
 		releaseNamespace = ctx.KubeClient().Namespace()
@@ -156,7 +156,7 @@ func (c *client) Template(ctx devspacecontext.Context, releaseName, releaseNames
 	if err != nil {
 		return "", err
 	}
-	defer os.Remove(valuesFile)
+	defer os.Remove(valuesFile) //nolint:errcheck
 
 	if releaseNamespace == "" {
 		releaseNamespace = ctx.KubeClient().Namespace()

@@ -4,10 +4,11 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 
@@ -38,11 +39,11 @@ func (client *client) Copy(ctx context.Context, pod *k8sv1.Pod, container, conta
 	reader, writer := io.Pipe()
 	errorChan := make(chan error)
 	go func() {
-		defer reader.Close()
+		defer reader.Close() //nolint:errcheck
 		errorChan <- client.CopyFromReader(ctx, pod, container, containerPath, reader)
 	}()
 	go func() {
-		defer writer.Close()
+		defer writer.Close() //nolint:errcheck
 		errorChan <- writeTar(writer, localPath, exclude)
 	}()
 	err := <-errorChan
@@ -71,11 +72,11 @@ func writeTar(writer io.Writer, localPath string, exclude []string) error {
 
 	// Use compression
 	gw := gzip.NewWriter(writer)
-	defer gw.Close()
+	defer gw.Close() //nolint:errcheck
 
 	// Create tar writer
 	tarWriter := tar.NewWriter(gw)
-	defer tarWriter.Close()
+	defer tarWriter.Close() //nolint:errcheck
 
 	// When its a file we copy the file to the toplevel of the tar
 	if !stat.IsDir() {

@@ -20,7 +20,7 @@ func NewVersionCmd() *cobra.Command {
 				version = "latest"
 			}
 
-			fmt.Fprint(os.Stdout, version)
+			_, _ = fmt.Fprint(os.Stdout, version)
 			return nil
 		},
 	}

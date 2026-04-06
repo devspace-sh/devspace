@@ -33,7 +33,7 @@ func printFile(filename string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 	_, err = io.Copy(stdout, f)
 	if err != nil {
 		return err

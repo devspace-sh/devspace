@@ -233,13 +233,13 @@ func downloadFile(version string, filepath string, filename string) error {
 	if err != nil {
 		return errors.Wrap(err, "create filepath")
 	}
-	defer out.Close()
+	defer out.Close() //nolint:errcheck
 
 	resp, err := http.Get(url)
 	if err != nil {
 		return errors.Wrap(err, "download devspace helper")
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
@@ -283,7 +283,7 @@ func injectSyncHelper(ctx context.Context, client kubectl.Client, pod *v1.Pod, c
 		return errors.Wrap(err, "open file")
 	}
 
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 	return injectSyncHelperFromBytes(ctx, client, pod, container, stat, f)
 }
 
@@ -307,7 +307,7 @@ func injectSyncHelperFromBytes(ctx context.Context, client kubectl.Client, pod *
 				})
 			}
 		}()
-		defer reader.Close()
+		defer reader.Close() //nolint:errcheck
 
 		err := client.CopyFromReader(ctx, pod, container, "/tmp", reader)
 		setRetErr.Do(func() {
@@ -324,15 +324,15 @@ func injectSyncHelperFromBytes(ctx context.Context, client kubectl.Client, pod *
 				})
 			}
 		}()
-		defer writer.Close()
+		defer writer.Close() //nolint:errcheck
 
 		// Use compression
 		gw := gzip.NewWriter(writer)
-		defer gw.Close()
+		defer gw.Close() //nolint:errcheck
 
 		// Create tar writer
 		tarWriter := tar.NewWriter(gw)
-		defer tarWriter.Close()
+		defer tarWriter.Close() //nolint:errcheck
 
 		hdr, err := tar.FileInfoHeader(fi, DevSpaceHelperTempFolder)
 		if err != nil {

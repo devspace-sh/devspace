@@ -280,7 +280,7 @@ func CallPluginExecutableInBackground(main string, argv []string, extraEnvVars m
 		err := prog.Wait()
 		if err != nil {
 			if eerr, ok := err.(*exec.ExitError); ok {
-				os.Stderr.Write([]byte(fmt.Sprintf("Plugin Hook %s failed (code: %d): %s", main+" "+strings.Join(argv, " "), eerr.ExitCode(), stderrOut.String())))
+				_, _ = fmt.Fprintf(os.Stderr, "Plugin Hook %s failed (code: %d): %s", main+" "+strings.Join(argv, " "), eerr.ExitCode(), stderrOut.String())
 			}
 		}
 	}()
@@ -302,7 +302,7 @@ func CallPluginExecutable(main string, argv []string, extraEnvVars map[string]st
 	prog.Stderr = os.Stderr
 	if err := prog.Run(); err != nil {
 		if eerr, ok := err.(*exec.ExitError); ok {
-			os.Stderr.Write(eerr.Stderr)
+			_, _ = os.Stderr.Write(eerr.Stderr)
 			return &exit.ReturnCodeError{ExitCode: eerr.ExitCode()}
 		} else if strings.Contains(err.Error(), "no such file or directory") {
 			return fmt.Errorf("the plugin's binary was not found (%v). Please uninstall and reinstall the plugin and make sure there are no other conflicting plugins installed (run 'devspace list plugins' to see all installed plugins)", err)

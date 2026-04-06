@@ -43,7 +43,7 @@ func ExecConn(ctx devspacecontext.Context, namespace, pod, container string, cmd
 	}
 	go func() {
 		writer := ctx.Log().Writer(logrus.ErrorLevel, true)
-		defer writer.Close()
+		defer writer.Close() //nolint:errcheck
 
 		serr := exec.StreamWithContext(ctx.Context(), remotecommand.StreamOptions{
 			Stdin:  stdinR,

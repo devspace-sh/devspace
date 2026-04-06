@@ -119,7 +119,7 @@ func (w *watcher) Watch(ctx context.Context, action func(ctx context.Context) er
 	}
 
 	watchTree := notify.NewTree()
-	defer watchTree.Close()
+	defer watchTree.Close() //nolint:errcheck
 
 	globalChannel := make(chan string, 100)
 	for targetPath := range pathsToWatch {
@@ -216,7 +216,7 @@ func (w *watcher) handleCommand(ctx context.Context, patterns []string, excludes
 			if numEvents > 0 {
 				// kill application and wait for exit
 				if !w.options.Silent {
-					_, _ = hc.Stderr.Write([]byte(fmt.Sprintf("\n%s Restarting command because '%s' has changed...\n\n", ansi.Color("warn", "red+b"), lastChange)))
+					_, _ = fmt.Fprintf(hc.Stderr, "\n%s Restarting command because '%s' has changed...\n\n", ansi.Color("warn", "red+b"), lastChange)
 				}
 				t.Kill(nil)
 				select {

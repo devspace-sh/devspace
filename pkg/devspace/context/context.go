@@ -41,8 +41,8 @@ func NewContext(ctx context2.Context, variables map[string]interface{}, log log.
 func RealWorkDir() (string, error) {
 	if runtime.GOOS == "darwin" {
 		if pwd, present := os.LookupEnv("PWD"); present {
-			os.Unsetenv("PWD")
-			defer os.Setenv("PWD", pwd)
+			_ = os.Unsetenv("PWD")
+			defer os.Setenv("PWD", pwd) //nolint:errcheck
 		}
 		return os.Getwd()
 	}

@@ -125,7 +125,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	if cmd.ConfigPath != "" {
 		_, err := os.Stat(cmd.ConfigPath)
 		if err != nil {
-			return errors.Errorf("--config is specified, but config %s cannot be loaded: %v", cmd.GlobalFlags.ConfigPath, err)
+			return errors.Errorf("--config is specified, but config %s cannot be loaded: %v", cmd.ConfigPath, err)
 		}
 	}
 
@@ -139,7 +139,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 		return err
 	}
 	if configLoader.Exists() {
-		if cmd.GlobalFlags.ConfigPath != "" {
+		if cmd.ConfigPath != "" {
 			configExists, err := configLoader.SetDevSpaceRoot(logger)
 			if err != nil {
 				return err
@@ -170,7 +170,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	}
 
 	var configInterface config.Config
-	if configLoader.Exists() && cmd.GlobalFlags.ConfigPath != "" {
+	if configLoader.Exists() && cmd.ConfigPath != "" {
 		configInterface, err = configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, logger)
 		if err != nil {
 			return err
@@ -208,7 +208,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 		devPod:     &latest.DevPod{},
 		syncConfig: &latest.SyncConfig{},
 	}
-	if cmd.GlobalFlags.ConfigPath != "" && configInterface != nil {
+	if cmd.ConfigPath != "" && configInterface != nil {
 		devSection := configInterface.Config().Dev
 		syncConfigs := []nameConfig{}
 		for _, v := range devSection {
@@ -224,7 +224,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 			})
 		}
 		if len(syncConfigs) == 0 {
-			return fmt.Errorf("no sync config found in %s", cmd.GlobalFlags.ConfigPath)
+			return fmt.Errorf("no sync config found in %s", cmd.ConfigPath)
 		}
 
 		// Check which sync config should be used

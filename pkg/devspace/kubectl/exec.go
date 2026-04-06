@@ -94,7 +94,8 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 		}
 	}
 
-	if options.SubResource == SubResourceExec {
+	switch options.SubResource {
+	case SubResourceExec:
 		execRequest.VersionedParams(&corev1.PodExecOptions{
 			Container: options.Container,
 			Command:   options.Command,
@@ -103,7 +104,7 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 			Stderr:    options.Stderr != nil,
 			TTY:       tty,
 		}, scheme.ParameterCodec)
-	} else if options.SubResource == SubResourceAttach {
+	case SubResourceAttach:
 		execRequest.VersionedParams(&corev1.PodExecOptions{
 			Container: options.Container,
 			Stdin:     options.Stdin != nil,
@@ -127,7 +128,7 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 
 	select {
 	case <-ctx.Done():
-		upgradeRoundTripper.Close()
+		_ = upgradeRoundTripper.Close()
 		<-errChan
 		return nil
 	case err = <-errChan:

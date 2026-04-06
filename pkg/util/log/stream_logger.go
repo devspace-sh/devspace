@@ -287,22 +287,23 @@ func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 
 	if s.level >= fnInformation.logLevel {
 		stream := s.getStream(fnInformation.logLevel)
-		if s.format == RawFormat {
+		switch s.format {
+		case RawFormat:
 			_, _ = stream.Write([]byte(message))
-		} else if s.format == TimeFormat {
+		case TimeFormat:
 			if env.GlobalGetEnv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
 				now := time.Now()
 				_, _ = stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
 			}
 			_, _ = stream.Write([]byte(message))
-		} else if s.format == TextFormat {
+		case TextFormat:
 			if env.GlobalGetEnv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
 				now := time.Now()
 				_, _ = stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
 			}
 			_, _ = stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
 			_, _ = stream.Write([]byte(message))
-		} else if s.format == JSONFormat {
+		case JSONFormat:
 			s.writeJSON(message, fnInformation.logLevel)
 		}
 	}

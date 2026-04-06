@@ -366,7 +366,7 @@ func (s PatchMetaFromStruct) LookupPatchMetadataForSlice(key string) (strategicp
 
 // we have to override map handling since otherwise it would produce errors
 func (s PatchMetaFromStruct) LookupPatchMetadataForStruct(key string) (strategicpatch.LookupPatchMeta, strategicpatch.PatchMeta, error) {
-	fieldType, fieldPatchStrategies, fieldPatchMergeKey, err := LookupPatchMetadataForMap(s.PatchMetaFromStruct.T)
+	fieldType, fieldPatchStrategies, fieldPatchMergeKey, err := LookupPatchMetadataForMap(s.T)
 	if err != nil {
 		l, p, err := s.PatchMetaFromStruct.LookupPatchMetadataForStruct(key)
 		if err != nil {

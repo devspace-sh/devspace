@@ -12,7 +12,7 @@ func Checksum(filename string) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	_, err = io.Copy(tab, file)
 	if err != nil {
