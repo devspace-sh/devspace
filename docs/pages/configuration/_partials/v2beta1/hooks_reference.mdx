@@ -35,7 +35,7 @@ import PartialContainerreference from "./hooks/container_reference.mdx"
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `upload` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-upload}
+### `upload` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> <span id="hooks-upload"></span>
 
 If Upload is specified, DevSpace will upload certain local files or folders into a
 remote container.
@@ -52,7 +52,7 @@ remote container.
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `download` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-download}
+### `download` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> <span id="hooks-download"></span>
 
 Same as Upload, but with this option DevSpace will download files or folders from
 a remote container.
@@ -69,7 +69,7 @@ a remote container.
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `logs` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-logs}
+### `logs` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> <span id="hooks-logs"></span>
 
 If logs is defined will print the logs of the target container. This is useful for containers
 that should finish like init containers or job pods. Otherwise this hook will never terminate.
@@ -86,7 +86,7 @@ that should finish like init containers or job pods. Otherwise this hook will ne
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `wait` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-wait}
+### `wait` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> <span id="hooks-wait"></span>
 
 If wait is defined the hook will wait until the matched pod or container is running or is terminated
 with a certain exit code.
@@ -109,7 +109,7 @@ with a certain exit code.
 <details className="config-field" data-expandable="true">
 <summary>
 
-### `container` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> {#hooks-container}
+### `container` <span className="config-field-required" data-required="false">required</span> <span className="config-field-type"></span> <span className="config-field-default"></span> <span className="config-field-enum"></span> <span id="hooks-container"></span>
 
 Container specifies where the hook should be run. If this is omitted DevSpace expects a
 local command hook.
