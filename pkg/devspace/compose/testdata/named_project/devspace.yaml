@@ -1,0 +1,9 @@
+version: v2beta1
+name: docker-compose
+deployments:
+  web:
+    helm:
+      values:
+        containers:
+          - name: web-container
+            image: nginx:latest
