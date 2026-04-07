@@ -47,10 +47,11 @@ type SyncCmd struct {
 
 	InitialSync string
 
-	NoWatch               bool
-	DownloadOnInitialSync bool
-	DownloadOnly          bool
-	UploadOnly            bool
+	NoWatch                      bool
+	DownloadOnInitialSync        bool
+	downloadOnInitialSyncChanged bool
+	DownloadOnly                 bool
+	UploadOnly                   bool
 
 	// used for testing to allow interruption
 	Ctx context.Context
@@ -79,6 +80,7 @@ devspace sync --path=.:/app --pod=my-pod --container=my-container
 			// Print upgrade message if new version available
 			upgrade.PrintUpgradeMessage(f.GetLog())
 			plugin.SetPluginCommand(cobraCmd, args)
+			cmd.downloadOnInitialSyncChanged = cobraCmd.Flags().Changed("download-on-initial-sync")
 			return cmd.Run(f)
 		},
 	}
@@ -329,10 +331,12 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig, option
 		options = options.WithNamespace(cmd.Namespace)
 	}
 
-	if cmd.DownloadOnInitialSync {
-		syncConfig.InitialSync = latest.InitialSyncStrategyPreferLocal
-	} else {
-		syncConfig.InitialSync = latest.InitialSyncStrategyMirrorLocal
+	if cmd.downloadOnInitialSyncChanged || syncConfig.InitialSync == "" {
+		if cmd.DownloadOnInitialSync {
+			syncConfig.InitialSync = latest.InitialSyncStrategyPreferLocal
+		} else {
+			syncConfig.InitialSync = latest.InitialSyncStrategyMirrorLocal
+		}
 	}
 
 	if cmd.InitialSync != "" {

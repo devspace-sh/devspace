@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -129,8 +130,9 @@ func installDevSpaceHelperInContainer(ctx context.Context, client kubectl.Client
 		return err
 	}
 
-	curl := fmt.Sprintf("curl -L %s -o %s", url, DevSpaceHelperContainerPath)
-	chmod := fmt.Sprintf("chmod +x %s", DevSpaceHelperContainerPath)
+	tempHelperPath := newDevSpaceHelperTempContainerPath()
+	curl := fmt.Sprintf("curl -L %s -o %s", url, tempHelperPath)
+	chmod := fmt.Sprintf("chmod +x %s", tempHelperPath)
 	cmd := curl + " && " + chmod
 
 	stdout, stderr, err := client.ExecBuffered(ctx, pod, container, []string{"sh", "-c", cmd}, nil)
@@ -138,7 +140,7 @@ func installDevSpaceHelperInContainer(ctx context.Context, client kubectl.Client
 		return errors.Wrapf(err, "stdout, stderr: \n%s %s", string(stdout), string(stderr))
 	}
 
-	stdout, stderr, err = client.ExecBuffered(ctx, pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
+	stdout, stderr, err = client.ExecBuffered(ctx, pod, container, []string{tempHelperPath, "version"}, nil)
 	if err != nil {
 		return errors.Wrapf(err, "stdout, stderr: \n%s %s", string(stdout), string(stderr))
 	}
@@ -147,7 +149,16 @@ func installDevSpaceHelperInContainer(ctx context.Context, client kubectl.Client
 		return fmt.Errorf("devspacehelper(%s) and devspace(%s) differs in version", string(stdout), version)
 	}
 
+	stdout, stderr, err = client.ExecBuffered(ctx, pod, container, []string{"mv", "-f", tempHelperPath, DevSpaceHelperContainerPath}, nil)
+	if err != nil {
+		return errors.Wrapf(err, "stdout, stderr: \n%s %s", string(stdout), string(stderr))
+	}
+
 	return nil
+}
+
+func newDevSpaceHelperTempContainerPath() string {
+	return fmt.Sprintf("%s.tmp-%d", DevSpaceHelperContainerPath, time.Now().UnixNano())
 }
 
 // getDownloadURL
@@ -288,6 +299,8 @@ func injectSyncHelper(ctx context.Context, client kubectl.Client, pod *v1.Pod, c
 }
 
 func injectSyncHelperFromBytes(ctx context.Context, client kubectl.Client, pod *v1.Pod, container string, fi fs.FileInfo, bytesReader io.Reader) error {
+	tempHelperPath := newDevSpaceHelperTempContainerPath()
+	tempHelperName := path.Base(tempHelperPath)
 	writerComplete := make(chan struct{})
 	readerComplete := make(chan struct{})
 
@@ -342,7 +355,7 @@ func injectSyncHelperFromBytes(ctx context.Context, client kubectl.Client, pod *
 			return
 		}
 
-		hdr.Name = "devspacehelper"
+		hdr.Name = tempHelperName
 
 		// Set permissions correctly
 		hdr.Mode = 0777
@@ -379,6 +392,11 @@ func injectSyncHelperFromBytes(ctx context.Context, client kubectl.Client, pod *
 		}
 
 		<-writerComplete
+	}
+
+	stdout, stderr, err := client.ExecBuffered(ctx, pod, container, []string{"sh", "-c", fmt.Sprintf("chmod +x %s && mv -f %s %s", tempHelperPath, tempHelperPath, DevSpaceHelperContainerPath)}, nil)
+	if err != nil {
+		return errors.Wrapf(err, "stdout, stderr: \n%s %s", string(stdout), string(stderr))
 	}
 
 	return nil

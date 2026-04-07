@@ -63,8 +63,10 @@ type upstream struct {
 }
 
 const (
-	removeFilesBufferSize = 64
-	largeFileSize         = 1024 * 1024 * 10
+	removeFilesBufferSize  = 64
+	largeFileSize          = 1024 * 1024 * 10
+	initialWatchSettleTime = 250 * time.Millisecond
+	initialWatchDrainMax   = 2 * time.Second
 )
 
 // newUpstream creates a new upstream handler with the given parameters
@@ -180,6 +182,32 @@ func (u *upstream) startEventsLoop(doneChan chan struct{}) {
 			}
 		}
 	}()
+}
+
+func (u *upstream) discardInitialWatchEvents() {
+	timer := time.NewTimer(initialWatchSettleTime)
+	deadline := time.NewTimer(initialWatchDrainMax)
+	defer timer.Stop()
+	defer deadline.Stop()
+
+	for {
+		select {
+		case <-u.sync.ctx.Done():
+			return
+		case <-deadline.C:
+			return
+		case <-timer.C:
+			return
+		case <-u.events:
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer.Reset(initialWatchSettleTime)
+		}
+	}
 }
 
 func (u *upstream) getEvents() []notify.EventInfo {

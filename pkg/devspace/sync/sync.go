@@ -208,9 +208,10 @@ func (s *Sync) initIgnoreParsers() error {
 
 func (s *Sync) mainLoop(onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}) {
 	s.log.Info("Start syncing")
+	startUpstreamAfterInitialSync := !s.Options.UpstreamDisabled && s.Options.InitialSync == latest.InitialSyncStrategyDisabled
 
 	// Start upstream as early as possible
-	if !s.Options.UpstreamDisabled {
+	if !s.Options.UpstreamDisabled && !startUpstreamAfterInitialSync {
 		go s.startUpstream()
 	}
 
@@ -220,6 +221,10 @@ func (s *Sync) mainLoop(onInitUploadDone chan struct{}, onInitDownloadDone chan 
 		if err != nil {
 			s.Stop(errors.Wrap(err, "initial sync"))
 			return
+		}
+
+		if startUpstreamAfterInitialSync {
+			go s.startUpstream()
 		}
 
 		if !s.Options.DownstreamDisabled {
@@ -255,6 +260,9 @@ func (s *Sync) startUpstream() {
 		return
 	}
 	defer s.tree.Stop(s.upstream.events)
+	if s.Options.InitialSync == latest.InitialSyncStrategyDisabled {
+		s.upstream.discardInitialWatchEvents()
+	}
 	if s.readyChan != nil {
 		s.readyChan <- true
 	}
