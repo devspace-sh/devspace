@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"time"
-
+	
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	enginecommands "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler/commands"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
@@ -70,7 +70,7 @@ var OverwriteCommands = map[string]func(ctx context.Context, args []string, hand
 var EnsureCommands = map[string]func(ctx context.Context, args []string) (string, error){
 	"kubectl": func(ctx context.Context, args []string) (string, error) {
 		hc := interp.HandlerCtx(ctx)
-		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), log.GetFileLogger("shell"), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
+		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), log.ToLogr(log.GetFileLogger("shell")), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
 		if err != nil {
 			_, _ = fmt.Fprintln(hc.Stderr, err)
 			return "", interp.NewExitStatus(127)
@@ -79,7 +79,7 @@ var EnsureCommands = map[string]func(ctx context.Context, args []string) (string
 	},
 	"helm": func(ctx context.Context, args []string) (string, error) {
 		hc := interp.HandlerCtx(ctx)
-		path, err := downloader.NewDownloader(commands.NewHelmV3Command(), log.GetFileLogger("shell"), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
+		path, err := downloader.NewDownloader(commands.NewHelmV4Command(), log.ToLogr(log.GetFileLogger("shell")), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
 		if err != nil {
 			_, _ = fmt.Fprintln(hc.Stderr, err)
 			return "", interp.NewExitStatus(127)
@@ -100,10 +100,10 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 		return interp.NewExitStatus(255)
 	default:
 	}
-
+	
 	if len(args) > 0 {
 		hc := interp.HandlerCtx(ctx)
-
+		
 		// make sure if we reference devspace in a script we
 		// always use the current binary
 		if args[0] == "devspace" {
@@ -112,7 +112,7 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 				_, _ = fmt.Fprintln(hc.Stderr, err)
 				return interp.NewExitStatus(1)
 			}
-
+			
 			args[0] = bin
 		} else {
 			// handle overwrite commands
@@ -120,7 +120,7 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 			if ok {
 				return overwriteCommand(ctx, args[1:], e)
 			}
-
+			
 			// handle some special commands that are not found locally
 			_, err := lookPathDir(hc.Dir, hc.Env, args[0])
 			if err != nil {
@@ -128,7 +128,7 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 				if ok {
 					return command(ctx, args[1:])
 				}
-
+				
 				ensureCommand, ok := EnsureCommands[args[0]]
 				if ok {
 					path, err := ensureCommand(ctx, args[1:])
@@ -141,7 +141,7 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 			}
 		}
 	}
-
+	
 	return interp.DefaultExecHandler(2*time.Second)(ctx, args)
 }
 
@@ -149,12 +149,12 @@ func HandleError(ctx context.Context, command string, err error) error {
 	if err == nil {
 		return interp.NewExitStatus(0)
 	}
-
+	
 	_, ok := interp.IsExitStatus(err)
 	if ok {
 		return err
 	}
-
+	
 	hc := interp.HandlerCtx(ctx)
 	_, _ = fmt.Fprintln(hc.Stderr, errors.Wrap(err, command))
 	return interp.NewExitStatus(1)

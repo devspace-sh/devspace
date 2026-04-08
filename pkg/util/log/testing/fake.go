@@ -2,8 +2,9 @@ package testing
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
+
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	fakesurvey "github.com/loft-sh/devspace/pkg/util/survey/testing"
@@ -142,4 +143,8 @@ func (d *FakeLogger) WithPrefixColor(prefix, color string) log.Logger {
 
 func (d *FakeLogger) ErrorStreamOnly() log.Logger {
 	return d
+}
+
+func (d *FakeLogger) Children() []log.Logger {
+	return nil
 }
