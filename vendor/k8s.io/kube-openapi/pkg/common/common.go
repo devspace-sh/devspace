@@ -48,11 +48,11 @@ type GetOpenAPIDefinitions func(ReferenceCallback) map[string]OpenAPIDefinition
 // GetOpenAPITypeFormat for more information about trade-offs of using this interface or GetOpenAPITypeFormat method when
 // possible.
 type OpenAPIDefinitionGetter interface {
-	OpenAPIDefinition() *OpenAPIDefinition
+	OpenAPIDefinition() OpenAPIDefinition
 }
 
 type OpenAPIV3DefinitionGetter interface {
-	OpenAPIV3Definition() *OpenAPIDefinition
+	OpenAPIV3Definition() OpenAPIDefinition
 }
 
 type PathHandler interface {
@@ -163,6 +163,9 @@ type OpenAPIV3Config struct {
 	// GetDefinitionName returns a friendly name for a definition base on the serving path. parameter `name` is the full name of the definition.
 	// It is an optional function to customize model names.
 	GetDefinitionName func(name string) (string, spec.Extensions)
+
+	// PostProcessSpec runs after the spec is ready to serve. It allows a final modification to the spec before serving.
+	PostProcessSpec func(*spec3.OpenAPI) (*spec3.OpenAPI, error)
 
 	// SecuritySchemes is list of all security schemes for OpenAPI service.
 	SecuritySchemes spec3.SecuritySchemes
