@@ -272,6 +272,11 @@ func IsMinikubeKubernetes(kubeClient Client) bool {
 // panics on such values via reflection ("reflect.Set: value of type string is
 // not assignable to type map[string]interface {}") rather than returning an
 // error, so we recover() and treat unparseable extensions as non-minikube.
+//
+// noinline is required: if the compiler inlines this function into its caller,
+// the deferred recover() loses its stack frame and cannot catch the panic.
+//
+//go:noinline
 func isMinikubeExtension(extension runtime.Object) (result bool) {
 	defer func() {
 		if recover() != nil {
