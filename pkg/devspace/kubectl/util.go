@@ -255,18 +255,35 @@ func IsMinikubeKubernetes(kubeClient Client) bool {
 	if rawConfig, err := kubeClient.ClientConfig().RawConfig(); err == nil {
 		clusters := rawConfig.Clusters[rawConfig.Contexts[rawConfig.CurrentContext].Cluster]
 		for _, extension := range clusters.Extensions {
-			ext, err := runtime.DefaultUnstructuredConverter.ToUnstructured(extension)
-			if err == nil {
-				if provider, ok := ext["provider"].(string); ok {
-					if provider == minikubeProvider {
-						return true
-					}
-				}
+			if isMinikubeExtension(extension) {
+				return true
 			}
 		}
 	}
 
 	return false
+}
+
+// isMinikubeExtension safely checks whether a kubeconfig cluster extension
+// identifies the cluster as a minikube provider.
+//
+// Some tools (e.g. Teleport) write extension values as plain YAML strings
+// rather than structured objects. runtime.DefaultUnstructuredConverter.ToUnstructured
+// panics on such values via reflection ("reflect.Set: value of type string is
+// not assignable to type map[string]interface {}") rather than returning an
+// error, so we recover() and treat unparseable extensions as non-minikube.
+func isMinikubeExtension(extension runtime.Object) (result bool) {
+	defer func() {
+		if recover() != nil {
+			result = false
+		}
+	}()
+	ext, err := runtime.DefaultUnstructuredConverter.ToUnstructured(extension)
+	if err != nil {
+		return false
+	}
+	provider, ok := ext["provider"].(string)
+	return ok && provider == minikubeProvider
 }
 
 // GetKindContext returns the kind cluster name
