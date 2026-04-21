@@ -459,7 +459,7 @@ func runPipeline(ctx devspacecontext.Context, args []string, options *CommandOpt
 	})
 
 	// start ui & open
-	serv, err := dev.UI(ctx, options.UIPort, options.ShowUI, pipe)
+	serv, err := dev.UI(ctx, options.UIPort, options.ShowUI, options.ProtectUI, pipe)
 	if err != nil {
 		return err
 	}

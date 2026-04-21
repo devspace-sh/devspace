@@ -11,6 +11,7 @@ type GlobalFlags struct {
 	NoWarn                   bool
 	NoColors                 bool
 	Debug                    bool
+	ProtectUI                bool
 	DisableProfileActivation bool
 	SwitchContext            bool
 	InactivityTimeout        int
@@ -48,6 +49,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.BoolVar(&globalFlags.NoWarn, "no-warn", false, "If true does not show any warning when deploying into a different namespace or kube-context than before")
 	flags.BoolVar(&globalFlags.NoColors, "no-colors", false, "Do not show color highlighting in log output. This avoids invisible output with different terminal background colors")
 	flags.BoolVar(&globalFlags.Debug, "debug", false, "Prints the stack trace if an error occurs")
+	flags.BoolVar(&globalFlags.ProtectUI, "protect-ui", false, "Enable UI protections such as auth checks for sensitive routes and redaction of sensitive config values")
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devspace log output except panics & fatals")
 
 	flags.StringSliceVarP(&globalFlags.Profiles, "profile", "p", []string{}, "The DevSpace profiles to apply. Multiple profiles are applied in the order they are specified")

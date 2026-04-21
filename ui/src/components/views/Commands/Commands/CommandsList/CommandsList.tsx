@@ -9,6 +9,7 @@ import IconButton from 'components/basic/IconButton/IconButton';
 import CodeSnippet from 'components/basic/CodeSnippet/CodeSnippet';
 import { ApiHostname, ApiWebsocketProtocol } from 'lib/rest';
 import SimpleCodeLine from 'components/basic/CodeSnippet/SimpleCodeLine/SimpleCodeLine';
+import { withAuthQuery } from 'lib/auth';
 
 interface Props extends DevSpaceConfigContext {
   commandsList: { [key: string]: Command };
@@ -26,7 +27,7 @@ export const getURLByName = (name: string) => {
     return null;
   }
 
-  return `${ApiWebsocketProtocol()}://${ApiHostname()}/api/command?name=${name}`;
+  return withAuthQuery(`${ApiWebsocketProtocol()}://${ApiHostname()}/api/command?name=${name}`);
 };
 
 class CommandsList extends React.PureComponent<Props, State> {
