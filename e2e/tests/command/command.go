@@ -73,7 +73,7 @@ var _ = DevSpaceDescribe("command", func() {
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
-		defer os.Unsetenv("KUBECONFIG")
+		defer os.Unsetenv("KUBECONFIG") //nolint:errcheck
 		err = os.Setenv("KUBECONFIG", filepath.Join(tempDir, "config"))
 		framework.ExpectNoError(err)
 

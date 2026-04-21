@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 const fs = require("fs");
+const https = require("https");
 const path = require("path");
 const execSync = require("child_process").execSync;
-const fetch = require("node-fetch");
-const Spinner = require("cli-spinner").Spinner;
-const inquirer = require('inquirer');
-const findProcess = require('find-process');
+
+const getFetch = () => require("node-fetch");
+const getSpinner = () => require("cli-spinner").Spinner;
+const getInquirer = () => require("inquirer");
+const getFindProcess = () => require("find-process");
 
 const downloadPathTemplate =
   "https://github.com/devspace-sh/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
@@ -80,43 +82,27 @@ const sanitizeVersion = function(version) {
 
 const getLatestVersion = function (callback) {
   const releasesURL = "https://github.com/devspace-sh/devspace/releases/latest";
+  https.get(releasesURL, { headers: requestHeaders }, function (res) {
+    const redirectUrl = res.headers.location;
+    const matches = redirectUrl && /\/tag\/(.*)$/.exec(redirectUrl);
 
-  fetch(releasesURL, { headers: requestHeaders, redirect: false })
-    .then(function (res) {
-      if (!res.ok) {
-        console.error(
-          "Error requesting URL " +
-          releasesURL +
-          " (Status Code: " +
-          res.status +
-          ")"
-        );
-        process.exit(1);
-      }
-
-      const redirectUrl = res.url
-      if (redirectUrl == null) {
-        throw new Error('Error fetching latest version')
-      }
-
-      const matches = /\/tag\/(.*)$/.exec(redirectUrl)
-      if (!matches || matches.length !== 2) {
-        throw new Error('Error fetching latest version')
-      }
-
-      const latestVersion = matches[1].replace('v', '')
-      if (latestVersion) {
-        callback(latestVersion);
-      } else {
-        console.error("Unable to identify latest devspace version");
-        process.exit(2);
-      }
-    })
-    .catch(function (err) {
+    if (!matches || matches.length !== 2) {
       console.error("Error requesting URL " + releasesURL);
-      console.error(err)
       process.exit(1);
-    })
+    }
+
+    const latestVersion = matches[1].replace('v', '')
+    if (latestVersion) {
+      callback(latestVersion);
+    } else {
+      console.error("Unable to identify latest devspace version");
+      process.exit(2);
+    }
+  }).on("error", function (err) {
+    console.error("Error requesting URL " + releasesURL);
+    console.error(err)
+    process.exit(1);
+  })
 };
 
 if (action === "update-version") {
@@ -311,6 +297,7 @@ let continueProcess = function (askRemoveGlobalFolder) {
     removeScripts(true);
 
     if (askRemoveGlobalFolder && process.stdout.isTTY) {
+      const inquirer = getInquirer();
       let removeGlobalFolder = function () {
         try {
           let homedir = require('os').homedir();
@@ -366,6 +353,7 @@ let continueProcess = function (askRemoveGlobalFolder) {
       };
 
       const downloadRelease = function (version) {
+        const fetch = getFetch();
         let downloadPath = downloadPathTemplate
           .replace("{{version}}", version)
           .replace("{{platform}}", platform)
@@ -377,6 +365,7 @@ let continueProcess = function (askRemoveGlobalFolder) {
 
         console.log("Download DevSpace CLI release: " + downloadPath + "\n");
 
+        const Spinner = getSpinner();
         const spinner = new Spinner(
           "%s Downloading DevSpace CLI... (this may take a minute)"
         );
@@ -466,25 +455,30 @@ let continueProcess = function (askRemoveGlobalFolder) {
 }
 
 if (process.ppid > 1) {
-  findProcess('pid', process.ppid)
-    .then(function (list) {
-      if (list.length === 1 && list[0].ppid > 1) {
-        findProcess('pid', list[0].ppid)
-          .then(function (list) {
-            if (list.length === 1 && /((npm-cli.js("|')\s+up(date)?)|(yarn.js("|')\s+(global\s+)?upgrade))\s+.*((\/)|(\\)|(\s))devspace((\/)|(\\)|(\s)|$)/.test(list[0].cmd)) {
-              continueProcess(false);
-            } else {
+  try {
+    const findProcess = getFindProcess();
+    findProcess('pid', process.ppid)
+      .then(function (list) {
+        if (list.length === 1 && list[0].ppid > 1) {
+          findProcess('pid', list[0].ppid)
+            .then(function (list) {
+              if (list.length === 1 && /((npm-cli.js("|')\s+up(date)?)|(yarn.js("|')\s+(global\s+)?upgrade))\s+.*((\/)|(\\)|(\s))devspace((\/)|(\\)|(\s)|$)/.test(list[0].cmd)) {
+                continueProcess(false);
+              } else {
+                continueProcess(true);
+              }
+            }, function () {
               continueProcess(true);
-            }
-          }, function () {
-            continueProcess(true);
-          })
-      } else {
+            })
+        } else {
+          continueProcess(true);
+        }
+      }, function () {
         continueProcess(true);
-      }
-    }, function () {
-      continueProcess(true);
-    })
+      })
+  } catch (e) {
+    continueProcess(true);
+  }
 } else {
   continueProcess(true);
 }
