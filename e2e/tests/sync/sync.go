@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -834,11 +835,23 @@ var _ = DevSpaceDescribe("sync", func() {
 		// check that included file was not synced
 		framework.ExpectRemoteFileNotFound("alpine", ns, "/app/syncme/file.txt")
 
-		// write a file and check that it got synced
+		// Keep writing until the sync watcher observes a local change. This avoids
+		// racing the first write against watcher startup in slower CI environments.
 		payload := randutil.GenerateRandomString(10000)
-		err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
+			err = os.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+			if err != nil {
+				return false, err
+			}
+
+			out, err := kubeClient.ExecByImageSelector("alpine", ns, []string{"cat", "/app/watching.txt"})
+			if err != nil {
+				return false, nil
+			}
+
+			return strings.TrimSpace(out) == strings.TrimSpace(payload), nil
+		})
 		framework.ExpectNoError(err)
-		framework.ExpectRemoteFileContents("alpine", ns, "/app/watching.txt", payload)
 
 		// stop command
 		stop()

@@ -229,8 +229,8 @@ dep2dep2wait
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		os.Setenv("DEP1_NAMESPACE", depNamespace)
-		defer os.Unsetenv("DEP1_NAMESPACE")
+		_ = os.Setenv("DEP1_NAMESPACE", depNamespace)
+		defer os.Unsetenv("DEP1_NAMESPACE") //nolint:errcheck
 		devCmd := &cmd.RunPipelineCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:    true,
@@ -405,8 +405,8 @@ dep2dep2wait
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// load it from the regular path first
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		config, dependencies, err := framework.LoadConfig(f, kubeClient.Client(), filepath.Join(tempDir, "activated.yaml"))
 		framework.ExpectNoError(err)
 
@@ -423,8 +423,8 @@ dep2dep2wait
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// load activated dependencies with --disable-profile-activation
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		_, dependencies, err := framework.LoadConfigWithOptions(f, kubeClient.Client(), filepath.Join(tempDir, "activated.yaml"), &loader.ConfigOptions{
 			DisableProfileActivation: true,
 		})
@@ -442,8 +442,8 @@ dep2dep2wait
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// load it from the regular path first
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		_, dependencies, err := framework.LoadConfig(f, kubeClient.Client(), filepath.Join(tempDir, "deactivated.yaml"))
 		framework.ExpectNoError(err)
 
@@ -586,8 +586,8 @@ dep2dep2wait
 		framework.ExpectNoError(err)
 		defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
-		os.Setenv("DEP1_DISABLED", "true")
-		defer os.Unsetenv("DEP1_DISABLED")
+		_ = os.Setenv("DEP1_DISABLED", "true")
+		defer os.Unsetenv("DEP1_DISABLED") //nolint:errcheck
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		devCmd := &cmd.RunPipelineCmd{
@@ -611,8 +611,8 @@ dep2dep2wait
 		framework.ExpectNoError(err)
 		defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
-		os.Setenv("DEP1_DISABLED", "true")
-		defer os.Unsetenv("DEP1_DISABLED")
+		_ = os.Setenv("DEP1_DISABLED", "true")
+		defer os.Unsetenv("DEP1_DISABLED") //nolint:errcheck
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		devCmd := &cmd.RunPipelineCmd{
@@ -637,8 +637,8 @@ dep2dep2wait
 		framework.ExpectNoError(err)
 		defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
-		os.Setenv("DEP1_DISABLED", "true")
-		defer os.Unsetenv("DEP1_DISABLED")
+		_ = os.Setenv("DEP1_DISABLED", "true")
+		defer os.Unsetenv("DEP1_DISABLED") //nolint:errcheck
 		cancelCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
