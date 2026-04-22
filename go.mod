@@ -1,8 +1,8 @@
 module github.com/loft-sh/devspace
 
-go 1.24
+go 1.25
 
-toolchain go1.24.4
+toolchain go1.25.9
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2

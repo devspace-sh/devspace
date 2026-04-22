@@ -29,27 +29,32 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.25"
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v1
 
       - name: Test
-        run: ./hack/coverage.bash
+        shell: bash
+        run: |
+          source ./hack/remove-system-helm.sh
+          ./hack/coverage.bash
 
   test-unit-windows:
     runs-on: windows-latest
     name: unit-test-windows-latest
-    
+
     steps:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
-      
+          go-version: "1.25"
+
       - name: Check out code into the Go module directory
         uses: actions/checkout@v1
 
       - name: Test
-        run: ./hack/coverage.bash
         shell: bash
+        run: |
+          source ./hack/remove-system-helm.sh
+          ./hack/coverage.bash

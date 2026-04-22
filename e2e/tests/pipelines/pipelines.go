@@ -563,9 +563,9 @@ var _ = DevSpaceDescribe("pipelines", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		origEnv := os.Getenv("KUBE_CONFIG")
-		defer os.Setenv("KUBE_CONFIG", origEnv)
+		defer os.Setenv("KUBE_CONFIG", origEnv) //nolint:errcheck
 
-		os.Setenv("KUBE_CONFIG", "nonexistent.yaml")
+		_ = os.Setenv("KUBE_CONFIG", "nonexistent.yaml")
 		newEnv := os.Getenv("KUBE_CONFIG")
 		framework.ExpectEqual(newEnv, "nonexistent.yaml")
 
