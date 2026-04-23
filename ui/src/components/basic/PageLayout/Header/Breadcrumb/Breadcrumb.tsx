@@ -1,77 +1,67 @@
 import React from 'react';
 import styles from './Breadcrumb.module.scss';
 import Arrow from 'images/breadcrumb-arrow.svg';
-import { withRouter, RouteComponentProps } from 'react-router';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import ErrorBoundary from 'components/basic/ErrorBoundary/ErrorBoundary';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
+import { formatURL } from 'lib/utils';
 
 const capitalize = (s: string) => {
   if (typeof s !== 'string') return '';
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
-interface Props extends RouteComponentProps, DevSpaceConfigContext {}
-interface State {}
+interface Props extends DevSpaceConfigContext {}
 
-class Breadcrumb extends React.Component<Props, State> {
-  isComponentMounted: boolean = false;
+const Breadcrumb = (props: Props) => {
+  const location = useLocation();
 
-  componentDidMount() {
-    this.isComponentMounted = true;
-  }
+  const renderBreadcrumb = () => {
+    const arrow = <img alt="" src={Arrow} />;
+    const crumbs = formatURL(location.pathname)
+      .split('/')
+      .filter(Boolean);
+    const breadcrumbs = crumbs.length > 1 ? crumbs.slice(0, crumbs.length - 1) : crumbs;
 
-  componentWillUnmount() {
-    this.isComponentMounted = false;
-  }
+    if (!breadcrumbs.length) {
+      return null;
+    }
 
-  renderBreadcrumb = () => {
-    const arrow = <img src={Arrow} />;
-
-    // Removes empty string "" because path starts with "/"
-    const crumbs = this.props.match.url.split('/').slice(1);
-    const crumbsWithIds = crumbs.slice(0, crumbs.length - 1);
-    const params = this.props.match.path.split('/').slice(1);
-    const crumbsWithParams = params.slice(0, params.length - 1);
-
-    if (crumbs.length === 1) {
+    if (breadcrumbs.length === 1) {
       return (
         <span className={styles.crumb}>
           {arrow}
-          <span className={styles.text}>{capitalize(crumbs[0])}</span>
+          <span className={styles.text}>{capitalize(breadcrumbs[0])}</span>
         </span>
       );
     }
 
-    return [
-      crumbsWithParams.map((crumb: string, idx: number) => {
-        const isLastOne = idx === crumbsWithParams.length - 1;
-        const shouldNotBeLink = false;
+    return breadcrumbs.map((crumb: string, idx: number) => {
+      const isLastOne = idx === breadcrumbs.length - 1;
 
-        if (isLastOne || shouldNotBeLink) {
-          return (
-            <span className={styles.crumb} key={idx}>
-              {arrow}
-              <span className={styles.text}>{capitalize(crumb)}</span>
-            </span>
-          );
-        }
-
+      if (isLastOne) {
         return (
           <span className={styles.crumb} key={idx}>
             {arrow}
-            <Link to={'/' + crumbsWithIds.slice(0, idx + 1).join('/')}>{capitalize(crumb)}</Link>
+            <span className={styles.text}>{capitalize(crumb)}</span>
           </span>
         );
-      }),
-    ];
+      }
+
+      return (
+        <span className={styles.crumb} key={idx}>
+          {arrow}
+          <Link to={'/' + breadcrumbs.slice(0, idx + 1).join('/')}>{capitalize(crumb)}</Link>
+        </span>
+      );
+    });
   };
 
-  renderPrefix = () => {
-    if (!this.props.devSpaceConfig.workingDirectory || !this.props.devSpaceConfig.config) {
+  const renderPrefix = () => {
+    if (!props.devSpaceConfig.workingDirectory || !props.devSpaceConfig.config) {
       return 'DevSpace';
     } else {
-      const wd = this.props.devSpaceConfig.workingDirectory;
+      const wd = props.devSpaceConfig.workingDirectory;
       // Unix
       const lastIdxOfSlash = wd.lastIndexOf('/');
       // Windows
@@ -85,22 +75,20 @@ class Breadcrumb extends React.Component<Props, State> {
     }
   };
 
-  renderRoute() {
+  const renderRoute = () => {
     return (
       <React.Fragment>
-        <div className={styles['account-selector']}>{this.renderPrefix()}</div>
-        <div className={styles.crumbs}>{this.renderBreadcrumb()}</div>
+        <div className={styles['account-selector']}>{renderPrefix()}</div>
+        <div className={styles.crumbs}>{renderBreadcrumb()}</div>
       </React.Fragment>
     );
-  }
+  };
 
-  render() {
-    return (
-      <ErrorBoundary>
-        <div className={styles.breadcrumb}>{this.renderRoute()}</div>
-      </ErrorBoundary>
-    );
-  }
-}
+  return (
+    <ErrorBoundary>
+      <div className={styles.breadcrumb}>{renderRoute()}</div>
+    </ErrorBoundary>
+  );
+};
 
-export default withRouter(withDevSpaceConfig(Breadcrumb));
+export default withDevSpaceConfig(Breadcrumb);
