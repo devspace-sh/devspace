@@ -1,5 +1,5 @@
 import React from 'react';
-import { V1Pod, V1ContainerStatus, Config } from '@kubernetes/client-node';
+import { V1Pod, V1ContainerStatus } from '@kubernetes/client-node';
 import yaml from 'js-yaml';
 
 export const formatError = (error: any): any => {
@@ -275,7 +275,7 @@ export const GetContainerStatus = (container: V1ContainerStatus) => {
   return reason;
 };
 
-export const configToYAML = (config: Config, reverse?: boolean) => {
+export const configToYAML = (config: object, reverse?: boolean) => {
   const yamlString = yaml.dump(config, {
     sortKeys: reverse ? (a, b) => (a < b ? 1 : a > b ? -1 : 0) : false,
   });
