@@ -432,8 +432,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "false")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "false")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -454,8 +454,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -534,10 +534,10 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "test123")
+		_ = os.Setenv("FOO", "test123")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
-		os.Unsetenv("FOO")
+		_ = os.Unsetenv("FOO")
 
 		latestConfig := &latest.Config{}
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
@@ -556,10 +556,10 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "test")
+		_ = os.Setenv("FOO", "test")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
-		os.Unsetenv("FOO")
+		_ = os.Unsetenv("FOO")
 
 		latestConfig = &latest.Config{}
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
@@ -634,10 +634,10 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "some test here")
+		_ = os.Setenv("FOO", "some test here")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
-		os.Unsetenv("FOO")
+		_ = os.Unsetenv("FOO")
 
 		latestConfig := &latest.Config{}
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
@@ -656,10 +656,10 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "test")
+		_ = os.Setenv("FOO", "test")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
-		os.Unsetenv("FOO")
+		_ = os.Unsetenv("FOO")
 
 		latestConfig = &latest.Config{}
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
@@ -734,10 +734,10 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "false")
+		_ = os.Setenv("FOO", "false")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
-		os.Unsetenv("FOO")
+		_ = os.Unsetenv("FOO")
 
 		latestConfig := &latest.Config{}
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
@@ -756,10 +756,10 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "^the string begins with ^t and ends with $")
+		_ = os.Setenv("FOO", "^the string begins with ^t and ends with $")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
-		os.Unsetenv("FOO")
+		_ = os.Unsetenv("FOO")
 
 		latestConfig = &latest.Config{}
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
@@ -834,10 +834,10 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "the best string")
+		_ = os.Setenv("FOO", "the best string")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
-		os.Unsetenv("FOO")
+		_ = os.Unsetenv("FOO")
 
 		latestConfig := &latest.Config{}
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
@@ -856,10 +856,10 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "a test string")
+		_ = os.Setenv("FOO", "a test string")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
-		os.Unsetenv("FOO")
+		_ = os.Unsetenv("FOO")
 
 		latestConfig = &latest.Config{}
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
@@ -956,8 +956,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1052,8 +1052,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1074,8 +1074,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("BAR", "true")
-		defer os.Unsetenv("BAR")
+		_ = os.Setenv("BAR", "true")
+		defer os.Unsetenv("BAR") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1193,8 +1193,8 @@ var _ = DevSpaceDescribe("config", func() {
 			Out:      configBuffer,
 			SkipInfo: true,
 		}
-		os.Setenv("FOO", "false")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "false")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1215,8 +1215,8 @@ var _ = DevSpaceDescribe("config", func() {
 			Out:      configBuffer,
 			SkipInfo: true,
 		}
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1237,8 +1237,8 @@ var _ = DevSpaceDescribe("config", func() {
 			Out:      configBuffer,
 			SkipInfo: true,
 		}
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1286,10 +1286,10 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "true")
+		_ = os.Setenv("FOO", "true")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
-		os.Unsetenv("FOO")
+		_ = os.Unsetenv("FOO")
 
 		latestConfig = &latest.Config{}
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
@@ -1310,10 +1310,10 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("BAR", "true")
+		_ = os.Setenv("BAR", "true")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
-		os.Unsetenv("BAR")
+		_ = os.Unsetenv("BAR")
 
 		latestConfig = &latest.Config{}
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
@@ -1431,8 +1431,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1531,8 +1531,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
@@ -1584,8 +1584,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1637,8 +1637,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("BAR", "true")
-		defer os.Unsetenv("BAR")
+		_ = os.Setenv("BAR", "true")
+		defer os.Unsetenv("BAR") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1689,8 +1689,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("BAR", "true")
-		defer os.Unsetenv("BAR")
+		_ = os.Setenv("BAR", "true")
+		defer os.Unsetenv("BAR") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1742,8 +1742,8 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -1775,8 +1775,8 @@ var _ = DevSpaceDescribe("config", func() {
 		}
 
 		// run with environment variable set.
-		os.Setenv("FOO", "true")
-		defer os.Unsetenv("FOO")
+		_ = os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO") //nolint:errcheck
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
