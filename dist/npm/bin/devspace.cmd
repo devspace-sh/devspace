@@ -13,24 +13,28 @@ SET indexFile=\index.js
 echo "!basedir!\!indexFile!"
 
 IF NOT EXIST "!basedir!\!indexFile!" (
-  SET basedir=%~dp0\..\lib\node_modules\devspace
+  SET basedir=%~dp0\..\devspace
 
   IF NOT EXIST "!basedir!\!indexFile!" (
-    SET basedir=%~dp0\node_modules\devspace
+    SET basedir=%~dp0\..\lib\node_modules\devspace
 
     IF NOT EXIST "!basedir!\!indexFile!" (
-      FOR /F "tokens=* USEBACKQ" %%F IN (`npm root -g`) DO (
-        SET basedir=%%F\devspace
-      )
+      SET basedir=%~dp0\node_modules\devspace
 
       IF NOT EXIST "!basedir!\!indexFile!" (
-        FOR /F "tokens=* USEBACKQ" %%F IN (`yarn global dir`) DO (
-          SET basedir=%%F\node_modules\devspace
+        FOR /F "tokens=* USEBACKQ" %%F IN (`npm root -g`) DO (
+          SET basedir=%%F\devspace
         )
 
         IF NOT EXIST "!basedir!\!indexFile!" (
-          echo Unable to find global npm/yarn dir
-          exit /b 1
+          FOR /F "tokens=* USEBACKQ" %%F IN (`yarn global dir`) DO (
+            SET basedir=%%F\node_modules\devspace
+          )
+
+          IF NOT EXIST "!basedir!\!indexFile!" (
+            echo Unable to find global npm/yarn dir
+            exit /b 1
+          )
         )
       )
     )

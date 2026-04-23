@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,6 +20,16 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 )
+
+// writeUniqueBuildMarker ensures the test image is unique per run so it does not reuse an already-cached node image ID
+func writeUniqueBuildMarker(tempDir string) {
+	err := os.WriteFile(
+		filepath.Join(tempDir, ".devspace-e2e-build-marker"),
+		[]byte(time.Now().Format(time.RFC3339Nano)),
+		0644,
+	)
+	framework.ExpectNoError(err)
+}
 
 var _ = DevSpaceDescribe("restarthelper", func() {
 	initialDir, err := os.Getwd()
@@ -44,6 +55,7 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 		tempDir, err := framework.CopyToTempDir("tests/restarthelper/testdata/v5")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
+		writeUniqueBuildMarker(tempDir)
 
 		ns, err := kubeClient.CreateNamespace("restarthelper")
 		framework.ExpectNoError(err)
@@ -125,6 +137,7 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 		tempDir, err := framework.CopyToTempDir("tests/restarthelper/testdata/v6")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
+		writeUniqueBuildMarker(tempDir)
 
 		ns, err := kubeClient.CreateNamespace("restarthelper")
 		framework.ExpectNoError(err)
@@ -206,6 +219,7 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 		tempDir, err := framework.CopyToTempDir("tests/restarthelper/testdata/v6-inject-restart-helper")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
+		writeUniqueBuildMarker(tempDir)
 
 		ns, err := kubeClient.CreateNamespace("restarthelper")
 		framework.ExpectNoError(err)
@@ -296,6 +310,7 @@ var _ = DevSpaceDescribe("restarthelper", func() {
 		tempDir, err := framework.CopyToTempDir("tests/restarthelper/testdata/v6-manual-start")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
+		writeUniqueBuildMarker(tempDir)
 
 		ns, err := kubeClient.CreateNamespace("restarthelper")
 		framework.ExpectNoError(err)
