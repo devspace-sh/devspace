@@ -21,6 +21,16 @@ const publicPath = '/';
 const publicUrl = '';
 // Get environment variables to inject into our app.
 const env = getClientEnvironment(publicUrl);
+const getSassLoader = (options = {}) => ({
+  loader: require.resolve('sass-loader'),
+  options: {
+    ...options,
+    sassOptions: {
+      ...(options.sassOptions || {}),
+      silenceDeprecations: ['legacy-js-api'],
+    },
+  },
+});
 
 // This is the development configuration.
 // It is focused on developer experience and fast rebuilds.
@@ -171,10 +181,9 @@ module.exports = {
                 },
               },
               {
-                loader: require.resolve('sass-loader'),
-                options: {
+                ...getSassLoader({
                   sourceMap: true,
-                },
+                }),
               },
             ],
           },
@@ -184,7 +193,7 @@ module.exports = {
             use: [
               'style-loader', // creates style nodes from JS strings
               'css-loader', // translates CSS into CommonJS
-              'sass-loader', // compiles Sass to CSS, using Node Sass by default
+              getSassLoader(), // compiles Sass to CSS
             ],
           },
           // "postcss" loader applies autoprefixer to our CSS.

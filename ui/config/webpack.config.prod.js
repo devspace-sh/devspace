@@ -26,6 +26,16 @@ const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== 'false';
 const publicUrl = publicPath.slice(0, -1);
 // Get environment variables to inject into our app.
 const env = getClientEnvironment(publicUrl);
+const getSassLoader = (options = {}) => ({
+  loader: require.resolve('sass-loader'),
+  options: {
+    ...options,
+    sassOptions: {
+      ...(options.sassOptions || {}),
+      silenceDeprecations: ['legacy-js-api'],
+    },
+  },
+});
 
 // Assert this just to be safe.
 // Development builds of React are slow and not intended for production.
@@ -161,7 +171,7 @@ module.exports = {
                 },
               },
               {
-                loader: require.resolve('sass-loader'),
+                ...getSassLoader(),
               },
             ],
           },
@@ -171,7 +181,7 @@ module.exports = {
             use: [
               'style-loader', // creates style nodes from JS strings
               'css-loader', // translates CSS into CommonJS
-              'sass-loader', // compiles Sass to CSS, using Node Sass by default
+              getSassLoader(), // compiles Sass to CSS
             ],
           },
           // "postcss" loader applies autoprefixer to our CSS.
