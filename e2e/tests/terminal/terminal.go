@@ -100,7 +100,7 @@ sleep 1000000
 		framework.ExpectNoError(err)
 		defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
-		buffer := &bytes.Buffer{}
+		buffer := &Buffer{}
 		devpod.DefaultTerminalStdout = buffer
 		devpod.DefaultTerminalStderr = buffer
 		devpod.DefaultTerminalStdin = nil
@@ -129,12 +129,10 @@ sleep 1000000
 		// wait until we get the first hostnames
 		var podName string
 		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*3, true, func(_ context.Context) (done bool, err error) {
-			lines := strings.Split(buffer.String(), "\n")
-			if len(lines) <= 1 {
+			podName = lastTerminalPodName(buffer.String())
+			if podName == "" {
 				return false, nil
 			}
-
-			podName = strings.TrimSpace(lines[0])
 			return true, nil
 		})
 		framework.ExpectNoError(err)
@@ -169,12 +167,11 @@ sleep 1000000
 
 		// get new pod name
 		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*3, true, func(_ context.Context) (done bool, err error) {
-			lines := strings.Split(buffer.String(), "\n")
-			if len(lines) <= 1 {
+			newPodName := lastTerminalPodName(buffer.String())
+			if newPodName == "" {
 				return false, nil
 			}
 
-			newPodName := strings.TrimSpace(lines[len(lines)-2])
 			if newPodName != podName {
 				podName = newPodName
 				return true, nil
@@ -239,4 +236,28 @@ func (s *Buffer) String() string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	return s.buffer.String()
+}
+
+func lastTerminalPodName(output string) string {
+	lines := strings.Split(output, "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := sanitizeTerminalLine(lines[i])
+		if line != "" {
+			return line
+		}
+	}
+
+	return ""
+}
+
+func sanitizeTerminalLine(line string) string {
+	line = strings.Map(func(r rune) rune {
+		if r < 32 || r == 127 {
+			return -1
+		}
+
+		return r
+	}, line)
+
+	return strings.TrimSpace(line)
 }

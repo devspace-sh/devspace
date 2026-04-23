@@ -246,14 +246,7 @@ var _ = DevSpaceDescribe("build", func() {
 		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 
-		for _, image := range imageList {
-			if len(image.RepoTags) > 0 && image.RepoTags[0] == "my-docker-username/helloworld-buildkit:latest" {
-				err = nil
-				break
-			} else {
-				err = errors.New("image not found")
-			}
-		}
+		err = ensureImagePresent(imageList, "my-docker-username/helloworld-buildkit:latest")
 		framework.ExpectNoError(err)
 
 		var stdout, stderr bytes.Buffer
@@ -290,14 +283,7 @@ var _ = DevSpaceDescribe("build", func() {
 		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 
-		for _, image := range imageList {
-			if len(image.RepoTags) > 0 && image.RepoTags[0] == "my-docker-username/helloworld-buildkit:latest" {
-				err = nil
-				break
-			} else {
-				err = errors.New("image not found")
-			}
-		}
+		err = ensureImagePresent(imageList, "my-docker-username/helloworld-buildkit:latest")
 		framework.ExpectNoError(err)
 	})
 
@@ -342,14 +328,7 @@ var _ = DevSpaceDescribe("build", func() {
 		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 
-		for _, image := range imageList {
-			if len(image.RepoTags) > 0 && image.RepoTags[0] == "my-docker-username/helloworld-custom-build:latest" {
-				err = nil
-				break
-			} else {
-				err = errors.New("image not found")
-			}
-		}
+		err = ensureImagePresent(imageList, "my-docker-username/helloworld-custom-build:latest")
 		framework.ExpectNoError(err)
 	})
 
@@ -377,14 +356,7 @@ var _ = DevSpaceDescribe("build", func() {
 		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 		imageName := "my-docker-username/helloworld-dockerignore:latest"
-		for _, image := range imageList {
-			if image.RepoTags[0] == imageName {
-				err = nil
-				break
-			} else {
-				err = errors.New("image not found")
-			}
-		}
+		err = ensureImagePresent(imageList, imageName)
 		framework.ExpectNoError(err)
 
 		resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
@@ -442,14 +414,7 @@ var _ = DevSpaceDescribe("build", func() {
 		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 		imageName := "my-docker-username/helloworld-dockerignore-rel-path:latest"
-		for _, image := range imageList {
-			if image.RepoTags[0] == imageName {
-				err = nil
-				break
-			} else {
-				err = errors.New("image not found")
-			}
-		}
+		err = ensureImagePresent(imageList, imageName)
 		framework.ExpectNoError(err)
 
 		resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
@@ -507,14 +472,7 @@ var _ = DevSpaceDescribe("build", func() {
 		imageList, err := dockerClient.ImageList(ctx, image.ListOptions{})
 		framework.ExpectNoError(err)
 		imageName := "my-docker-username/helloworld-dockerignore-context:latest"
-		for _, image := range imageList {
-			if image.RepoTags[0] == imageName {
-				err = nil
-				break
-			} else {
-				err = errors.New("image not found")
-			}
-		}
+		err = ensureImagePresent(imageList, imageName)
 		framework.ExpectNoError(err)
 
 		resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
@@ -554,6 +512,18 @@ func stdoutContains(stdout, content string) error {
 		return nil
 	}
 	return fmt.Errorf("%s found in output", content)
+}
+
+func ensureImagePresent(imageList []image.Summary, imageName string) error {
+	for _, image := range imageList {
+		for _, repoTag := range image.RepoTags {
+			if repoTag == imageName {
+				return nil
+			}
+		}
+	}
+
+	return errors.New("image not found")
 }
 
 func stderrContains(stderr, content string) error {

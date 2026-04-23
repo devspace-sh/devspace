@@ -1,0 +1,4 @@
+name: myproject
+services:
+  web:
+    image: nginx:latest
