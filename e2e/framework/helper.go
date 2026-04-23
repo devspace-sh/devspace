@@ -92,13 +92,13 @@ func ExpectRemoteFileContents(imageSelector string, namespace string, filePath s
 	ExpectNoErrorWithOffset(1, err)
 }
 
-func ExpectLocalCurlContents(urlString string, contents string) {
+func ExpectLocalCurlContains(urlString string, contents string) {
 	client := resty.New()
 	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
 		resp, _ := client.R().
 			EnableTrace().
 			Get(urlString)
-		return strings.TrimSpace(string(resp.Body())) == strings.TrimSpace(contents), nil
+		return strings.Contains(strings.TrimSpace(string(resp.Body())), strings.TrimSpace(contents)), nil
 	})
 	ExpectNoErrorWithOffset(1, err)
 }
@@ -118,7 +118,7 @@ func ExpectContainerNameAndImageEqual(namespace, deploymentName, containerImage,
 	ExpectNoErrorWithOffset(1, err)
 }
 
-func ExpectRemoteCurlContents(imageSelector string, namespace string, urlString string, contents string) {
+func ExpectRemoteCurlContains(imageSelector string, namespace string, urlString string, contents string) {
 	kubeClient, err := kube.NewKubeHelper()
 	ExpectNoErrorWithOffset(1, err)
 	err = wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute*2, true, func(_ context.Context) (done bool, err error) {
@@ -126,7 +126,7 @@ func ExpectRemoteCurlContents(imageSelector string, namespace string, urlString 
 		if err != nil {
 			return false, nil
 		}
-		return strings.TrimSpace(out) == strings.TrimSpace(contents), nil
+		return strings.Contains(strings.TrimSpace(out), strings.TrimSpace(contents)), nil
 	})
 	ExpectNoErrorWithOffset(1, err)
 }

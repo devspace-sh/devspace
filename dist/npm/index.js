@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 const fs = require("fs");
+const https = require("https");
 const path = require("path");
 const execSync = require("child_process").execSync;
-const fetch = require("node-fetch");
-const Spinner = require("cli-spinner").Spinner;
-const inquirer = require('inquirer');
-const findProcess = require('find-process');
+
+const getSpinner = () => require("cli-spinner").Spinner;
+const getInquirer = () => require("inquirer");
+const getFindProcess = () => require("find-process");
 
 const downloadPathTemplate =
   "https://github.com/devspace-sh/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
@@ -80,43 +81,91 @@ const sanitizeVersion = function(version) {
 
 const getLatestVersion = function (callback) {
   const releasesURL = "https://github.com/devspace-sh/devspace/releases/latest";
+  https.get(releasesURL, { headers: requestHeaders }, function (res) {
+    const redirectUrl = res.headers.location;
+    const matches = redirectUrl && /\/tag\/(.*)$/.exec(redirectUrl);
 
-  fetch(releasesURL, { headers: requestHeaders, redirect: false })
-    .then(function (res) {
-      if (!res.ok) {
-        console.error(
-          "Error requesting URL " +
-          releasesURL +
-          " (Status Code: " +
-          res.status +
-          ")"
-        );
-        process.exit(1);
-      }
-
-      const redirectUrl = res.url
-      if (redirectUrl == null) {
-        throw new Error('Error fetching latest version')
-      }
-
-      const matches = /\/tag\/(.*)$/.exec(redirectUrl)
-      if (!matches || matches.length !== 2) {
-        throw new Error('Error fetching latest version')
-      }
-
-      const latestVersion = matches[1].replace('v', '')
-      if (latestVersion) {
-        callback(latestVersion);
-      } else {
-        console.error("Unable to identify latest devspace version");
-        process.exit(2);
-      }
-    })
-    .catch(function (err) {
+    if (!matches || matches.length !== 2) {
       console.error("Error requesting URL " + releasesURL);
-      console.error(err)
       process.exit(1);
-    })
+    }
+
+    const latestVersion = matches[1].replace('v', '')
+    if (latestVersion) {
+      callback(latestVersion);
+    } else {
+      console.error("Unable to identify latest devspace version");
+      process.exit(2);
+    }
+  }).on("error", function (err) {
+    console.error("Error requesting URL " + releasesURL);
+    console.error(err)
+    process.exit(1);
+  })
+};
+
+const createSpinner = function (text) {
+  try {
+    const Spinner = getSpinner();
+    const spinner = new Spinner("%s " + text);
+    spinner.setSpinnerString("|/-\\");
+    return spinner;
+  } catch (err) {
+    return {
+      start: function () {
+        console.log(text);
+      },
+      stop: function () { }
+    };
+  }
+};
+
+const downloadFile = function (downloadPath, destination, callback) {
+  let done = false;
+  const finish = function (err, res) {
+    if (done) {
+      return;
+    }
+
+    done = true;
+    callback(err, res);
+  };
+
+  https.get(downloadPath, { headers: requestHeaders }, function (res) {
+    if (
+      res.statusCode &&
+      res.statusCode >= 300 &&
+      res.statusCode < 400 &&
+      res.headers.location
+    ) {
+      res.resume();
+      downloadFile(res.headers.location, destination, callback);
+      return;
+    }
+
+    if (res.statusCode !== 200) {
+      finish(null, res);
+      return;
+    }
+
+    const writeStream = fs.createWriteStream(destination)
+      .on("error", function (err) {
+        finish(err);
+      })
+      .on("finish", function () {
+        writeStream.close(function () {
+          finish(null, res);
+        });
+      });
+
+    res.on("error", function (err) {
+      finish(err);
+    });
+
+    res.pipe(writeStream);
+  }).on("error", function (err) {
+    finish(err);
+  });
 };
 
 if (action === "update-version") {
@@ -311,6 +360,7 @@ let continueProcess = function (askRemoveGlobalFolder) {
     removeScripts(true);
 
     if (askRemoveGlobalFolder && process.stdout.isTTY) {
+      const inquirer = getInquirer();
       let removeGlobalFolder = function () {
         try {
           let homedir = require('os').homedir();
@@ -377,33 +427,34 @@ let continueProcess = function (askRemoveGlobalFolder) {
 
         console.log("Download DevSpace CLI release: " + downloadPath + "\n");
 
-        const spinner = new Spinner(
-          "%s Downloading DevSpace CLI... (this may take a minute)"
+        const spinner = createSpinner(
+          "Downloading DevSpace CLI... (this may take a minute)"
         );
-        spinner.setSpinnerString("|/-\\");
         spinner.start();
 
-        let writeStream = fs
-          .createWriteStream(binaryPath + downloadExtension)
-          .on("error", function (err) {
-            spinner.stop(true);
-            console.error("Unable to write stream: " + err)
-            showRootError(version);
-          });
-
-        fetch(downloadPath, { headers: requestHeaders, encoding: null })
-          .catch(function (err) {
-            writeStream.end();
-            spinner.stop(true);
-            console.error("Error requesting URL: " + downloadPath);
-            process.exit(6);
-          })
-          .then(function (res) {
-            if (!res.ok) {
-              writeStream.end();
+        downloadFile(
+          downloadPath,
+          binaryPath + downloadExtension,
+          function (err, res) {
+            if (err) {
               spinner.stop(true);
 
-              if (res.status === 404) {
+              if (err.code === "EACCES" || err.code === "EPERM") {
+                console.error("Unable to write stream: " + err)
+                showRootError(version);
+                return;
+              }
+
+              console.error("Error requesting URL: " + downloadPath);
+              console.error(err);
+              process.exit(6);
+            }
+
+            if (!res || res.statusCode !== 200) {
+              spinner.stop(true);
+
+              if (res && res.statusCode === 404) {
+                res.resume();
                 console.error("Release version " + version + " not found.\n");
 
                 getLatestVersion(function (latestVersion) {
@@ -418,46 +469,44 @@ let continueProcess = function (askRemoveGlobalFolder) {
                   }
                 });
               } else {
+                if (res) {
+                  res.resume();
+                }
+
                 console.error(
                   "Error requesting URL " +
                   downloadPath +
                   " (Status Code: " +
-                  res.status +
+                  (res && res.statusCode) +
                   ")"
                 );
-                console.error(res.statusText);
+                console.error(res && res.statusMessage);
                 process.exit(7);
               }
-            } else {
-              try {
-                res.body.pipe(writeStream)
-                  .on("close", function () {
-                    writeStream.end();
-                    spinner.stop(true);
 
-                    try {
-                      fs.chmodSync(binaryPath + downloadExtension, "0755");
-                    } catch (e) {
-                      console.error("Unable to chmod: " + e)
-                      showRootError(version);
-                    }
-
-                    try {
-                      fs.renameSync(binaryPath + downloadExtension, binaryPath);
-                    } catch (e) {
-                      console.log(e);
-                      console.error("\nRenaming release binary failed. Please copy file manually:\n from: " + binaryPath + downloadExtension + "\n to: " + binaryPath + "\n");
-                      process.exit(8);
-                    }
-
-                    removeScripts(true);
-                  });
-              } catch (e) {
-                console.error("Unable to write stream: " + e)
-                showRootError(version);
-              }
+              return;
             }
-          });
+
+            spinner.stop(true);
+
+            try {
+              fs.chmodSync(binaryPath + downloadExtension, "0755");
+            } catch (e) {
+              console.error("Unable to chmod: " + e)
+              showRootError(version);
+            }
+
+            try {
+              fs.renameSync(binaryPath + downloadExtension, binaryPath);
+            } catch (e) {
+              console.log(e);
+              console.error("\nRenaming release binary failed. Please copy file manually:\n from: " + binaryPath + downloadExtension + "\n to: " + binaryPath + "\n");
+              process.exit(8);
+            }
+
+            removeScripts(true);
+          }
+        );
       };
 
       downloadRelease(version);
@@ -466,25 +515,30 @@ let continueProcess = function (askRemoveGlobalFolder) {
 }
 
 if (process.ppid > 1) {
-  findProcess('pid', process.ppid)
-    .then(function (list) {
-      if (list.length === 1 && list[0].ppid > 1) {
-        findProcess('pid', list[0].ppid)
-          .then(function (list) {
-            if (list.length === 1 && /((npm-cli.js("|')\s+up(date)?)|(yarn.js("|')\s+(global\s+)?upgrade))\s+.*((\/)|(\\)|(\s))devspace((\/)|(\\)|(\s)|$)/.test(list[0].cmd)) {
-              continueProcess(false);
-            } else {
+  try {
+    const findProcess = getFindProcess();
+    findProcess('pid', process.ppid)
+      .then(function (list) {
+        if (list.length === 1 && list[0].ppid > 1) {
+          findProcess('pid', list[0].ppid)
+            .then(function (list) {
+              if (list.length === 1 && /((npm-cli.js("|')\s+up(date)?)|(yarn.js("|')\s+(global\s+)?upgrade))\s+.*((\/)|(\\)|(\s))devspace((\/)|(\\)|(\s)|$)/.test(list[0].cmd)) {
+                continueProcess(false);
+              } else {
+                continueProcess(true);
+              }
+            }, function () {
               continueProcess(true);
-            }
-          }, function () {
-            continueProcess(true);
-          })
-      } else {
+            })
+        } else {
+          continueProcess(true);
+        }
+      }, function () {
         continueProcess(true);
-      }
-    }, function () {
-      continueProcess(true);
-    })
+      })
+  } catch (e) {
+    continueProcess(true);
+  }
 } else {
   continueProcess(true);
 }
