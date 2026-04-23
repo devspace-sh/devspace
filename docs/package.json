@@ -12,7 +12,7 @@
     "@docusaurus/core": "^2.4.1",
     "@docusaurus/preset-classic": "^2.4.1",
     "@saucelabs/theme-github-codeblock": "^0.2.3",
-    "classnames": "^2.2.6",
+    "classnames": "^2.5.1",
     "docusaurus-plugin-sass": "^0.2.3",
     "mdx-link-checker": "^0.1.1",
     "mdx-mermaid": "^v1.3.0",
