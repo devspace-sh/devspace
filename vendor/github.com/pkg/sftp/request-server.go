@@ -2,16 +2,15 @@ package sftp
 
 import (
 	"context"
+	"errors"
 	"io"
 	"path"
 	"path/filepath"
 	"strconv"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
-var maxTxPacket uint32 = 1 << 15
+const defaultMaxTxPacket uint32 = 1 << 15
 
 // Handlers contains the 4 SFTP server request handlers.
 type Handlers struct {
@@ -23,12 +22,17 @@ type Handlers struct {
 
 // RequestServer abstracts the sftp protocol with an http request-like protocol
 type RequestServer struct {
+	Handlers Handlers
+
 	*serverConn
-	Handlers        Handlers
-	pktMgr          *packetManager
-	openRequests    map[string]*Request
-	openRequestLock sync.RWMutex
-	handleCount     int
+	pktMgr *packetManager
+
+	startDirectory string
+	maxTxPacket    uint32
+
+	mu           sync.RWMutex
+	handleCount  int
+	openRequests map[string]*Request
 }
 
 // A RequestServerOption is a function which applies configuration to a RequestServer.
@@ -46,6 +50,30 @@ func WithRSAllocator() RequestServerOption {
 	}
 }
 
+// WithStartDirectory sets a start directory to use as base for relative paths.
+// If unset the default is "/"
+func WithStartDirectory(startDirectory string) RequestServerOption {
+	return func(rs *RequestServer) {
+		rs.startDirectory = cleanPath(startDirectory)
+	}
+}
+
+// WithRSMaxTxPacket sets the maximum size of the payload returned to the client,
+// measured in bytes. The default value is 32768 bytes, and this option
+// can only be used to increase it. Setting this option to a larger value
+// should be safe, because the client decides the size of the requested payload.
+//
+// The default maximum packet size is 32768 bytes.
+func WithRSMaxTxPacket(size uint32) RequestServerOption {
+	return func(rs *RequestServer) {
+		if size < defaultMaxTxPacket {
+			return
+		}
+
+		rs.maxTxPacket = size
+	}
+}
+
 // NewRequestServer creates/allocates/returns new RequestServer.
 // Normally there will be one server per user-session.
 func NewRequestServer(rwc io.ReadWriteCloser, h Handlers, options ...RequestServerOption) *RequestServer {
@@ -56,9 +84,14 @@ func NewRequestServer(rwc io.ReadWriteCloser, h Handlers, options ...RequestServ
 		},
 	}
 	rs := &RequestServer{
-		serverConn:   svrConn,
-		Handlers:     h,
-		pktMgr:       newPktMgr(svrConn),
+		Handlers: h,
+
+		serverConn: svrConn,
+		pktMgr:     newPktMgr(svrConn),
+
+		startDirectory: "/",
+		maxTxPacket:    defaultMaxTxPacket,
+
 		openRequests: make(map[string]*Request),
 	}
 
@@ -70,13 +103,15 @@ func NewRequestServer(rwc io.ReadWriteCloser, h Handlers, options ...RequestServ
 
 // New Open packet/Request
 func (rs *RequestServer) nextRequest(r *Request) string {
-	rs.openRequestLock.Lock()
-	defer rs.openRequestLock.Unlock()
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+
 	rs.handleCount++
-	handle := strconv.Itoa(rs.handleCount)
-	r.handle = handle
-	rs.openRequests[handle] = r
-	return handle
+
+	r.handle = strconv.Itoa(rs.handleCount)
+	rs.openRequests[r.handle] = r
+
+	return r.handle
 }
 
 // Returns Request from openRequests, bool is false if it is missing.
@@ -85,20 +120,23 @@ func (rs *RequestServer) nextRequest(r *Request) string {
 // you can do different things with. What you are doing with it are denoted by
 // the first packet of that type (read/write/etc).
 func (rs *RequestServer) getRequest(handle string) (*Request, bool) {
-	rs.openRequestLock.RLock()
-	defer rs.openRequestLock.RUnlock()
+	rs.mu.RLock()
+	defer rs.mu.RUnlock()
+
 	r, ok := rs.openRequests[handle]
 	return r, ok
 }
 
 // Close the Request and clear from openRequests map
 func (rs *RequestServer) closeRequest(handle string) error {
-	rs.openRequestLock.Lock()
-	defer rs.openRequestLock.Unlock()
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+
 	if r, ok := rs.openRequests[handle]; ok {
 		delete(rs.openRequests, handle)
 		return r.close()
 	}
+
 	return EBADF
 }
 
@@ -110,7 +148,7 @@ func (rs *RequestServer) serveLoop(pktChan chan<- orderedRequest) error {
 
 	var err error
 	var pkt requestPacket
-	var pktType uint8
+	var pktType fxp
 	var pktBytes []byte
 
 	for {
@@ -120,10 +158,10 @@ func (rs *RequestServer) serveLoop(pktChan chan<- orderedRequest) error {
 			return err
 		}
 
-		pkt, err = makePacket(rxPacket{fxp(pktType), pktBytes})
+		pkt, err = makePacket(rxPacket{pktType, pktBytes})
 		if err != nil {
-			switch errors.Cause(err) {
-			case errUnknownExtendedPacket:
+			switch {
+			case errors.Is(err, errUnknownExtendedPacket):
 				// do nothing
 			default:
 				debug("makePacket err: %v", err)
@@ -143,8 +181,10 @@ func (rs *RequestServer) Serve() error {
 			rs.pktMgr.alloc.Free()
 		}
 	}()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	var wg sync.WaitGroup
 	runWorker := func(ch chan orderedRequest) {
 		wg.Add(1)
@@ -161,8 +201,8 @@ func (rs *RequestServer) Serve() error {
 
 	wg.Wait() // wait for all workers to exit
 
-	rs.openRequestLock.Lock()
-	defer rs.openRequestLock.Unlock()
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
 
 	// make sure all open requests are properly closed
 	// (eg. possible on dropped connections, client crashes, etc.)
@@ -179,9 +219,7 @@ func (rs *RequestServer) Serve() error {
 	return err
 }
 
-func (rs *RequestServer) packetWorker(
-	ctx context.Context, pktChan chan orderedRequest,
-) error {
+func (rs *RequestServer) packetWorker(ctx context.Context, pktChan chan orderedRequest) error {
 	for pkt := range pktChan {
 		orderID := pkt.orderID()
 		if epkt, ok := pkt.requestPacket.(*sshFxpExtendedPacket); ok {
@@ -199,14 +237,23 @@ func (rs *RequestServer) packetWorker(
 			rpkt = statusFromError(pkt.ID, rs.closeRequest(handle))
 		case *sshFxpRealpathPacket:
 			var realPath string
-			if realPather, ok := rs.Handlers.FileList.(RealPathFileLister); ok {
-				realPath = realPather.RealPath(pkt.getPath())
-			} else {
-				realPath = cleanPath(pkt.getPath())
+			var err error
+
+			switch pather := rs.Handlers.FileList.(type) {
+			case RealPathFileLister:
+				realPath, err = pather.RealPath(pkt.getPath())
+			case legacyRealPathFileLister:
+				realPath = pather.RealPath(pkt.getPath())
+			default:
+				realPath = cleanPathWithBase(rs.startDirectory, pkt.getPath())
 			}
-			rpkt = cleanPacketPath(pkt, realPath)
+			if err != nil {
+				rpkt = statusFromError(pkt.ID, err)
+			} else {
+				rpkt = cleanPacketPath(pkt, realPath)
+			}
 		case *sshFxpOpendirPacket:
-			request := requestFromPacket(ctx, pkt)
+			request := requestFromPacket(ctx, pkt, rs.startDirectory)
 			handle := rs.nextRequest(request)
 			rpkt = request.opendir(rs.Handlers, pkt)
 			if _, ok := rpkt.(*sshFxpHandlePacket); !ok {
@@ -214,7 +261,7 @@ func (rs *RequestServer) packetWorker(
 				rs.closeRequest(handle)
 			}
 		case *sshFxpOpenPacket:
-			request := requestFromPacket(ctx, pkt)
+			request := requestFromPacket(ctx, pkt, rs.startDirectory)
 			handle := rs.nextRequest(request)
 			rpkt = request.open(rs.Handlers, pkt)
 			if _, ok := rpkt.(*sshFxpHandlePacket); !ok {
@@ -227,8 +274,11 @@ func (rs *RequestServer) packetWorker(
 			if !ok {
 				rpkt = statusFromError(pkt.ID, EBADF)
 			} else {
-				request = NewRequest("Stat", request.Filepath)
-				rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID)
+				request = &Request{
+					Method:   "Stat",
+					Filepath: cleanPathWithBase(rs.startDirectory, request.Filepath),
+				}
+				rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID, rs.maxTxPacket)
 			}
 		case *sshFxpFsetstatPacket:
 			handle := pkt.getHandle()
@@ -236,27 +286,36 @@ func (rs *RequestServer) packetWorker(
 			if !ok {
 				rpkt = statusFromError(pkt.ID, EBADF)
 			} else {
-				request = NewRequest("Setstat", request.Filepath)
-				rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID)
+				request = &Request{
+					Method:   "Setstat",
+					Filepath: cleanPathWithBase(rs.startDirectory, request.Filepath),
+				}
+				rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID, rs.maxTxPacket)
 			}
 		case *sshFxpExtendedPacketPosixRename:
-			request := NewRequest("PosixRename", pkt.Oldpath)
-			request.Target = pkt.Newpath
-			rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID)
+			request := &Request{
+				Method:   "PosixRename",
+				Filepath: cleanPathWithBase(rs.startDirectory, pkt.Oldpath),
+				Target:   cleanPathWithBase(rs.startDirectory, pkt.Newpath),
+			}
+			rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID, rs.maxTxPacket)
 		case *sshFxpExtendedPacketStatVFS:
-			request := NewRequest("StatVFS", pkt.Path)
-			rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID)
+			request := &Request{
+				Method:   "StatVFS",
+				Filepath: cleanPathWithBase(rs.startDirectory, pkt.Path),
+			}
+			rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID, rs.maxTxPacket)
 		case hasHandle:
 			handle := pkt.getHandle()
 			request, ok := rs.getRequest(handle)
 			if !ok {
 				rpkt = statusFromError(pkt.id(), EBADF)
 			} else {
-				rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID)
+				rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID, rs.maxTxPacket)
 			}
 		case hasPath:
-			request := requestFromPacket(ctx, pkt)
-			rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID)
+			request := requestFromPacket(ctx, pkt, rs.startDirectory)
+			rpkt = request.call(rs.Handlers, pkt, rs.pktMgr.alloc, orderID, rs.maxTxPacket)
 			request.close()
 		default:
 			rpkt = statusFromError(pkt.id(), ErrSSHFxOpUnsupported)
@@ -288,9 +347,9 @@ func cleanPath(p string) string {
 }
 
 func cleanPathWithBase(base, p string) string {
-	p = filepath.ToSlash(p)
+	p = filepath.ToSlash(filepath.Clean(p))
 	if !path.IsAbs(p) {
 		return path.Join(base, p)
 	}
-	return path.Clean(p)
+	return p
 }

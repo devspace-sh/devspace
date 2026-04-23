@@ -1,11 +1,9 @@
 // Package sftp implements the SSH File Transfer Protocol as described in
-// https://tools.ietf.org/html/draft-ietf-secsh-filexfer-02
+// https://filezilla-project.org/specs/draft-ietf-secsh-filexfer-02.txt
 package sftp
 
 import (
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -186,15 +184,15 @@ func (f fx) String() string {
 }
 
 type unexpectedPacketErr struct {
-	want, got uint8
+	want, got fxp
 }
 
 func (u *unexpectedPacketErr) Error() string {
-	return fmt.Sprintf("sftp: unexpected packet: want %v, got %v", fxp(u.want), fxp(u.got))
+	return fmt.Sprintf("sftp: unexpected packet: want %v, got %v", u.want, u.got)
 }
 
-func unimplementedPacketErr(u uint8) error {
-	return errors.Errorf("sftp: unimplemented packet type: got %v", fxp(u))
+func unimplementedPacketErr(u fxp) error {
+	return fmt.Errorf("sftp: unimplemented packet type: got %v", u)
 }
 
 type unexpectedIDErr struct{ want, got uint32 }
@@ -204,11 +202,11 @@ func (u *unexpectedIDErr) Error() string {
 }
 
 func unimplementedSeekWhence(whence int) error {
-	return errors.Errorf("sftp: unimplemented seek whence %d", whence)
+	return fmt.Errorf("sftp: unimplemented seek whence %d", whence)
 }
 
 func unexpectedCount(want, got uint32) error {
-	return errors.Errorf("sftp: unexpected count: want %d, got %d", want, got)
+	return fmt.Errorf("sftp: unexpected count: want %d, got %d", want, got)
 }
 
 type unexpectedVersionErr struct{ want, got uint32 }
@@ -239,7 +237,7 @@ func getSupportedExtensionByName(extensionName string) (sshExtensionPair, error)
 			return supportedExtension, nil
 		}
 	}
-	return sshExtensionPair{}, errors.Errorf("unsupported extension: %s", extensionName)
+	return sshExtensionPair{}, fmt.Errorf("unsupported extension: %s", extensionName)
 }
 
 // SetSFTPExtensions allows to customize the supported server extensions.

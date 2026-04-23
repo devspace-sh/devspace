@@ -2,8 +2,7 @@ package sftp
 
 import (
 	"encoding"
-
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 // all incoming packets
@@ -32,7 +31,7 @@ type notReadOnly interface {
 	notReadOnly()
 }
 
-//// define types by adding methods
+// // define types by adding methods
 // hasPath
 func (p *sshFxpLstatPacket) getPath() string    { return p.Path }
 func (p *sshFxpStatPacket) getPath() string     { return p.Path }
@@ -125,7 +124,7 @@ func makePacket(p rxPacket) (requestPacket, error) {
 	case sshFxpExtended:
 		pkt = &sshFxpExtendedPacket{}
 	default:
-		return nil, errors.Errorf("unhandled packet type: %s", p.pktType)
+		return nil, fmt.Errorf("unhandled packet type: %s", p.pktType)
 	}
 	if err := pkt.UnmarshalBinary(p.pktBytes); err != nil {
 		// Return partially unpacked packet to allow callers to return
