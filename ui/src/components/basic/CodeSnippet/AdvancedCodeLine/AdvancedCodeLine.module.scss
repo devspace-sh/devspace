@@ -1,7 +1,7 @@
-@import '../../../../styles/constants.scss';
+@use '../../../../styles/constants.scss';
 
 .advanced-code-line {
-  font: $code;
+  font: constants.$code;
   color: #d3dae1;
   position: relative;
   margin: 1px 0;

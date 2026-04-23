@@ -1,4 +1,4 @@
-@import '../../../../styles/constants';
+@use '../../../../styles/constants';
 
 .menu-container-wrapper {
   position: relative;
@@ -9,7 +9,7 @@
 }
 
 .menu {
-  background-color: $blue;
+  background-color: constants.$blue;
   max-width: 180px;
   display: flex;
   flex-direction: column;
@@ -59,10 +59,10 @@
             opacity: 0.6;
             transition: opacity 0.2s;
             margin-bottom: 12px;
-            font: $nav;
+            font: constants.$nav;
 
             &.selected {
-              background-color: $blue-highlight;
+              background-color: constants.$blue-highlight;
               opacity: 1;
 
               &:hover {
@@ -111,12 +111,12 @@
       display: block;
       height: 50px;
       width: 85px;
-      background-color: $blue-dark-2;
+      background-color: constants.$blue-dark-2;
       color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      font: $nav;
+      font: constants.$nav;
     }
   }
 }

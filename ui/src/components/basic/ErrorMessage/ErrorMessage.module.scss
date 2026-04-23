@@ -1,8 +1,8 @@
-@import '../../../styles/constants.scss';
+@use '../../../styles/constants.scss';
 
 .error-component-wrapper {
   margin-top: 20px;
-  color: $red;
+  color: constants.$red;
   text-align: center;
   font-size: 14px;
 }

@@ -1,4 +1,4 @@
-@import '../../../styles/constants';
+@use '../../../styles/constants';
 
 .loading-wrapper {
   flex: 1;
@@ -21,7 +21,7 @@
       background-image: none;
       width: 40px;
       height: 40px;
-      border-color: $sky-blue $sky-blue $sky-blue transparent;
+      border-color: constants.$sky-blue constants.$sky-blue constants.$sky-blue transparent;
       border-radius: 50%;
       border-style: solid;
       border-width: 2px;

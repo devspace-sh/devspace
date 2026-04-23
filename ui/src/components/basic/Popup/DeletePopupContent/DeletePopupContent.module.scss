@@ -1,4 +1,4 @@
-@import '../../../../styles/constants.scss';
+@use '../../../../styles/constants.scss';
 
 .delete-popup-content {
   .buttons {
@@ -7,13 +7,13 @@
     justify-content: flex-end;
 
     .cancel {
-      background-color: $gray-4;
+      background-color: constants.$gray-4;
       margin-right: 15px;
     }
   }
 
   .error {
-    color: $darkred;
+    color: constants.$darkred;
   }
 
   + * {

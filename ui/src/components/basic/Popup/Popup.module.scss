@@ -1,8 +1,8 @@
-@import '../../../styles/constants';
+@use '../../../styles/constants';
 
 .popup-container {
   position: fixed;
-  background-color: $popup-bg;
+  background-color: constants.$popup-bg;
   top: 0;
   left: 0;
   right: 0;
@@ -16,7 +16,7 @@
   .popup {
     width: 570px;
     background: white;
-    box-shadow: 0px 0px 20px $box-shadow;
+    box-shadow: 0px 0px 20px constants.$box-shadow;
     border-radius: 3px;
     padding: 20px;
     position: relative;
@@ -24,8 +24,8 @@
     max-height: 90vh;
     overflow-y: auto;
     overflow-x: hidden;
-    font: $text;
-    color: $blue-dark-2;
+    font: constants.$text;
+    color: constants.$blue-dark-2;
 
     &.closed {
       margin-bottom: 103px;
@@ -34,15 +34,15 @@
     .title {
       > h3 {
         margin: 0;
-        color: $blue-dark-2;
+        color: constants.$blue-dark-2;
         padding-bottom: 20px;
-        font: $portlet-title;
+        font: constants.$portlet-title;
       }
     }
 
     .message-text {
       padding-bottom: 15px;
-      color: $blue-dark-2;
+      color: constants.$blue-dark-2;
     }
 
     .popup-close {
@@ -57,16 +57,16 @@
     }
 
     h2 {
-      font: $portlet-title;
+      font: constants.$portlet-title;
       margin: 0;
-      color: $blue-dark-2;
+      color: constants.$blue-dark-2;
     }
 
     hr {
       margin: 0;
       border: none;
       height: 1px;
-      background: $box-shadow;
+      background: constants.$box-shadow;
       opacity: 0.5;
       border-radius: 0px 0px 5px 5px;
       margin-bottom: 18px;
@@ -78,7 +78,7 @@
       font-size: 14px;
 
       &:global(.error) {
-        color: $darkred;
+        color: constants.$darkred;
       }
     }
 
@@ -87,12 +87,12 @@
       justify-content: flex-end;
 
       .yes-btn {
-        background-color: $red;
+        background-color: constants.$red;
       }
 
       .no-btn {
         margin-left: 10px;
-        background-color: $blue;
+        background-color: constants.$blue;
       }
     }
   }

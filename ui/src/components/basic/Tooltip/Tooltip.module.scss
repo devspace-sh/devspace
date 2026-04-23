@@ -1,4 +1,4 @@
-@import '../../../styles/constants';
+@use '../../../styles/constants';
 
 .tooltip-container {
   position: relative;
@@ -19,7 +19,7 @@
     border-radius: 3px;
     text-align: left;
     padding: 3px 10px;
-    color: $gray-4;
+    color: constants.$gray-4;
     font-size: 14px !important;
     text-align: center;
     font-weight: normal !important;
@@ -88,7 +88,7 @@
 
   .tooltip-top {
     bottom: calc(108% + 10px);
-    box-shadow: $shadow-button;
+    box-shadow: constants.$shadow-button;
     .tooltip-arrow {
       z-index: 50;
       width: 15px;
@@ -102,7 +102,7 @@
 
   .tooltip-bottom {
     top: calc(100% + 13px);
-    box-shadow: $shadow-button;
+    box-shadow: constants.$shadow-button;
     .tooltip-arrow {
       z-index: 50;
       width: 15px;

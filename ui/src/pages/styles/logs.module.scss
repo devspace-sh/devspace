@@ -1,12 +1,12 @@
-@import '../../styles/constants';
+@use '../../styles/constants';
 
 .spaces-component {
   .spaces-heading {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font: $portlet-title;
-    color: $gray-4;
+    font: constants.$portlet-title;
+    color: constants.$gray-4;
     margin-bottom: 40px;
 
     button {

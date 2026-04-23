@@ -1,4 +1,4 @@
-@import '../../../../styles/constants';
+@use '../../../../styles/constants';
 
 .status-icon-text {
   font: 600 14px 'Open Sans';
@@ -7,6 +7,6 @@
   margin-right: 17px;
 
   &.warning {
-    color: $red-2;
+    color: constants.$red-2;
   }
 }
