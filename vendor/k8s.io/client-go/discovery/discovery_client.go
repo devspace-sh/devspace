@@ -29,11 +29,11 @@ import (
 	"sync"
 	"time"
 
-	//nolint:staticcheck // SA1019 Keep using module since it's still being maintained and the api of google.golang.org/protobuf/proto differs
-	"github.com/golang/protobuf/proto"
 	openapi_v2 "github.com/google/gnostic-models/openapiv2"
+	"google.golang.org/protobuf/proto"
 
-	apidiscovery "k8s.io/api/apidiscovery/v2beta1"
+	apidiscoveryv2 "k8s.io/api/apidiscovery/v2"
+	apidiscoveryv2beta1 "k8s.io/api/apidiscovery/v2beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,13 +63,16 @@ const (
 	// Aggregated discovery content-type (v2beta1). NOTE: content-type parameters
 	// MUST be ordered (g, v, as) for server in "Accept" header (BUT we are resilient
 	// to ordering when comparing returned values in "Content-Type" header).
-	AcceptV2Beta1 = runtime.ContentTypeJSON + ";" + "g=apidiscovery.k8s.io;v=v2beta1;as=APIGroupDiscoveryList"
+	AcceptV2Beta1  = runtime.ContentTypeJSON + ";" + "g=apidiscovery.k8s.io;v=v2beta1;as=APIGroupDiscoveryList"
+	AcceptV2       = runtime.ContentTypeJSON + ";" + "g=apidiscovery.k8s.io;v=v2;as=APIGroupDiscoveryList"
+	AcceptV2NoPeer = runtime.ContentTypeJSON + ";" + "g=apidiscovery.k8s.io;v=v2;as=APIGroupDiscoveryList;profile=nopeer"
 	// Prioritize aggregated discovery by placing first in the order of discovery accept types.
-	acceptDiscoveryFormats = AcceptV2Beta1 + "," + AcceptV1
+	acceptDiscoveryFormats = AcceptV2 + "," + AcceptV2Beta1 + "," + AcceptV1
 )
 
 // Aggregated discovery content-type GVK.
 var v2Beta1GVK = schema.GroupVersionKind{Group: "apidiscovery.k8s.io", Version: "v2beta1", Kind: "APIGroupDiscoveryList"}
+var v2GVK = schema.GroupVersionKind{Group: "apidiscovery.k8s.io", Version: "v2", Kind: "APIGroupDiscoveryList"}
 
 // DiscoveryInterface holds the methods that discover server-supported API groups,
 // versions and resources.
@@ -166,6 +169,11 @@ type DiscoveryClient struct {
 	LegacyPrefix string
 	// Forces the client to request only "unaggregated" (legacy) discovery.
 	UseLegacyDiscovery bool
+	// NoPeerDiscovery will request the "nopeer" profile of aggregated discovery.
+	// This allows a client to get just the discovery documents served by the single apiserver
+	// that it is talking to. This is useful for clients that need to understand the state
+	// of a single apiserver, for example, to validate that the apiserver is ready to serve traffic.
+	NoPeerDiscovery bool
 }
 
 var _ AggregatedDiscoveryInterface = &DiscoveryClient{}
@@ -239,10 +247,7 @@ func (d *DiscoveryClient) downloadLegacy() (
 	map[schema.GroupVersion]*metav1.APIResourceList,
 	map[schema.GroupVersion]error,
 	error) {
-	accept := acceptDiscoveryFormats
-	if d.UseLegacyDiscovery {
-		accept = AcceptV1
-	}
+	accept := selectDiscoveryAcceptHeader(d.UseLegacyDiscovery, d.NoPeerDiscovery)
 	var responseContentType string
 	body, err := d.restClient.Get().
 		AbsPath("/api").
@@ -265,13 +270,20 @@ func (d *DiscoveryClient) downloadLegacy() (
 
 	var resourcesByGV map[schema.GroupVersion]*metav1.APIResourceList
 	// Based on the content-type server responded with: aggregated or unaggregated.
-	if isGVK, _ := ContentTypeIsGVK(responseContentType, v2Beta1GVK); isGVK {
-		var aggregatedDiscovery apidiscovery.APIGroupDiscoveryList
+	if isGVK, _ := ContentTypeIsGVK(responseContentType, v2GVK); isGVK {
+		var aggregatedDiscovery apidiscoveryv2.APIGroupDiscoveryList
 		err = json.Unmarshal(body, &aggregatedDiscovery)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		apiGroupList, resourcesByGV, failedGVs = SplitGroupsAndResources(aggregatedDiscovery)
+	} else if isGVK, _ := ContentTypeIsGVK(responseContentType, v2Beta1GVK); isGVK {
+		var aggregatedDiscovery apidiscoveryv2beta1.APIGroupDiscoveryList
+		err = json.Unmarshal(body, &aggregatedDiscovery)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		apiGroupList, resourcesByGV, failedGVs = SplitGroupsAndResourcesV2Beta1(aggregatedDiscovery)
 	} else {
 		// Default is unaggregated discovery v1.
 		var v metav1.APIVersions
@@ -298,10 +310,7 @@ func (d *DiscoveryClient) downloadAPIs() (
 	map[schema.GroupVersion]*metav1.APIResourceList,
 	map[schema.GroupVersion]error,
 	error) {
-	accept := acceptDiscoveryFormats
-	if d.UseLegacyDiscovery {
-		accept = AcceptV1
-	}
+	accept := selectDiscoveryAcceptHeader(d.UseLegacyDiscovery, d.NoPeerDiscovery)
 	var responseContentType string
 	body, err := d.restClient.Get().
 		AbsPath("/apis").
@@ -317,13 +326,20 @@ func (d *DiscoveryClient) downloadAPIs() (
 	failedGVs := map[schema.GroupVersion]error{}
 	var resourcesByGV map[schema.GroupVersion]*metav1.APIResourceList
 	// Based on the content-type server responded with: aggregated or unaggregated.
-	if isGVK, _ := ContentTypeIsGVK(responseContentType, v2Beta1GVK); isGVK {
-		var aggregatedDiscovery apidiscovery.APIGroupDiscoveryList
+	if isGVK, _ := ContentTypeIsGVK(responseContentType, v2GVK); isGVK {
+		var aggregatedDiscovery apidiscoveryv2.APIGroupDiscoveryList
 		err = json.Unmarshal(body, &aggregatedDiscovery)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		apiGroupList, resourcesByGV, failedGVs = SplitGroupsAndResources(aggregatedDiscovery)
+	} else if isGVK, _ := ContentTypeIsGVK(responseContentType, v2Beta1GVK); isGVK {
+		var aggregatedDiscovery apidiscoveryv2beta1.APIGroupDiscoveryList
+		err = json.Unmarshal(body, &aggregatedDiscovery)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		apiGroupList, resourcesByGV, failedGVs = SplitGroupsAndResourcesV2Beta1(aggregatedDiscovery)
 	} else {
 		// Default is unaggregated discovery v1.
 		err = json.Unmarshal(body, apiGroupList)
@@ -333,6 +349,16 @@ func (d *DiscoveryClient) downloadAPIs() (
 	}
 
 	return apiGroupList, resourcesByGV, failedGVs, nil
+}
+
+func selectDiscoveryAcceptHeader(useLegacy, nopeer bool) string {
+	if useLegacy {
+		return AcceptV1
+	}
+	if nopeer {
+		return AcceptV2NoPeer + "," + acceptDiscoveryFormats
+	}
+	return acceptDiscoveryFormats
 }
 
 // ContentTypeIsGVK checks of the content-type string is both

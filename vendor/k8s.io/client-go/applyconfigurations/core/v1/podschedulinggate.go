@@ -18,13 +18,17 @@ limitations under the License.
 
 package v1
 
-// PodSchedulingGateApplyConfiguration represents an declarative configuration of the PodSchedulingGate type for use
+// PodSchedulingGateApplyConfiguration represents a declarative configuration of the PodSchedulingGate type for use
 // with apply.
+//
+// PodSchedulingGate is associated to a Pod to guard its scheduling.
 type PodSchedulingGateApplyConfiguration struct {
+	// Name of the scheduling gate.
+	// Each scheduling gate must have a unique name field.
 	Name *string `json:"name,omitempty"`
 }
 
-// PodSchedulingGateApplyConfiguration constructs an declarative configuration of the PodSchedulingGate type for use with
+// PodSchedulingGateApplyConfiguration constructs a declarative configuration of the PodSchedulingGate type for use with
 // apply.
 func PodSchedulingGate() *PodSchedulingGateApplyConfiguration {
 	return &PodSchedulingGateApplyConfiguration{}

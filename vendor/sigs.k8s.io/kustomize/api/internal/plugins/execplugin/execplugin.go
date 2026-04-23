@@ -6,12 +6,11 @@ package execplugin
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
-
-	"github.com/google/shlex"
 
 	"sigs.k8s.io/kustomize/api/internal/plugins/utils"
 	"sigs.k8s.io/kustomize/api/resmap"
@@ -21,6 +20,7 @@ import (
 
 const (
 	tmpConfigFilePrefix = "kust-plugin-config-"
+	maxArgStringLength  = 131071
 )
 
 // ExecPlugin record the name and args of an executable
@@ -93,7 +93,11 @@ func (p *ExecPlugin) processOptionalArgsFields() error {
 		return err
 	}
 	if c.ArgsOneLiner != "" {
-		p.args, _ = shlex.Split(c.ArgsOneLiner)
+		argsTolenSlice, err := ShlexSplit(c.ArgsOneLiner)
+		if err != nil {
+			return fmt.Errorf("failed to parse argsOneLiner: %w", err)
+		}
+		p.args = argsTolenSlice
 	}
 	if c.ArgsFromFile != "" {
 		content, err := p.h.Loader().Load(c.ArgsFromFile)
@@ -169,23 +173,36 @@ func (p *ExecPlugin) invokePlugin(input []byte) ([]byte, error) {
 		p.path, append([]string{f.Name()}, p.args...)...)
 	cmd.Env = p.getEnv()
 	cmd.Stdin = bytes.NewReader(input)
-	cmd.Stderr = os.Stderr
+	var stdErr bytes.Buffer
+	cmd.Stderr = &stdErr
 	if _, err := os.Stat(p.h.Loader().Root()); err == nil {
 		cmd.Dir = p.h.Loader().Root()
 	}
 	result, err := cmd.Output()
 	if err != nil {
+		//nolint:govet
 		return nil, errors.WrapPrefixf(
-			err, "failure in plugin configured via %s; %v",
-			f.Name(), err.Error())
+			fmt.Errorf("failure in plugin configured via %s; %w",
+				f.Name(), err), stdErr.String())
 	}
 	return result, os.Remove(f.Name())
 }
 
 func (p *ExecPlugin) getEnv() []string {
 	env := os.Environ()
-	env = append(env,
-		"KUSTOMIZE_PLUGIN_CONFIG_STRING="+string(p.cfg),
-		"KUSTOMIZE_PLUGIN_CONFIG_ROOT="+p.h.Loader().Root())
+	pluginConfigString := "KUSTOMIZE_PLUGIN_CONFIG_STRING=" + string(p.cfg)
+	if len(pluginConfigString) <= maxArgStringLength {
+		env = append(env, pluginConfigString)
+	} else {
+		log.Printf("KUSTOMIZE_PLUGIN_CONFIG_STRING exceeds hard limit of %d characters, the environment variable "+
+			"will be omitted", maxArgStringLength)
+	}
+	pluginConfigRoot := "KUSTOMIZE_PLUGIN_CONFIG_ROOT=" + p.h.Loader().Root()
+	if len(pluginConfigRoot) <= maxArgStringLength {
+		env = append(env, pluginConfigRoot)
+	} else {
+		log.Printf("KUSTOMIZE_PLUGIN_CONFIG_ROOT exceeds hard limit of %d characters, the environment variable "+
+			"will be omitted", maxArgStringLength)
+	}
 	return env
 }

@@ -18,14 +18,19 @@ limitations under the License.
 
 package v2beta2
 
-// PodsMetricStatusApplyConfiguration represents an declarative configuration of the PodsMetricStatus type for use
+// PodsMetricStatusApplyConfiguration represents a declarative configuration of the PodsMetricStatus type for use
 // with apply.
+//
+// PodsMetricStatus indicates the current value of a metric describing each pod in
+// the current scale target (for example, transactions-processed-per-second).
 type PodsMetricStatusApplyConfiguration struct {
-	Metric  *MetricIdentifierApplyConfiguration  `json:"metric,omitempty"`
+	// metric identifies the target metric by name and selector
+	Metric *MetricIdentifierApplyConfiguration `json:"metric,omitempty"`
+	// current contains the current value for the given metric
 	Current *MetricValueStatusApplyConfiguration `json:"current,omitempty"`
 }
 
-// PodsMetricStatusApplyConfiguration constructs an declarative configuration of the PodsMetricStatus type for use with
+// PodsMetricStatusApplyConfiguration constructs a declarative configuration of the PodsMetricStatus type for use with
 // apply.
 func PodsMetricStatus() *PodsMetricStatusApplyConfiguration {
 	return &PodsMetricStatusApplyConfiguration{}

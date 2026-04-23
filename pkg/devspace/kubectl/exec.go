@@ -4,15 +4,29 @@ import (
 	"bytes"
 	"context"
 	"io"
-
+	
 	"github.com/loft-sh/devspace/pkg/util/terminal"
 	"k8s.io/kubectl/pkg/util/term"
-
+	
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	kubectlExec "k8s.io/client-go/util/exec"
 	"k8s.io/kubectl/pkg/scheme"
 )
+
+// termSizeQueueAdapter adapts k8s.io/kubectl/pkg/util/term.TerminalSizeQueue to
+// k8s.io/client-go/tools/remotecommand.TerminalSizeQueue, which diverged in v0.35.0.
+type termSizeQueueAdapter struct {
+	q term.TerminalSizeQueue
+}
+
+func (a *termSizeQueueAdapter) Next() *remotecommand.TerminalSize {
+	size := a.q.Next()
+	if size == nil {
+		return nil
+	}
+	return &remotecommand.TerminalSize{Width: size.Width, Height: size.Height}
+}
 
 // SubResource specifies with sub resources should be used for the container connection (exec or attach)
 type SubResource string
@@ -20,7 +34,7 @@ type SubResource string
 const (
 	// SubResourceExec creates a new process in the container and attaches to that
 	SubResourceExec SubResource = "exec"
-
+	
 	// SubResourceAttach attaches to the top process of the container
 	SubResourceAttach SubResource = "attach"
 )
@@ -33,34 +47,34 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 		streamOptions remotecommand.StreamOptions
 		tty           = options.TTY
 	)
-
+	
 	if options.SubResource == "" {
 		options.SubResource = SubResourceExec
 	}
-
+	
 	wrapper, upgradeRoundTripper, err := GetUpgraderWrapper(client)
 	if err != nil {
 		return err
 	}
-
+	
 	execRequest := client.KubeClient().CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(options.Pod.Name).
 		Namespace(options.Pod.Namespace).
 		SubResource(string(options.SubResource))
-
+	
 	if tty {
 		tty, t = terminal.SetupTTY(options.Stdin, options.Stdout)
 		if options.ForceTTY || tty {
 			tty = true
 			if t.Raw && options.TerminalSizeQueue == nil {
 				// this call spawns a goroutine to monitor/update the terminal size
-				sizeQueue = t.MonitorSize(t.GetSize())
+				sizeQueue = &termSizeQueueAdapter{q: t.MonitorSize(t.GetSize())}
 			} else if options.TerminalSizeQueue != nil {
 				sizeQueue = options.TerminalSizeQueue
 				t.Raw = true
 			}
-
+			
 			// unset options.Stderr if it was previously set because both stdout and stderr
 			// go over t.Out when tty is true
 			options.Stderr = nil
@@ -79,8 +93,9 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 			Stderr: options.Stderr,
 		}
 	}
-
-	if options.SubResource == SubResourceExec {
+	
+	switch options.SubResource {
+	case SubResourceExec:
 		execRequest.VersionedParams(&corev1.PodExecOptions{
 			Container: options.Container,
 			Command:   options.Command,
@@ -89,7 +104,7 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 			Stderr:    options.Stderr != nil,
 			TTY:       tty,
 		}, scheme.ParameterCodec)
-	} else if options.SubResource == SubResourceAttach {
+	case SubResourceAttach:
 		execRequest.VersionedParams(&corev1.PodExecOptions{
 			Container: options.Container,
 			Stdin:     options.Stdin != nil,
@@ -98,22 +113,22 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 			TTY:       tty,
 		}, scheme.ParameterCodec)
 	}
-
+	
 	exec, err := remotecommand.NewSPDYExecutorForTransports(wrapper, upgradeRoundTripper, "POST", execRequest.URL())
 	if err != nil {
 		return err
 	}
-
+	
 	errChan := make(chan error)
 	go func() {
 		errChan <- t.Safe(func() error {
 			return exec.StreamWithContext(ctx, streamOptions)
 		})
 	}()
-
+	
 	select {
 	case <-ctx.Done():
-		upgradeRoundTripper.Close()
+		_ = upgradeRoundTripper.Close()
 		<-errChan
 		return nil
 	case err = <-errChan:
@@ -124,18 +139,18 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 // ExecStreamOptions are the options for ExecStream
 type ExecStreamOptions struct {
 	Pod *corev1.Pod
-
+	
 	Container string
 	Command   []string
-
+	
 	ForceTTY          bool
 	TTY               bool
 	TerminalSizeQueue remotecommand.TerminalSizeQueue
-
+	
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
-
+	
 	SubResource SubResource
 }
 
@@ -148,7 +163,7 @@ func (client *client) ExecStream(ctx context.Context, options *ExecStreamOptions
 func (client *client) ExecBuffered(ctx context.Context, pod *corev1.Pod, container string, command []string, stdin io.Reader) ([]byte, []byte, error) {
 	stdoutBuffer := &bytes.Buffer{}
 	stderrBuffer := &bytes.Buffer{}
-
+	
 	kubeExecError := client.ExecStream(ctx, &ExecStreamOptions{
 		Pod:       pod,
 		Container: container,
@@ -162,7 +177,7 @@ func (client *client) ExecBuffered(ctx context.Context, pod *corev1.Pod, contain
 			return nil, nil, kubeExecError
 		}
 	}
-
+	
 	return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), kubeExecError
 }
 
@@ -182,6 +197,6 @@ func (client *client) ExecBufferedCombined(ctx context.Context, pod *corev1.Pod,
 			return nil, kubeExecError
 		}
 	}
-
+	
 	return stdoutBuffer.Bytes(), kubeExecError
 }

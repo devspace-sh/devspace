@@ -18,13 +18,17 @@ limitations under the License.
 
 package v1beta1
 
-// CSINodeSpecApplyConfiguration represents an declarative configuration of the CSINodeSpec type for use
+// CSINodeSpecApplyConfiguration represents a declarative configuration of the CSINodeSpec type for use
 // with apply.
+//
+// CSINodeSpec holds information about the specification of all CSI drivers installed on a node
 type CSINodeSpecApplyConfiguration struct {
+	// drivers is a list of information of all CSI Drivers existing on a node.
+	// If all drivers in the list are uninstalled, this can become empty.
 	Drivers []CSINodeDriverApplyConfiguration `json:"drivers,omitempty"`
 }
 
-// CSINodeSpecApplyConfiguration constructs an declarative configuration of the CSINodeSpec type for use with
+// CSINodeSpecApplyConfiguration constructs a declarative configuration of the CSINodeSpec type for use with
 // apply.
 func CSINodeSpec() *CSINodeSpecApplyConfiguration {
 	return &CSINodeSpecApplyConfiguration{}

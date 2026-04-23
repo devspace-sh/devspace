@@ -18,16 +18,23 @@ limitations under the License.
 
 package v1
 
-// ProbeHandlerApplyConfiguration represents an declarative configuration of the ProbeHandler type for use
+// ProbeHandlerApplyConfiguration represents a declarative configuration of the ProbeHandler type for use
 // with apply.
+//
+// ProbeHandler defines a specific action that should be taken in a probe.
+// One and only one of the fields must be specified.
 type ProbeHandlerApplyConfiguration struct {
-	Exec      *ExecActionApplyConfiguration      `json:"exec,omitempty"`
-	HTTPGet   *HTTPGetActionApplyConfiguration   `json:"httpGet,omitempty"`
+	// Exec specifies a command to execute in the container.
+	Exec *ExecActionApplyConfiguration `json:"exec,omitempty"`
+	// HTTPGet specifies an HTTP GET request to perform.
+	HTTPGet *HTTPGetActionApplyConfiguration `json:"httpGet,omitempty"`
+	// TCPSocket specifies a connection to a TCP port.
 	TCPSocket *TCPSocketActionApplyConfiguration `json:"tcpSocket,omitempty"`
-	GRPC      *GRPCActionApplyConfiguration      `json:"grpc,omitempty"`
+	// GRPC specifies a GRPC HealthCheckRequest.
+	GRPC *GRPCActionApplyConfiguration `json:"grpc,omitempty"`
 }
 
-// ProbeHandlerApplyConfiguration constructs an declarative configuration of the ProbeHandler type for use with
+// ProbeHandlerApplyConfiguration constructs a declarative configuration of the ProbeHandler type for use with
 // apply.
 func ProbeHandler() *ProbeHandlerApplyConfiguration {
 	return &ProbeHandlerApplyConfiguration{}

@@ -18,13 +18,16 @@ limitations under the License.
 
 package v1
 
-// HostIPApplyConfiguration represents an declarative configuration of the HostIP type for use
+// HostIPApplyConfiguration represents a declarative configuration of the HostIP type for use
 // with apply.
+//
+// HostIP represents a single IP address allocated to the host.
 type HostIPApplyConfiguration struct {
+	// IP is the IP address assigned to the host
 	IP *string `json:"ip,omitempty"`
 }
 
-// HostIPApplyConfiguration constructs an declarative configuration of the HostIP type for use with
+// HostIPApplyConfiguration constructs a declarative configuration of the HostIP type for use with
 // apply.
 func HostIP() *HostIPApplyConfiguration {
 	return &HostIPApplyConfiguration{}

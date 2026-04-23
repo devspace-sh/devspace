@@ -19,17 +19,30 @@ limitations under the License.
 package v1
 
 import (
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
-// SeccompProfileApplyConfiguration represents an declarative configuration of the SeccompProfile type for use
+// SeccompProfileApplyConfiguration represents a declarative configuration of the SeccompProfile type for use
 // with apply.
+//
+// SeccompProfile defines a pod/container's seccomp profile settings.
+// Only one profile source may be set.
 type SeccompProfileApplyConfiguration struct {
-	Type             *v1.SeccompProfileType `json:"type,omitempty"`
-	LocalhostProfile *string                `json:"localhostProfile,omitempty"`
+	// type indicates which kind of seccomp profile will be applied.
+	// Valid options are:
+	//
+	// Localhost - a profile defined in a file on the node should be used.
+	// RuntimeDefault - the container runtime default profile should be used.
+	// Unconfined - no profile should be applied.
+	Type *corev1.SeccompProfileType `json:"type,omitempty"`
+	// localhostProfile indicates a profile defined in a file on the node should be used.
+	// The profile must be preconfigured on the node to work.
+	// Must be a descending path, relative to the kubelet's configured seccomp profile location.
+	// Must be set if type is "Localhost". Must NOT be set for any other type.
+	LocalhostProfile *string `json:"localhostProfile,omitempty"`
 }
 
-// SeccompProfileApplyConfiguration constructs an declarative configuration of the SeccompProfile type for use with
+// SeccompProfileApplyConfiguration constructs a declarative configuration of the SeccompProfile type for use with
 // apply.
 func SeccompProfile() *SeccompProfileApplyConfiguration {
 	return &SeccompProfileApplyConfiguration{}
@@ -38,7 +51,7 @@ func SeccompProfile() *SeccompProfileApplyConfiguration {
 // WithType sets the Type field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Type field is set to the value of the last call.
-func (b *SeccompProfileApplyConfiguration) WithType(value v1.SeccompProfileType) *SeccompProfileApplyConfiguration {
+func (b *SeccompProfileApplyConfiguration) WithType(value corev1.SeccompProfileType) *SeccompProfileApplyConfiguration {
 	b.Type = &value
 	return b
 }

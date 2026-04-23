@@ -18,15 +18,20 @@ limitations under the License.
 
 package v1
 
-// AffinityApplyConfiguration represents an declarative configuration of the Affinity type for use
+// AffinityApplyConfiguration represents a declarative configuration of the Affinity type for use
 // with apply.
+//
+// Affinity is a group of affinity scheduling rules.
 type AffinityApplyConfiguration struct {
-	NodeAffinity    *NodeAffinityApplyConfiguration    `json:"nodeAffinity,omitempty"`
-	PodAffinity     *PodAffinityApplyConfiguration     `json:"podAffinity,omitempty"`
+	// Describes node affinity scheduling rules for the pod.
+	NodeAffinity *NodeAffinityApplyConfiguration `json:"nodeAffinity,omitempty"`
+	// Describes pod affinity scheduling rules (e.g. co-locate this pod in the same node, zone, etc. as some other pod(s)).
+	PodAffinity *PodAffinityApplyConfiguration `json:"podAffinity,omitempty"`
+	// Describes pod anti-affinity scheduling rules (e.g. avoid putting this pod in the same node, zone, etc. as some other pod(s)).
 	PodAntiAffinity *PodAntiAffinityApplyConfiguration `json:"podAntiAffinity,omitempty"`
 }
 
-// AffinityApplyConfiguration constructs an declarative configuration of the Affinity type for use with
+// AffinityApplyConfiguration constructs a declarative configuration of the Affinity type for use with
 // apply.
 func Affinity() *AffinityApplyConfiguration {
 	return &AffinityApplyConfiguration{}

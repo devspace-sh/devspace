@@ -18,14 +18,44 @@ limitations under the License.
 
 package v1
 
-// PodResourceClaimApplyConfiguration represents an declarative configuration of the PodResourceClaim type for use
+// PodResourceClaimApplyConfiguration represents a declarative configuration of the PodResourceClaim type for use
 // with apply.
+//
+// PodResourceClaim references exactly one ResourceClaim, either directly
+// or by naming a ResourceClaimTemplate which is then turned into a ResourceClaim
+// for the pod.
+//
+// It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
+// Containers that need access to the ResourceClaim reference it with this name.
 type PodResourceClaimApplyConfiguration struct {
-	Name   *string                        `json:"name,omitempty"`
-	Source *ClaimSourceApplyConfiguration `json:"source,omitempty"`
+	// Name uniquely identifies this resource claim inside the pod.
+	// This must be a DNS_LABEL.
+	Name *string `json:"name,omitempty"`
+	// ResourceClaimName is the name of a ResourceClaim object in the same
+	// namespace as this pod.
+	//
+	// Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+	// be set.
+	ResourceClaimName *string `json:"resourceClaimName,omitempty"`
+	// ResourceClaimTemplateName is the name of a ResourceClaimTemplate
+	// object in the same namespace as this pod.
+	//
+	// The template will be used to create a new ResourceClaim, which will
+	// be bound to this pod. When this pod is deleted, the ResourceClaim
+	// will also be deleted. The pod name and resource name, along with a
+	// generated component, will be used to form a unique name for the
+	// ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+	//
+	// This field is immutable and no changes will be made to the
+	// corresponding ResourceClaim by the control plane after creating the
+	// ResourceClaim.
+	//
+	// Exactly one of ResourceClaimName and ResourceClaimTemplateName must
+	// be set.
+	ResourceClaimTemplateName *string `json:"resourceClaimTemplateName,omitempty"`
 }
 
-// PodResourceClaimApplyConfiguration constructs an declarative configuration of the PodResourceClaim type for use with
+// PodResourceClaimApplyConfiguration constructs a declarative configuration of the PodResourceClaim type for use with
 // apply.
 func PodResourceClaim() *PodResourceClaimApplyConfiguration {
 	return &PodResourceClaimApplyConfiguration{}
@@ -39,10 +69,18 @@ func (b *PodResourceClaimApplyConfiguration) WithName(value string) *PodResource
 	return b
 }
 
-// WithSource sets the Source field in the declarative configuration to the given value
+// WithResourceClaimName sets the ResourceClaimName field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Source field is set to the value of the last call.
-func (b *PodResourceClaimApplyConfiguration) WithSource(value *ClaimSourceApplyConfiguration) *PodResourceClaimApplyConfiguration {
-	b.Source = value
+// If called multiple times, the ResourceClaimName field is set to the value of the last call.
+func (b *PodResourceClaimApplyConfiguration) WithResourceClaimName(value string) *PodResourceClaimApplyConfiguration {
+	b.ResourceClaimName = &value
+	return b
+}
+
+// WithResourceClaimTemplateName sets the ResourceClaimTemplateName field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the ResourceClaimTemplateName field is set to the value of the last call.
+func (b *PodResourceClaimApplyConfiguration) WithResourceClaimTemplateName(value string) *PodResourceClaimApplyConfiguration {
+	b.ResourceClaimTemplateName = &value
 	return b
 }

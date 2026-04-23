@@ -18,15 +18,20 @@ limitations under the License.
 
 package v2beta2
 
-// ObjectMetricStatusApplyConfiguration represents an declarative configuration of the ObjectMetricStatus type for use
+// ObjectMetricStatusApplyConfiguration represents a declarative configuration of the ObjectMetricStatus type for use
 // with apply.
+//
+// ObjectMetricStatus indicates the current value of a metric describing a
+// kubernetes object (for example, hits-per-second on an Ingress object).
 type ObjectMetricStatusApplyConfiguration struct {
-	Metric          *MetricIdentifierApplyConfiguration            `json:"metric,omitempty"`
+	// metric identifies the target metric by name and selector
+	Metric *MetricIdentifierApplyConfiguration `json:"metric,omitempty"`
+	// current contains the current value for the given metric
 	Current         *MetricValueStatusApplyConfiguration           `json:"current,omitempty"`
 	DescribedObject *CrossVersionObjectReferenceApplyConfiguration `json:"describedObject,omitempty"`
 }
 
-// ObjectMetricStatusApplyConfiguration constructs an declarative configuration of the ObjectMetricStatus type for use with
+// ObjectMetricStatusApplyConfiguration constructs a declarative configuration of the ObjectMetricStatus type for use with
 // apply.
 func ObjectMetricStatus() *ObjectMetricStatusApplyConfiguration {
 	return &ObjectMetricStatusApplyConfiguration{}

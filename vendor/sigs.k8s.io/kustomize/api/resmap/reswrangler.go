@@ -181,6 +181,10 @@ func (m *resWrangler) GetMatchingResourcesByAnyId(
 	matches IdMatcher) []*resource.Resource {
 	var result []*resource.Resource
 	for _, r := range m.rList {
+		if r.RNode.IsNilOrEmpty() {
+			continue
+		}
+
 		for _, id := range append(r.PrevIds(), r.CurId()) {
 			if matches(id) {
 				result = append(result, r)
@@ -696,8 +700,7 @@ func (m *resWrangler) DeAnchor() (err error) {
 }
 
 // ApplySmPatch applies the patch, and errors on Id collisions.
-func (m *resWrangler) ApplySmPatch(
-	selectedSet *resource.IdSet, patch *resource.Resource) error {
+func (m *resWrangler) ApplySmPatch(selectedSet *resource.IdSet, patch *resource.Resource) error {
 	var list []*resource.Resource
 	for _, res := range m.rList {
 		if selectedSet.Contains(res.CurId()) {

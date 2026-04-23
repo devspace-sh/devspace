@@ -18,13 +18,17 @@ limitations under the License.
 
 package v1
 
-// LoadBalancerStatusApplyConfiguration represents an declarative configuration of the LoadBalancerStatus type for use
+// LoadBalancerStatusApplyConfiguration represents a declarative configuration of the LoadBalancerStatus type for use
 // with apply.
+//
+// LoadBalancerStatus represents the status of a load-balancer.
 type LoadBalancerStatusApplyConfiguration struct {
+	// Ingress is a list containing ingress points for the load-balancer.
+	// Traffic intended for the service should be sent to these ingress points.
 	Ingress []LoadBalancerIngressApplyConfiguration `json:"ingress,omitempty"`
 }
 
-// LoadBalancerStatusApplyConfiguration constructs an declarative configuration of the LoadBalancerStatus type for use with
+// LoadBalancerStatusApplyConfiguration constructs a declarative configuration of the LoadBalancerStatus type for use with
 // apply.
 func LoadBalancerStatus() *LoadBalancerStatusApplyConfiguration {
 	return &LoadBalancerStatusApplyConfiguration{}

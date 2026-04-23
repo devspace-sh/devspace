@@ -18,13 +18,20 @@ limitations under the License.
 
 package v1
 
-// EndpointHintsApplyConfiguration represents an declarative configuration of the EndpointHints type for use
+// EndpointHintsApplyConfiguration represents a declarative configuration of the EndpointHints type for use
 // with apply.
+//
+// EndpointHints provides hints describing how an endpoint should be consumed.
 type EndpointHintsApplyConfiguration struct {
+	// forZones indicates the zone(s) this endpoint should be consumed by when
+	// using topology aware routing. May contain a maximum of 8 entries.
 	ForZones []ForZoneApplyConfiguration `json:"forZones,omitempty"`
+	// forNodes indicates the node(s) this endpoint should be consumed by when
+	// using topology aware routing. May contain a maximum of 8 entries.
+	ForNodes []ForNodeApplyConfiguration `json:"forNodes,omitempty"`
 }
 
-// EndpointHintsApplyConfiguration constructs an declarative configuration of the EndpointHints type for use with
+// EndpointHintsApplyConfiguration constructs a declarative configuration of the EndpointHints type for use with
 // apply.
 func EndpointHints() *EndpointHintsApplyConfiguration {
 	return &EndpointHintsApplyConfiguration{}
@@ -39,6 +46,19 @@ func (b *EndpointHintsApplyConfiguration) WithForZones(values ...*ForZoneApplyCo
 			panic("nil value passed to WithForZones")
 		}
 		b.ForZones = append(b.ForZones, *values[i])
+	}
+	return b
+}
+
+// WithForNodes adds the given value to the ForNodes field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the ForNodes field.
+func (b *EndpointHintsApplyConfiguration) WithForNodes(values ...*ForNodeApplyConfiguration) *EndpointHintsApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithForNodes")
+		}
+		b.ForNodes = append(b.ForNodes, *values[i])
 	}
 	return b
 }

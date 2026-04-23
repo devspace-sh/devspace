@@ -22,15 +22,21 @@ import (
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
 )
 
-// ValidatingAdmissionPolicyStatusApplyConfiguration represents an declarative configuration of the ValidatingAdmissionPolicyStatus type for use
+// ValidatingAdmissionPolicyStatusApplyConfiguration represents a declarative configuration of the ValidatingAdmissionPolicyStatus type for use
 // with apply.
+//
+// ValidatingAdmissionPolicyStatus represents the status of a ValidatingAdmissionPolicy.
 type ValidatingAdmissionPolicyStatusApplyConfiguration struct {
-	ObservedGeneration *int64                           `json:"observedGeneration,omitempty"`
-	TypeChecking       *TypeCheckingApplyConfiguration  `json:"typeChecking,omitempty"`
-	Conditions         []v1.ConditionApplyConfiguration `json:"conditions,omitempty"`
+	// The generation observed by the controller.
+	ObservedGeneration *int64 `json:"observedGeneration,omitempty"`
+	// The results of type checking for each expression.
+	// Presence of this field indicates the completion of the type checking.
+	TypeChecking *TypeCheckingApplyConfiguration `json:"typeChecking,omitempty"`
+	// The conditions represent the latest available observations of a policy's current state.
+	Conditions []v1.ConditionApplyConfiguration `json:"conditions,omitempty"`
 }
 
-// ValidatingAdmissionPolicyStatusApplyConfiguration constructs an declarative configuration of the ValidatingAdmissionPolicyStatus type for use with
+// ValidatingAdmissionPolicyStatusApplyConfiguration constructs a declarative configuration of the ValidatingAdmissionPolicyStatus type for use with
 // apply.
 func ValidatingAdmissionPolicyStatus() *ValidatingAdmissionPolicyStatusApplyConfiguration {
 	return &ValidatingAdmissionPolicyStatusApplyConfiguration{}
