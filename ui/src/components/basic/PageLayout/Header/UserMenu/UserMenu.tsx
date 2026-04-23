@@ -1,7 +1,6 @@
 import React from 'react';
 import styles from './UserMenu.module.scss';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
-import { withRouter, RouteComponentProps } from 'react-router-dom';
 import ErrorBoundary from 'components/basic/ErrorBoundary/ErrorBoundary';
 import Tooltip from 'components/basic/Tooltip/Tooltip';
 import GitHubButton from 'components/basic/GitHubButton/GitHubButton';
@@ -11,7 +10,7 @@ interface State {
   menuOpen: boolean;
 }
 
-class UserMenu extends React.PureComponent<Props & RouteComponentProps, State> {
+class UserMenu extends React.PureComponent<Props, State> {
   state: State = {
     menuOpen: false,
   };
@@ -30,4 +29,4 @@ class UserMenu extends React.PureComponent<Props & RouteComponentProps, State> {
   }
 }
 
-export default withRouter(withPopup(UserMenu));
+export default withPopup(UserMenu);
