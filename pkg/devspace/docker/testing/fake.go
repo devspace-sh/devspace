@@ -5,13 +5,13 @@ import (
 	"context"
 	"io"
 	"strings"
-	
+
 	dockertypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/docker/docker/api/types/build"
 )
 
 // FakeClient is a prototype for a fake docker cient for testing purposes
