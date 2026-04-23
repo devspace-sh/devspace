@@ -11,7 +11,7 @@
     "autoprefixer": "7.1.6",
     "babel-jest": "^25.5.1",
     "babel-loader": "^8.4.1",
-    "babel-preset-react-app": "^4.0.0",
+    "babel-preset-react-app": "^7.0.0",
     "case-sensitive-paths-webpack-plugin": "2.2.0",
     "chalk": "2.0.0",
     "css-loader": "^3.6.0",
