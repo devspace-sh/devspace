@@ -44,6 +44,7 @@ func LoadDockerComposeProject(path string) (*composetypes.Project, error) {
 				Content: composeFile,
 			},
 		},
+		Environment: map[string]string{},
 	})
 	if err != nil {
 		return nil, err

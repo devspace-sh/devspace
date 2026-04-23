@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -14,7 +15,18 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true // non-browser clients (CLI tools, curl) send no Origin header
+		}
+		u, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		h := u.Hostname()
+		return h == "localhost" || h == "127.0.0.1"
+	},
 }
 
 type wsStream struct {

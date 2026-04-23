@@ -7,8 +7,8 @@
     "start": "nodemon index.js"
   },
   "dependencies": {
-    "express": "^4.13.3",
-    "nodemon": "^2.0.12"
+    "express": "^4.22.0",
+    "nodemon": "^3.1.12"
   },
   "keywords": [
     "node",
