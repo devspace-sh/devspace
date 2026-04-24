@@ -4,6 +4,9 @@ const autoprefixer = require('autoprefixer');
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
+const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
 const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
@@ -42,6 +45,13 @@ const getSassLoader = (options = {}) => ({
 if (env.stringified['process.env'].NODE_ENV !== '"production"') {
   throw new Error('Production builds must have NODE_ENV=production.');
 }
+
+const cssFilename = 'static/css/[name].[contenthash:8].css';
+const cssPublicPath = shouldUseRelativeAssetPaths ? Array(cssFilename.split('/').length).join('../') : undefined;
+const getExtractLoader = () => ({
+  loader: MiniCssExtractPlugin.loader,
+  options: cssPublicPath ? { publicPath: cssPublicPath } : {},
+});
 
 // This is the production configuration.
 // It compiles slowly and is focused on producing a fast and minimal bundle.
@@ -159,8 +169,7 @@ module.exports = {
           {
             test: /\.module\.s(a|c)ss$/,
             use: [
-              require.resolve('style-loader'),
-              // isDevelopment ? 'style-loader' : MiniCssExtractPlugin.loader,
+              getExtractLoader(),
               {
                 loader: require.resolve('css-loader'),
                 options: {
@@ -168,10 +177,13 @@ module.exports = {
                   modules: {
                     localIdentName: '[hash:base64]',
                   },
+                  sourceMap: shouldUseSourceMap,
                 },
               },
               {
-                ...getSassLoader(),
+                ...getSassLoader({
+                  sourceMap: shouldUseSourceMap,
+                }),
               },
             ],
           },
@@ -179,23 +191,25 @@ module.exports = {
           {
             test: /\.scss$/,
             use: [
-              'style-loader', // creates style nodes from JS strings
-              'css-loader', // translates CSS into CommonJS
-              getSassLoader(), // compiles Sass to CSS
+              getExtractLoader(),
+              {
+                loader: require.resolve('css-loader'),
+                options: {
+                  sourceMap: shouldUseSourceMap,
+                },
+              },
+              getSassLoader({
+                sourceMap: shouldUseSourceMap,
+              }),
             ],
           },
           // "postcss" loader applies autoprefixer to our CSS.
           // "css" loader resolves paths in CSS and adds assets as dependencies.
-          // "style" loader turns CSS into JS modules that inject <style> tags.
+          // "mini-css-extract-plugin" extracts the final CSS into a production asset.
           {
             test: /\.css$/,
             use: [
-              {
-                loader: require.resolve('style-loader'),
-                options: {
-                  hmr: false,
-                },
-              },
+              getExtractLoader(),
               {
                 loader: require.resolve('css-loader'),
                 options: {
@@ -226,19 +240,17 @@ module.exports = {
             ],
           },
 
-          // "file" loader makes sure assets end up in the `build` folder.
+          // Webpack 5 asset modules emit files directly without file-loader.
           // When you `import` an asset, you get its filename.
-          // This loader doesn't use a "test" so it will catch all modules
-          // that fall through the other loaders.
           {
-            loader: require.resolve('file-loader'),
             // Exclude `js` files to keep "css" loader working as it injects
-            // it's runtime that would otherwise processed through "file" loader.
+            // its runtime that would otherwise be processed through the asset rule.
             // Also exclude `html` and `json` extensions so they get processed
-            // by webpacks internal loaders.
+            // by webpack's internal loaders.
             exclude: [/\.(js|jsx|mjs)$/, /\.html$/, /\.json$/],
-            options: {
-              name: 'static/media/[name].[hash:8].[ext]',
+            type: 'asset/resource',
+            generator: {
+              filename: 'static/media/[name].[hash:8][ext]',
             },
           },
           // ** STOP ** Are you adding a new loader?
@@ -312,6 +324,20 @@ module.exports = {
       // Use multi-process parallel running to improve the build speed
       // Default number of concurrent runs: os.cpus().length - 1
       parallel: true,
+    }),
+    new MiniCssExtractPlugin({
+      filename: cssFilename,
+      chunkFilename: 'static/css/[name].[contenthash:8].chunk.css',
+    }),
+    new WebpackManifestPlugin({
+      fileName: 'asset-manifest.json',
+    }),
+    new WorkboxWebpackPlugin.GenerateSW({
+      dontCacheBustURLsMatching: /\.\w{8}\./,
+      swDest: 'service-worker.js',
+      navigateFallback: publicUrl + '/index.html',
+      navigateFallbackDenylist: [/^\/__/],
+      exclude: [/\.map$/, /asset-manifest\.json$/],
     }),
     // Moment.js is an extremely popular library that bundles large locale files
     // by default due to how Webpack interprets its code. This is a practical
