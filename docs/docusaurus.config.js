@@ -7,6 +7,11 @@ module.exports = {
   tagline: 'The tagline of my site',
   url: 'https://devspace.sh',
   baseUrl: __webpack_public_path__,
+  markdown: {
+    mdx1Compat: {
+      headingIds: true,
+    },
+  },
   favicon: '/img/favicon.png',
   organizationName: 'loft-sh', // Usually your GitHub org/user name.
   projectName: 'devspace', // Usually your repo name.
@@ -84,39 +89,6 @@ module.exports = {
                   path: ""
               }
           },
-          remarkPlugins: [
-              [
-                  require('mdx-mermaid'),
-                  {
-                      mermaid: {
-                          securityLevel: "loose",
-                          theme: 'neutral',
-                          themeVariables: {
-                              primaryColor: '#00bdff',
-                              lineColor: '#bdd6f3',
-                              arrowheadColor: '#bdd6f3',
-                              mainBkg: '#6c89ad',
-                              contrast: '#3e5371',
-                              textColor: '#fff',
-                              primaryTextColor: '#fff',
-                              secondaryTextColor: '#fff',
-                              tertiaryTextColor: '#fff',
-                              border1: 'transparent',
-                              border2: 'transparent',
-                              clusterBkg: 'transparent',
-                              clusterBorder: '#bdd6f3',
-                              edgeLabelBackground: '#bcd6f3',
-
-                          },
-                          flowchart: {
-                              curve: 'basis',
-                              nodeSpacing: 20,
-                              rankSpacing: 50,
-                          }
-                      }
-                  }
-              ]
-          ],
       },
         theme: {
           customCss: resolveGlob.sync(['./src/css/**/*.scss']),
