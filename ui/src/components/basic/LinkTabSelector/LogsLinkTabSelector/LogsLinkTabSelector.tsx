@@ -17,7 +17,7 @@ const LogsLinkTabSelector = (props: Props) => {
 
   return (
     <LinkTabSelector className={props.className && props.className}>
-      <CustomNavLink to={`${currentPath}/logs/containers`} activeClassName={styles['selected']}>
+      <CustomNavLink to={`${currentPath}/logs/containers`} activeClassName={styles['selected']} end={true}>
         Containers
       </CustomNavLink>
     </LinkTabSelector>

@@ -18,13 +18,16 @@ limitations under the License.
 
 package v1beta2
 
-// FlowSchemaStatusApplyConfiguration represents an declarative configuration of the FlowSchemaStatus type for use
+// FlowSchemaStatusApplyConfiguration represents a declarative configuration of the FlowSchemaStatus type for use
 // with apply.
+//
+// FlowSchemaStatus represents the current state of a FlowSchema.
 type FlowSchemaStatusApplyConfiguration struct {
+	// `conditions` is a list of the current states of FlowSchema.
 	Conditions []FlowSchemaConditionApplyConfiguration `json:"conditions,omitempty"`
 }
 
-// FlowSchemaStatusApplyConfiguration constructs an declarative configuration of the FlowSchemaStatus type for use with
+// FlowSchemaStatusApplyConfiguration constructs a declarative configuration of the FlowSchemaStatus type for use with
 // apply.
 func FlowSchemaStatus() *FlowSchemaStatusApplyConfiguration {
 	return &FlowSchemaStatusApplyConfiguration{}

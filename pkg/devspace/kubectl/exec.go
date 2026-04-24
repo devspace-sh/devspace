@@ -6,13 +6,32 @@ import (
 	"io"
 
 	"github.com/loft-sh/devspace/pkg/util/terminal"
-	"k8s.io/kubectl/pkg/util/term"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	kubectlExec "k8s.io/client-go/util/exec"
 	"k8s.io/kubectl/pkg/scheme"
+	"k8s.io/kubectl/pkg/util/term"
 )
+
+// termSizeQueueAdapter adapts k8s.io/kubectl/pkg/util/term.TerminalSizeQueue to
+// k8s.io/client-go/tools/remotecommand.TerminalSizeQueue, which diverged in v0.35.0.
+type termSizeQueueAdapter struct {
+	q term.TerminalSizeQueue
+}
+
+var _ remotecommand.TerminalSizeQueue = (*termSizeQueueAdapter)(nil)
+
+func (a *termSizeQueueAdapter) Next() *remotecommand.TerminalSize {
+	if a == nil || a.q == nil {
+		return nil
+	}
+
+	size := a.q.Next()
+	if size == nil {
+		return nil
+	}
+	return &remotecommand.TerminalSize{Width: size.Width, Height: size.Height}
+}
 
 // SubResource specifies with sub resources should be used for the container connection (exec or attach)
 type SubResource string
@@ -55,7 +74,9 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 			tty = true
 			if t.Raw && options.TerminalSizeQueue == nil {
 				// this call spawns a goroutine to monitor/update the terminal size
-				sizeQueue = t.MonitorSize(t.GetSize())
+				if q := t.MonitorSize(t.GetSize()); q != nil {
+					sizeQueue = &termSizeQueueAdapter{q: q}
+				}
 			} else if options.TerminalSizeQueue != nil {
 				sizeQueue = options.TerminalSizeQueue
 				t.Raw = true
@@ -80,7 +101,8 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 		}
 	}
 
-	if options.SubResource == SubResourceExec {
+	switch options.SubResource {
+	case SubResourceExec:
 		execRequest.VersionedParams(&corev1.PodExecOptions{
 			Container: options.Container,
 			Command:   options.Command,
@@ -89,7 +111,7 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 			Stderr:    options.Stderr != nil,
 			TTY:       tty,
 		}, scheme.ParameterCodec)
-	} else if options.SubResource == SubResourceAttach {
+	case SubResourceAttach:
 		execRequest.VersionedParams(&corev1.PodExecOptions{
 			Container: options.Container,
 			Stdin:     options.Stdin != nil,
@@ -113,7 +135,9 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 
 	select {
 	case <-ctx.Done():
-		upgradeRoundTripper.Close()
+		// Nothing actionable can be done with a close error during shutdown, and the stream goroutine
+		// will still surface any real streaming error via errChan.
+		_ = upgradeRoundTripper.Close()
 		<-errChan
 		return nil
 	case err = <-errChan:

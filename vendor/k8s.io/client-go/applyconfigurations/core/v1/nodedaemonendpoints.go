@@ -18,13 +18,16 @@ limitations under the License.
 
 package v1
 
-// NodeDaemonEndpointsApplyConfiguration represents an declarative configuration of the NodeDaemonEndpoints type for use
+// NodeDaemonEndpointsApplyConfiguration represents a declarative configuration of the NodeDaemonEndpoints type for use
 // with apply.
+//
+// NodeDaemonEndpoints lists ports opened by daemons running on the Node.
 type NodeDaemonEndpointsApplyConfiguration struct {
+	// Endpoint on which Kubelet is listening.
 	KubeletEndpoint *DaemonEndpointApplyConfiguration `json:"kubeletEndpoint,omitempty"`
 }
 
-// NodeDaemonEndpointsApplyConfiguration constructs an declarative configuration of the NodeDaemonEndpoints type for use with
+// NodeDaemonEndpointsApplyConfiguration constructs a declarative configuration of the NodeDaemonEndpoints type for use with
 // apply.
 func NodeDaemonEndpoints() *NodeDaemonEndpointsApplyConfiguration {
 	return &NodeDaemonEndpointsApplyConfiguration{}

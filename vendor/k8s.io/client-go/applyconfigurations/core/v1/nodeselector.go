@@ -18,13 +18,18 @@ limitations under the License.
 
 package v1
 
-// NodeSelectorApplyConfiguration represents an declarative configuration of the NodeSelector type for use
+// NodeSelectorApplyConfiguration represents a declarative configuration of the NodeSelector type for use
 // with apply.
+//
+// A node selector represents the union of the results of one or more label queries
+// over a set of nodes; that is, it represents the OR of the selectors represented
+// by the node selector terms.
 type NodeSelectorApplyConfiguration struct {
+	// Required. A list of node selector terms. The terms are ORed.
 	NodeSelectorTerms []NodeSelectorTermApplyConfiguration `json:"nodeSelectorTerms,omitempty"`
 }
 
-// NodeSelectorApplyConfiguration constructs an declarative configuration of the NodeSelector type for use with
+// NodeSelectorApplyConfiguration constructs a declarative configuration of the NodeSelector type for use with
 // apply.
 func NodeSelector() *NodeSelectorApplyConfiguration {
 	return &NodeSelectorApplyConfiguration{}

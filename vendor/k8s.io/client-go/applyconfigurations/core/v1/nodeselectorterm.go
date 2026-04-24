@@ -18,14 +18,20 @@ limitations under the License.
 
 package v1
 
-// NodeSelectorTermApplyConfiguration represents an declarative configuration of the NodeSelectorTerm type for use
+// NodeSelectorTermApplyConfiguration represents a declarative configuration of the NodeSelectorTerm type for use
 // with apply.
+//
+// A null or empty node selector term matches no objects. The requirements of
+// them are ANDed.
+// The TopologySelectorTerm type implements a subset of the NodeSelectorTerm.
 type NodeSelectorTermApplyConfiguration struct {
+	// A list of node selector requirements by node's labels.
 	MatchExpressions []NodeSelectorRequirementApplyConfiguration `json:"matchExpressions,omitempty"`
-	MatchFields      []NodeSelectorRequirementApplyConfiguration `json:"matchFields,omitempty"`
+	// A list of node selector requirements by node's fields.
+	MatchFields []NodeSelectorRequirementApplyConfiguration `json:"matchFields,omitempty"`
 }
 
-// NodeSelectorTermApplyConfiguration constructs an declarative configuration of the NodeSelectorTerm type for use with
+// NodeSelectorTermApplyConfiguration constructs a declarative configuration of the NodeSelectorTerm type for use with
 // apply.
 func NodeSelectorTerm() *NodeSelectorTermApplyConfiguration {
 	return &NodeSelectorTermApplyConfiguration{}

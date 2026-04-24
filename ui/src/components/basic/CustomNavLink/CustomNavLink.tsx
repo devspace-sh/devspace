@@ -9,6 +9,7 @@ interface Props extends Omit<NavLinkProps, 'className'> {
 const CustomNavLink = ({ activeClassName, className, end, to, ...props }: Props) => {
   const getClassName = ({ isActive }: { isActive: boolean }) =>
     [className, isActive ? activeClassName : undefined].filter(Boolean).join(' ');
+  // Default to prefix matching for parent/group routes; leaf routes should pass end={true}.
   const isEnd = typeof end === 'boolean' ? end : false;
 
   return <NavLink {...props} className={getClassName} end={isEnd} to={to} />;

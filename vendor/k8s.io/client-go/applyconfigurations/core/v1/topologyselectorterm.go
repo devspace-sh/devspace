@@ -18,13 +18,20 @@ limitations under the License.
 
 package v1
 
-// TopologySelectorTermApplyConfiguration represents an declarative configuration of the TopologySelectorTerm type for use
+// TopologySelectorTermApplyConfiguration represents a declarative configuration of the TopologySelectorTerm type for use
 // with apply.
+//
+// A topology selector term represents the result of label queries.
+// A null or empty topology selector term matches no objects.
+// The requirements of them are ANDed.
+// It provides a subset of functionality as NodeSelectorTerm.
+// This is an alpha feature and may change in the future.
 type TopologySelectorTermApplyConfiguration struct {
+	// A list of topology selector requirements by labels.
 	MatchLabelExpressions []TopologySelectorLabelRequirementApplyConfiguration `json:"matchLabelExpressions,omitempty"`
 }
 
-// TopologySelectorTermApplyConfiguration constructs an declarative configuration of the TopologySelectorTerm type for use with
+// TopologySelectorTermApplyConfiguration constructs a declarative configuration of the TopologySelectorTerm type for use with
 // apply.
 func TopologySelectorTerm() *TopologySelectorTermApplyConfiguration {
 	return &TopologySelectorTermApplyConfiguration{}

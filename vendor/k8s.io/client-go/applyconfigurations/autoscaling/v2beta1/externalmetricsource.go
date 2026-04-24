@@ -23,16 +23,28 @@ import (
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
 )
 
-// ExternalMetricSourceApplyConfiguration represents an declarative configuration of the ExternalMetricSource type for use
+// ExternalMetricSourceApplyConfiguration represents a declarative configuration of the ExternalMetricSource type for use
 // with apply.
+//
+// ExternalMetricSource indicates how to scale on a metric not associated with
+// any Kubernetes object (for example length of queue in cloud
+// messaging service, or QPS from loadbalancer running outside of cluster).
+// Exactly one "target" type should be set.
 type ExternalMetricSourceApplyConfiguration struct {
-	MetricName         *string                             `json:"metricName,omitempty"`
-	MetricSelector     *v1.LabelSelectorApplyConfiguration `json:"metricSelector,omitempty"`
-	TargetValue        *resource.Quantity                  `json:"targetValue,omitempty"`
-	TargetAverageValue *resource.Quantity                  `json:"targetAverageValue,omitempty"`
+	// metricName is the name of the metric in question.
+	MetricName *string `json:"metricName,omitempty"`
+	// metricSelector is used to identify a specific time series
+	// within a given metric.
+	MetricSelector *v1.LabelSelectorApplyConfiguration `json:"metricSelector,omitempty"`
+	// targetValue is the target value of the metric (as a quantity).
+	// Mutually exclusive with TargetAverageValue.
+	TargetValue *resource.Quantity `json:"targetValue,omitempty"`
+	// targetAverageValue is the target per-pod value of global metric (as a quantity).
+	// Mutually exclusive with TargetValue.
+	TargetAverageValue *resource.Quantity `json:"targetAverageValue,omitempty"`
 }
 
-// ExternalMetricSourceApplyConfiguration constructs an declarative configuration of the ExternalMetricSource type for use with
+// ExternalMetricSourceApplyConfiguration constructs a declarative configuration of the ExternalMetricSource type for use with
 // apply.
 func ExternalMetricSource() *ExternalMetricSourceApplyConfiguration {
 	return &ExternalMetricSourceApplyConfiguration{}

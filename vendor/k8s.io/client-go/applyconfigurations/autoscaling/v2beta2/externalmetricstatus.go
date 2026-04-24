@@ -18,14 +18,19 @@ limitations under the License.
 
 package v2beta2
 
-// ExternalMetricStatusApplyConfiguration represents an declarative configuration of the ExternalMetricStatus type for use
+// ExternalMetricStatusApplyConfiguration represents a declarative configuration of the ExternalMetricStatus type for use
 // with apply.
+//
+// ExternalMetricStatus indicates the current value of a global metric
+// not associated with any Kubernetes object.
 type ExternalMetricStatusApplyConfiguration struct {
-	Metric  *MetricIdentifierApplyConfiguration  `json:"metric,omitempty"`
+	// metric identifies the target metric by name and selector
+	Metric *MetricIdentifierApplyConfiguration `json:"metric,omitempty"`
+	// current contains the current value for the given metric
 	Current *MetricValueStatusApplyConfiguration `json:"current,omitempty"`
 }
 
-// ExternalMetricStatusApplyConfiguration constructs an declarative configuration of the ExternalMetricStatus type for use with
+// ExternalMetricStatusApplyConfiguration constructs a declarative configuration of the ExternalMetricStatus type for use with
 // apply.
 func ExternalMetricStatus() *ExternalMetricStatusApplyConfiguration {
 	return &ExternalMetricStatusApplyConfiguration{}

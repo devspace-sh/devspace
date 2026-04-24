@@ -18,14 +18,23 @@ limitations under the License.
 
 package v1
 
-// IPBlockApplyConfiguration represents an declarative configuration of the IPBlock type for use
+// IPBlockApplyConfiguration represents a declarative configuration of the IPBlock type for use
 // with apply.
+//
+// IPBlock describes a particular CIDR (Ex. "192.168.1.0/24","2001:db8::/64") that is allowed
+// to the pods matched by a NetworkPolicySpec's podSelector. The except entry describes CIDRs
+// that should not be included within this rule.
 type IPBlockApplyConfiguration struct {
-	CIDR   *string  `json:"cidr,omitempty"`
+	// cidr is a string representing the IPBlock
+	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+	CIDR *string `json:"cidr,omitempty"`
+	// except is a slice of CIDRs that should not be included within an IPBlock
+	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+	// Except values will be rejected if they are outside the cidr range
 	Except []string `json:"except,omitempty"`
 }
 
-// IPBlockApplyConfiguration constructs an declarative configuration of the IPBlock type for use with
+// IPBlockApplyConfiguration constructs a declarative configuration of the IPBlock type for use with
 // apply.
 func IPBlock() *IPBlockApplyConfiguration {
 	return &IPBlockApplyConfiguration{}

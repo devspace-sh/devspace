@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -21,7 +22,7 @@ var Logdir = "./.devspace/logs/"
 var logs = map[string]Logger{}
 var logsMutex sync.Mutex
 
-var overrideOnce sync.Once
+var runtimeHandlerMutex sync.Mutex
 
 type fileLogger struct {
 	logger *logrus.Logger
@@ -67,30 +68,66 @@ func GetFileLogger(filename string) Logger {
 // OverrideRuntimeErrorHandler overrides the standard runtime error handler that logs to stdout
 // with a file logger that logs all runtime.HandleErrors to errors.log
 func OverrideRuntimeErrorHandler(discard bool) {
-	overrideOnce.Do(func() {
-		if discard {
-			if len(runtime.ErrorHandlers) > 0 {
-				runtime.ErrorHandlers[0] = func(err error) {}
-			} else {
-				runtime.ErrorHandlers = []func(err error){
-					func(err error) {},
-				}
-			}
-		} else {
-			errorLog := GetFileLogger("errors")
-			if len(runtime.ErrorHandlers) > 0 {
-				runtime.ErrorHandlers[0] = func(err error) {
-					errorLog.Errorf("Runtime error occurred: %s", err)
-				}
-			} else {
-				runtime.ErrorHandlers = []func(err error){
-					func(err error) {
-						errorLog.Errorf("Runtime error occurred: %s", err)
-					},
-				}
-			}
+	runtimeHandlerMutex.Lock()
+	defer runtimeHandlerMutex.Unlock()
+
+	var handler runtime.ErrorHandler
+	if discard {
+		handler = func(_ context.Context, _ error, _ string, _ ...interface{}) {}
+	} else {
+		handler = newRuntimeErrorHandler(GetFileLogger("errors"))
+	}
+
+	if len(runtime.ErrorHandlers) > 0 {
+		runtime.ErrorHandlers[0] = handler
+	} else {
+		runtime.ErrorHandlers = []runtime.ErrorHandler{handler}
+	}
+}
+
+func newRuntimeErrorHandler(errorLog Logger) runtime.ErrorHandler {
+	return func(_ context.Context, err error, msg string, keysAndValues ...interface{}) {
+		errorLog.Error(formatRuntimeError(err, msg, keysAndValues...))
+	}
+}
+
+func formatRuntimeError(err error, msg string, keysAndValues ...interface{}) string {
+	message := "Runtime error occurred"
+	msg = strings.TrimSpace(msg)
+
+	switch {
+	case msg != "" && err != nil:
+		message += ": " + msg + ": " + err.Error()
+	case msg != "":
+		message += ": " + msg
+	case err != nil:
+		message += ": " + err.Error()
+	}
+
+	if details := formatRuntimeErrorKeysAndValues(keysAndValues...); details != "" {
+		message += " (" + details + ")"
+	}
+
+	return message
+}
+
+func formatRuntimeErrorKeysAndValues(keysAndValues ...interface{}) string {
+	if len(keysAndValues) == 0 {
+		return ""
+	}
+
+	formatted := make([]string, 0, (len(keysAndValues)+1)/2)
+	for i := 0; i < len(keysAndValues); i += 2 {
+		key := fmt.Sprint(keysAndValues[i])
+		if i+1 >= len(keysAndValues) {
+			formatted = append(formatted, key+"=<missing>")
+			continue
 		}
-	})
+
+		formatted = append(formatted, fmt.Sprintf("%s=%v", key, keysAndValues[i+1]))
+	}
+
+	return strings.Join(formatted, ", ")
 }
 
 func (f *fileLogger) addPrefixes(message string) string {

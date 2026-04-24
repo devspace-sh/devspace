@@ -33,10 +33,7 @@ const getSassLoader = (options = {}) => ({
   loader: require.resolve('sass-loader'),
   options: {
     ...options,
-    sassOptions: {
-      ...(options.sassOptions || {}),
-      silenceDeprecations: ['legacy-js-api'],
-    },
+    api: 'modern',
   },
 });
 
@@ -220,21 +217,22 @@ module.exports = {
               {
                 loader: require.resolve('postcss-loader'),
                 options: {
-                  // Necessary for external CSS imports to work
-                  // https://github.com/facebookincubator/create-react-app/issues/2677
-                  ident: 'postcss',
-                  plugins: () => [
-                    require('postcss-flexbugs-fixes'),
-                    autoprefixer({
-                      browsers: [
-                        '>1%',
-                        'last 4 versions',
-                        'Firefox ESR',
-                        'not ie < 9', // React doesn't support IE8 anyway
-                      ],
-                      flexbox: 'no-2009',
-                    }),
-                  ],
+                  postcssOptions: {
+                    // Necessary for external CSS imports to work
+                    // https://github.com/facebookincubator/create-react-app/issues/2677
+                    plugins: [
+                      require('postcss-flexbugs-fixes'),
+                      autoprefixer({
+                        browsers: [
+                          '>1%',
+                          'last 4 versions',
+                          'Firefox ESR',
+                          'not ie < 9', // React doesn't support IE8 anyway
+                        ],
+                        flexbox: 'no-2009',
+                      }),
+                    ],
+                  },
                 },
               },
             ],
@@ -300,7 +298,6 @@ module.exports = {
         },
         compress: {
           ecma: 5,
-          warnings: false,
           // Disabled because of an issue with Uglify breaking seemingly valid code:
           // https://github.com/facebook/create-react-app/issues/2376
           // Pending further investigation:

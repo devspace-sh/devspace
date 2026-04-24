@@ -18,14 +18,21 @@ limitations under the License.
 
 package v1alpha1
 
-// ParamKindApplyConfiguration represents an declarative configuration of the ParamKind type for use
+// ParamKindApplyConfiguration represents a declarative configuration of the ParamKind type for use
 // with apply.
+//
+// ParamKind is a tuple of Group Kind and Version.
 type ParamKindApplyConfiguration struct {
+	// APIVersion is the API group version the resources belong to.
+	// In format of "group/version".
+	// Required.
 	APIVersion *string `json:"apiVersion,omitempty"`
-	Kind       *string `json:"kind,omitempty"`
+	// Kind is the API kind the resources belong to.
+	// Required.
+	Kind *string `json:"kind,omitempty"`
 }
 
-// ParamKindApplyConfiguration constructs an declarative configuration of the ParamKind type for use with
+// ParamKindApplyConfiguration constructs a declarative configuration of the ParamKind type for use with
 // apply.
 func ParamKind() *ParamKindApplyConfiguration {
 	return &ParamKindApplyConfiguration{}

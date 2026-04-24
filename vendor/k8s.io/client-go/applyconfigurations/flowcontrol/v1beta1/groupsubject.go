@@ -18,13 +18,19 @@ limitations under the License.
 
 package v1beta1
 
-// GroupSubjectApplyConfiguration represents an declarative configuration of the GroupSubject type for use
+// GroupSubjectApplyConfiguration represents a declarative configuration of the GroupSubject type for use
 // with apply.
+//
+// GroupSubject holds detailed information for group-kind subject.
 type GroupSubjectApplyConfiguration struct {
+	// name is the user group that matches, or "*" to match all user groups.
+	// See https://github.com/kubernetes/apiserver/blob/master/pkg/authentication/user/user.go for some
+	// well-known group names.
+	// Required.
 	Name *string `json:"name,omitempty"`
 }
 
-// GroupSubjectApplyConfiguration constructs an declarative configuration of the GroupSubject type for use with
+// GroupSubjectApplyConfiguration constructs a declarative configuration of the GroupSubject type for use with
 // apply.
 func GroupSubject() *GroupSubjectApplyConfiguration {
 	return &GroupSubjectApplyConfiguration{}

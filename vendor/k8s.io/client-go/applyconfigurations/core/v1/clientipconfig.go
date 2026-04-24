@@ -18,13 +18,18 @@ limitations under the License.
 
 package v1
 
-// ClientIPConfigApplyConfiguration represents an declarative configuration of the ClientIPConfig type for use
+// ClientIPConfigApplyConfiguration represents a declarative configuration of the ClientIPConfig type for use
 // with apply.
+//
+// ClientIPConfig represents the configurations of Client IP based session affinity.
 type ClientIPConfigApplyConfiguration struct {
+	// timeoutSeconds specifies the seconds of ClientIP type session sticky time.
+	// The value must be >0 && <=86400(for 1 day) if ServiceAffinity == "ClientIP".
+	// Default value is 10800(for 3 hours).
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
-// ClientIPConfigApplyConfiguration constructs an declarative configuration of the ClientIPConfig type for use with
+// ClientIPConfigApplyConfiguration constructs a declarative configuration of the ClientIPConfig type for use with
 // apply.
 func ClientIPConfig() *ClientIPConfigApplyConfiguration {
 	return &ClientIPConfigApplyConfiguration{}

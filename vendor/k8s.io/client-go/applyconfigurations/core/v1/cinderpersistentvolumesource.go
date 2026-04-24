@@ -18,16 +18,32 @@ limitations under the License.
 
 package v1
 
-// CinderPersistentVolumeSourceApplyConfiguration represents an declarative configuration of the CinderPersistentVolumeSource type for use
+// CinderPersistentVolumeSourceApplyConfiguration represents a declarative configuration of the CinderPersistentVolumeSource type for use
 // with apply.
+//
+// Represents a cinder volume resource in Openstack.
+// A Cinder volume must exist before mounting to a container.
+// The volume must also be in the same region as the kubelet.
+// Cinder volumes support ownership management and SELinux relabeling.
 type CinderPersistentVolumeSourceApplyConfiguration struct {
-	VolumeID  *string                            `json:"volumeID,omitempty"`
-	FSType    *string                            `json:"fsType,omitempty"`
-	ReadOnly  *bool                              `json:"readOnly,omitempty"`
+	// volumeID used to identify the volume in cinder.
+	// More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+	VolumeID *string `json:"volumeID,omitempty"`
+	// fsType Filesystem type to mount.
+	// Must be a filesystem type supported by the host operating system.
+	// Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+	// More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+	FSType *string `json:"fsType,omitempty"`
+	// readOnly is Optional: Defaults to false (read/write). ReadOnly here will force
+	// the ReadOnly setting in VolumeMounts.
+	// More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+	ReadOnly *bool `json:"readOnly,omitempty"`
+	// secretRef is Optional: points to a secret object containing parameters used to connect
+	// to OpenStack.
 	SecretRef *SecretReferenceApplyConfiguration `json:"secretRef,omitempty"`
 }
 
-// CinderPersistentVolumeSourceApplyConfiguration constructs an declarative configuration of the CinderPersistentVolumeSource type for use with
+// CinderPersistentVolumeSourceApplyConfiguration constructs a declarative configuration of the CinderPersistentVolumeSource type for use with
 // apply.
 func CinderPersistentVolumeSource() *CinderPersistentVolumeSourceApplyConfiguration {
 	return &CinderPersistentVolumeSourceApplyConfiguration{}

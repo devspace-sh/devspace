@@ -18,14 +18,18 @@ limitations under the License.
 
 package v1
 
-// VolumeDeviceApplyConfiguration represents an declarative configuration of the VolumeDevice type for use
+// VolumeDeviceApplyConfiguration represents a declarative configuration of the VolumeDevice type for use
 // with apply.
+//
+// volumeDevice describes a mapping of a raw block device within a container.
 type VolumeDeviceApplyConfiguration struct {
-	Name       *string `json:"name,omitempty"`
+	// name must match the name of a persistentVolumeClaim in the pod
+	Name *string `json:"name,omitempty"`
+	// devicePath is the path inside of the container that the device will be mapped to.
 	DevicePath *string `json:"devicePath,omitempty"`
 }
 
-// VolumeDeviceApplyConfiguration constructs an declarative configuration of the VolumeDevice type for use with
+// VolumeDeviceApplyConfiguration constructs a declarative configuration of the VolumeDevice type for use with
 // apply.
 func VolumeDevice() *VolumeDeviceApplyConfiguration {
 	return &VolumeDeviceApplyConfiguration{}
