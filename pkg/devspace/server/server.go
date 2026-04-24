@@ -8,33 +8,34 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/loft-sh/devspace/helper/util/port"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Server is listens on a given port for the ui functionality
 type Server struct {
-	Server *http.Server
+	Server    *http.Server
+	authToken string
 }
 
 // DefaultPort is the default port the ui server will listen to
 const DefaultPort = 8090
 
 // NewServer creates a new server from the given parameters
-func NewServer(ctx devspacecontext.Context, host string, ignoreDownloadError bool, forcePort *int, pipeline types.Pipeline) (*Server, error) {
+func NewServer(ctx devspacecontext.Context, host string, ignoreDownloadError bool, forcePort *int, pipeline types.Pipeline, protectUI bool) (*Server, error) {
 	path, err := downloadUI()
 	if err != nil {
 		if !ignoreDownloadError {
@@ -72,12 +73,20 @@ func NewServer(ctx devspacecontext.Context, host string, ignoreDownloadError boo
 	}
 
 	// Create handler
-	handler, err := newHandler(ctx, path, pipeline)
+	authToken := ""
+	if protectUI {
+		authToken, err = generateAuthToken()
+		if err != nil {
+			return nil, errors.Wrap(err, "generate ui auth token")
+		}
+	}
+
+	handler, err := newHandler(ctx, path, pipeline, authToken, protectUI)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Server{
+	server := &Server{
 		Server: &http.Server{
 			Addr:    host + ":" + strconv.Itoa(usePort),
 			Handler: handler,
@@ -85,7 +94,22 @@ func NewServer(ctx devspacecontext.Context, host string, ignoreDownloadError boo
 			// WriteTimeout: 10 * time.Second,
 			// IdleTimeout:  60 * time.Second,
 		},
-	}, nil
+		authToken: authToken,
+	}
+
+	if protectUI {
+		if err := persistAuthToken(server.Server.Addr, authToken); err != nil {
+			ctx.Log().Warnf("Couldn't persist UI auth token: %v", err)
+		}
+	} else if err := removeAuthToken(server.Server.Addr); err != nil {
+		ctx.Log().Warnf("Couldn't clear UI auth token: %v", err)
+	}
+
+	server.Server.RegisterOnShutdown(func() {
+		_ = removeAuthToken(server.Server.Addr)
+	})
+
+	return server, nil
 }
 
 // ListenAndServe implements interface
@@ -94,8 +118,10 @@ func (s *Server) ListenAndServe() error {
 }
 
 type handler struct {
-	ctx      devspacecontext.Context
-	pipeline types.Pipeline
+	ctx       devspacecontext.Context
+	pipeline  types.Pipeline
+	authToken string
+	protectUI bool
 
 	kubeContexts     map[string]string
 	analyticsEnabled bool
@@ -120,7 +146,7 @@ type forward struct {
 	podUUID string
 }
 
-func newHandler(ctx devspacecontext.Context, path string, pipeline types.Pipeline) (*handler, error) { // Get kube config
+func newHandler(ctx devspacecontext.Context, path string, pipeline types.Pipeline, authToken string, protectUI bool) (*handler, error) { // Get kube config
 	kubeConfig, err := kubeconfig.NewLoader().LoadRawConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "load kube config")
@@ -139,6 +165,8 @@ func newHandler(ctx devspacecontext.Context, path string, pipeline types.Pipelin
 	handler := &handler{
 		ctx:                  ctx,
 		pipeline:             pipeline,
+		authToken:            authToken,
+		protectUI:            protectUI,
 		mux:                  http.NewServeMux(),
 		path:                 path,
 		kubeContexts:         kubeContexts,
@@ -146,21 +174,39 @@ func newHandler(ctx devspacecontext.Context, path string, pipeline types.Pipelin
 		clientCache:          make(map[string]kubectl.Client),
 		terminalResizeQueues: make(map[string]TerminalResizeQueue),
 	}
-	handler.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(path, "index.html"))
-	})
-	handler.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(path, "static")))))
-	handler.mux.HandleFunc("/api/ping", handler.ping)
-	handler.mux.HandleFunc("/api/exclude-dependency", handler.excludeDependency)
-	handler.mux.HandleFunc("/api/version", handler.version)
-	handler.mux.HandleFunc("/api/command", handler.command)
-	handler.mux.HandleFunc("/api/resource", handler.request)
-	handler.mux.HandleFunc("/api/config", handler.returnConfig)
-	handler.mux.HandleFunc("/api/forward", handler.forward)
-	handler.mux.HandleFunc("/api/enter", handler.enter)
-	handler.mux.HandleFunc("/api/resize", handler.resize)
-	handler.mux.HandleFunc("/api/logs", handler.logs)
+	handler.registerRoutes()
 	return handler, nil
+}
+
+func (h *handler) registerRoutes() {
+	h.mux.HandleFunc("/", h.index)
+	h.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(h.path, "static")))))
+
+	// These routes are intentionally left unauthenticated:
+	// - /api/version lets `devspace ui` discover an already-running local UI server.
+	// - /api/ping and /api/exclude-dependency are used for local dependency coordination and
+	//   already require the per-run ID in the request body.
+	h.mux.HandleFunc("/api/ping", h.ping)
+	h.mux.HandleFunc("/api/exclude-dependency", h.excludeDependency)
+	h.mux.HandleFunc("/api/version", h.version)
+
+	// Sensitive routes that expose cluster data or perform actions require the UI auth token.
+	h.handleAuthenticated("/api/command", h.command)
+	h.handleAuthenticated("/api/resource", h.request)
+	h.handleAuthenticated("/api/config", h.returnConfig)
+	h.handleAuthenticated("/api/forward", h.forward)
+	h.handleAuthenticated("/api/enter", h.enter)
+	h.handleAuthenticated("/api/resize", h.resize)
+	h.handleAuthenticated("/api/logs", h.logs)
+}
+
+func (h *handler) handleAuthenticated(pattern string, next http.HandlerFunc) {
+	if !h.protectUI {
+		h.mux.HandleFunc(pattern, next)
+		return
+	}
+
+	h.mux.Handle(pattern, authMiddleware(h, next))
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -181,15 +227,17 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // UIServerVersion is the struct that is returned by the /api/version request
 type UIServerVersion struct {
-	Version  string `json:"version"`
-	DevSpace bool   `json:"devSpace"`
+	Version   string `json:"version"`
+	DevSpace  bool   `json:"devSpace"`
+	Protected bool   `json:"protected"`
 }
 
 func (h *handler) version(w http.ResponseWriter, r *http.Request) {
 	version := upgrade.GetVersion()
 	b, err := json.Marshal(&UIServerVersion{
-		Version:  version,
-		DevSpace: true,
+		Version:   version,
+		DevSpace:  true,
+		Protected: h.protectUI,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -229,8 +277,12 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	if h.ctx.Config() != nil {
 		retConfig.RawConfig = h.ctx.Config().Raw()
 		retConfig.Config = h.ctx.Config().Config()
+		vars := h.ctx.Config().Variables()
+		if h.protectUI {
+			vars = redactSensitiveVars(vars)
+		}
 		retConfig.LocalCache = localCache{
-			Vars:        h.ctx.Config().Variables(),
+			Vars:        vars,
 			LastContext: h.ctx.Config().LocalCache().GetLastContext(),
 		}
 	}
@@ -261,6 +313,84 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(b)
+}
+
+func redactSensitiveVars(vars map[string]interface{}) map[string]interface{} {
+	if vars == nil {
+		return nil
+	}
+
+	redacted := make(map[string]interface{}, len(vars))
+	for key, value := range vars {
+		if isSensitiveVariableName(key) {
+			redacted[key] = "***"
+			continue
+		}
+
+		redacted[key] = value
+	}
+
+	return redacted
+}
+
+func isSensitiveVariableName(name string) bool {
+	for _, token := range identifierTokens(name) {
+		tokenUpper := strings.ToUpper(token)
+		upper := tokenUpper
+		if len(upper) > 1 {
+			upper = strings.TrimSuffix(upper, "S")
+		}
+
+		switch upper {
+		case "PASSWORD", "SECRET", "KEY", "TOKEN", "CREDENTIAL":
+			return true
+		}
+
+		if token == tokenUpper && len(upper) >= 3 {
+			for _, keyword := range []string{"PASSWORD", "SECRET", "KEY", "TOKEN", "CREDENTIAL"} {
+				if strings.Contains(upper, keyword) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func identifierTokens(identifier string) []string {
+	tokens := []string{}
+	current := []rune{}
+	runes := []rune(identifier)
+
+	flush := func() {
+		if len(current) == 0 {
+			return
+		}
+
+		tokens = append(tokens, string(current))
+		current = nil
+	}
+
+	for i, r := range runes {
+		if !unicode.IsLetter(r) && !unicode.IsNumber(r) {
+			flush()
+			continue
+		}
+
+		if len(current) > 0 && unicode.IsUpper(r) {
+			prev := current[len(current)-1]
+			nextIsLower := i+1 < len(runes) && unicode.IsLower(runes[i+1])
+			if unicode.IsLower(prev) || (unicode.IsUpper(prev) && nextIsLower) {
+				flush()
+			}
+		}
+
+		current = append(current, r)
+	}
+
+	flush()
+	return tokens
 }
 
 func (h *handler) request(w http.ResponseWriter, r *http.Request) {

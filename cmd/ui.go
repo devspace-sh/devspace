@@ -121,9 +121,9 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 					continue
 				}
 
-				if serverVersion.DevSpace {
+				if serverVersion.DevSpace && serverVersion.Protected == cmd.ProtectUI {
 					cmd.log.Infof("Found running UI server at %s", domain)
-					_ = open.Start(domain)
+					_ = open.Start(server.BrowserURL(fmt.Sprintf("%s:%d", cmd.Host, checkPort)))
 					return nil
 				}
 
@@ -190,17 +190,17 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 	}
 
 	// Create server
-	server, err := server.NewServer(ctx, cmd.Host, cmd.Dev, forcePort, nil)
+	server, err := server.NewServer(ctx, cmd.Host, cmd.Dev, forcePort, nil, cmd.ProtectUI)
 	if err != nil {
 		return err
 	}
 
 	// Open the browser
 	if !cmd.Dev {
-		go func(domain string) {
+		go func(url string) {
 			time.Sleep(time.Second * 2)
-			_ = open.Start("http://" + domain)
-		}(server.Server.Addr)
+			_ = open.Start(url)
+		}(server.BrowserURL())
 	}
 
 	cmd.log.Infof("Start listening on http://%s", server.Server.Addr)

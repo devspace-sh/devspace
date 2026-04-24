@@ -75,3 +75,13 @@ To change which ports should be forwarded, you can edit the `ports` configuratio
 
 ### 3. DevSpace UI
 When running `devspace dev`, DevSpace starts a client-only, localhost UI. By default, DevSpace starts the development UI on port `8090` but if the port is already in use, it will use a different port. If `devspace dev` is running, you can open the link shown in the `devspace dev` output, e.g. [http://localhost:8090](http://localhost:8090)
+
+If you want the localhost UI to require token-based auth for sensitive routes and redact sensitive config values in the stack view, start DevSpace with:
+```bash
+devspace dev --protect-ui
+```
+
+You can also use the same flag when starting the UI directly:
+```bash
+devspace ui --protect-ui
+```

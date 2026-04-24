@@ -46,6 +46,7 @@ devspace reset pods
       --no-warn                      If true does not show any warning when deploying into a different namespace or kube-context than before
       --override-name string         If specified will override the DevSpace project name provided in the devspace.yaml
   -p, --profile strings              The DevSpace profiles to apply. Multiple profiles are applied in the order they are specified
+      --protect-ui                   Enable UI protections such as auth checks for sensitive routes and redaction of sensitive config values
       --silent                       Run in silent mode and prevents any devspace log output except panics & fatals
   -s, --switch-context               Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings                  Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
