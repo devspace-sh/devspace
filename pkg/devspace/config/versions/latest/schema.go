@@ -566,7 +566,7 @@ type KanikoAdditionalMountKeyToPath struct {
 
 // CustomConfig tells the DevSpace CLI to build with a custom build script
 type CustomConfig struct {
-	// Command to execute to build the image. You can use ${runtime.images.my-image.image} and ${runtime.image.my-image.tag}
+	// Command to execute to build the image. You can use `${runtime.images.my-image.image}` and `${runtime.images.my-image.tag}`
 	// to reference the image and tag that should get built.
 	Command string `yaml:"command,omitempty" json:"command,omitempty"`
 	// OnChange will determine when the command should be rerun
@@ -1138,7 +1138,8 @@ type SyncConfig struct {
 	// well as restart the container after a file changed has happened.
 	OnUpload *SyncOnUpload `yaml:"onUpload,omitempty" json:"onUpload,omitempty" jsonschema_extras:"group=actions"`
 
-	// InitialSync defines the initial sync strategy to use when this sync starts. Defaults to mirrorLocal
+	// InitialSync defines the initial sync strategy to use when this sync starts. Defaults to mirrorLocal.
+	// You can completely disable this using the `initialSync: disabled` option.
 	InitialSync InitialSyncStrategy `yaml:"initialSync,omitempty" json:"initialSync,omitempty" jsonschema_extras:"group=initial_sync,group_name=Initial Sync"`
 
 	// WaitInitialSync can be used to tell DevSpace to not wait until the initial sync is done

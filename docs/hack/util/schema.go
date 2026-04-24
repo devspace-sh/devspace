@@ -75,7 +75,7 @@ func GenerateReference(schema *jsonschema.Schema, basePath string) {
 func createSections(basePath, prefix string, schema *jsonschema.Schema, definitions jsonschema.Definitions, depth int, parentIsNameObjectMap bool) string {
 	partialImports := &[]string{}
 	content := ""
-	headlinePrefix := strings.Repeat("#", depth+1) + " "
+	headlinePrefix := headingPrefix(depth)
 	anchorPrefix := strings.TrimPrefix(strings.ReplaceAll(prefix, prefixSeparator, anchorSeparator), anchorSeparator)
 
 	groups := map[string]*Group{}
@@ -275,6 +275,14 @@ func createSections(basePath, prefix string, schema *jsonschema.Schema, definiti
 	}
 
 	return content
+}
+
+func headingPrefix(depth int) string {
+	headingLevel := depth + 1
+	if headingLevel > 6 {
+		headingLevel = 6
+	}
+	return strings.Repeat("#", headingLevel) + " "
 }
 
 func GetEumValues(fieldSchema *jsonschema.Schema, required bool, fieldDefault *string) string {

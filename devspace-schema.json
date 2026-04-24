@@ -452,7 +452,7 @@
       "properties": {
         "command": {
           "type": "string",
-          "description": "Command to execute to build the image. You can use ${runtime.images.my-image.image} and ${runtime.image.my-image.tag}\nto reference the image and tag that should get built."
+          "description": "Command to execute to build the image. You can use `${runtime.images.my-image.image}` and `${runtime.images.my-image.tag}`\nto reference the image and tag that should get built."
         },
         "onChange": {
           "oneOf": [
@@ -3513,7 +3513,7 @@
         },
         "initialSync": {
           "type": "string",
-          "description": "InitialSync defines the initial sync strategy to use when this sync starts. Defaults to mirrorLocal",
+          "description": "InitialSync defines the initial sync strategy to use when this sync starts. Defaults to mirrorLocal.\nYou can completely disable this using the `initialSync: disabled` option.",
           "group": "initial_sync",
           "group_name": "Initial Sync"
         },

@@ -1,8 +1,8 @@
 {
-  "version-5.x/adminSidebar": [
+  "adminSidebar": [
     {
       "type": "doc",
-      "id": "version-5.x/introduction"
+      "id": "introduction"
     },
     {
       "collapsed": false,
@@ -11,7 +11,7 @@
       "items": [
         {
           "type": "doc",
-          "id": "version-5.x/quickstart"
+          "id": "quickstart"
         },
         {
           "collapsed": true,
@@ -20,27 +20,27 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/getting-started/installation"
+              "id": "getting-started/installation"
             },
             {
               "type": "doc",
-              "id": "version-5.x/getting-started/initialize-project"
+              "id": "getting-started/initialize-project"
             },
             {
               "type": "doc",
-              "id": "version-5.x/getting-started/development"
+              "id": "getting-started/development"
             },
             {
               "type": "doc",
-              "id": "version-5.x/getting-started/deployment"
+              "id": "getting-started/deployment"
             },
             {
               "type": "doc",
-              "id": "version-5.x/getting-started/cleanup"
+              "id": "getting-started/cleanup"
             },
             {
               "type": "doc",
-              "id": "version-5.x/getting-started/next-steps"
+              "id": "getting-started/next-steps"
             }
           ]
         }
@@ -53,7 +53,7 @@
       "items": [
         {
           "type": "doc",
-          "id": "version-5.x/configuration/reference"
+          "id": "configuration/reference"
         },
         {
           "collapsed": true,
@@ -62,35 +62,35 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/configuration/images/basics"
+              "id": "configuration/images/basics"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/images/image-tagging"
+              "id": "configuration/images/image-tagging"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/images/dockerfile-context"
+              "id": "configuration/images/dockerfile-context"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/images/entrypoint-cmd"
+              "id": "configuration/images/entrypoint-cmd"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/images/append-dockerfile-instructions"
+              "id": "configuration/images/append-dockerfile-instructions"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/images/inject-restart-helper"
+              "id": "configuration/images/inject-restart-helper"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/images/rebuild-strategy"
+              "id": "configuration/images/rebuild-strategy"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/images/pull-secrets"
+              "id": "configuration/images/pull-secrets"
             },
             {
               "collapsed": true,
@@ -99,23 +99,23 @@
               "items": [
                 {
                   "type": "doc",
-                  "id": "version-5.x/configuration/images/docker"
+                  "id": "configuration/images/docker"
                 },
                 {
                   "type": "doc",
-                  "id": "version-5.x/configuration/images/buildkit"
+                  "id": "configuration/images/buildkit"
                 },
                 {
                   "type": "doc",
-                  "id": "version-5.x/configuration/images/kaniko"
+                  "id": "configuration/images/kaniko"
                 },
                 {
                   "type": "doc",
-                  "id": "version-5.x/configuration/images/custom"
+                  "id": "configuration/images/custom"
                 },
                 {
                   "type": "doc",
-                  "id": "version-5.x/configuration/images/disabled"
+                  "id": "configuration/images/disabled"
                 }
               ]
             }
@@ -128,19 +128,19 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/configuration/deployments/basics"
+              "id": "configuration/deployments/basics"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/deployments/helm-charts"
+              "id": "configuration/deployments/helm-charts"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/deployments/kubernetes-manifests"
+              "id": "configuration/deployments/kubernetes-manifests"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/deployments/kustomizations"
+              "id": "configuration/deployments/kustomizations"
             },
             {
               "type": "link",
@@ -156,39 +156,39 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/configuration/development/basics"
+              "id": "configuration/development/basics"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/development/port-forwarding"
+              "id": "configuration/development/port-forwarding"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/development/reverse-port-forwarding"
+              "id": "configuration/development/reverse-port-forwarding"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/development/open-links"
+              "id": "configuration/development/open-links"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/development/file-synchronization"
+              "id": "configuration/development/file-synchronization"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/development/terminal"
+              "id": "configuration/development/terminal"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/development/log-streaming"
+              "id": "configuration/development/log-streaming"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/development/replace-pods"
+              "id": "configuration/development/replace-pods"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/development/auto-reloading"
+              "id": "configuration/development/auto-reloading"
             }
           ]
         },
@@ -199,15 +199,15 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/configuration/dependencies/basics"
+              "id": "configuration/dependencies/basics"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/dependencies/git-repository"
+              "id": "configuration/dependencies/git-repository"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/dependencies/local-folder"
+              "id": "configuration/dependencies/local-folder"
             }
           ]
         },
@@ -218,31 +218,31 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/configuration/variables/basics"
+              "id": "configuration/variables/basics"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/variables/source-env"
+              "id": "configuration/variables/source-env"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/variables/source-input"
+              "id": "configuration/variables/source-input"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/variables/source-command"
+              "id": "configuration/variables/source-command"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/variables/source-none"
+              "id": "configuration/variables/source-none"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/variables/predefined-variables"
+              "id": "configuration/variables/predefined-variables"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/variables/runtime-variables"
+              "id": "configuration/variables/runtime-variables"
             }
           ]
         },
@@ -253,53 +253,53 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/configuration/profiles/basics"
+              "id": "configuration/profiles/basics"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/profiles/replace"
+              "id": "configuration/profiles/replace"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/profiles/merge"
+              "id": "configuration/profiles/merge"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/profiles/patches"
+              "id": "configuration/profiles/patches"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/profiles/parents"
+              "id": "configuration/profiles/parents"
             },
             {
               "type": "doc",
-              "id": "version-5.x/configuration/profiles/activation"
+              "id": "configuration/profiles/activation"
             }
           ]
         },
         {
           "type": "doc",
-          "id": "version-5.x/configuration/pullSecrets/basics"
+          "id": "configuration/pullSecrets/basics"
         },
         {
           "type": "doc",
-          "id": "version-5.x/configuration/commands/basics"
+          "id": "configuration/commands/basics"
         },
         {
           "type": "doc",
-          "id": "version-5.x/configuration/hooks/basics"
+          "id": "configuration/hooks/basics"
         },
         {
           "type": "doc",
-          "id": "version-5.x/configuration/require/basics"
+          "id": "configuration/require/basics"
         },
         {
           "type": "doc",
-          "id": "version-5.x/configuration/expressions"
+          "id": "configuration/expressions"
         },
         {
           "type": "doc",
-          "id": "version-5.x/configuration/env-file"
+          "id": "configuration/env-file"
         }
       ]
     },
@@ -310,43 +310,43 @@
       "items": [
         {
           "type": "doc",
-          "id": "version-5.x/guides/basics"
+          "id": "guides/basics"
         },
         {
           "type": "doc",
-          "id": "version-5.x/guides/localhost-ui"
+          "id": "guides/localhost-ui"
         },
         {
           "type": "doc",
-          "id": "version-5.x/guides/networking-domains"
+          "id": "guides/networking-domains"
         },
         {
           "type": "doc",
-          "id": "version-5.x/guides/file-synchronization"
+          "id": "guides/file-synchronization"
         },
         {
           "type": "doc",
-          "id": "version-5.x/guides/ci-cd-integration"
+          "id": "guides/ci-cd-integration"
         },
         {
           "type": "doc",
-          "id": "version-5.x/guides/dev-staging-production"
+          "id": "guides/dev-staging-production"
         },
         {
           "type": "doc",
-          "id": "version-5.x/guides/image-building"
+          "id": "guides/image-building"
         },
         {
           "type": "doc",
-          "id": "version-5.x/guides/plugins"
+          "id": "guides/plugins"
         },
         {
           "type": "doc",
-          "id": "version-5.x/guides/remote-debugging"
+          "id": "guides/remote-debugging"
         },
         {
           "type": "doc",
-          "id": "version-5.x/guides/community-projects"
+          "id": "guides/community-projects"
         }
       ]
     },
@@ -406,41 +406,41 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_add_plugin"
+              "id": "commands/devspace_add_plugin"
             }
           ]
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_analyze"
+          "id": "commands/devspace_analyze"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_attach"
+          "id": "commands/devspace_attach"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_build"
+          "id": "commands/devspace_build"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_cleanup_images"
+          "id": "commands/devspace_cleanup_images"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_deploy"
+          "id": "commands/devspace_deploy"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_dev"
+          "id": "commands/devspace_dev"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_enter"
+          "id": "commands/devspace_enter"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_init"
+          "id": "commands/devspace_init"
         },
         {
           "collapsed": true,
@@ -449,57 +449,57 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_list_commands"
+              "id": "commands/devspace_list_commands"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_list_contexts"
+              "id": "commands/devspace_list_contexts"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_list_deployments"
+              "id": "commands/devspace_list_deployments"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_list_namespaces"
+              "id": "commands/devspace_list_namespaces"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_list_plugins"
+              "id": "commands/devspace_list_plugins"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_list_ports"
+              "id": "commands/devspace_list_ports"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_list_profiles"
+              "id": "commands/devspace_list_profiles"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_list_sync"
+              "id": "commands/devspace_list_sync"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_list_vars"
+              "id": "commands/devspace_list_vars"
             }
           ]
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_logs"
+          "id": "commands/devspace_logs"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_open"
+          "id": "commands/devspace_open"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_print"
+          "id": "commands/devspace_print"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_purge"
+          "id": "commands/devspace_purge"
         },
         {
           "collapsed": true,
@@ -508,17 +508,17 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_remove_context"
+              "id": "commands/devspace_remove_context"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_remove_plugin"
+              "id": "commands/devspace_remove_plugin"
             }
           ]
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_render"
+          "id": "commands/devspace_render"
         },
         {
           "collapsed": true,
@@ -527,17 +527,17 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_reset_dependencies"
+              "id": "commands/devspace_reset_dependencies"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_reset_vars"
+              "id": "commands/devspace_reset_vars"
             }
           ]
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_run"
+          "id": "commands/devspace_run"
         },
         {
           "collapsed": true,
@@ -546,17 +546,17 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_set_var"
+              "id": "commands/devspace_set_var"
             }
           ]
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_sync"
+          "id": "commands/devspace_sync"
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_ui"
+          "id": "commands/devspace_ui"
         },
         {
           "collapsed": true,
@@ -565,17 +565,17 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_update_plugin"
+              "id": "commands/devspace_update_plugin"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_update_dependencies"
+              "id": "commands/devspace_update_dependencies"
             }
           ]
         },
         {
           "type": "doc",
-          "id": "version-5.x/commands/devspace_upgrade"
+          "id": "commands/devspace_upgrade"
         },
         {
           "collapsed": true,
@@ -584,15 +584,15 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_use_context"
+              "id": "commands/devspace_use_context"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_use_namespace"
+              "id": "commands/devspace_use_namespace"
             },
             {
               "type": "doc",
-              "id": "version-5.x/commands/devspace_use_profile"
+              "id": "commands/devspace_use_profile"
             }
           ]
         }
