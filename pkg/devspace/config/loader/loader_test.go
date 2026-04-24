@@ -1964,6 +1964,287 @@ deployments:
 	}
 }
 
+// TestImportsDeepMerge validates that imports are deep merged correctly.
+// Maps should be recursively merged while arrays and scalars are replaced.
+func TestImportsDeepMerge(t *testing.T) {
+	dir := t.TempDir()
+
+	wdBackup, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting current working directory: %v", err)
+	}
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatalf("Error changing working directory: %v", err)
+	}
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+	}()
+
+	testCases := []struct {
+		name        string
+		catalogYaml string
+		mainYaml    string
+		verify      func(t *testing.T, dev map[string]*latest.DevPod)
+	}{
+		{
+			name: "Catalog provides base config, project adds minimal customization",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+dev:
+  api:
+    command: ["/bin/bash"]
+    ports:
+      - port: "8080:8080"
+    sync:
+      - path: ./src:/app/src
+        excludePaths:
+          - "**/__pycache__/"
+          - "**/*.pyc"
+        onUpload:
+          restartContainer: true
+    logs:
+      enabled: true
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+dev:
+  api:
+    labelSelector:
+      app.kubernetes.io/name: my-app
+`,
+			verify: func(t *testing.T, dev map[string]*latest.DevPod) {
+				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
+
+				// Project customization
+				assert.Equal(t, dev["api"].LabelSelector["app.kubernetes.io/name"], "my-app", "labelSelector from project")
+
+				// Catalog base config preserved
+				assert.Equal(t, len(dev["api"].Command), 1, "command from catalog")
+				assert.Equal(t, dev["api"].Command[0], "/bin/bash", "command value from catalog")
+				assert.Assert(t, len(dev["api"].Ports) >= 1, "ports from catalog")
+				assert.Assert(t, len(dev["api"].Sync) >= 1, "sync from catalog")
+			},
+		},
+		{
+			name: "Project replaces arrays but deep merges maps",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+dev:
+  api:
+    labelSelector:
+      app: catalog-app
+      version: v1
+    command: ["/bin/bash"]
+    ports:
+      - port: "8080:8080"
+      - port: "8443:8443"
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+dev:
+  api:
+    labelSelector:
+      app: project-app
+      tier: frontend
+    ports:
+      - port: "3000:3000"
+`,
+			verify: func(t *testing.T, dev map[string]*latest.DevPod) {
+				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
+
+				// Maps are deep merged
+				assert.Equal(t, dev["api"].LabelSelector["app"], "project-app", "project overrides 'app' in map")
+				assert.Equal(t, dev["api"].LabelSelector["version"], "v1", "catalog 'version' preserved in map")
+				assert.Equal(t, dev["api"].LabelSelector["tier"], "frontend", "project adds 'tier' in map")
+
+				// Arrays are replaced entirely
+				assert.Equal(t, len(dev["api"].Ports), 1, "project ports replace catalog ports (array replaced)")
+
+				// Catalog scalar values preserved
+				assert.Equal(t, len(dev["api"].Command), 1, "command from catalog")
+				assert.Equal(t, dev["api"].Command[0], "/bin/bash", "command value")
+			},
+		},
+		{
+			name: "Catalog with nested labelSelector, project adds and overrides",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+dev:
+  api:
+    labelSelector:
+      app: base-app
+      version: v1
+      environment: production
+    command: ["/bin/bash"]
+    ports:
+      - port: "8080:8080"
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+dev:
+  api:
+    labelSelector:
+      app: my-custom-app
+      tier: frontend
+`,
+			verify: func(t *testing.T, dev map[string]*latest.DevPod) {
+				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
+
+				// Project overrides specific label
+				assert.Equal(t, dev["api"].LabelSelector["app"], "my-custom-app", "project overrides 'app' label")
+
+				// Project adds new label
+				assert.Equal(t, dev["api"].LabelSelector["tier"], "frontend", "project adds 'tier' label")
+
+				// Catalog labels preserved when not overridden
+				assert.Equal(t, dev["api"].LabelSelector["version"], "v1", "catalog 'version' label preserved")
+				assert.Equal(t, dev["api"].LabelSelector["environment"], "production", "catalog 'environment' label preserved")
+
+				// Catalog command/ports preserved
+				assert.Equal(t, len(dev["api"].Command), 1, "command from catalog")
+				assert.Assert(t, len(dev["api"].Ports) >= 1, "ports from catalog")
+			},
+		},
+		{
+			name: "Multiple services with independent merges",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+dev:
+  api:
+    command: ["/bin/bash"]
+    ports:
+      - port: "8080:8080"
+    sync:
+      - path: ./api:/app
+  worker:
+    command: ["/bin/sh"]
+    ports:
+      - port: "9090:9090"
+    sync:
+      - path: ./worker:/app
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+dev:
+  api:
+    labelSelector:
+      app.kubernetes.io/name: my-api
+      tier: backend
+  worker:
+    labelSelector:
+      app.kubernetes.io/name: my-worker
+      tier: jobs
+`,
+			verify: func(t *testing.T, dev map[string]*latest.DevPod) {
+				// Verify api service
+				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
+				assert.Equal(t, dev["api"].LabelSelector["app.kubernetes.io/name"], "my-api", "api labelSelector")
+				assert.Equal(t, dev["api"].LabelSelector["tier"], "backend", "api tier label")
+				assert.Equal(t, len(dev["api"].Command), 1, "api command from catalog")
+				assert.Equal(t, dev["api"].Command[0], "/bin/bash", "api command value")
+				assert.Assert(t, len(dev["api"].Ports) >= 1, "api ports from catalog")
+				assert.Assert(t, len(dev["api"].Sync) >= 1, "api sync from catalog")
+
+				// Verify worker service
+				assert.Assert(t, dev["worker"] != nil, "worker dev config should exist")
+				assert.Equal(t, dev["worker"].LabelSelector["app.kubernetes.io/name"], "my-worker", "worker labelSelector")
+				assert.Equal(t, dev["worker"].LabelSelector["tier"], "jobs", "worker tier label")
+				assert.Equal(t, len(dev["worker"].Command), 1, "worker command from catalog")
+				assert.Equal(t, dev["worker"].Command[0], "/bin/sh", "worker command value")
+				assert.Assert(t, len(dev["worker"].Ports) >= 1, "worker ports from catalog")
+				assert.Assert(t, len(dev["worker"].Sync) >= 1, "worker sync from catalog")
+			},
+		},
+		{
+			name: "Project only defines labelSelector, everything else from catalog",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+dev:
+  api:
+    command: ["/bin/bash"]
+    ports:
+      - port: "8080:8080"
+      - port: "8443:8443"
+    sync:
+      - path: ./src:/usr/src/app/src
+        excludePaths:
+          - "**/__pycache__/"
+          - "**/*.pyc"
+          - "**/node_modules/"
+        onUpload:
+          restartContainer: true
+    logs:
+      enabled: true
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+dev:
+  api:
+    labelSelector:
+      app.kubernetes.io/name: my-minimal-app
+`,
+			verify: func(t *testing.T, dev map[string]*latest.DevPod) {
+				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
+
+				// Only labelSelector from project
+				assert.Equal(t, dev["api"].LabelSelector["app.kubernetes.io/name"], "my-minimal-app", "labelSelector from project")
+
+				// Everything else from catalog
+				assert.Equal(t, len(dev["api"].Command), 1, "command from catalog")
+				assert.Equal(t, dev["api"].Command[0], "/bin/bash", "command value")
+				assert.Equal(t, len(dev["api"].Ports), 2, "all ports from catalog")
+				assert.Assert(t, len(dev["api"].Sync) >= 1, "sync config from catalog")
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create catalog file
+			err := fsutil.WriteToFile([]byte(tc.catalogYaml), filepath.Join(dir, "catalog.yaml"))
+			assert.NilError(t, err, "Error writing catalog.yaml")
+
+			// Create main config file
+			err = fsutil.WriteToFile([]byte(tc.mainYaml), filepath.Join(dir, "devspace.yaml"))
+			assert.NilError(t, err, "Error writing devspace.yaml")
+
+			// Load config
+			loader, err := NewConfigLoader(filepath.Join(dir, "devspace.yaml"))
+			assert.NilError(t, err, "Error creating config loader")
+
+			config, err := loader.Load(context.TODO(), nil, &ConfigOptions{Dry: true}, log.Discard)
+			assert.NilError(t, err, "Error loading config in test case %s", tc.name)
+
+			// Verify using custom verification function
+			tc.verify(t, config.Config().Dev)
+		})
+	}
+}
+
 func stripNames(config *latest.Config) {
 	for k := range config.Images {
 		config.Images[k].Name = ""
