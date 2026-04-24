@@ -37,17 +37,17 @@ class Menu extends React.PureComponent<Props, State> {
             <nav>
               <ul>
                 <li>
-                  <CustomNavLink className={styles.logs} to="/logs/containers" activeClassName={styles.selected}>
+                  <CustomNavLink className={styles.logs} to="/logs/containers" activeClassName={styles.selected} end={true}>
                     Logs
                   </CustomNavLink>
                 </li>
                 <li>
-                  <CustomNavLink className={styles.stack} to="/stack/configuration" activeClassName={styles.selected}>
+                  <CustomNavLink className={styles.stack} to="/stack/configuration" activeClassName={styles.selected} end={true}>
                     Stack
                   </CustomNavLink>
                 </li>
                 <li>
-                  <CustomNavLink className={styles.commands} to="/commands/commands" activeClassName={styles.selected}>
+                  <CustomNavLink className={styles.commands} to="/commands/commands" activeClassName={styles.selected} end={true}>
                     Commands
                   </CustomNavLink>
                 </li>

@@ -7,9 +7,9 @@ import (
 	"io"
 	"strings"
 	"sync"
-	
+
 	"github.com/acarl005/stripansi"
-	
+
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -22,11 +22,11 @@ var Logdir = "./.devspace/logs/"
 var logs = map[string]Logger{}
 var logsMutex sync.Mutex
 
-var overrideOnce sync.Once
+var runtimeHandlerMutex sync.Mutex
 
 type fileLogger struct {
 	logger *logrus.Logger
-	
+
 	m        *sync.Mutex
 	level    logrus.Level
 	sinks    []Logger
@@ -40,10 +40,10 @@ func GetDevPodFileLogger(devPodName string) Logger {
 // GetFileLogger returns a logger instance for the specified filename
 func GetFileLogger(filename string) Logger {
 	filename = strings.TrimSpace(filename)
-	
+
 	logsMutex.Lock()
 	defer logsMutex.Unlock()
-	
+
 	log := logs[filename]
 	if log == nil {
 		newLogger := &fileLogger{
@@ -57,38 +57,32 @@ func GetFileLogger(filename string) Logger {
 			MaxBackups: 4,
 			MaxSize:    10 * 1024 * 1024,
 		})
-		
+
 		newLogger.SetLevel(GetInstance().GetLevel())
 		logs[filename] = newLogger
 	}
-	
+
 	return logs[filename]
 }
 
 // OverrideRuntimeErrorHandler overrides the standard runtime error handler that logs to stdout
 // with a file logger that logs all runtime.HandleErrors to errors.log
 func OverrideRuntimeErrorHandler(discard bool) {
-	overrideOnce.Do(func() {
-		if discard {
-			if len(runtime.ErrorHandlers) > 0 {
-				runtime.ErrorHandlers[0] = func(_ context.Context, _ error, _ string, _ ...interface{}) {}
-			} else {
-				runtime.ErrorHandlers = []runtime.ErrorHandler{
-					func(_ context.Context, _ error, _ string, _ ...interface{}) {},
-				}
-			}
-		} else {
-			errorLog := GetFileLogger("errors")
-			handler := newRuntimeErrorHandler(errorLog)
-			if len(runtime.ErrorHandlers) > 0 {
-				runtime.ErrorHandlers[0] = handler
-			} else {
-				runtime.ErrorHandlers = []runtime.ErrorHandler{
-					handler,
-				}
-			}
-		}
-	})
+	runtimeHandlerMutex.Lock()
+	defer runtimeHandlerMutex.Unlock()
+
+	var handler runtime.ErrorHandler
+	if discard {
+		handler = func(_ context.Context, _ error, _ string, _ ...interface{}) {}
+	} else {
+		handler = newRuntimeErrorHandler(GetFileLogger("errors"))
+	}
+
+	if len(runtime.ErrorHandlers) > 0 {
+		runtime.ErrorHandlers[0] = handler
+	} else {
+		runtime.ErrorHandlers = []runtime.ErrorHandler{handler}
+	}
 }
 
 func newRuntimeErrorHandler(errorLog Logger) runtime.ErrorHandler {
@@ -141,139 +135,139 @@ func (f *fileLogger) addPrefixes(message string) string {
 	for _, p := range f.prefixes {
 		prefix += p
 	}
-	
+
 	return prefix + message
 }
 
 func (f *fileLogger) Debug(args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.DebugLevel {
 		return
 	}
-	
+
 	f.logger.Debug(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Debugf(format string, args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.DebugLevel {
 		return
 	}
-	
+
 	f.logger.Debug(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Info(args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.InfoLevel {
 		return
 	}
-	
+
 	f.logger.Info(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Infof(format string, args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.InfoLevel {
 		return
 	}
-	
+
 	f.logger.Info(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Warn(args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.WarnLevel {
 		return
 	}
-	
+
 	f.logger.Warn(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Warnf(format string, args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.WarnLevel {
 		return
 	}
-	
+
 	f.logger.Warn(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Error(args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.ErrorLevel {
 		return
 	}
-	
+
 	f.logger.Error(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Errorf(format string, args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.ErrorLevel {
 		return
 	}
-	
+
 	f.logger.Error(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Fatal(args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.FatalLevel {
 		return
 	}
-	
+
 	f.logger.Fatal(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Fatalf(format string, args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.FatalLevel {
 		return
 	}
-	
+
 	f.logger.Fatal(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Done(args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.InfoLevel {
 		return
 	}
-	
+
 	f.logger.Info(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Donef(format string, args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.InfoLevel {
 		return
 	}
-	
+
 	f.logger.Info(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
@@ -318,25 +312,25 @@ func (f *fileLogger) StopWait() {
 func (f *fileLogger) SetLevel(level logrus.Level) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	f.level = level
 }
 
 func (f *fileLogger) GetLevel() logrus.Level {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	return f.level
 }
 
 func (f *fileLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < level {
 		return &NopCloser{io.Discard}
 	}
-	
+
 	return &NopCloser{f}
 }
 
@@ -347,11 +341,11 @@ func (f *fileLogger) Write(message []byte) (int, error) {
 func (f *fileLogger) WriteString(level logrus.Level, message string) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	if f.level < logrus.InfoLevel {
 		return
 	}
-	
+
 	_, _ = f.logger.Out.Write([]byte(stripEscapeSequences(message)))
 }
 
@@ -367,7 +361,7 @@ func (f *fileLogger) Question(params *survey.QuestionOptions) (string, error) {
 func (f *fileLogger) WithLevel(level logrus.Level) Logger {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	n := *f
 	n.m = &sync.Mutex{}
 	n.level = level
@@ -377,7 +371,7 @@ func (f *fileLogger) WithLevel(level logrus.Level) Logger {
 func (f *fileLogger) WithSink(log Logger) Logger {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	n := *f
 	n.m = &sync.Mutex{}
 	n.sinks = append(n.sinks, log)
@@ -387,14 +381,14 @@ func (f *fileLogger) WithSink(log Logger) Logger {
 func (f *fileLogger) AddSink(log Logger) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	f.sinks = append(f.sinks, log)
 }
 
 func (f *fileLogger) WithPrefix(prefix string) Logger {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	n := *f
 	n.m = &sync.Mutex{}
 	n.prefixes = append(n.prefixes, prefix)
@@ -404,7 +398,7 @@ func (f *fileLogger) WithPrefix(prefix string) Logger {
 func (f *fileLogger) WithPrefixColor(prefix, color string) Logger {
 	f.m.Lock()
 	defer f.m.Unlock()
-	
+
 	n := *f
 	n.m = &sync.Mutex{}
 	n.prefixes = append(n.prefixes, prefix)

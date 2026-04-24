@@ -17,7 +17,7 @@ const StackLinkTabSelector = (props: Props) => {
 
   return (
     <LinkTabSelector className={props.className && props.className}>
-      <CustomNavLink to={`${currentPath}/stack/configuration`} activeClassName={styles['selected']}>
+      <CustomNavLink to={`${currentPath}/stack/configuration`} activeClassName={styles['selected']} end={true}>
         Configuration
       </CustomNavLink>
     </LinkTabSelector>
