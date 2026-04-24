@@ -1,4 +1,4 @@
-@import '../../../../styles/constants.scss';
+@use '../../../../styles/constants.scss';
 
 .change-namespace {
   width: 420px;
@@ -7,7 +7,7 @@
   z-index: 11;
 
   > div {
-    background-color: $blue;
+    background-color: constants.$blue;
     padding: 8px 0;
 
     :global(.top) {
@@ -24,9 +24,9 @@
 
         label {
           width: 100%;
-          font: $list-label;
+          font: constants.$list-label;
           font-size: 13px;
-          color: $gray-1;
+          color: constants.$gray-1;
 
           .dropdown {
             margin-top: 5px;

@@ -1,11 +1,11 @@
-@import '../../../styles/constants';
+@use '../../../styles/constants';
 
 .link-tab-selector {
   background-color: white;
   display: flex;
   justify-content: center;
-  font: $sub-nav;
-  box-shadow: $shadow-1;
+  font: constants.$sub-nav;
+  box-shadow: constants.$shadow-1;
   z-index: 1;
   display: none;
 
@@ -21,11 +21,11 @@
 
       a {
         padding: 15px 24px 13px;
-        color: $black;
+        color: constants.$black;
         border-bottom: 3px solid transparent;
 
         &.selected {
-          border-bottom: 3px solid $sky-blue;
+          border-bottom: 3px solid constants.$sky-blue;
         }
       }
     }

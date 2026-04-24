@@ -1,5 +1,4 @@
 import React from 'react';
-import { withRouter, RouteComponentProps } from 'react-router';
 import styles from './configuration.module.scss';
 import PageLayout from 'components/basic/PageLayout/PageLayout';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
@@ -13,7 +12,7 @@ import ProfilePortlet from 'components/views/Stack/Configuration/ProfilePortlet/
 import ConfigVariablesPortlet from 'components/views/Stack/Configuration/ConfigVariablesPortlet/ConfigVariablesPortlet';
 import { configToYAML } from 'lib/utils';
 
-interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
+interface Props extends DevSpaceConfigContext, PopupContext, WarningContext {}
 
 interface State {
   podList?: V1PodList;
@@ -58,4 +57,4 @@ class StackConfiguration extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(withPopup(withDevSpaceConfig(withWarning(StackConfiguration))));
+export default withPopup(withDevSpaceConfig(withWarning(StackConfiguration)));

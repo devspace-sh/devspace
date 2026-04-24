@@ -1,4 +1,4 @@
-@import '../../../../styles/constants.scss';
+@use '../../../../styles/constants.scss';
 
 .highlighted-area {
   position: relative;
@@ -9,7 +9,7 @@
     padding: 15px 20px;
     width: calc(100% + 40px);
     margin-left: -20px;
-    background-color: $gray-1;
+    background-color: constants.$gray-1;
     margin-top: 15px;
     margin-bottom: 15px;
   }
@@ -18,9 +18,9 @@
     width: calc(100% + 40px);
     margin-left: -20px;
     top: -15px;
-    background-color: rgba($red-2, 0.2);
+    background-color: rgba(constants.$red-2, 0.2);
     padding: 5px 20px;
-    color: $red-2;
+    color: constants.$red-2;
     text-align: center;
     position: relative;
     font-size: 13px;

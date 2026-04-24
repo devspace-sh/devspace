@@ -21,6 +21,16 @@ const publicPath = '/';
 const publicUrl = '';
 // Get environment variables to inject into our app.
 const env = getClientEnvironment(publicUrl);
+const getSassLoader = (options = {}) => ({
+  loader: require.resolve('sass-loader'),
+  options: {
+    ...options,
+    sassOptions: {
+      ...(options.sassOptions || {}),
+      silenceDeprecations: ['legacy-js-api'],
+    },
+  },
+});
 
 // This is the development configuration.
 // It is focused on developer experience and fast rebuilds.
@@ -88,6 +98,13 @@ module.exports = {
       // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
       'react-native': 'react-native-web',
     },
+    fallback: {
+      dgram: false,
+      fs: false,
+      net: false,
+      tls: false,
+      child_process: false,
+    },
     plugins: [
       // Prevents users from importing files from outside of src/ (or node_modules/).
       // This often causes confusion because we only process files within src/ with babel.
@@ -150,7 +167,7 @@ module.exports = {
           },
           {
             test: /\.module\.s(a|c)ss$/,
-            loader: [
+            use: [
               require.resolve('style-loader'),
               // isDevelopment ? 'style-loader' : MiniCssExtractPlugin.loader,
               {
@@ -164,10 +181,9 @@ module.exports = {
                 },
               },
               {
-                loader: require.resolve('sass-loader'),
-                options: {
+                ...getSassLoader({
                   sourceMap: true,
-                },
+                }),
               },
             ],
           },
@@ -177,7 +193,7 @@ module.exports = {
             use: [
               'style-loader', // creates style nodes from JS strings
               'css-loader', // translates CSS into CommonJS
-              'sass-loader', // compiles Sass to CSS, using Node Sass by default
+              getSassLoader(), // compiles Sass to CSS
             ],
           },
           // "postcss" loader applies autoprefixer to our CSS.
@@ -217,20 +233,18 @@ module.exports = {
               },
             ],
           },
-          // "file" loader makes sure those assets get served by WebpackDevServer.
+          // Webpack 5 asset modules emit files directly without file-loader.
           // When you `import` an asset, you get its (virtual) filename.
           // In production, they would get copied to the `build` folder.
-          // This loader doesn't use a "test" so it will catch all modules
-          // that fall through the other loaders.
           {
             // Exclude `js` files to keep "css" loader working as it injects
-            // its runtime that would otherwise processed through "file" loader.
+            // its runtime that would otherwise be processed through the asset rule.
             // Also exclude `html` and `json` extensions so they get processed
-            // by webpacks internal loaders.
+            // by webpack's internal loaders.
             exclude: [/\.(js|jsx|mjs)$/, /\.html$/, /\.json$/],
-            loader: require.resolve('file-loader'),
-            options: {
-              name: 'static/media/[name].[hash:8].[ext]',
+            type: 'asset/resource',
+            generator: {
+              filename: 'static/media/[name].[hash:8][ext]',
             },
           },
         ],
@@ -266,7 +280,10 @@ module.exports = {
     // solution that requires the user to opt into importing specific locales.
     // https://github.com/jmblog/how-to-optimize-momentjs-with-webpack
     // You can remove this if you don't use Moment.js:
-    new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
+    new webpack.IgnorePlugin({
+      resourceRegExp: /^\.\/locale$/,
+      contextRegExp: /moment$/,
+    }),
     // Perform type checking and linting in a separate process to speed up compilation
     new ForkTsCheckerWebpackPlugin({
       async: false,
@@ -275,15 +292,6 @@ module.exports = {
       tslint: paths.appTsLint,
     }),
   ],
-  // Some libraries import Node modules but don't use them in the browser.
-  // Tell Webpack to provide empty mocks for them so importing them works.
-  node: {
-    dgram: 'empty',
-    fs: 'empty',
-    net: 'empty',
-    tls: 'empty',
-    child_process: 'empty',
-  },
   // Turn off performance hints during development because we don't do any
   // splitting or minification in interest of speed. These warnings become
   // cumbersome.

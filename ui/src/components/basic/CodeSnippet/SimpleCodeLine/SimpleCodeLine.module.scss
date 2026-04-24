@@ -1,7 +1,7 @@
-@import '../../../../styles/constants.scss';
+@use '../../../../styles/constants.scss';
 
 .simple-code-line {
-  font: $code;
+  font: constants.$code;
   color: #8fa6b2;
   word-break: break-all;
   margin: 1px 0;

@@ -1,4 +1,4 @@
-@import '../../../styles/constants';
+@use '../../../styles/constants';
 
 .custom-dropdown-wrapper {
   display: inline-block;
@@ -10,8 +10,8 @@
   display: flex;
   align-items: center;
   background-color: white;
-  box-shadow: $shadow-button;
-  border-bottom: 1px solid $gray-2;
+  box-shadow: constants.$shadow-button;
+  border-bottom: 1px solid constants.$gray-2;
   border-top: 1px solid transparent;
 
   &.dropdown-test {
@@ -21,8 +21,8 @@
 
   > :global(.CustomDropDown_selected-value) {
     width: 100%;
-    font: $button-text;
-    color: $gray-4;
+    font: constants.$button-text;
+    color: constants.$gray-4;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -51,7 +51,7 @@
     z-index: -999999;
     position: absolute;
     background-color: white;
-    color: $dark-blue;
+    color: constants.$dark-blue;
     width: unset;
     border-bottom-left-radius: 5px;
     border-bottom-right-radius: 5px;
@@ -59,7 +59,7 @@
     overflow: hidden;
     min-width: 100%;
     white-space: nowrap;
-    box-shadow: $shadow-button;
+    box-shadow: constants.$shadow-button;
     visibility: hidden;
     height: 0;
 
@@ -70,8 +70,8 @@
     .option {
       width: 100%;
       padding: 10px 16px;
-      font: $button-text;
-      color: $gray-4;
+      font: constants.$button-text;
+      color: constants.$gray-4;
       position: relative;
       text-overflow: ellipsis;
       white-space: nowrap;;

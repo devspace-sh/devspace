@@ -2,6 +2,25 @@
 
 'use strict';
 
-const tsJestPreprocessor = require('ts-jest/preprocessor');
+const path = require('path');
+const typescript = require('typescript');
 
-module.exports = tsJestPreprocessor;
+const configPath = path.resolve(__dirname, '../../tsconfig.test.json');
+const { config } = typescript.readConfigFile(configPath, typescript.sys.readFile);
+const parsedConfig = typescript.parseJsonConfigFileContent(config, typescript.sys, path.dirname(configPath));
+
+module.exports = {
+  process(src, filename) {
+    const result = typescript.transpileModule(src, {
+      compilerOptions: {
+        ...parsedConfig.options,
+        sourceMap: false,
+      },
+      fileName: filename,
+    });
+
+    return {
+      code: result.outputText,
+    };
+  },
+};

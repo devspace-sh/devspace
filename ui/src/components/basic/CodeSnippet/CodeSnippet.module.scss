@@ -1,11 +1,11 @@
-@import '../../../styles/constants';
+@use '../../../styles/constants';
 
 .code-snippet {
   padding: 15px 40px 15px 30px;
   position: relative;
-  color: $dark-blue;
-  background-color: $blue-dark;
-  box-shadow: $shadow-button;
+  color: constants.$dark-blue;
+  background-color: constants.$blue-dark;
+  box-shadow: constants.$shadow-button;
   border-radius: 3px;
 
   .tooltip-container {
@@ -25,8 +25,8 @@
   > .code {
     display: flex;
     flex-direction: column;
-    color: $code-color;
-    font: $code;
+    color: constants.$code-color;
+    font: constants.$code;
     height: 100%;
 
     > div::-webkit-scrollbar {
@@ -68,7 +68,7 @@
         }
 
         b {
-          color: $primary-orange;
+          color: constants.$primary-orange;
         }
       }
     }

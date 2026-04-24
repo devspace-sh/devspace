@@ -1,4 +1,4 @@
-@import '../../../styles/constants';
+@use '../../../styles/constants';
 
 .icon-button-tooltip  {
   display: inline-block;
@@ -28,7 +28,7 @@
   }
 
   &:hover {
-    background-color: rgba($blue-kubernetes, 0.2);
+    background-color: rgba(constants.$blue-kubernetes, 0.2);
   }
 
   > :global(.icon-container) {
@@ -52,7 +52,7 @@
         background-image: none;
         width: 16px;
         height: 16px;
-        border-color: $gray-2 $gray-2 $gray-2 transparent;
+        border-color: constants.$gray-2 constants.$gray-2 constants.$gray-2 transparent;
         border-radius: 50%;
         border-style: solid;
         border-width: 2px;

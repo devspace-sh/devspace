@@ -1,4 +1,4 @@
-@import '../../../styles/constants.scss';
+@use '../../../styles/constants.scss';
 
 .terminal-wrapper {
   display: flex;
@@ -7,7 +7,7 @@
   padding: 15px;
   padding-left: 40px;
   border-radius: 4px;
-  background: $blue-dark;
+  background: constants.$blue-dark;
 
   &.fullscreen {
     position: fixed;

@@ -1,5 +1,4 @@
 import React from 'react';
-import { withRouter, RouteComponentProps } from 'react-router';
 import styles from './commands.module.scss';
 import PageLayout from 'components/basic/PageLayout/PageLayout';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
@@ -12,7 +11,7 @@ import InteractiveTerminal, { InteractiveTerminalProps } from 'components/advanc
 import AdvancedCodeLine from 'components/basic/CodeSnippet/AdvancedCodeLine/AdvancedCodeLine';
 import Button from '../../components/basic/Button/Button';
 
-interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
+interface Props extends DevSpaceConfigContext, PopupContext, WarningContext {}
 
 interface State {
   podList?: V1PodList;
@@ -139,4 +138,4 @@ class Commands extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(withPopup(withDevSpaceConfig(withWarning(Commands))));
+export default withPopup(withDevSpaceConfig(withWarning(Commands)));

@@ -1,7 +1,7 @@
-@import '../../../../styles/constants';
+@use '../../../../styles/constants';
 
 .delete-button {
   &:hover {
-    background-color: rgba($red-2, 0.2) !important;
+    background-color: rgba(constants.$red-2, 0.2) !important;
   }
 }

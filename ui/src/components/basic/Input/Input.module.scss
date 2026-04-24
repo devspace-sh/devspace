@@ -1,17 +1,17 @@
-@import '../../../styles/constants.scss';
+@use '../../../styles/constants.scss';
 
 .input-component {
   border-style: none;
   height: 32px;
   width: 100%;
   padding: 0 8px;
-  font: $button-text;
-  color: $blue-dark-2;
+  font: constants.$button-text;
+  color: constants.$blue-dark-2;
   border-radius: 3px;
-  box-shadow: $shadow-button;
+  box-shadow: constants.$shadow-button;
 
   &::placeholder {
-    color: rgba($blue-dark, 0.5);
+    color: rgba(constants.$blue-dark, 0.5);
   }
 
   &:focus {
@@ -25,8 +25,8 @@
   }
 
   &[readonly] {
-    background-color: $gray-1;
-    color: $violet;
+    background-color: constants.$gray-1;
+    color: constants.$violet;
   }
 
   &:disabled {

@@ -1,8 +1,8 @@
-@import '../../../../styles/constants';
+@use '../../../../styles/constants';
 
 .portlet-tabs {
   .portlet-title {
-    color: $gray-5;
+    color: constants.$gray-5;
   }
   .portlet-selector {
     height: 100%;

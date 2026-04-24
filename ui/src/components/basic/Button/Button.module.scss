@@ -1,4 +1,4 @@
-@import '../../../styles/constants';
+@use '../../../styles/constants';
 
 .button {
   display: inline-flex;
@@ -6,7 +6,7 @@
   height: 32px;
   font-size: 0;
   padding: 0;
-  background-color: $sky-blue;
+  background-color: constants.$sky-blue;
   border-radius: 5px;
   transition: all 0.2s ease;
   cursor: pointer;
@@ -37,7 +37,7 @@
     justify-content: center;
     height: 32px;
     padding: 0 12px;
-    font: $button-text;
+    font: constants.$button-text;
     white-space: nowrap;
     color: white;
   }

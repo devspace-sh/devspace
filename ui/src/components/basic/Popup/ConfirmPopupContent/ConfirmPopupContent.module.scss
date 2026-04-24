@@ -1,4 +1,4 @@
-@import '../../../../styles/constants.scss';
+@use '../../../../styles/constants.scss';
 
 .confirm-popup-content {
   .highlighted-area {
@@ -12,7 +12,7 @@
     display: flex;
 
     .button:first-of-type {
-      background-color: $gray-4;
+      background-color: constants.$gray-4;
       margin-right: 10px;
     }
   }

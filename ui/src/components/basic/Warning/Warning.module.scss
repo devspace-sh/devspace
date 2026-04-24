@@ -1,4 +1,4 @@
-@import '../../../styles/constants.scss';
+@use '../../../styles/constants.scss';
 
 .warning {
   height: 42px;
@@ -7,7 +7,7 @@
   .wrapper {
     height: inherit;
     padding: 0 10px 0 20px;
-    background-color: $red;
+    background-color: constants.$red;
     color: white;
     display: flex;
     font-size: 14px;

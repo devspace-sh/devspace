@@ -1,7 +1,7 @@
-@import '../../../styles/constants';
+@use '../../../styles/constants';
 
 .portlet {
   background-color: white;
-  box-shadow: $shadow-portlet;
+  box-shadow: constants.$shadow-portlet;
   border-radius: 3px;
 }

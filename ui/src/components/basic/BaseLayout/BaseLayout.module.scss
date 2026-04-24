@@ -1,4 +1,4 @@
-@import '../../../styles/constants';
+@use '../../../styles/constants';
 
 .header-layout {
   display: flex;
@@ -7,11 +7,11 @@
   align-items: center;
   height: 100%;
   width: 100%;
-  background-color: $light-blue;
+  background-color: constants.$light-blue;
   overflow-x: hidden;
 
   & > .body {
-    max-width: $max-width;
+    max-width: constants.$max-width;
     width: 100%;
     min-height: calc(100% - 70px);
   }

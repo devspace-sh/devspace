@@ -1,4 +1,4 @@
-@import '../../../../../styles/constants.scss';
+@use '../../../../../styles/constants.scss';
 
 .commands-list {
   width: 100%;
@@ -12,7 +12,7 @@
     position: absolute;
     height: 27px;
     width: 100%;
-    background-color: $blue-light-1;
+    background-color: constants.$blue-light-1;
     top: 0;
     right: 2px;
     z-index: 2;

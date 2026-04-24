@@ -1,5 +1,4 @@
 import React from 'react';
-import { withRouter, RouteComponentProps } from 'react-router';
 import styles from './containers.module.scss';
 import PageLayout from 'components/basic/PageLayout/PageLayout';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
@@ -13,7 +12,7 @@ import withWarning, { WarningContext } from 'contexts/withWarning/withWarning';
 import ChangeNamespace from 'components/views/Logs/ChangeNamespace/ChangeKubeContext';
 import authFetch from "../../lib/fetch";
 
-interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
+interface Props extends DevSpaceConfigContext, PopupContext, WarningContext {}
 
 interface State {
   podList?: V1PodList;
@@ -190,4 +189,4 @@ class LogsContainers extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(withPopup(withDevSpaceConfig(withWarning(LogsContainers))));
+export default withPopup(withDevSpaceConfig(withWarning(LogsContainers)));

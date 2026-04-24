@@ -1,4 +1,4 @@
-@import '../../../../../styles/constants.scss';
+@use '../../../../../styles/constants.scss';
 
 .profile-portlet {
   .label-value-title {
@@ -7,8 +7,8 @@
     margin-left: 10px;
 
     .label {
-      font: $list-label;
-      color: $gray-4;
+      font: constants.$list-label;
+      color: constants.$gray-4;
     }
   }
 }

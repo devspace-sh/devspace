@@ -1,4 +1,4 @@
-@import '../../../../../styles/constants.scss';
+@use '../../../../../styles/constants.scss';
 
 .config-var-portlet {
   .label-value-title {
@@ -15,15 +15,15 @@
       > div {
         text-indent: 5px;
         width: 50%;
-        font: $list-label;
-        color: $gray-4;
+        font: constants.$list-label;
+        color: constants.$gray-4;
       }
     }
 
     .no-vars {
       text-align: center;
       font-size: 14px;
-      font: $list-label;
+      font: constants.$list-label;
     }
 
     .var {
@@ -41,8 +41,8 @@
 
         > span {
           margin: 0 10px;
-          font: $portlet-title;
-          color: $gray-4;
+          font: constants.$portlet-title;
+          color: constants.$gray-4;
         }
 
         > label {
@@ -53,30 +53,30 @@
             content: '${';
             position: absolute;
             left: 5px;
-            color: $gray-3;
+            color: constants.$gray-3;
             height: 100%;
             display: flex;
             align-items: center;
-            font: $list-label;
+            font: constants.$list-label;
           }
           &::after {
             content: '}';
             position: absolute;
             right: 5px;
             top: 0;
-            color: $gray-3;
+            color: constants.$gray-3;
             height: 100%;
             display: flex;
             align-items: center;
-            font: $list-label;
+            font: constants.$list-label;
           }
           .key {
-            background-color: $gray-5;
+            background-color: constants.$gray-5;
             color: white;
             padding-left: 20px;
             padding-right: 12px;
             padding-top: 2px;
-            font: $button-text;
+            font: constants.$button-text;
           }
         }
       }
@@ -87,8 +87,8 @@
       }
 
       .value {
-        color: $gray-4;
-        font: $button-text;
+        color: constants.$gray-4;
+        font: constants.$button-text;
       }
     }
   }

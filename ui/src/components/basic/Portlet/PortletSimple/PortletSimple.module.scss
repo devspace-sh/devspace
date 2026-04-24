@@ -1,4 +1,4 @@
-@import '../../../../styles/constants';
+@use '../../../../styles/constants';
 
 .portlet-simple {
   > :global.top {
@@ -12,7 +12,7 @@
     width: 100%;
 
     :global(.left) {
-      font: $portlet-title;
+      font: constants.$portlet-title;
       display: flex;
       align-items: center;
     }
@@ -48,7 +48,7 @@
         height: 1px;
         left: 15px;
         bottom: -1px;
-        background-color: $blue-dark-2;
+        background-color: constants.$blue-dark-2;
         opacity: 0.1;
       }
     }

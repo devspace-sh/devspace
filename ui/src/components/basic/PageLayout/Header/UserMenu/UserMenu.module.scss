@@ -1,4 +1,4 @@
-@import '../../../../../styles/constants';
+@use '../../../../../styles/constants';
 
 .user-menu {
   z-index: 5;
@@ -27,7 +27,7 @@
       &.selected,
       &:hover {
         background-image: url(../../../../../images/book-selected-icon.svg);
-        background-color: $blue-kubernetes;
+        background-color: constants.$blue-kubernetes;
       }
     }
   }

@@ -1,10 +1,12 @@
+@use "sass:meta";
+@use 'constants.scss';
+
 @import url('https://fonts.googleapis.com/css?family=Raleway:400,500,600,700');
 @import url('https://fonts.googleapis.com/css?family=Open+Sans:400,600,700');
 @import url('https://fonts.googleapis.com/css?family=Roboto+Mono:400,700');
 @import url('https://fonts.googleapis.com/css?family=Play:400,700');
 @import url('https://fonts.googleapis.com/css?family=Kanit:300,400,500');
-@import './constants.scss';
-@import './xterm.scss';
+@include meta.load-css('xterm.scss');
 
 * {
   box-sizing: border-box;
@@ -17,7 +19,7 @@ html {
 body {
   margin: 0;
   padding: 0;
-  color: $dark-blue;
+  color: constants.$dark-blue;
   height: 100%;
   font-family: 'Open Sans', sans-serif;
 }
@@ -37,10 +39,10 @@ h2 {
 }
 
 a {
-  color: $blue-kubernetes;
+  color: constants.$blue-kubernetes;
   cursor: pointer;
   text-decoration: none;
-  font: $link;
+  font: constants.$link;
 }
 
 textarea {
@@ -49,10 +51,10 @@ textarea {
   width: 100%;
   margin-right: 15px;
   padding: 0 8px;
-  font: $button-text;
-  color: $blue-dark-2;
+  font: constants.$button-text;
+  color: constants.$blue-dark-2;
   border-radius: 3px;
-  box-shadow: $shadow-button;
+  box-shadow: constants.$shadow-button;
   max-width: 100%;
 
   &::placeholder {
@@ -81,7 +83,7 @@ button {
   // padding: 5px 7px;
 }
 button:active {
-  background-color: $sky-darker;
+  background-color: constants.$sky-darker;
   transition: background-color 0.3s;
   border-radius: 5px;
 }
@@ -100,7 +102,7 @@ button:focus {
 
 .button-bar {
   height: 36px;
-  background: $verylight-blue;
+  background: constants.$verylight-blue;
   border-radius: 0px 0px 5px 5px;
   display: flex;
   align-items: center;
@@ -132,7 +134,7 @@ button:focus {
 
       &.status-btn {
         .status-warning {
-          color: $red;
+          color: constants.$red;
           display: flex;
           align-items: center;
           font-weight: 600;
@@ -160,17 +162,17 @@ button:focus {
         justify-content: center;
 
         &.selected {
-          background-color: $lighter-blue;
+          background-color: constants.$lighter-blue;
         }
 
         &:hover {
-          background-color: $lighter-blue;
+          background-color: constants.$lighter-blue;
         }
       }
 
       &.disabled {
         opacity: 0.5;
-        background-color: $lighter-blue;
+        background-color: constants.$lighter-blue;
         a:hover {
           opacity: 1;
           cursor: unset;
