@@ -10,10 +10,10 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
+	"github.com/loft-sh/devspace/pkg/devspace/helm/downloader"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/utils/pkg/downloader/commands"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/yaml"
@@ -26,7 +26,7 @@ type client struct {
 // NewClient creates a new helm v3 Client
 func NewClient(log log.Logger) (types.Client, error) {
 	c := &client{}
-	c.genericHelm = generic.NewGenericClient(commands.NewHelmV3Command(), log)
+	c.genericHelm = generic.NewGenericClient(downloader.NewHelmCommand(), log)
 	return c, nil
 }
 
