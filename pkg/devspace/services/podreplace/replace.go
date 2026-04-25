@@ -158,7 +158,7 @@ func updateNeeded(ctx devspacecontext.Context, deployment *appsv1.Deployment, de
 
 	// update deployment
 	originalDeployment := deployment.DeepCopy()
-	deployment.Spec.Replicas = ptr.Int32(1)
+	deployment.Spec.Replicas = newDeployment.Spec.Replicas
 	deployment.Spec.Selector = newDeployment.Spec.Selector
 	deployment.Spec.Template = newDeployment.Spec.Template
 	deployment.Annotations = newDeployment.Annotations
