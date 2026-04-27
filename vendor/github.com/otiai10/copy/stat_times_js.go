@@ -1,4 +1,4 @@
-//go:build freebsd
+//go:build js
 
 package copy
 
@@ -12,8 +12,8 @@ func getTimeSpec(info os.FileInfo) timespec {
 	stat := info.Sys().(*syscall.Stat_t)
 	times := timespec{
 		Mtime: info.ModTime(),
-		Atime: time.Unix(int64(stat.Atimespec.Sec), int64(stat.Atimespec.Nsec)),
-		Ctime: time.Unix(int64(stat.Ctimespec.Sec), int64(stat.Ctimespec.Nsec)),
+		Atime: time.Unix(int64(stat.Atime), int64(stat.AtimeNsec)),
+		Ctime: time.Unix(int64(stat.Ctime), int64(stat.CtimeNsec)),
 	}
 	return times
 }

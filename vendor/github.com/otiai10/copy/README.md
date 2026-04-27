@@ -10,13 +10,25 @@
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/otiai10/copy?sort=semver)](https://pkg.go.dev/github.com/otiai10/copy)
 [![Docker Test](https://github.com/otiai10/copy/actions/workflows/docker-test.yml/badge.svg)](https://github.com/otiai10/copy/actions/workflows/docker-test.yml)
 [![Vagrant Test](https://github.com/otiai10/copy/actions/workflows/vagrant-test.yml/badge.svg)](https://github.com/otiai10/copy/actions/workflows/vagrant-test.yml)
+[![GopherJS](https://github.com/otiai10/copy/actions/workflows/gopherjs.yml/badge.svg)](https://github.com/otiai10/copy/actions/workflows/gopherjs.yml)
+[![Go WASM](https://github.com/otiai10/copy/actions/workflows/wasm.yml/badge.svg)](https://github.com/otiai10/copy/actions/workflows/wasm.yml)
 
 `copy` copies directories recursively.
 
 # Example Usage
 
 ```go
-err := Copy("your/directory", "your/directory.copy")
+package main
+
+import (
+	"fmt"
+	cp "github.com/otiai10/copy"
+)
+
+func main() {
+	err := cp.Copy("your/src", "your/dest")
+	fmt.Println(err) // nil
+}
 ```
 
 # Advanced Usage
@@ -31,12 +43,28 @@ type Options struct {
 	// OnDirExists can specify what to do when there is a directory already existing in destination.
 	OnDirExists func(src, dest string) DirExistsAction
 
-	// Skip can specify which files should be skipped
-	Skip func(src string) (bool, error)
+	// OnError can let users decide how to handle errors (e.g., you can suppress specific error).
+	OnError func(src, dest, string, err error) error
 
-	// AddPermission to every entry,
-	// NO MORE THAN 0777
-	AddPermission os.FileMode
+	// Skip can specify which files should be skipped
+	Skip func(srcinfo os.FileInfo, src, dest string) (bool, error)
+
+	// RenameDestination can rename destination.
+	// If not set, nil, it does nothing.
+	RenameDestination func(src, dest string) (string, error)
+
+	// PermissionControl can control permission of
+	// every entry.
+	// When you want to add permission 0222, do like
+	//
+	//		PermissionControl = AddPermission(0222)
+	//
+	// or if you even don't want to touch permission,
+	//
+	//		PermissionControl = DoNothing
+	//
+	// By default, PermissionControl = PreservePermission
+	PermissionControl PermissionControlFunc
 
 	// Sync file after copy.
 	// Useful in case when file must be on the disk
@@ -55,13 +83,35 @@ type Options struct {
 	// If zero, the internal default buffer of 32KB is used.
 	// See https://golang.org/pkg/io/#CopyBuffer for more information.
 	CopyBufferSize uint
+
+	// If you want to add some limitation on reading src file,
+	// you can wrap the src and provide new reader,
+	// such as `RateLimitReader` in the test case.
+	WrapReader func(src io.Reader) io.Reader
+
+	// If given, copy.Copy refers to this fs.FS instead of the OS filesystem.
+	// e.g., You can use embed.FS to copy files from embedded filesystem.
+	FS fs.FS
+
+	// NumOfWorkers represents the number of workers used for
+	// concurrent copying contents of directories.
+	// If 0 or 1, it does not use goroutine for copying directories.
+	// Please refer to https://pkg.go.dev/golang.org/x/sync/semaphore for more details.
+	NumOfWorkers int64
+
+	// PreferConcurrent is a function to determine whether or not
+	// to use goroutine for copying contents of directories.
+	// If PreferConcurrent is nil, which is default, it does concurrent
+	// copying for all directories.
+	// If NumOfWorkers is 0 or 1, this function will be ignored.
+	PreferConcurrent func(srcdir, destdir string) (bool, error)
 }
 ```
 
 ```go
 // For example...
 opt := Options{
-	Skip: func(src string) (bool, error) {
+	Skip: func(info os.FileInfo, src, dest string) (bool, error) {
 		return strings.HasSuffix(src, ".git"), nil
 	},
 }
