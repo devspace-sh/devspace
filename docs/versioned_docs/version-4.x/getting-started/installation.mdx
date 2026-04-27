@@ -48,7 +48,7 @@ curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/downloa
 
 ```powershell {4}
 md -Force "$Env:APPDATA\loft"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
-Invoke-WebRequest -URI "https://github.com/loft-sh/devspace/releases/latest/download/devspace-windows-amd64.exe" -o $Env:APPDATA\loft\devspace.exe;
+Invoke-WebRequest -URI "https://github.com/loft-sh/devspace/releases/latest/download/devspace-windows-amd64.exe" -OutFile $Env:APPDATA\loft\devspace.exe;
 $env:Path += ";" + $Env:APPDATA + "\loft";
 [Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
 ```
