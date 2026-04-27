@@ -21,7 +21,7 @@ require (
 	github.com/fujiwara/shapeio v1.0.0
 	github.com/gertd/go-pluralize v0.2.0
 	github.com/gliderlabs/ssh v0.3.5
-	github.com/go-resty/resty/v2 v2.17.1
+	github.com/go-resty/resty/v2 v2.17.2
 	github.com/google/go-containerregistry v0.20.6
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
