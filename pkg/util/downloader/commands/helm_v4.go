@@ -2,8 +2,10 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -12,7 +14,7 @@ import (
 	downloadercommands "github.com/loft-sh/utils/pkg/downloader/commands"
 	"github.com/loft-sh/utils/pkg/extract"
 	"github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 	"mvdan.cc/sh/v3/expand"
 )
 
@@ -55,7 +57,11 @@ func (h *helmCommand) DownloadURL() string {
 func (h *helmCommand) IsValid(ctx context.Context, path string) (bool, error) {
 	out, err := utilscommand.Output(ctx, "", expand.ListEnviron(os.Environ()...), path, "version")
 	if err != nil {
-		return false, nil
+		if errors.Is(err, exec.ErrNotFound) || os.IsNotExist(err) {
+			return false, nil
+		}
+
+		return false, err
 	}
 
 	return strings.Contains(string(out), `:"v4.`), nil
@@ -76,11 +82,11 @@ func installHelmBinary(archiveFile, installPath, installFromURL string) error {
 
 	if strings.HasSuffix(installFromURL, ".tar.gz") {
 		if err := extractor.UntarGz(archiveFile, targetDir); err != nil {
-			return errors.Wrap(err, "extract tar.gz")
+			return pkgerrors.Wrap(err, "extract tar.gz")
 		}
 	} else if strings.HasSuffix(installFromURL, ".zip") {
 		if err := extractor.Unzip(archiveFile, targetDir); err != nil {
-			return errors.Wrap(err, "extract zip")
+			return pkgerrors.Wrap(err, "extract zip")
 		}
 	}
 
@@ -104,11 +110,9 @@ func copyFile(sourcePath, targetPath string) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = target.Close()
-	}()
 
 	if _, err := io.Copy(target, source); err != nil {
+		_ = target.Close()
 		return err
 	}
 

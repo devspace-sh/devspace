@@ -57,7 +57,12 @@ case "${HELM_ARCH}" in
     ;;
 esac
 HELM_PLATFORM="${HELM_OS}-${HELM_ARCH}"
-curl -s "https://get.helm.sh/helm-v4.0.4-${HELM_PLATFORM}.tar.gz" > helm4.tar.gz && tar -zxvf helm4.tar.gz "${HELM_PLATFORM}/helm" && chmod +x "${HELM_PLATFORM}/helm"
+HELM_VERSION=$(sed -nE 's/^const helmVersion = "([^"]+)"/\1/p' pkg/util/downloader/commands/helm_v4.go)
+if [[ -z "${HELM_VERSION}" ]]; then
+  echo "unable to determine Helm version" 1>&2
+  exit 1
+fi
+curl -s "https://get.helm.sh/helm-${HELM_VERSION}-${HELM_PLATFORM}.tar.gz" > helm4.tar.gz && tar -zxvf helm4.tar.gz "${HELM_PLATFORM}/helm" && chmod +x "${HELM_PLATFORM}/helm"
 
 # Pull the component chart
 COMPONENT_CHART_VERSION=$(cat pkg/devspace/deploy/deployer/helm/client.go | grep 'Version: "' | sed -nE 's/[^"]+"(.+)",\s*/\1/p')

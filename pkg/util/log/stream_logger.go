@@ -476,7 +476,8 @@ func (s *StreamLogger) StartWait(message string) {
 }
 
 func (s *StreamLogger) StopWait() {
-	// TODO: implement spinner/wait indicator
+	// StartWait writes a complete log line instead of starting a spinner, so
+	// there is no terminal state to clean up.
 }
 
 func (s *StreamLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {

@@ -13,6 +13,7 @@ func TestStreamLoggerStartWaitFallsBackToInfo(t *testing.T) {
 	logger := NewStreamLoggerWithFormat(stdout, stderr, logrus.InfoLevel, RawFormat)
 
 	logger.StartWait("Downloading helm...")
+	logger.StopWait()
 
 	expected := "Downloading helm...\n"
 	if stdout.String() != expected {
