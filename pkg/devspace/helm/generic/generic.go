@@ -34,7 +34,7 @@ func NewGenericClient(command commands.Command, logger log.Logger) Client {
 		extract: extract.NewExtractor(),
 	}
 
-	c.downloader = downloader.NewDownloader(command, log.ToLogr(logger), constants.DefaultHomeDevSpaceFolder)
+	c.downloader = downloader.NewDownloader(command, logger, constants.DefaultHomeDevSpaceFolder)
 	return c
 }
 

@@ -2,14 +2,15 @@ package downloader
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 
-	"github.com/go-logr/logr"
 	"github.com/loft-sh/utils/pkg/downloader/commands"
+	"github.com/loft-sh/utils/pkg/log"
+
+	"github.com/pkg/errors"
 )
 
 type Downloader interface {
@@ -19,11 +20,11 @@ type Downloader interface {
 type downloader struct {
 	httpGet        getRequest
 	command        commands.Command
-	log            logr.Logger
+	log            log.Logger
 	toolHomeFolder string
 }
 
-func NewDownloader(command commands.Command, log logr.Logger, toolHomeFolder string) Downloader {
+func NewDownloader(command commands.Command, log log.Logger, toolHomeFolder string) Downloader {
 	return &downloader{
 		httpGet:        http.Get,
 		command:        command,
@@ -64,12 +65,12 @@ func (d *downloader) downloadExecutable(command, installPath, installFromURL str
 
 	err = d.downloadFile(command, installPath, installFromURL)
 	if err != nil {
-		return fmt.Errorf("download file: %w", err)
+		return errors.Wrap(err, "download file")
 	}
 
 	err = os.Chmod(installPath, 0755)
 	if err != nil {
-		return fmt.Errorf("cannot make file executable: %w", err)
+		return errors.Wrap(err, "cannot make file executable")
 	}
 
 	return nil
@@ -78,7 +79,7 @@ func (d *downloader) downloadExecutable(command, installPath, installFromURL str
 type getRequest func(url string) (*http.Response, error)
 
 func (d *downloader) downloadFile(command, installPath, installFromURL string) error {
-	d.log.Info("Downloading", "command", command)
+	d.log.Info("Downloading " + command + "...")
 
 	t, err := os.MkdirTemp("", "")
 	if err != nil {
@@ -99,7 +100,7 @@ func (d *downloader) downloadFile(command, installPath, installFromURL string) e
 
 	resp, err := d.httpGet(installFromURL)
 	if err != nil {
-		return fmt.Errorf("get url: %w", err)
+		return errors.Wrap(err, "get url")
 	}
 
 	defer func(Body io.ReadCloser) {
@@ -108,7 +109,7 @@ func (d *downloader) downloadFile(command, installPath, installFromURL string) e
 
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
-		return fmt.Errorf("download file: %w", err)
+		return errors.Wrap(err, "download file")
 	}
 
 	err = f.Close()

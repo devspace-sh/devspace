@@ -30,10 +30,9 @@ func (e SyntaxError) Error() string { return e.msg }
 func (e SyntaxError) Unwrap() error { return e.err }
 
 const (
-	Shortest     Mode = 1 << iota // prefer the shortest match.
-	Filenames                     // "*" and "?" don't match slashes; only "**" does
-	Braces                        // support "{a,b}" and "{1..4}"
-	EntireString                  // match the entire string using ^$ delimiters
+	Shortest  Mode = 1 << iota // prefer the shortest match.
+	Filenames                  // "*" and "?" don't match slashes; only "**" does
+	Braces                     // support "{a,b}" and "{1..4}"
 )
 
 var numRange = regexp.MustCompile(`^([+-]?\d+)\.\.([+-]?\d+)}`)
@@ -60,17 +59,11 @@ noopLoop:
 			break noopLoop
 		}
 	}
-	if !any && mode&EntireString == 0 { // short-cut without a string copy
+	if !any { // short-cut without a string copy
 		return pat, nil
 	}
 	closingBraces := []int{}
 	var buf bytes.Buffer
-	// Enable matching `\n` with the `.` metacharacter as globs match `\n`
-	buf.WriteString("(?s)")
-	dotMeta := false
-	if mode&EntireString != 0 {
-		buf.WriteString("^")
-	}
 writeLoop:
 	for i := 0; i < len(pat); i++ {
 		switch c := pat[i]; c {
@@ -79,10 +72,8 @@ writeLoop:
 				if i++; i < len(pat) && pat[i] == '*' {
 					if i++; i < len(pat) && pat[i] == '/' {
 						buf.WriteString("(.*/|)")
-						dotMeta = true
 					} else {
 						buf.WriteString(".*")
-						dotMeta = true
 						i--
 					}
 				} else {
@@ -91,7 +82,6 @@ writeLoop:
 				}
 			} else {
 				buf.WriteString(".*")
-				dotMeta = true
 			}
 			if mode&Shortest != 0 {
 				buf.WriteByte('?')
@@ -101,7 +91,6 @@ writeLoop:
 				buf.WriteString("[^/]")
 			} else {
 				buf.WriteByte('.')
-				dotMeta = true
 			}
 		case '\\':
 			if i++; i >= len(pat) {
@@ -238,13 +227,6 @@ writeLoop:
 				buf.WriteString(regexp.QuoteMeta(string(c)))
 			}
 		}
-	}
-	if mode&EntireString != 0 {
-		buf.WriteString("$")
-	}
-	// No `.` metacharacters were used, so don't return the flag.
-	if !dotMeta {
-		return string(buf.Bytes()[4:]), nil
 	}
 	return buf.String(), nil
 }

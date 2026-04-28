@@ -4,7 +4,6 @@
 package interp
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -26,13 +25,11 @@ func isBuiltin(name string) bool {
 		"wait", "builtin", "trap", "type", "source", ".", "command",
 		"dirs", "pushd", "popd", "umask", "alias", "unalias",
 		"fg", "bg", "getopts", "eval", "test", "[", "exec",
-		"return", "read", "mapfile", "readarray", "shopt":
+		"return", "read", "shopt":
 		return true
 	}
 	return false
 }
-
-// TODO: oneIf and atoi are duplicated in the expand package.
 
 func oneIf(b bool) int {
 	if b {
@@ -41,9 +38,9 @@ func oneIf(b bool) int {
 	return 0
 }
 
-// atoi is like strconv.Atoi, but it ignores errors and trims whitespace.
+// atoi is just a shorthand for strconv.Atoi that ignores the error,
+// just like shells do.
 func atoi(s string) int {
-	s = strings.TrimSpace(s)
 	n, _ := strconv.Atoi(s)
 	return n
 }
@@ -670,44 +667,29 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			}
 		}
 		args := fp.args()
-		bash := !posixOpts
 		if len(args) == 0 {
-			if bash {
-				for i, opt := range bashOptsTable {
-					r.printOptLine(opt.name, r.opts[len(shellOptsTable)+i], opt.supported)
+			if !posixOpts {
+				for i, name := range bashOptsTable {
+					r.printOptLine(name, r.opts[len(shellOptsTable)+i])
 				}
 				break
 			}
 			for i, opt := range &shellOptsTable {
-				r.printOptLine(opt.name, r.opts[i], true)
+				r.printOptLine(opt.name, r.opts[i])
 			}
 			break
 		}
 		for _, arg := range args {
-			i, opt := r.optByName(arg, bash)
+			opt := r.optByName(arg, !posixOpts)
 			if opt == nil {
 				r.errf("shopt: invalid option name %q\n", arg)
 				return 1
 			}
-
-			var (
-				bo        *bashOpt
-				supported = true // default for shell options
-			)
-			if bash {
-				bo = &bashOptsTable[i-len(shellOptsTable)]
-				supported = bo.supported
-			}
-
 			switch mode {
 			case "-s", "-u":
-				if bash && !supported {
-					r.errf("shopt: invalid option name %q %q (%q not supported)\n", arg, r.optStatusText(bo.defaultState), r.optStatusText(!bo.defaultState))
-					return 1
-				}
 				*opt = mode == "-s"
 			default: // ""
-				r.printOptLine(arg, *opt, supported)
+				r.printOptLine(arg, *opt)
 			}
 		}
 		r.updateExpandOpts()
@@ -818,64 +800,6 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 				return 2
 			}
 		}
-
-	case "readarray", "mapfile":
-		dropDelim := false
-		delim := "\n"
-		fp := flagParser{remaining: args}
-		for fp.more() {
-			switch flag := fp.flag(); flag {
-			case "-t":
-				// Remove the delim from each line read
-				dropDelim = true
-			case "-d":
-				if len(fp.remaining) == 0 {
-					r.errf("%s: -d: option requires an argument\n", name)
-					return 2
-				}
-				delim = fp.value()
-				if delim == "" {
-					// Bash sets the delim to an ASCII NUL if provided with an empty
-					// string.
-					delim = "\x00"
-				}
-			default:
-				r.errf("%s: invalid option %q\n", name, flag)
-				return 2
-			}
-		}
-
-		args := fp.args()
-		var arrayName string
-		switch len(args) {
-		case 0:
-			arrayName = "MAPFILE"
-		case 1:
-			if !syntax.ValidName(args[0]) {
-				r.errf("%s: invalid identifier %q\n", name, args[0])
-				return 2
-			}
-			arrayName = args[0]
-		default:
-			r.errf("%s: Only one array name may be specified, %v\n", name, args)
-			return 2
-		}
-
-		var vr expand.Variable
-		vr.Kind = expand.Indexed
-		scanner := bufio.NewScanner(r.stdin)
-		scanner.Split(mapfileSplit(delim[0], dropDelim))
-		for scanner.Scan() {
-			vr.List = append(vr.List, scanner.Text())
-		}
-		if err := scanner.Err(); err != nil {
-			r.errf("%s: unable to read, %v", name, err)
-			return 2
-		}
-		r.setVarInternal(arrayName, vr)
-
-		return 0
-
 	default:
 		// "umask", "fg", "bg",
 		panic(fmt.Sprintf("unhandled builtin: %s", name))
@@ -883,37 +807,12 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 	return 0
 }
 
-// mapfileSplit returns a suitable Split function for a bufio.Scanner, the code
-// is mostly stolen from bufio.ScanLines.
-func mapfileSplit(delim byte, dropDelim bool) func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
-			return 0, nil, nil
-		}
-		if i := bytes.IndexByte(data, delim); i >= 0 {
-			// We have a full newline-terminated line.
-			if dropDelim {
-				return i + 1, data[0:i], nil
-			} else {
-				return i + 1, data[0 : i+1], nil
-			}
-		}
-		// If we're at EOF, we have a final, non-terminated line. Return it.
-		if atEOF {
-			return len(data), data, nil
-		}
-		// Request more data.
-		return 0, nil, nil
+func (r *Runner) printOptLine(name string, enabled bool) {
+	status := "off"
+	if enabled {
+		status = "on"
 	}
-}
-
-func (r *Runner) printOptLine(name string, enabled, supported bool) {
-	state := r.optStatusText(enabled)
-	if supported {
-		r.outf("%s\t%s\n", name, state)
-		return
-	}
-	r.outf("%s\t%s\t(%q not supported)\n", name, state, r.optStatusText(!enabled))
+	r.outf("%s\t%s\n", name, status)
 }
 
 func (r *Runner) readLine(raw bool) ([]byte, error) {
@@ -1087,12 +986,4 @@ func (g *getopts) next(optstr string, args []string) (opt rune, optarg string, d
 	}
 
 	return opt, optarg, false
-}
-
-// optStatusText returns a shell option's status text display
-func (r *Runner) optStatusText(status bool) string {
-	if status {
-		return "on"
-	}
-	return "off"
 }

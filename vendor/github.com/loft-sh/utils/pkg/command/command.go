@@ -3,7 +3,6 @@ package command
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -91,8 +90,7 @@ func (s *streamCommand) RunWithEnv(ctx context.Context, dir string, environ expa
 		err = s.cmd.Wait()
 	}
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) && defaultStderr != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && defaultStderr != nil {
 			exitErr.Stderr = defaultStderr.Bytes()
 		}
 
@@ -130,9 +128,8 @@ func ShouldExecuteOnOS(os string) bool {
 func Command(ctx context.Context, dir string, environ expand.Environ, stdout io.Writer, stderr io.Writer, stdin io.Reader, cmd string, args ...string) error {
 	err := newStreamCommand(cmd, args).RunWithEnv(ctx, dir, environ, stdout, stderr, stdin)
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			return fmt.Errorf("error executing '%s %s': %s", cmd, strings.Join(args, " "), string(exitErr.Stderr))
+		if errr, ok := err.(*exec.ExitError); ok {
+			return fmt.Errorf("error executing '%s %s': %s", cmd, strings.Join(args, " "), string(errr.Stderr))
 		}
 
 		return err

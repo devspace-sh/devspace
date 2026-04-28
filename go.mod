@@ -31,7 +31,6 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/loft-sh/go-github-selfupdate v1.0.0
-	github.com/loft-sh/loft-util v0.0.9-alpha
 	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 	github.com/loft-sh/programming-language-detection v0.0.5
 	github.com/loft-sh/utils v0.0.16

@@ -468,7 +468,11 @@ func (s *StreamLogger) GetLevel() logrus.Level {
 }
 
 func (s *StreamLogger) StartWait(message string) {
-	// TODO: implement spinner/wait indicator
+	if message == "" {
+		return
+	}
+
+	s.Info(message)
 }
 
 func (s *StreamLogger) StopWait() {

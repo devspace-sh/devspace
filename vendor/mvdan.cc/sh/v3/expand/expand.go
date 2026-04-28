@@ -215,24 +215,6 @@ func Pattern(cfg *Config, word *syntax.Word) (string, error) {
 func Format(cfg *Config, format string, args []string) (string, int, error) {
 	cfg = prepareConfig(cfg)
 	buf := cfg.strBuilder()
-
-	consumed, err := formatIntoBuffer(buf, format, args)
-	if err != nil {
-		return "", 0, err
-	}
-
-	return buf.String(), consumed, err
-}
-
-// Format expands a format string with a number of arguments, following the
-// shell's format specifications. These include printf(1), among others.
-//
-// The resulting string is written to the provided buffer, and the number
-// of arguments used is returned.
-//
-// The config specifies shell expansion options; nil behaves the same as an
-// empty config.
-func formatIntoBuffer(buf *bytes.Buffer, format string, args []string) (int, error) {
 	var fmts []byte
 	initialArgs := len(args)
 
@@ -332,26 +314,18 @@ formatLoop:
 				fmts = nil
 			case '+', '-', ' ':
 				if len(fmts) > 1 {
-					return 0, fmt.Errorf("invalid format char: %c", c)
+					return "", 0, fmt.Errorf("invalid format char: %c", c)
 				}
 				fmts = append(fmts, c)
 			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 				fmts = append(fmts, c)
-			case 's', 'b', 'd', 'i', 'u', 'o', 'x':
+			case 's', 'd', 'i', 'u', 'o', 'x':
 				arg := ""
 				if len(args) > 0 {
 					arg, args = args[0], args[1:]
 				}
-				var farg interface{}
-				if c == 'b' {
-					// Passing in nil for args ensures that % format
-					// strings aren't processed; only escape sequences
-					// will be handled.
-					_, err := formatIntoBuffer(buf, arg, nil)
-					if err != nil {
-						return 0, err
-					}
-				} else if c != 's' {
+				var farg interface{} = arg
+				if c != 's' {
 					n, _ := strconv.ParseInt(arg, 0, 0)
 					if c == 'i' || c == 'd' {
 						farg = int(n)
@@ -361,16 +335,12 @@ formatLoop:
 					if c == 'i' || c == 'u' {
 						c = 'd'
 					}
-				} else {
-					farg = arg
 				}
-				if farg != nil {
-					fmts = append(fmts, c)
-					fmt.Fprintf(buf, string(fmts), farg)
-				}
+				fmts = append(fmts, c)
+				fmt.Fprintf(buf, string(fmts), farg)
 				fmts = nil
 			default:
-				return 0, fmt.Errorf("invalid format char: %c", c)
+				return "", 0, fmt.Errorf("invalid format char: %c", c)
 			}
 		case args != nil && c == '%':
 			// if args == nil, we are not doing format
@@ -381,9 +351,9 @@ formatLoop:
 		}
 	}
 	if len(fmts) > 0 {
-		return 0, fmt.Errorf("missing format char")
+		return "", 0, fmt.Errorf("missing format char")
 	}
-	return initialArgs - len(args), nil
+	return buf.String(), initialArgs - len(args), nil
 }
 
 func (cfg *Config) fieldJoin(parts []fieldPart) string {
@@ -576,22 +546,11 @@ func (cfg *Config) wordFields(wps []syntax.WordPart) ([][]fieldPart, error) {
 		curField = nil
 	}
 	splitAdd := func(val string) {
-		fieldStart := -1
-		for i, r := range val {
-			if cfg.ifsRune(r) {
-				if fieldStart >= 0 { // ending a field
-					curField = append(curField, fieldPart{val: val[fieldStart:i]})
-					fieldStart = -1
-				}
+		for i, field := range strings.FieldsFunc(val, cfg.ifsRune) {
+			if i > 0 {
 				flush()
-			} else {
-				if fieldStart < 0 { // starting a new field
-					fieldStart = i
-				}
 			}
-		}
-		if fieldStart >= 0 { // ending a field without IFS
-			curField = append(curField, fieldPart{val: val[fieldStart:]})
+			curField = append(curField, fieldPart{val: field})
 		}
 	}
 	for i, wp := range wps {
@@ -677,8 +636,6 @@ func (cfg *Config) wordFields(wps []syntax.WordPart) ([][]fieldPart, error) {
 				return nil, err
 			}
 			splitAdd(path)
-		case *syntax.ExtGlob:
-			return nil, fmt.Errorf("extended globbing is not supported")
 		default:
 			panic(fmt.Sprintf("unhandled word part: %T", x))
 		}
@@ -691,57 +648,31 @@ func (cfg *Config) wordFields(wps []syntax.WordPart) ([][]fieldPart, error) {
 }
 
 // quotedElemFields returns the list of elements resulting from a quoted
-// parameter expansion that should be treated especially, like "${foo[@]}".
+// parameter expansion if it was in the form of ${*}, ${@}, ${foo[*], ${foo[@]},
+// or ${!foo@}.
 func (cfg *Config) quotedElemFields(pe *syntax.ParamExp) []string {
 	if pe == nil || pe.Length || pe.Width {
 		return nil
 	}
-	name := pe.Param.Value
 	if pe.Excl {
-		switch pe.Names {
-		case syntax.NamesPrefixWords: // "${!prefix@}"
+		if pe.Names == syntax.NamesPrefixWords {
 			return cfg.namesByPrefix(pe.Param.Value)
-		case syntax.NamesPrefix: // "${!prefix*}"
-			return nil
-		}
-		switch nodeLit(pe.Index) {
-		case "@": // "${!name[@]}"
-			switch vr := cfg.Env.Get(name); vr.Kind {
-			case Indexed:
-				keys := make([]string, 0, len(vr.Map))
-				for key := range vr.List {
-					keys = append(keys, strconv.Itoa(key))
-				}
-				return keys
-			case Associative:
-				keys := make([]string, 0, len(vr.Map))
-				for key := range vr.Map {
-					keys = append(keys, key)
-				}
-				return keys
-			}
 		}
 		return nil
 	}
+	name := pe.Param.Value
 	switch name {
-	case "*": // "${*}"
+	case "*":
 		return []string{cfg.ifsJoin(cfg.Env.Get(name).List)}
-	case "@": // "${@}"
+	case "@":
 		return cfg.Env.Get(name).List
 	}
 	switch nodeLit(pe.Index) {
-	case "@": // "${name[@]}"
-		switch vr := cfg.Env.Get(name); vr.Kind {
-		case Indexed:
+	case "@":
+		if vr := cfg.Env.Get(name); vr.Kind == Indexed {
 			return vr.List
-		case Associative:
-			elems := make([]string, 0, len(vr.Map))
-			for _, elem := range vr.Map {
-				elems = append(elems, elem)
-			}
-			return elems
 		}
-	case "*": // "${name[*]}"
+	case "*":
 		if vr := cfg.Env.Get(name); vr.Kind == Indexed {
 			return []string{cfg.ifsJoin(vr.List)}
 		}
@@ -914,22 +845,21 @@ func (cfg *Config) glob(base, pat string) ([]string, error) {
 
 				// If dir is not a directory, we keep the stack as-is and continue.
 				newMatches = newMatches[:0]
-				newMatches, _ = cfg.globDir(base, dir, rxGlobStar, false, wantDir, newMatches)
+				newMatches, _ = cfg.globDir(base, dir, rxGlobStar, wantDir, newMatches)
 				for i := len(newMatches) - 1; i >= 0; i-- {
 					stack = append(stack, newMatches[i])
 				}
 			}
 			continue
 		}
-		expr, err := pattern.Regexp(part, pattern.Filenames|pattern.EntireString)
+		expr, err := pattern.Regexp(part, pattern.Filenames)
 		if err != nil {
 			return nil, err
 		}
-		rx := regexp.MustCompile(expr)
-		matchHidden := part[0] == byte('.')
+		rx := regexp.MustCompile("^" + expr + "$")
 		var newMatches []string
 		for _, dir := range matches {
-			newMatches, err = cfg.globDir(base, dir, rx, matchHidden, wantDir, newMatches)
+			newMatches, err = cfg.globDir(base, dir, rx, wantDir, newMatches)
 			if err != nil {
 				return nil, err
 			}
@@ -939,7 +869,7 @@ func (cfg *Config) glob(base, pat string) ([]string, error) {
 	return matches, nil
 }
 
-func (cfg *Config) globDir(base, dir string, rx *regexp.Regexp, matchHidden bool, wantDir bool, matches []string) ([]string, error) {
+func (cfg *Config) globDir(base, dir string, rx *regexp.Regexp, wantDir bool, matches []string) ([]string, error) {
 	fullDir := dir
 	if !filepath.IsAbs(dir) {
 		fullDir = filepath.Join(base, dir)
@@ -966,7 +896,7 @@ func (cfg *Config) globDir(base, dir string, rx *regexp.Regexp, matchHidden bool
 			// Not a symlink nor a directory.
 			continue
 		}
-		if !matchHidden && name[0] == '.' {
+		if !strings.HasPrefix(rx.String(), `^\.`) && name[0] == '.' {
 			continue
 		}
 		if rx.MatchString(name) {

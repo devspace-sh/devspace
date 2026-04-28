@@ -6,7 +6,6 @@ package expand
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"mvdan.cc/sh/v3/syntax"
 )
@@ -93,7 +92,7 @@ func Arithm(cfg *Config, expr syntax.ArithmExpr) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		return binArit(x.Op, left, right)
+		return binArit(x.Op, left, right), nil
 	default:
 		panic(fmt.Sprintf("unexpected arithm expr: %T", x))
 	}
@@ -106,9 +105,9 @@ func oneIf(b bool) int {
 	return 0
 }
 
-// atoi is like strconv.Atoi, but it ignores errors and trims whitespace.
+// atoi is just a shorthand for strconv.Atoi that ignores the error,
+// just like shells do.
 func atoi(s string) int {
-	s = strings.TrimSpace(s)
 	n, _ := strconv.Atoi(s)
 	return n
 }
@@ -130,14 +129,8 @@ func (cfg *Config) assgnArit(b *syntax.BinaryArithm) (int, error) {
 	case syntax.MulAssgn:
 		val *= arg
 	case syntax.QuoAssgn:
-		if arg == 0 {
-			return 0, fmt.Errorf("division by zero")
-		}
 		val /= arg
 	case syntax.RemAssgn:
-		if arg == 0 {
-			return 0, fmt.Errorf("division by zero")
-		}
 		val %= arg
 	case syntax.AndAssgn:
 		val &= arg
@@ -168,54 +161,48 @@ func intPow(a, b int) int {
 	return p
 }
 
-func binArit(op syntax.BinAritOperator, x, y int) (int, error) {
+func binArit(op syntax.BinAritOperator, x, y int) int {
 	switch op {
 	case syntax.Add:
-		return x + y, nil
+		return x + y
 	case syntax.Sub:
-		return x - y, nil
+		return x - y
 	case syntax.Mul:
-		return x * y, nil
+		return x * y
 	case syntax.Quo:
-		if y == 0 {
-			return 0, fmt.Errorf("division by zero")
-		}
-		return x / y, nil
+		return x / y
 	case syntax.Rem:
-		if y == 0 {
-			return 0, fmt.Errorf("division by zero")
-		}
-		return x % y, nil
+		return x % y
 	case syntax.Pow:
-		return intPow(x, y), nil
+		return intPow(x, y)
 	case syntax.Eql:
-		return oneIf(x == y), nil
+		return oneIf(x == y)
 	case syntax.Gtr:
-		return oneIf(x > y), nil
+		return oneIf(x > y)
 	case syntax.Lss:
-		return oneIf(x < y), nil
+		return oneIf(x < y)
 	case syntax.Neq:
-		return oneIf(x != y), nil
+		return oneIf(x != y)
 	case syntax.Leq:
-		return oneIf(x <= y), nil
+		return oneIf(x <= y)
 	case syntax.Geq:
-		return oneIf(x >= y), nil
+		return oneIf(x >= y)
 	case syntax.And:
-		return x & y, nil
+		return x & y
 	case syntax.Or:
-		return x | y, nil
+		return x | y
 	case syntax.Xor:
-		return x ^ y, nil
+		return x ^ y
 	case syntax.Shr:
-		return x >> uint(y), nil
+		return x >> uint(y)
 	case syntax.Shl:
-		return x << uint(y), nil
+		return x << uint(y)
 	case syntax.AndArit:
-		return oneIf(x != 0 && y != 0), nil
+		return oneIf(x != 0 && y != 0)
 	case syntax.OrArit:
-		return oneIf(x != 0 || y != 0), nil
+		return oneIf(x != 0 || y != 0)
 	default: // syntax.Comma
 		// x is executed but its result discarded
-		return y, nil
+		return y
 	}
 }

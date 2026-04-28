@@ -422,9 +422,6 @@ github.com/liggitt/tabwriter
 # github.com/loft-sh/go-github-selfupdate v1.0.0
 ## explicit; go 1.13
 github.com/loft-sh/go-github-selfupdate/selfupdate
-# github.com/loft-sh/loft-util v0.0.9-alpha
-## explicit; go 1.19
-github.com/loft-sh/loft-util/pkg/command
 # github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 ## explicit; go 1.11
 github.com/loft-sh/notify

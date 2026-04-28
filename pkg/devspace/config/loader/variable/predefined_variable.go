@@ -55,7 +55,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 	},
 	"DEVSPACE_KUBECTL_EXECUTABLE": func(ctx context.Context, options *PredefinedVariableOptions, logger log.Logger) (interface{}, error) {
 		debugLog := logger.WithLevel(logrus.DebugLevel)
-		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), log.ToLogr(debugLog), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
+		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), debugLog, constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
 		if err != nil {
 			debugLog.Debugf("Error downloading kubectl: %v", err)
 			return "", nil
