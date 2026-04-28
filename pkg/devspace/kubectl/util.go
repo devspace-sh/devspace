@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -264,27 +265,13 @@ func IsMinikubeKubernetes(kubeClient Client) bool {
 	return false
 }
 
-// isMinikubeExtension safely checks whether a kubeconfig cluster extension
-// identifies the cluster as a minikube provider.
-//
-// Some tools (e.g. Teleport) write extension values as plain YAML strings
-// rather than structured objects. runtime.DefaultUnstructuredConverter.ToUnstructured
-// panics on such values via reflection ("reflect.Set: value of type string is
-// not assignable to type map[string]interface {}") rather than returning an
-// error, so we recover() and treat unparseable extensions as non-minikube.
-//
-// noinline is required: if the compiler inlines this function into its caller,
-// the deferred recover() loses its stack frame and cannot catch the panic.
-//
-//go:noinline
-func isMinikubeExtension(extension runtime.Object) (result bool) {
-	defer func() {
-		if recover() != nil {
-			result = false
-		}
-	}()
-	ext, err := runtime.DefaultUnstructuredConverter.ToUnstructured(extension)
-	if err != nil {
+func isMinikubeExtension(extension runtime.Object) bool {
+	unknown, ok := extension.(*runtime.Unknown)
+	if !ok {
+		return false
+	}
+	var ext map[string]interface{}
+	if err := json.Unmarshal(unknown.Raw, &ext); err != nil {
 		return false
 	}
 	provider, ok := ext["provider"].(string)

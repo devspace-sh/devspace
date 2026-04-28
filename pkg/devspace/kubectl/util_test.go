@@ -118,9 +118,9 @@ func TestIsMinikubeKubernetes(t *testing.T) {
 	})
 
 	// Some tools (e.g. Teleport) serialise kubeconfig extensions as plain YAML
-	// strings rather than structured objects. runtime.ToUnstructured panics on
-	// these via reflection instead of returning an error. isMinikubeExtension
-	// must recover gracefully and return false.
+	// strings rather than structured objects. isMinikubeExtension detects this
+	// by type-asserting the extension to *runtime.Unknown and using json.Unmarshal,
+	// which returns an error for non-object JSON (e.g. a bare string) rather than panicking.
 	t.Run("string-valued extension does not panic and returns false", func(t *testing.T) {
 		ext := &runtime.Unknown{
 			Raw:         []byte(`"my-cluster-name"`), // bare JSON string, not an object
