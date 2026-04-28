@@ -20,7 +20,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/loft-util/pkg/command"
+	"github.com/loft-sh/utils/pkg/command"
 	"mvdan.cc/sh/v3/interp"
 
 	"github.com/loft-sh/devspace/cmd/flags"

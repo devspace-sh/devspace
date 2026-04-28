@@ -3,13 +3,13 @@ package engine
 import (
 	"bytes"
 	"context"
-	"mvdan.cc/sh/v3/expand"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"gotest.tools/assert"
+	"mvdan.cc/sh/v3/expand"
 )
 
 type testCaseShell struct {
@@ -132,5 +132,6 @@ func TestHelmDownload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Assert(t, strings.Contains(stdout1.String(), `Version:"v3`))
+
+	assert.Assert(t, strings.Contains(stdout1.String(), `Version:"v4`))
 }

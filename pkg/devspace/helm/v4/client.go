@@ -1,4 +1,4 @@
-package v3
+package v4
 
 import (
 	"net/url"
@@ -12,8 +12,8 @@ import (
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
+	devspacecommands "github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/utils/pkg/downloader/commands"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/yaml"
@@ -23,10 +23,10 @@ type client struct {
 	genericHelm generic.Client
 }
 
-// NewClient creates a new helm v3 Client
+// NewClient creates a new helm v4 Client
 func NewClient(log log.Logger) (types.Client, error) {
 	c := &client{}
-	c.genericHelm = generic.NewGenericClient(commands.NewHelmV3Command(), log)
+	c.genericHelm = generic.NewGenericClient(devspacecommands.NewHelmV4Command(), log)
 	return c, nil
 }
 
@@ -38,7 +38,7 @@ func (c *client) DownloadChart(ctx devspacecontext.Context, helmConfig *latest.H
 	return filepath.Dir(chartName), nil
 }
 
-// InstallChart installs the given chart via helm v3
+// InstallChart installs the given chart via helm v4
 func (c *client) InstallChart(ctx devspacecontext.Context, releaseName string, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	valuesFile, err := c.genericHelm.WriteValues(values)
 	if err != nil {

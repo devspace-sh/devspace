@@ -41,13 +41,32 @@ fi
 # Create the release directory
 mkdir -p "${DEVSPACE_ROOT}/release"
 
-# Install Helm 3
+# Install Helm 4
 echo "Installing helm"
-curl -s https://get.helm.sh/helm-v3.3.4-darwin-amd64.tar.gz > helm3.tar.gz && tar -zxvf helm3.tar.gz darwin-amd64/helm && chmod +x darwin-amd64/helm
+HELM_OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+HELM_ARCH=$(uname -m)
+case "${HELM_ARCH}" in
+  x86_64)
+    HELM_ARCH="amd64"
+    ;;
+  aarch64|arm64)
+    HELM_ARCH="arm64"
+    ;;
+  i386|i686)
+    HELM_ARCH="386"
+    ;;
+esac
+HELM_PLATFORM="${HELM_OS}-${HELM_ARCH}"
+HELM_VERSION=$(sed -nE 's/^const helmVersion = "([^"]+)"/\1/p' pkg/util/downloader/commands/helm_v4.go)
+if [[ -z "${HELM_VERSION}" ]]; then
+  echo "unable to determine Helm version" 1>&2
+  exit 1
+fi
+curl -s "https://get.helm.sh/helm-${HELM_VERSION}-${HELM_PLATFORM}.tar.gz" > helm4.tar.gz && tar -zxvf helm4.tar.gz "${HELM_PLATFORM}/helm" && chmod +x "${HELM_PLATFORM}/helm"
 
 # Pull the component chart
 COMPONENT_CHART_VERSION=$(cat pkg/devspace/deploy/deployer/helm/client.go | grep 'Version: "' | sed -nE 's/[^"]+"(.+)",\s*/\1/p')
-darwin-amd64/helm pull component-chart --repo https://charts.devspace.sh --version $COMPONENT_CHART_VERSION
+"${HELM_PLATFORM}/helm" pull component-chart --repo https://charts.devspace.sh --version $COMPONENT_CHART_VERSION
 
 # Move ui.tar.gz to releases
 echo "Moving ui"
@@ -74,28 +93,28 @@ for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
     if [[ "${OS}" == "windows" ]]; then
       NAME="${NAME}.exe"
     fi
-    
+
     # darwin 386 is deprecated and shouldn't be used anymore
     if [[ "${ARCH}" == "386" && "${OS}" == "darwin" ]]; then
         echo "Building for ${OS}/${ARCH} not supported."
         continue
     fi
-    
+
     # arm64 build is only supported for darwin
     if [[ "${ARCH}" == "arm64" && "${OS}" == "windows" ]]; then
         echo "Building for ${OS}/${ARCH} not supported."
         continue
     fi
-    
+
     echo "Building for ${OS}/${ARCH}"
-    
+
     # build darwin with CGO_ENABLED=1
     if [[ "${OS}" == "darwin" ]]; then
       CGO_ENABLED=1
     else
-      CGO_ENABLED=0 
+      CGO_ENABLED=0
     fi
-    
+
     # build the DevSpace binary
     CGO_ENABLED=${CGO_ENABLED} GOARCH=${ARCH} GOOS=${OS} ${GO_BUILD_CMD} -ldflags "${GO_BUILD_LDFLAGS}"\
                   -o "${DEVSPACE_ROOT}/release/${NAME}" .

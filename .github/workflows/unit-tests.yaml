@@ -21,10 +21,10 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
-    
+
     name: unit-test-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - name: Set up Go
         uses: actions/setup-go@v5

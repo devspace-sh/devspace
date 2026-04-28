@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	enginecommands "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler/commands"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
+	devspacecommands "github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/utils/pkg/downloader"
 	"github.com/loft-sh/utils/pkg/downloader/commands"
@@ -79,7 +80,7 @@ var EnsureCommands = map[string]func(ctx context.Context, args []string) (string
 	},
 	"helm": func(ctx context.Context, args []string) (string, error) {
 		hc := interp.HandlerCtx(ctx)
-		path, err := downloader.NewDownloader(commands.NewHelmV3Command(), log.GetFileLogger("shell"), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
+		path, err := downloader.NewDownloader(devspacecommands.NewHelmV4Command(), log.GetFileLogger("shell"), constants.DefaultHomeDevSpaceFolder).EnsureCommand(ctx)
 		if err != nil {
 			_, _ = fmt.Fprintln(hc.Stderr, err)
 			return "", interp.NewExitStatus(127)

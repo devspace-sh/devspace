@@ -343,8 +343,6 @@ github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de h1:9TO3cAIGXtEhn
 github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de/go.mod h1:zAbeS9B/r2mtpb6U+EI2rYA5OAXxsYw6wTamcNW+zcE=
 github.com/loft-sh/go-github-selfupdate v1.0.0 h1:YS8iSsIWXw3BygBdPK2xDO4K84XYu2YuYgVS7eQNtik=
 github.com/loft-sh/go-github-selfupdate v1.0.0/go.mod h1:LDkR6J2QpqQLIMcYvNaSinVwvjPAkg8278oZBPGnrb8=
-github.com/loft-sh/loft-util v0.0.9-alpha h1:kGcyTQWxWHWy7bbjhS8Hsq/JRdlSztAU++anV6P+sqk=
-github.com/loft-sh/loft-util v0.0.9-alpha/go.mod h1:lsjG5Exh5iEf7Z/87nqwkxx3GRQTizFRLGuS1knF6Cg=
 github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee h1:hZ79+pKEbCBrH1dVmgZ4jtFrrDPxgM4zqEP1lHlSnvI=
 github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee/go.mod h1:pq83B8lgfCY7tKdegTTXU6DZxGQkcWMowUTOTpTQmqk=
 github.com/loft-sh/programming-language-detection v0.0.5 h1:XiWlxtrf4t6Z7SQiob0JMKaCeMHCP3kWhB80wLt+EMY=

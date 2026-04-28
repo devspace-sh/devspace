@@ -415,6 +415,14 @@ func (s *StreamLogger) Donef(format string, args ...interface{}) {
 	s.writeMessage(doneFn, fmt.Sprintf(format, args...)+"\n")
 }
 
+func (s *StreamLogger) Fail(args ...interface{}) {
+	s.Error(args...)
+}
+
+func (s *StreamLogger) Failf(format string, args ...interface{}) {
+	s.Errorf(format, args...)
+}
+
 func (s *StreamLogger) Print(level logrus.Level, args ...interface{}) {
 	switch level {
 	case logrus.InfoLevel:
@@ -459,6 +467,19 @@ func (s *StreamLogger) GetLevel() logrus.Level {
 	return s.level
 }
 
+func (s *StreamLogger) StartWait(message string) {
+	if message == "" {
+		return
+	}
+
+	s.Info(message)
+}
+
+func (s *StreamLogger) StopWait() {
+	// StartWait writes a complete log line instead of starting a spinner, so
+	// there is no terminal state to clean up.
+}
+
 func (s *StreamLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -494,6 +515,13 @@ func (s *StreamLogger) WriteString(level logrus.Level, message string) {
 		return
 	}
 	_, _ = s.write(level, []byte(message))
+}
+
+func (s *StreamLogger) Write(message []byte) (int, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	return s.write(logrus.InfoLevel, message)
 }
 
 func (s *StreamLogger) write(level logrus.Level, message []byte) (int, error) {
