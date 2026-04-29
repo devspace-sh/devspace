@@ -9,7 +9,7 @@
     "@fortawesome/react-fontawesome": "^0.1.19",
     "@kubernetes/client-node": "^1.0.0",
     "autoprefixer": "7.1.6",
-    "babel-jest": "^25.5.1",
+    "babel-jest": "^30.3.0",
     "babel-loader": "^8.4.1",
     "babel-preset-react-app": "^4.0.0",
     "case-sensitive-paths-webpack-plugin": "2.2.0",
