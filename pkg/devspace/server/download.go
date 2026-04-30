@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/loft-sh/devspace/assets"
+	"github.com/mitchellh/go-homedir"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/git"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 )
 
@@ -38,17 +38,19 @@ func downloadUI() (string, error) {
 		version = "latest"
 	}
 
-	homedir, _ := homedir.Dir()
+	downloadDir := os.Getenv("DEVSPACE_HOME")
 
+	if downloadDir == "" {
+		downloadDir, _ = homedir.Dir()
+	}
 	// Check if ui was already downloaded / extracted
-	uiFolder := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, UITempFolder, version)
+	uiFolder := filepath.Join(downloadDir, constants.DefaultHomeDevSpaceFolder, UITempFolder, version)
 
 	// Download / extract if necessary
 	err := downloadUITar(uiFolder, version)
 	if err != nil {
 		return "", errors.Wrap(err, "download ui tar ball")
 	}
-
 	return uiFolder, nil
 }
 
