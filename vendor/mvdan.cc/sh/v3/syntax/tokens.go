@@ -3,7 +3,7 @@
 
 package syntax
 
-//go:generate stringer -type token -linecomment -trimprefix _
+//go:generate go tool stringer -type token -linecomment -trimprefix _
 
 type token uint32
 
@@ -17,15 +17,20 @@ const (
 	_LitWord
 	_LitRedir
 
+	// Token values beyond this point stringify as exact source.
+	_realTokenBoundary
+
 	sglQuote // '
 	dblQuote // "
 	bckQuote // `
 
-	and    // &
-	andAnd // &&
-	orOr   // ||
-	or     // |
-	orAnd  // |&
+	and     // &
+	andAnd  // &&
+	orOr    // ||
+	or      // |
+	orAnd   // |&
+	andPipe // &|
+	andBang // &!
 
 	dollar       // $
 	dollSglQuote // $'
@@ -34,6 +39,7 @@ const (
 	dollBrack    // $[
 	dollParen    // $(
 	dollDblParen // $((
+	leftBrace    // {
 	leftBrack    // [
 	dblLeftBrack // [[
 	leftParen    // (
@@ -41,6 +47,7 @@ const (
 
 	rightBrace    // }
 	rightBrack    // ]
+	dblRightBrack // ]]
 	rightParen    // )
 	dblRightParen // ))
 	semicolon     // ;
@@ -61,32 +68,40 @@ const (
 	lequal   // <=
 	gequal   // >=
 
-	addAssgn // +=
-	subAssgn // -=
-	mulAssgn // *=
-	quoAssgn // /=
-	remAssgn // %=
-	andAssgn // &=
-	orAssgn  // |=
-	xorAssgn // ^=
-	shlAssgn // <<=
-	shrAssgn // >>=
+	addAssgn     // +=
+	subAssgn     // -=
+	mulAssgn     // *=
+	quoAssgn     // /=
+	remAssgn     // %=
+	andAssgn     // &=
+	orAssgn      // |=
+	xorAssgn     // ^=
+	shlAssgn     // <<=
+	shrAssgn     // >>=
+	andBoolAssgn // &&=
+	orBoolAssgn  // ||=
+	xorBoolAssgn // ^^=
+	powAssgn     // **=
 
-	rdrOut   // >
-	appOut   // >>
-	rdrIn    // <
-	rdrInOut // <>
-	dplIn    // <&
-	dplOut   // >&
-	clbOut   // >|
-	hdoc     // <<
-	dashHdoc // <<-
-	wordHdoc // <<<
-	rdrAll   // &>
-	appAll   // &>>
+	rdrOut     // >
+	appOut     // >>
+	rdrIn      // <
+	rdrInOut   // <>
+	dplIn      // <&
+	dplOut     // >&
+	rdrClob    // >|
+	appClob    // >>|
+	hdoc       // <<
+	dashHdoc   // <<-
+	wordHdoc   // <<<
+	rdrAll     // &>
+	rdrAllClob // &>|
+	appAll     // &>>
+	appAllClob // &>>|
 
-	cmdIn  // <(
-	cmdOut // >(
+	cmdIn      // <(
+	assgnParen // =(
+	cmdOut     // >(
 
 	plus     // +
 	colPlus  // :+
@@ -100,6 +115,9 @@ const (
 	dblPerc  // %%
 	hash     // #
 	dblHash  // ##
+	colHash  // :#
+	colPipe  // :|
+	colStar  // :*
 	caret    // ^
 	dblCaret // ^^
 	comma    // ,
@@ -107,6 +125,7 @@ const (
 	at       // @
 	slash    // /
 	dblSlash // //
+	period   // .
 	colon    // :
 
 	tsExists  // -e
@@ -152,28 +171,41 @@ const (
 	globExcl  // !(
 )
 
+func (t token) isLit() bool {
+	return t == _Lit || t == _LitWord || t == _LitRedir
+}
+
 type RedirOperator token
 
 const (
-	RdrOut   = RedirOperator(rdrOut) + iota // >
-	AppOut                                  // >>
-	RdrIn                                   // <
-	RdrInOut                                // <>
-	DplIn                                   // <&
-	DplOut                                  // >&
-	ClbOut                                  // >|
-	Hdoc                                    // <<
-	DashHdoc                                // <<-
-	WordHdoc                                // <<<
-	RdrAll                                  // &>
-	AppAll                                  // &>>
+	RdrOut     = RedirOperator(rdrOut) + iota // >
+	AppOut                                    // >>
+	RdrIn                                     // <
+	RdrInOut                                  // <>
+	DplIn                                     // <&
+	DplOut                                    // >&
+	RdrClob                                   // >|
+	AppClob                                   // >>| with [LangZsh]
+	Hdoc                                      // <<
+	DashHdoc                                  // <<-
+	WordHdoc                                  // <<<
+	RdrAll                                    // &>
+	RdrAllClob                                // &>| with [LangZsh]
+	AppAll                                    // &>>
+	AppAllClob                                // &>>| with [LangZsh]
+
+	// Deprecated: use [RdrClob]
+	//
+	//go:fix inline
+	ClbOut = RdrClob
 )
 
 type ProcOperator token
 
 const (
-	CmdIn  = ProcOperator(cmdIn) + iota // <(
-	CmdOut                              // >(
+	CmdIn     = ProcOperator(cmdIn) + iota // <(
+	CmdInTemp                              // =(
+	CmdOut                                 // >(
 )
 
 type GlobOperator token
@@ -226,6 +258,9 @@ const (
 	RemLargeSuffix                                     // %%
 	RemSmallPrefix                                     // #
 	RemLargePrefix                                     // ##
+	MatchEmpty                                         // :# with [LangZsh]
+	ArrayExclude                                       // :| with [LangZsh]
+	ArrayIntersect                                     // :* with [LangZsh]
 	UpperFirst                                         // ^
 	UpperAll                                           // ^^
 	LowerFirst                                         // ,
@@ -265,23 +300,30 @@ const (
 	Shr = BinAritOperator(appOut) // >>
 	Shl = BinAritOperator(hdoc)   // <<
 
-	AndArit   = BinAritOperator(andAnd) // &&
-	OrArit    = BinAritOperator(orOr)   // ||
-	Comma     = BinAritOperator(comma)  // ,
-	TernQuest = BinAritOperator(quest)  // ?
-	TernColon = BinAritOperator(colon)  // :
+	// TODO: use "Bool" consistently for logical operators like AndArit and OrArit; use //go:fix inline?
 
-	Assgn    = BinAritOperator(assgn)    // =
-	AddAssgn = BinAritOperator(addAssgn) // +=
-	SubAssgn = BinAritOperator(subAssgn) // -=
-	MulAssgn = BinAritOperator(mulAssgn) // *=
-	QuoAssgn = BinAritOperator(quoAssgn) // /=
-	RemAssgn = BinAritOperator(remAssgn) // %=
-	AndAssgn = BinAritOperator(andAssgn) // &=
-	OrAssgn  = BinAritOperator(orAssgn)  // |=
-	XorAssgn = BinAritOperator(xorAssgn) // ^=
-	ShlAssgn = BinAritOperator(shlAssgn) // <<=
-	ShrAssgn = BinAritOperator(shrAssgn) // >>=
+	AndArit   = BinAritOperator(andAnd)   // &&
+	OrArit    = BinAritOperator(orOr)     // ||
+	XorBool   = BinAritOperator(dblCaret) // ^^
+	Comma     = BinAritOperator(comma)    // ,
+	TernQuest = BinAritOperator(quest)    // ?
+	TernColon = BinAritOperator(colon)    // :
+
+	Assgn        = BinAritOperator(assgn)        // =
+	AddAssgn     = BinAritOperator(addAssgn)     // +=
+	SubAssgn     = BinAritOperator(subAssgn)     // -=
+	MulAssgn     = BinAritOperator(mulAssgn)     // *=
+	QuoAssgn     = BinAritOperator(quoAssgn)     // /=
+	RemAssgn     = BinAritOperator(remAssgn)     // %=
+	AndAssgn     = BinAritOperator(andAssgn)     // &=
+	OrAssgn      = BinAritOperator(orAssgn)      // |=
+	XorAssgn     = BinAritOperator(xorAssgn)     // ^=
+	ShlAssgn     = BinAritOperator(shlAssgn)     // <<=
+	ShrAssgn     = BinAritOperator(shrAssgn)     // >>=
+	AndBoolAssgn = BinAritOperator(andBoolAssgn) // &&=
+	OrBoolAssgn  = BinAritOperator(orBoolAssgn)  // ||=
+	XorBoolAssgn = BinAritOperator(xorBoolAssgn) // ^^=
+	PowAssgn     = BinAritOperator(powAssgn)     // **=
 )
 
 type UnTestOperator token
@@ -312,6 +354,7 @@ const (
 	TsVarSet                                    // -v
 	TsRefVar                                    // -R
 	TsNot     = UnTestOperator(exclMark)        // !
+	TsParen   = UnTestOperator(leftParen)       // (
 )
 
 type BinTestOperator token
