@@ -17,7 +17,6 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 20
-          registry-url: https://registry.npmjs.org/
       - name: Cache node modules
         uses: actions/cache@v4
         with:
@@ -27,7 +26,5 @@ jobs:
             ${{ runner.os }}-node-
       - name: Build UI
         env:
-          NPM_CONFIG_GLOBALCONFIG: "dist/npm/config/npmrc"
-          NPM_REGISTRY_TOKEN: ${{ secrets.NPM_DEVSPACE_REGISTRY_TOKEN }}
           CI: "false"
         run: ./hack/build-ui.bash
