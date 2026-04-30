@@ -26,15 +26,6 @@ updates:
       - "dependencies"
       - "javascript"
 
-  # Check for npm dependencies in dist/npm
-  - package-ecosystem: "npm"
-    directory: "/dist/npm"
-    schedule:
-      interval: "weekly"
-    labels:
-      - "dependencies"
-      - "javascript"
-
   # Check for npm dependencies at root level (but exclude docs)
   - package-ecosystem: "npm"
     directory: "/"

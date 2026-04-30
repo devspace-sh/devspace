@@ -5,10 +5,8 @@ import TabItem from '@theme/TabItem';
 DevSpace is a client-only binary. It is super lightweight, does not require any server-side component, and it does not have any dependencies.
 
 <Tabs
-  defaultValue="npm"
+  defaultValue="brew"
   values={[
-    { label: 'npm', value: 'npm', },
-    { label: 'yarn', value: 'yarn', },
     { label: 'brew', value: 'brew', },
     { label: 'Mac', value: 'mac', },
     { label: 'Linux', value: 'linux', },
@@ -16,20 +14,6 @@ DevSpace is a client-only binary. It is super lightweight, does not require any 
     { label: 'Windows Scoop', value: 'windows-scoop', },
   ]
 }>
-<TabItem value="npm">
-
-```bash
-npm install -g devspace
-```
-
-</TabItem>
-<TabItem value="yarn">
-
-```bash
-yarn global add devspace
-```
-
-</TabItem>
 <TabItem value="brew">
 
 ```bash
