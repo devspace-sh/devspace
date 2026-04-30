@@ -18,19 +18,20 @@ func (p *Parser) arithmExprAssign(compact bool) ArithmExpr {
 	value := p.arithmExprTernary(compact)
 	switch BinAritOperator(p.tok) {
 	case AddAssgn, SubAssgn, MulAssgn, QuoAssgn, RemAssgn, AndAssgn,
-		OrAssgn, XorAssgn, ShlAssgn, ShrAssgn, Assgn:
+		OrAssgn, XorAssgn, ShlAssgn, ShrAssgn, Assgn,
+		AndBoolAssgn, OrBoolAssgn, XorBoolAssgn, PowAssgn:
 		if compact && p.spaced {
 			return value
 		}
 		if !isArithName(value) {
-			p.posErr(p.pos, "%s must follow a name", p.tok.String())
+			p.posErr(p.pos, "%#q must follow a name", p.tok)
 		}
 		pos := p.pos
 		tok := p.tok
 		p.nextArithOp(compact)
 		y := p.arithmExprAssign(compact)
 		if y == nil {
-			p.followErrExp(pos, tok.String())
+			p.followErrExp(pos, tok)
 		}
 		return &BinaryArithm{
 			OpPos: pos,
@@ -49,25 +50,25 @@ func (p *Parser) arithmExprTernary(compact bool) ArithmExpr {
 	}
 
 	if value == nil {
-		p.curErr("%s must follow an expression", p.tok.String())
+		p.curErr("%#q must follow an expression", p.tok)
 	}
 	questPos := p.pos
 	p.nextArithOp(compact)
 	if BinAritOperator(p.tok) == TernColon {
-		p.followErrExp(questPos, TernQuest.String())
+		p.followErrExp(questPos, TernQuest)
 	}
 	trueExpr := p.arithmExpr(compact)
 	if trueExpr == nil {
-		p.followErrExp(questPos, TernQuest.String())
+		p.followErrExp(questPos, TernQuest)
 	}
 	if BinAritOperator(p.tok) != TernColon {
-		p.posErr(questPos, "ternary operator missing : after ?")
+		p.posErr(questPos, "ternary operator missing %#q after %#q", colon, quest)
 	}
 	colonPos := p.pos
 	p.nextArithOp(compact)
 	falseExpr := p.arithmExprTernary(compact)
 	if falseExpr == nil {
-		p.followErrExp(colonPos, TernColon.String())
+		p.followErrExp(colonPos, TernColon)
 	}
 	return &BinaryArithm{
 		OpPos: questPos,
@@ -83,7 +84,7 @@ func (p *Parser) arithmExprTernary(compact bool) ArithmExpr {
 }
 
 func (p *Parser) arithmExprLor(compact bool) ArithmExpr {
-	return p.arithmExprBinary(compact, p.arithmExprLand, OrArit)
+	return p.arithmExprBinary(compact, p.arithmExprLand, OrArit, XorBool)
 }
 
 func (p *Parser) arithmExprLand(compact bool) ArithmExpr {
@@ -130,7 +131,7 @@ func (p *Parser) arithmExprPower(compact bool) ArithmExpr {
 	}
 
 	if value == nil {
-		p.curErr("%s must follow an expression", p.tok.String())
+		p.curErr("%#q must follow an expression", p.tok)
 	}
 
 	op := p.tok
@@ -138,7 +139,7 @@ func (p *Parser) arithmExprPower(compact bool) ArithmExpr {
 	p.nextArithOp(compact)
 	y := p.arithmExprPower(compact)
 	if y == nil {
-		p.followErrExp(pos, op.String())
+		p.followErrExp(pos, op)
 	}
 	return &BinaryArithm{
 		OpPos: pos,
@@ -158,7 +159,7 @@ func (p *Parser) arithmExprUnary(compact bool) ArithmExpr {
 		ue := &UnaryArithm{OpPos: p.pos, Op: UnAritOperator(p.tok)}
 		p.nextArithOp(compact)
 		if ue.X = p.arithmExprUnary(compact); ue.X == nil {
-			p.followErrExp(ue.OpPos, ue.Op.String())
+			p.followErrExp(ue.OpPos, ue.Op)
 		}
 		return ue
 	}
@@ -172,29 +173,36 @@ func (p *Parser) arithmExprValue(compact bool) ArithmExpr {
 		ue := &UnaryArithm{OpPos: p.pos, Op: UnAritOperator(p.tok)}
 		p.nextArith(compact)
 		if p.tok != _LitWord {
-			p.followErr(ue.OpPos, token(ue.Op).String(), "a literal")
+			p.followErr(ue.OpPos, ue.Op, noQuote("a literal"))
 		}
 		ue.X = p.arithmExprValue(compact)
 		return ue
 	case leftParen:
+		if p.quote == paramExpArithm && p.lang.in(LangZsh) {
+			x = p.zshSubFlags()
+			break
+		}
 		pe := &ParenArithm{Lparen: p.pos}
 		p.nextArithOp(compact)
 		pe.X = p.followArithm(leftParen, pe.Lparen)
 		pe.Rparen = p.matched(pe.Lparen, leftParen, rightParen)
+		if p.quote == paramExpArithm && p.tok == _LitWord {
+			p.checkLang(pe.Lparen, LangZsh, "subscript flags")
+		}
 		x = pe
 	case leftBrack:
-		p.curErr("[ must follow a name")
+		p.curErr("%#q must follow a name like a[i]", p.tok)
 	case colon:
-		p.curErr("ternary operator missing ? before :")
+		p.curErr("ternary operator missing %#q before %#q", quest, colon)
 	case _LitWord:
 		l := p.getLit()
 		if p.tok != leftBrack {
-			x = p.word(p.wps(l))
+			x = p.wordOne(l)
 			break
 		}
-		pe := &ParamExp{Dollar: l.ValuePos, Short: true, Param: l}
+		pe := &ParamExp{Short: true, Param: l}
 		pe.Index = p.eitherIndex()
-		x = p.word(p.wps(pe))
+		x = p.wordOne(pe)
 	case bckQuote:
 		if p.quote == arithmExprLet && p.openBquotes > 0 {
 			return nil
@@ -219,7 +227,7 @@ func (p *Parser) arithmExprValue(compact bool) ArithmExpr {
 	// sets the type to non-nil and then x != nil
 	if p.tok == addAdd || p.tok == subSub {
 		if !isArithName(x) {
-			p.curErr("%s must follow a name", p.tok.String())
+			p.curErr("%#q must follow a name", p.tok)
 		}
 		u := &UnaryArithm{
 			Post:  true,
@@ -250,7 +258,7 @@ func (p *Parser) nextArithOp(compact bool) {
 	pos := p.pos
 	tok := p.tok
 	if p.nextArith(compact) {
-		p.followErrExp(pos, tok.String())
+		p.followErrExp(pos, tok)
 	}
 }
 
@@ -271,14 +279,14 @@ func (p *Parser) arithmExprBinary(compact bool, nextOp func(bool) ArithmExpr, op
 		}
 
 		if value == nil {
-			p.curErr("%s must follow an expression", p.tok.String())
+			p.curErr("%#q must follow an expression", p.tok)
 		}
 
 		pos := p.pos
 		p.nextArithOp(compact)
 		y := nextOp(compact)
 		if y == nil {
-			p.followErrExp(pos, foundOp.String())
+			p.followErrExp(pos, foundOp)
 		}
 
 		value = &BinaryArithm{
@@ -295,11 +303,11 @@ func isArithName(left ArithmExpr) bool {
 	if !ok || len(w.Parts) != 1 {
 		return false
 	}
-	switch x := w.Parts[0].(type) {
+	switch wp := w.Parts[0].(type) {
 	case *Lit:
-		return ValidName(x.Value)
+		return ValidName(wp.Value)
 	case *ParamExp:
-		return x.nakedIndex()
+		return wp.nakedIndex()
 	default:
 		return false
 	}
@@ -308,7 +316,7 @@ func isArithName(left ArithmExpr) bool {
 func (p *Parser) followArithm(ftok token, fpos Pos) ArithmExpr {
 	x := p.arithmExpr(false)
 	if x == nil {
-		p.followErrExp(fpos, ftok.String())
+		p.followErrExp(fpos, ftok)
 	}
 	return x
 }
@@ -320,16 +328,18 @@ func (p *Parser) peekArithmEnd() bool {
 func (p *Parser) arithmMatchingErr(pos Pos, left, right token) {
 	switch p.tok {
 	case _Lit, _LitWord:
-		p.curErr("not a valid arithmetic operator: %s", p.val)
+		p.curErr("not a valid arithmetic operator: %#q", p.val)
 	case leftBrack:
-		p.curErr("[ must follow a name")
+		p.curErr("%#q must follow a name like a[i]", leftBrack)
 	case colon:
-		p.curErr("ternary operator missing ? before :")
+		p.curErr("ternary operator missing %#q before %#q", quest, colon)
 	case rightParen, _EOF:
 		p.matchingErr(pos, left, right)
+	case period:
+		p.checkLang(p.pos, LangZsh, `floating point arithmetic`)
 	default:
-		if p.quote == arithmExpr {
-			p.curErr("not a valid arithmetic operator: %v", p.tok)
+		if p.quote&allArithmExpr != 0 {
+			p.curErr("not a valid arithmetic operator: %#q", p.tok)
 		}
 		p.matchingErr(pos, left, right)
 	}
@@ -343,6 +353,9 @@ func (p *Parser) matchedArithm(lpos Pos, left, right token) {
 
 func (p *Parser) arithmEnd(ltok token, lpos Pos, old saveState) Pos {
 	if !p.peekArithmEnd() {
+		if p.recoverError() {
+			return recoveredPos
+		}
 		p.arithmMatchingErr(lpos, ltok, dblRightParen)
 	}
 	p.rune()
