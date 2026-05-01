@@ -14,11 +14,21 @@ import (
 	appsapplyv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 )
 
-func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.StatefulSet, error) {
+func (r *LocalRegistry) ensureStatefulset(
+	ctx devspacecontext.Context,
+) (*appsv1.StatefulSet, error) {
 	// Switching from an unpersistent registry, delete the deployment.
-	_, err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.Namespace).Get(ctx.Context(), r.Name, metav1.GetOptions{})
+	_, err := ctx.KubeClient().
+		KubeClient().
+		AppsV1().
+		Deployments(r.Namespace).
+		Get(ctx.Context(), r.Name, metav1.GetOptions{})
 	if err == nil {
-		err := ctx.KubeClient().KubeClient().AppsV1().Deployments(r.Namespace).Delete(ctx.Context(), r.Name, metav1.DeleteOptions{})
+		err := ctx.KubeClient().
+			KubeClient().
+			AppsV1().
+			Deployments(r.Namespace).
+			Delete(ctx.Context(), r.Name, metav1.DeleteOptions{})
 		if err != nil && kerrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -27,29 +37,41 @@ func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.
 	var existing *appsv1.StatefulSet
 	desired := r.getStatefulSet()
 	kubeClient := ctx.KubeClient()
-	err = wait.PollUntilContextTimeout(ctx.Context(), time.Second, 30*time.Second, true, func(ctx context.Context) (bool, error) {
-		var err error
+	err = wait.PollUntilContextTimeout(
+		ctx.Context(),
+		time.Second,
+		30*time.Second,
+		true,
+		func(ctx context.Context) (bool, error) {
+			var err error
 
-		existing, err = kubeClient.KubeClient().AppsV1().StatefulSets(r.Namespace).Get(ctx, r.Name, metav1.GetOptions{})
-		if err == nil {
-			return true, nil
-		}
-
-		if kerrors.IsNotFound(err) {
-			existing, err = kubeClient.KubeClient().AppsV1().StatefulSets(r.Namespace).Create(ctx, desired, metav1.CreateOptions{})
+			existing, err = kubeClient.KubeClient().
+				AppsV1().
+				StatefulSets(r.Namespace).
+				Get(ctx, r.Name, metav1.GetOptions{})
 			if err == nil {
 				return true, nil
 			}
 
-			if kerrors.IsAlreadyExists(err) {
-				return false, nil
+			if kerrors.IsNotFound(err) {
+				existing, err = kubeClient.KubeClient().
+					AppsV1().
+					StatefulSets(r.Namespace).
+					Create(ctx, desired, metav1.CreateOptions{})
+				if err == nil {
+					return true, nil
+				}
+
+				if kerrors.IsAlreadyExists(err) {
+					return false, nil
+				}
+
+				return false, err
 			}
 
 			return false, err
-		}
-
-		return false, err
-	})
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +90,8 @@ func (r *LocalRegistry) ensureStatefulset(ctx devspacecontext.Context) (*appsv1.
 		},
 	)
 	if kerrors.IsUnsupportedMediaType(err) {
-		ctx.Log().Debugf("Server-side apply not available on the server for localRegistry statefulset: (%v)", err)
+		ctx.Log().
+			Debugf("Server-side apply not available on the server for localRegistry statefulset: (%v)", err)
 		// Unsupport server-side apply, we use existing or created statefulset
 		return existing, nil
 	}
@@ -100,7 +123,7 @@ func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
-						Resources: corev1.VolumeResourceRequirements{ // Fix: Change corev1.ResourceRequirements to corev1.VolumeResourceRequirements
+						Resources: corev1.VolumeResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: resource.MustParse(r.StorageSize),
 							},
@@ -114,13 +137,18 @@ func (r *LocalRegistry) getStatefulSet() *appsv1.StatefulSet {
 					Labels: map[string]string{
 						"app": r.Name,
 					},
-					Annotations: map[string]string{
-						"container.apparmor.security.beta.kubernetes.io/buildkitd": "unconfined",
-					},
+					Annotations: getAnnotations(r.LocalBuild, r.Annotations),
 				},
 				Spec: corev1.PodSpec{
 					EnableServiceLinks: new(bool),
-					Containers:         getContainers(r.RegistryImage, r.BuildKitImage, r.Name, int32(r.Port), r.LocalBuild),
+					Containers: getContainers(
+						r.RegistryImage,
+						r.BuildKitImage,
+						r.Name,
+						int32(r.Port),
+						r.LocalBuild,
+						r.Resources,
+					),
 					Volumes: []corev1.Volume{
 						{
 							VolumeSource: corev1.VolumeSource{
