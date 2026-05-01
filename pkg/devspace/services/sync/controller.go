@@ -226,6 +226,23 @@ func (c *controller) startWithWait(ctx devspacecontext.Context, options *Options
 			}
 			return nil
 		})
+	} else {
+		parent.Go(func() error {
+			select {
+			case <-ctx.Context().Done():
+				syncStop(ctx, client, options, parent)
+			case err := <-onError:
+				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
+					"sync_config": options.SyncConfig,
+					"ERROR":       err,
+				}, hook.EventsForSingle("error:sync", options.Name).With("sync.error")...)
+				ctx.Log().Errorf("Sync error: %v", err)
+				syncStop(ctx, client, options, parent)
+			case <-onDone:
+				syncDone(ctx, options, parent)
+			}
+			return nil
+		})
 	}
 
 	return nil
