@@ -1,0 +1,13 @@
+version: v2beta1
+name: git-subpath-imports
+
+imports:
+  - git: https://github.com/loft-sh/e2e-test-dependency.git
+    branch: main
+    subPath: subA
+  - git: https://github.com/loft-sh/e2e-test-dependency.git
+    branch: main
+    subPath: subB
+  - git: https://github.com/loft-sh/e2e-test-dependency.git
+    branch: main
+    subPath: subC
