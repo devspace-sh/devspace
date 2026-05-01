@@ -3,11 +3,11 @@ name: git-subpath-imports
 
 imports:
   - git: https://github.com/loft-sh/e2e-test-dependency.git
-    branch: main
+    revision: 1ec44dcffc83f64ea7e8c169751e56d233cd4b20
     subPath: subA
   - git: https://github.com/loft-sh/e2e-test-dependency.git
-    branch: main
+    revision: 1ec44dcffc83f64ea7e8c169751e56d233cd4b20
     subPath: subB
   - git: https://github.com/loft-sh/e2e-test-dependency.git
-    branch: main
+    revision: 1ec44dcffc83f64ea7e8c169751e56d233cd4b20
     subPath: subC

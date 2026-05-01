@@ -84,8 +84,6 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 	for _, resolvedImport := range resolvedImports {
 		if resolvedImport.Disabled {
 			continue
-		} else if resolvedImport.Data == nil {
-			return nil, errors.Errorf("resolved import is missing data")
 		}
 
 		importData := resolvedImport.Data
@@ -127,7 +125,7 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		if importData["imports"] != nil {
 			mergedMap["imports"] = importData["imports"]
 
-			// resolve imports
+			// The recursive call starts by reloading variables from mergedMap.
 			mergedMap, err = ResolveImports(ctx, resolver, filepath.Dir(resolvedImport.ConfigPath), mergedMap, log)
 			if err != nil {
 				return nil, err
@@ -135,6 +133,8 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		} else {
 			delete(mergedMap, "imports")
 
+			// Leaf imports used to recurse too, so preserve the variable reload
+			// after each ordered import merge.
 			err = reloadVariables(resolver, mergedMap, log)
 			if err != nil {
 				return nil, err
@@ -151,6 +151,7 @@ func loadImports(ctx context.Context, basePath string, imports []latest.Import, 
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.SetLimit(maxConcurrentImportDownloads)
 	for index := range imports {
+		// Keep an explicit per-iteration copy for the goroutine closure.
 		importConfig := imports[index]
 		if importConfig.Enabled != nil && !*importConfig.Enabled {
 			resolvedImports[index] = resolvedImport{Disabled: true}

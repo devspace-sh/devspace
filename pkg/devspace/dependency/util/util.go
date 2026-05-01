@@ -253,9 +253,9 @@ func downloadURLDependency(ctx context.Context, localPath string, source *latest
 		}
 		defer func() {
 			if err := resp.Body.Close(); err != nil {
-				log.Warnf("Error closing body: %v", err)	
+				log.Warnf("Error closing body: %v", err)
 			}
-		}() 
+		}()
 
 		// Write the body to file
 		_, err = io.Copy(out, resp.Body)
@@ -320,20 +320,33 @@ func runDownloadOnce(key string, download func() error) error {
 	downloadCalls[key] = call
 	downloadCallsMutex.Unlock()
 
+	cleanup := func() {
+		close(call.done)
+		downloadCallsMutex.Lock()
+		delete(downloadCalls, key)
+		downloadCallsMutex.Unlock()
+	}
+	defer func() {
+		panicValue := recover()
+		if panicValue != nil {
+			call.err = fmt.Errorf("download panicked: %v", panicValue)
+			cleanup()
+			panic(panicValue)
+		}
+
+		cleanup()
+	}()
+
 	call.err = download()
-	close(call.done)
-
-	downloadCallsMutex.Lock()
-	delete(downloadCalls, key)
-	downloadCallsMutex.Unlock()
-
 	return call.err
 }
 
 func downloadCallKey(sourceType, id string, source *latest.SourceConfig) string {
-	// SubPath is encoded in id (via GetDependencyID) and does not need to be
-	// listed separately. CloneArgs/DisableShallow/DisablePull affect download
-	// behavior but not the cache location, so they are listed explicitly.
+	// SubPath navigates within an already-cloned repo; all imports sharing the
+	// same git URL write to the same cache directory, so SubPath need not
+	// distinguish download calls. CloneArgs/DisableShallow/DisablePull affect
+	// download behavior but not the cache location, so they are listed
+	// explicitly.
 	return strings.Join([]string{
 		sourceType,
 		id,

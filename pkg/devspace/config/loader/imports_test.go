@@ -28,10 +28,11 @@ func TestResolveImportsDownloadsSiblingImportsConcurrently(t *testing.T) {
 		dependencyutil.DependencyFolderPath = oldDependencyFolderPath
 	}()
 
+	const importCount int32 = 3
 	var activeRequests int32
 	var maxActiveRequests int32
-	release := make(chan struct{})
-	var releaseOnce sync.Once
+	allInFlight := make(chan struct{})
+	var closeAllInFlight sync.Once
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		current := atomic.AddInt32(&activeRequests, 1)
@@ -44,15 +45,16 @@ func TestResolveImportsDownloadsSiblingImportsConcurrently(t *testing.T) {
 			}
 		}
 
-		if current == 3 {
-			releaseOnce.Do(func() {
-				close(release)
+		if current == importCount {
+			closeAllInFlight.Do(func() {
+				close(allInFlight)
 			})
 		}
 
 		select {
-		case <-release:
-		case <-time.After(2 * time.Second):
+		case <-allInFlight:
+		case <-r.Context().Done():
+			return
 		}
 
 		name := strings.TrimPrefix(r.URL.Path, "/")
@@ -71,8 +73,39 @@ func TestResolveImportsDownloadsSiblingImportsConcurrently(t *testing.T) {
 		},
 	}
 
-	resolved, err := ResolveImports(context.Background(), resolver, t.TempDir(), rawConfig, log.Discard)
-	assert.NilError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	type result struct {
+		resolved map[string]interface{}
+		err      error
+	}
+	results := make(chan result, 1)
+	go func() {
+		resolved, err := ResolveImports(ctx, resolver, t.TempDir(), rawConfig, log.Discard)
+		results <- result{resolved: resolved, err: err}
+	}()
+
+	select {
+	case <-allInFlight:
+	case result := <-results:
+		assert.NilError(t, result.err)
+		t.Fatalf("expected all import downloads to be in flight before resolution completed")
+	case <-time.After(5 * time.Second):
+		cancel()
+		t.Fatalf("timed out waiting for concurrent import downloads")
+	}
+
+	var resolved map[string]interface{}
+	select {
+	case result := <-results:
+		assert.NilError(t, result.err)
+		resolved = result.resolved
+	case <-time.After(5 * time.Second):
+		cancel()
+		t.Fatalf("timed out waiting for import resolution")
+	}
+
 	maxActive := atomic.LoadInt32(&maxActiveRequests)
 	assert.Assert(t, maxActive == 3, "expected 3 concurrent import downloads, got %d", maxActive)
 
