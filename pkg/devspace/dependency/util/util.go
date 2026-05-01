@@ -10,10 +10,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/loft-sh/devspace/pkg/util/encoding"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/git"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mitchellh/go-homedir"
@@ -146,12 +145,18 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 
 		// Git pull
 		if !source.DisablePull && source.Revision == "" {
-			err = repo.Pull(ctx)
-			if err != nil {
-				log.Warn(err)
-			}
+			if err := repo.Pull(ctx); err != nil {
+				log.Infof("Git pull failed for dependency '%s': %v", gitPath, err)
+				log.Infof("Attempting automatic recovery by re-cloning")
 
-			log.Debugf("Pulled %s", gitPath)
+				if err := recloneDependency(ctx, localPath, gitCloneOptions, gitPath, log); err != nil {
+					return "", errors.Wrap(err, "git pull failed and automatic recovery failed")
+				}
+
+				log.Donef("Successfully recovered dependency '%s'", gitPath)
+			} else {
+				log.Debugf("Pulled %s", gitPath)
+			}
 		}
 
 		// Resolve local source
@@ -256,4 +261,42 @@ func GetDependencyID(source *latest.SourceConfig) (string, error) {
 
 func isURL(path string) bool {
 	return strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://")
+}
+
+func recloneDependency(ctx context.Context, localPath string, gitCloneOptions git.CloneOptions, gitPath string, log log.Logger) error {
+	// Clone to temporary location to avoid losing old version if clone fails
+	tmpPath := localPath + ".tmp-reclone"
+
+	// Clean up any leftover tmp directory from previous failed attempts
+	_ = os.RemoveAll(tmpPath)
+
+	// Create new repository in tmp location
+	repo, err := git.NewGitCLIRepository(ctx, tmpPath)
+	if err != nil {
+		return errors.Wrap(err, "create temporary git repository")
+	}
+
+	// Try to clone
+	err = repo.Clone(ctx, gitCloneOptions)
+	if err != nil {
+		gitCloneOptions.URL = switchURLType(gitPath)
+		err = repo.Clone(ctx, gitCloneOptions)
+		if err != nil {
+			_ = os.RemoveAll(tmpPath)
+			return errors.Wrap(err, "clone repository")
+		}
+	}
+
+	// Clone succeeded - now replace old version atomically
+	if err := os.RemoveAll(localPath); err != nil {
+		_ = os.RemoveAll(tmpPath)
+		return errors.Wrap(err, "remove old dependency cache")
+	}
+
+	// Atomic rename (both paths in same directory, so same filesystem)
+	if err := os.Rename(tmpPath, localPath); err != nil {
+		return errors.Wrap(err, "move new dependency into place")
+	}
+
+	return nil
 }
