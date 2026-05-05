@@ -78,7 +78,7 @@
     "babel-preset-env": "^1.7.0",
     "cross-env": "^6.0.3",
     "ignore-loader": "^0.1.2",
-    "nodemon": "^1.19.4",
+    "nodemon": "^3.1.14",
     "react-hot-loader": "^4.13.1",
     "require-context.macro": "^1.2.2",
     "terser": "^4.8.1",
