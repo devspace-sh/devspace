@@ -239,7 +239,15 @@ func (c *controller) startWithWait(ctx devspacecontext.Context, options *Options
 				ctx.Log().Errorf("Sync error: %v", err)
 				syncStop(ctx, client, options, parent)
 			case <-onDone:
-				syncDone(ctx, options, parent)
+				// noWatch: initial sync completed normally.
+				// Stop the client and emit the stop:sync lifecycle event,
+				// but do NOT kill the parent tomb — SSH, port-forwarding and
+				// other services registered in the same parent must continue.
+				client.Stop(nil)
+				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
+					"sync_config": options.SyncConfig,
+				}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
+				ctx.Log().Debugf("Stopped sync %s", options.SyncConfig.Path)
 			}
 			return nil
 		})
