@@ -6,12 +6,14 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -146,7 +148,7 @@ func untarAll(reader io.Reader, destDir, prefix string, log logpkg.Logger) error
 			continue
 		}
 
-		if mode&os.ModeSymlink != 0 {
+		if fsutil.IsSymlink(mode) {
 			if !symlinkWarningPrinted {
 				symlinkWarningPrinted = true
 				log.Warnf("warning: skipping symlink: %q -> %q\n", destFileName, header.Linkname)

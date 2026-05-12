@@ -363,6 +363,7 @@ func makeBasicTestCases() (testCaseList, testCaseList) {
 
 	filesToCheck = makeSymLinkTestCases(filesToCheck)
 	foldersToCheck = makeSymLinkTestCases(foldersToCheck)
+	foldersToCheck = makeSymLinkTestCasesWithContent(foldersToCheck)
 
 	//Add Files and Folders that are inside a shared testFolder
 	filesToCheck = makeDeepTestCases(filesToCheck)
@@ -551,6 +552,33 @@ func makeSymLinkTestCases(testCases testCaseList) testCaseList {
 			isSymLink:           true,
 		}
 		testCases = append(testCases, deepEquivalent)
+	}
+
+	return testCases
+}
+
+func makeSymLinkTestCasesWithContent(testCases testCaseList) testCaseList {
+	for _, f := range testCases {
+		if f.isSymLink || strings.Contains(f.path, "Remote") || f.path == "testFolder" {
+			continue
+		}
+
+		deepEquivalent := checkedFileOrFolder{
+			path:                strings.ReplaceAll(f.path, "Folder", "SymLinkToFolderWithContents"),
+			shouldExistInLocal:  f.shouldExistInLocal,
+			shouldExistInRemote: f.shouldExistInRemote,
+			editLocation:        f.editLocation,
+			isSymLink:           true,
+		}
+		testCases = append(testCases, deepEquivalent)
+
+		testCases = append(testCases, checkedFileOrFolder{
+			path:                filepath.Join(deepEquivalent.path, "content"),
+			shouldExistInLocal:  f.shouldExistInLocal,
+			shouldExistInRemote: f.shouldExistInRemote,
+			editLocation:        f.editLocation,
+			isSymLink:           false,
+		})
 	}
 
 	return testCases
