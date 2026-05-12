@@ -1988,7 +1988,8 @@ func TestImportsDeepMerge(t *testing.T) {
 		name        string
 		catalogYaml string
 		mainYaml    string
-		verify      func(t *testing.T, dev map[string]*latest.DevPod)
+		expectedErr string
+		verify      func(t *testing.T, config *latest.Config)
 	}{
 		{
 			name: "Catalog provides base config, project adds minimal customization",
@@ -2015,12 +2016,14 @@ version: v2beta1
 name: my-project
 imports:
   - path: catalog.yaml
+    mergeStrategy: deepMerge
 dev:
   api:
     labelSelector:
       app.kubernetes.io/name: my-app
 `,
-			verify: func(t *testing.T, dev map[string]*latest.DevPod) {
+			verify: func(t *testing.T, config *latest.Config) {
+				dev := config.Dev
 				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
 
 				// Project customization
@@ -2053,6 +2056,7 @@ version: v2beta1
 name: my-project
 imports:
   - path: catalog.yaml
+    mergeStrategy: deepMerge
 dev:
   api:
     labelSelector:
@@ -2061,7 +2065,8 @@ dev:
     ports:
       - port: "3000:3000"
 `,
-			verify: func(t *testing.T, dev map[string]*latest.DevPod) {
+			verify: func(t *testing.T, config *latest.Config) {
+				dev := config.Dev
 				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
 
 				// Maps are deep merged
@@ -2097,13 +2102,15 @@ version: v2beta1
 name: my-project
 imports:
   - path: catalog.yaml
+    mergeStrategy: deepMerge
 dev:
   api:
     labelSelector:
       app: my-custom-app
       tier: frontend
 `,
-			verify: func(t *testing.T, dev map[string]*latest.DevPod) {
+			verify: func(t *testing.T, config *latest.Config) {
+				dev := config.Dev
 				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
 
 				// Project overrides specific label
@@ -2145,6 +2152,7 @@ version: v2beta1
 name: my-project
 imports:
   - path: catalog.yaml
+    mergeStrategy: deepMerge
 dev:
   api:
     labelSelector:
@@ -2155,7 +2163,8 @@ dev:
       app.kubernetes.io/name: my-worker
       tier: jobs
 `,
-			verify: func(t *testing.T, dev map[string]*latest.DevPod) {
+			verify: func(t *testing.T, config *latest.Config) {
+				dev := config.Dev
 				// Verify api service
 				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
 				assert.Equal(t, dev["api"].LabelSelector["app.kubernetes.io/name"], "my-api", "api labelSelector")
@@ -2202,12 +2211,14 @@ version: v2beta1
 name: my-project
 imports:
   - path: catalog.yaml
+    mergeStrategy: deepMerge
 dev:
   api:
     labelSelector:
       app.kubernetes.io/name: my-minimal-app
 `,
-			verify: func(t *testing.T, dev map[string]*latest.DevPod) {
+			verify: func(t *testing.T, config *latest.Config) {
+				dev := config.Dev
 				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
 
 				// Only labelSelector from project
@@ -2218,6 +2229,185 @@ dev:
 				assert.Equal(t, dev["api"].Command[0], "/bin/bash", "command value")
 				assert.Equal(t, len(dev["api"].Ports), 2, "all ports from catalog")
 				assert.Assert(t, len(dev["api"].Sync) >= 1, "sync config from catalog")
+			},
+		},
+		{
+			name: "Default merge strategy is shallow merge",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+dev:
+  api:
+    labelSelector:
+      app: catalog-app
+      version: v1
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+dev:
+  api:
+    labelSelector:
+      app: project-app
+      tier: frontend
+`,
+			verify: func(t *testing.T, config *latest.Config) {
+				dev := config.Dev
+				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
+
+				// Maps are shallow merged
+				assert.Equal(t, dev["api"].LabelSelector["app"], "project-app", "project overrides 'app' in map")
+				assert.Equal(t, dev["api"].LabelSelector["tier"], "frontend", "project adds 'tier' in map")
+				assert.Equal(t, dev["api"].LabelSelector["version"], "", "catalog 'version' is NOT preserved in map because of shallow merge")
+			},
+		},
+		{
+			name: "Explicit shallowMerge strategy",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+dev:
+  api:
+    labelSelector:
+      app: catalog-app
+      version: v1
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+    mergeStrategy: shallowMerge
+dev:
+  api:
+    labelSelector:
+      app: project-app
+      tier: frontend
+`,
+			verify: func(t *testing.T, config *latest.Config) {
+				dev := config.Dev
+				assert.Assert(t, dev["api"] != nil, "api dev config should exist")
+
+				// Maps are shallow merged
+				assert.Equal(t, dev["api"].LabelSelector["app"], "project-app", "project overrides 'app' in map")
+				assert.Equal(t, dev["api"].LabelSelector["tier"], "frontend", "project adds 'tier' in map")
+				assert.Equal(t, dev["api"].LabelSelector["version"], "", "catalog 'version' is NOT preserved in map because of shallow merge")
+			},
+		},
+		{
+			name: "mergeStrategy deepMerge on deployments with mutually exclusive fields",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+deployments:
+  my-app:
+    helm:
+      chart:
+        name: my-chart
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+    mergeStrategy: deepMerge
+deployments:
+  my-app:
+    kubectl:
+      manifests:
+        - my-manifest.yaml
+`,
+			expectedErr: "deployments[my-app].kubectl and deployments[my-app].helm cannot be used together",
+			verify: func(t *testing.T, config *latest.Config) {
+			},
+		},
+		{
+			name: "mergeStrategy deepMerge on dev with mutually exclusive fields",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+dev:
+  my-app:
+    imageSelector: my-image
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+    mergeStrategy: deepMerge
+dev:
+  my-app:
+    labelSelector:
+      app: my-app
+`,
+			expectedErr: "dev.my-app: image selector and label selector cannot be used together",
+			verify: func(t *testing.T, config *latest.Config) {
+			},
+		},
+		{
+			name: "mergeStrategy shallowMerge on dev with mutually exclusive fields (no regression)",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+dev:
+  my-app:
+    imageSelector: my-image
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+    mergeStrategy: shallowMerge
+dev:
+  my-app:
+    labelSelector:
+      app: my-app
+`,
+			verify: func(t *testing.T, config *latest.Config) {
+				dev := config.Dev
+				assert.Assert(t, dev["my-app"] != nil, "my-app dev config should exist")
+
+				// Only labelSelector is kept because my-app exists in dst, so src's my-app (imageSelector) is completely ignored
+				assert.Equal(t, dev["my-app"].ImageSelector, "", "imageSelector should NOT exist because of shallow merge")
+				assert.Equal(t, dev["my-app"].LabelSelector["app"], "my-app", "labelSelector should exist from project")
+			},
+		},
+		{
+			name: "mergeStrategy shallowMerge on deployments with mutually exclusive fields (no regression)",
+			catalogYaml: `
+version: v2beta1
+name: catalog
+deployments:
+  my-app:
+    helm:
+      chart:
+        name: my-chart
+`,
+			mainYaml: `
+version: v2beta1
+name: my-project
+imports:
+  - path: catalog.yaml
+    mergeStrategy: shallowMerge
+deployments:
+  my-app:
+    kubectl:
+      manifests:
+        - my-manifest.yaml
+`,
+			verify: func(t *testing.T, config *latest.Config) {
+				deps := config.Deployments
+				assert.Assert(t, deps["my-app"] != nil, "my-app deployment should exist")
+
+				// Only kubectl is kept because my-app exists in dst, so src's my-app (helm) is completely ignored
+				assert.Assert(t, deps["my-app"].Helm == nil, "helm should NOT exist because of shallow merge")
+				assert.Assert(t, deps["my-app"].Kubectl != nil, "kubectl should exist from project")
+				assert.Equal(t, len(deps["my-app"].Kubectl.Manifests), 1, "kubectl manifests should have 1 item")
+				assert.Equal(t, deps["my-app"].Kubectl.Manifests[0], "my-manifest.yaml", "kubectl manifest should be my-manifest.yaml")
 			},
 		},
 	}
@@ -2237,10 +2427,128 @@ dev:
 			assert.NilError(t, err, "Error creating config loader")
 
 			config, err := loader.Load(context.TODO(), nil, &ConfigOptions{Dry: true}, log.Discard)
+			if tc.expectedErr != "" {
+				assert.ErrorContains(t, err, tc.expectedErr, "Error loading config in test case %s", tc.name)
+				return
+			}
 			assert.NilError(t, err, "Error loading config in test case %s", tc.name)
 
 			// Verify using custom verification function
-			tc.verify(t, config.Config().Dev)
+			tc.verify(t, config.Config())
+		})
+	}
+}
+
+func TestDeepMerge(t *testing.T) {
+	testCases := []struct {
+		name     string
+		dst      map[string]interface{}
+		src      map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name:     "Empty src map",
+			dst:      map[string]interface{}{"a": 1},
+			src:      map[string]interface{}{},
+			expected: map[string]interface{}{"a": 1},
+		},
+		{
+			name:     "Empty dst map",
+			dst:      map[string]interface{}{},
+			src:      map[string]interface{}{"a": 1},
+			expected: map[string]interface{}{"a": 1},
+		},
+		{
+			name: "3 levels deep",
+			dst:  map[string]interface{}{"a": map[string]interface{}{"b": map[string]interface{}{"c": 1}}},
+			src:  map[string]interface{}{"a": map[string]interface{}{"b": map[string]interface{}{"d": 2}}},
+			expected: map[string]interface{}{
+				"a": map[string]interface{}{
+					"b": map[string]interface{}{
+						"c": 1,
+						"d": 2,
+					},
+				},
+			},
+		},
+		{
+			name:     "src has map, dst has scalar for same key",
+			dst:      map[string]interface{}{"a": "string"},
+			src:      map[string]interface{}{"a": map[string]interface{}{"nested": true}},
+			expected: map[string]interface{}{"a": "string"},
+		},
+		{
+			name:     "src has scalar, dst has map for same key",
+			dst:      map[string]interface{}{"a": map[string]interface{}{"nested": true}},
+			src:      map[string]interface{}{"a": "string"},
+			expected: map[string]interface{}{"a": map[string]interface{}{"nested": true}},
+		},
+		{
+			name:     "nil value in src map",
+			dst:      map[string]interface{}{"a": 1},
+			src:      map[string]interface{}{"b": nil},
+			expected: map[string]interface{}{"a": 1},
+		},
+		{
+			name:     "nil value in dst map",
+			dst:      map[string]interface{}{"a": nil},
+			src:      map[string]interface{}{"a": 1},
+			expected: map[string]interface{}{"a": 1},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			deepMerge(tc.dst, tc.src)
+
+			// Simple comparison for the test cases
+			dstYaml, _ := yaml.Marshal(tc.dst)
+			expectedYaml, _ := yaml.Marshal(tc.expected)
+			assert.Equal(t, string(dstYaml), string(expectedYaml), "Unexpected deepMerge result")
+		})
+	}
+}
+
+func TestShallowMerge(t *testing.T) {
+	testCases := []struct {
+		name     string
+		dst      map[string]interface{}
+		src      map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name:     "Empty src map",
+			dst:      map[string]interface{}{"a": 1},
+			src:      map[string]interface{}{},
+			expected: map[string]interface{}{"a": 1},
+		},
+		{
+			name:     "Empty dst map",
+			dst:      map[string]interface{}{},
+			src:      map[string]interface{}{"a": 1},
+			expected: map[string]interface{}{"a": 1},
+		},
+		{
+			name:     "Key exists in both (dst wins, no deep merge)",
+			dst:      map[string]interface{}{"a": map[string]interface{}{"b": 1}},
+			src:      map[string]interface{}{"a": map[string]interface{}{"c": 2}},
+			expected: map[string]interface{}{"a": map[string]interface{}{"b": 1}}, // "c" is completely ignored
+		},
+		{
+			name:     "Keys only in src are added",
+			dst:      map[string]interface{}{"a": 1},
+			src:      map[string]interface{}{"b": 2},
+			expected: map[string]interface{}{"a": 1, "b": 2},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			shallowMerge(tc.dst, tc.src)
+
+			dstYaml, _ := yaml.Marshal(tc.dst)
+			expectedYaml, _ := yaml.Marshal(tc.expected)
+			assert.Equal(t, string(dstYaml), string(expectedYaml), "Unexpected shallowMerge result")
 		})
 	}
 }

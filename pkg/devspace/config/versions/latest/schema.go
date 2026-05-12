@@ -129,9 +129,22 @@ type Import struct {
 	// Enabled specifies if the given import should be enabled
 	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" jsonschema:"required"`
 
+	// MergeStrategy specifies how the imported config should be merged (e.g. shallowMerge or deepMerge)
+	MergeStrategy string `yaml:"mergeStrategy,omitempty" json:"mergeStrategy,omitempty" jsonschema:"enum=shallowMerge,enum=deepMerge"`
+
 	// SourceConfig defines the source for this import
 	SourceConfig `yaml:",inline" json:",inline"`
 }
+
+const (
+	// MergeStrategyShallow performs a shallow merge where only top-level keys
+	// within each config section are merged. This is the default behavior.
+	MergeStrategyShallow = "shallowMerge"
+
+	// MergeStrategyDeep performs a recursive deep merge where nested maps are
+	// merged key by key. Arrays and scalars in the local config take precedence.
+	MergeStrategyDeep = "deepMerge"
+)
 
 // Pipeline defines what DevSpace should do. A pipeline consists of one or more
 // jobs that are run in parallel and can depend on each other. Each job consists

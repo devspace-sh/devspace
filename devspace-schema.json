@@ -2021,6 +2021,14 @@
           ],
           "description": "Enabled specifies if the given import should be enabled"
         },
+        "mergeStrategy": {
+          "type": "string",
+          "enum": [
+            "shallowMerge",
+            "deepMerge"
+          ],
+          "description": "MergeStrategy specifies how the imported config should be merged (e.g. shallowMerge or deepMerge)"
+        },
         "path": {
           "type": "string",
           "description": "Path is the local path where DevSpace can find the artifact.\nThis option is mutually exclusive with the git option.",

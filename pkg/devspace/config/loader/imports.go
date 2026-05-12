@@ -8,6 +8,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -118,7 +119,15 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 			if mergedMap[section] == nil {
 				mergedMap[section] = map[string]interface{}{}
 			}
-			deepMerge(mergedMap[section].(map[string]interface{}), sectionMap)
+
+			switch i.MergeStrategy {
+			case latest.MergeStrategyDeep:
+				deepMerge(mergedMap[section].(map[string]interface{}), sectionMap)
+			case "", latest.MergeStrategyShallow:
+				shallowMerge(mergedMap[section].(map[string]interface{}), sectionMap)
+			default:
+				return nil, fmt.Errorf("invalid mergeStrategy %q in import %s", i.MergeStrategy, configPath)
+			}
 		}
 
 		// resolve the import imports
@@ -171,5 +180,15 @@ func deepMerge(dst, src map[string]interface{}) {
 		}
 
 		// For other types (arrays, scalars), dst takes precedence (no action needed)
+	}
+}
+
+// shallowMerge merges src into dst only at the top level.
+// Existing keys in dst take precedence.
+func shallowMerge(dst, src map[string]interface{}) {
+	for key, value := range src {
+		if _, ok := dst[key]; !ok {
+			dst[key] = value
+		}
 	}
 }
