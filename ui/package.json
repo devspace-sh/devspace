@@ -17,7 +17,7 @@
     "css-loader": "^3.6.0",
     "dotenv": "4.0.0",
     "dotenv-expand": "4.2.0",
-    "express": "^4.22.0",
+    "express": "^4.22.2",
     "fork-ts-checker-webpack-plugin": "1.4.3",
     "fs-extra": "11.3.4",
     "get-parameter": "^1.0.8",
