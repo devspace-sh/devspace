@@ -36,7 +36,7 @@
     "@typescript-eslint/eslint-plugin": "8.60.0",
     "@typescript-eslint/parser": "8.60.0",
     "autoprefixer": "10.5.0",
-    "css-loader": "3.6.0",
+    "css-loader": "7.1.4",
     "dotenv": "4.0.0",
     "dotenv-expand": "4.2.0",
     "eslint": "9.39.4",

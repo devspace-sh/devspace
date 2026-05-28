@@ -159,6 +159,7 @@ module.exports = {
                 loader: require.resolve('css-loader'),
                 options: {
                   importLoaders: 1,
+                  esModule: false,
                   modules: {
                     localIdentName: '[hash:base64]',
                   },
@@ -180,6 +181,7 @@ module.exports = {
               {
                 loader: require.resolve('css-loader'),
                 options: {
+                  esModule: false,
                   sourceMap: shouldUseSourceMap,
                 },
               },
@@ -199,6 +201,7 @@ module.exports = {
                 loader: require.resolve('css-loader'),
                 options: {
                   importLoaders: 1,
+                  esModule: false,
                   sourceMap: shouldUseSourceMap,
                 },
               },
