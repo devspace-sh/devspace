@@ -59,7 +59,7 @@
     "url": "^0.11.4",
     "url-loader": "4.1.1",
     "webpack": "5.104.1",
-    "webpack-dev-server": "4.15.2",
+    "webpack-dev-server": "5.2.4",
     "webpack-manifest-plugin": "6.0.1",
     "whatwg-fetch": "2.0.3",
     "workbox-webpack-plugin": "^7.4.1",
@@ -68,8 +68,7 @@
   "scripts": {
     "start": "NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider node scripts/start.js",
     "build": "NODE_OPTIONS=--openssl-legacy-provider node scripts/build.js",
-    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
-    "postinstall": "patch-package"
+    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\""
   },
   "devDependencies": {
     "@types/jest": "^23.3.14",
@@ -85,7 +84,6 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-webpack-plugin": "^4.2.0",
     "ignore-loader": "^0.1.2",
-    "patch-package": "^8.0.1",
     "require-context.macro": "^1.2.2",
     "terser": "^4.8.1",
     "terser-webpack-plugin": "^5.3.16",
