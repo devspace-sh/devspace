@@ -1,4 +1,3 @@
-import React from 'react';
 import IconCopy from 'images/icon-copy.svg';
 import styles from './CopyButton.module.scss';
 import { copyToClipboard } from 'lib/utils';

@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import GreenCircle from 'images/green-ellipse.svg';
 import DarkGreenCircle from 'images/dark-green-ellipse.svg';
 import RedCircle from 'images/red-ellipse.svg';

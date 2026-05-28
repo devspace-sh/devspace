@@ -1,5 +1,3 @@
-// prettier-ignore
-import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes as RouterRoutes } from 'react-router-dom';
 import LogsContainers from 'pages/logs/containers';
 import StackConfiguration from 'pages/stack/configuration';

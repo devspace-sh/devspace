@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from 'pages/_app';
 import './styles/global.scss';

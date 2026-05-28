@@ -1,4 +1,3 @@
-import React from 'react';
 import IconTrash from 'images/trash.svg';
 import IconTrashWhite from 'images/trash-white.svg';
 import styles from './DeleteButton.module.scss';

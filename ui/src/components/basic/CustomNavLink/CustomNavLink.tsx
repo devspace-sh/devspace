@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink, NavLinkProps } from 'react-router-dom';
 
 interface Props extends Omit<NavLinkProps, 'className'> {

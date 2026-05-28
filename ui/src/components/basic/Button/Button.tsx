@@ -1,4 +1,3 @@
-import * as React from 'react';
 import styles from './Button.module.scss';
 import ButtonBase, { ButtonBaseProps } from 'components/basic/ButtonBase/ButtonBase';
 

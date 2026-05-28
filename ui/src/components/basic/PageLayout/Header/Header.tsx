@@ -1,4 +1,3 @@
-import React from 'react';
 import styles from './Header.module.scss';
 import Breadcrumb from 'components/basic/PageLayout/Header/Breadcrumb/Breadcrumb';
 import UserMenu from './UserMenu/UserMenu';

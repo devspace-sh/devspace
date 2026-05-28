@@ -1,4 +1,3 @@
-import React from 'react';
 import IconPlus from 'images/icon-plus.svg';
 import Button, { ButtonProps } from 'components/basic/Button/Button';
 

@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import styles from './PortletSimple.module.scss';
 import { Portlet } from 'components/basic/Portlet/Portlet';
 

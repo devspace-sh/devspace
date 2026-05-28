@@ -1,4 +1,3 @@
-import React from 'react';
 import MaximizeIcon from 'images/maximize.svg';
 import MinimizeIcon from 'images/minimize.svg';
 import IconButton, { IconButtonProps } from 'components/basic/IconButton/IconButton';

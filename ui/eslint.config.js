@@ -42,6 +42,7 @@ module.exports = [
       'no-undef': 'off',
       'no-unused-vars': 'off',
       'react/display-name': 'off',
+      'react/react-in-jsx-scope': 'off',
       'react/no-direct-mutation-state': 'off',
       'react/no-unescaped-entities': 'off',
       'react/prop-types': 'off',
