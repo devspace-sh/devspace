@@ -226,6 +226,31 @@ func (c *controller) startWithWait(ctx devspacecontext.Context, options *Options
 			}
 			return nil
 		})
+	} else {
+		parent.Go(func() error {
+			select {
+			case <-ctx.Context().Done():
+				syncStop(ctx, client, options, parent)
+			case err := <-onError:
+				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
+					"sync_config": options.SyncConfig,
+					"ERROR":       err,
+				}, hook.EventsForSingle("error:sync", options.Name).With("sync.error")...)
+				ctx.Log().Errorf("Sync error: %v", err)
+				syncStop(ctx, client, options, parent)
+			case <-onDone:
+				// noWatch: initial sync completed normally.
+				// Stop the client and emit the stop:sync lifecycle event,
+				// but do NOT kill the parent tomb — SSH, port-forwarding and
+				// other services registered in the same parent must continue.
+				client.Stop(nil)
+				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
+					"sync_config": options.SyncConfig,
+				}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
+				ctx.Log().Debugf("Stopped sync %s", options.SyncConfig.Path)
+			}
+			return nil
+		})
 	}
 
 	return nil
