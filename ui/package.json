@@ -68,7 +68,8 @@
   "scripts": {
     "start": "NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider node scripts/start.js",
     "build": "NODE_OPTIONS=--openssl-legacy-provider node scripts/build.js",
-    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\""
+    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
     "@types/jest": "^23.3.14",
@@ -84,6 +85,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-webpack-plugin": "^4.2.0",
     "ignore-loader": "^0.1.2",
+    "patch-package": "^8.0.1",
     "require-context.macro": "^1.2.2",
     "terser": "^4.8.1",
     "terser-webpack-plugin": "^5.3.16",

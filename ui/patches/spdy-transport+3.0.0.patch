@@ -1,0 +1,13 @@
+diff --git a/node_modules/spdy-transport/lib/spdy-transport/utils.js b/node_modules/spdy-transport/lib/spdy-transport/utils.js
+index 7f379f2..1f061cc 100644
+--- a/node_modules/spdy-transport/lib/spdy-transport/utils.js
++++ b/node_modules/spdy-transport/lib/spdy-transport/utils.js
+@@ -6,7 +6,7 @@ var isNode = require('detect-node')
+ // Node.js 0.8, 0.10 and 0.12 support
+ Object.assign = (process.versions.modules >= 46 || !isNode)
+   ? Object.assign // eslint-disable-next-line
+-  : util._extend
++  : Object.assign
+ 
+ function QueueItem () {
+   this.prev = null

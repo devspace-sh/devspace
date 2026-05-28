@@ -1,0 +1,26 @@
+diff --git a/node_modules/spdy/lib/spdy/agent.js b/node_modules/spdy/lib/spdy/agent.js
+index 4adc524..b7a383d 100644
+--- a/node_modules/spdy/lib/spdy/agent.js
++++ b/node_modules/spdy/lib/spdy/agent.js
+@@ -11,7 +11,7 @@ var debug = require('debug')('spdy:client')
+ // Node.js 0.10 and 0.12 support
+ Object.assign = process.versions.modules >= 46
+   ? Object.assign // eslint-disable-next-line
+-  : util._extend
++  : Object.assign
+ 
+ var EventEmitter = require('events').EventEmitter
+ 
+diff --git a/node_modules/spdy/lib/spdy/server.js b/node_modules/spdy/lib/spdy/server.js
+index 1889fcd..0306dcf 100644
+--- a/node_modules/spdy/lib/spdy/server.js
++++ b/node_modules/spdy/lib/spdy/server.js
+@@ -14,7 +14,7 @@ var EventEmitter = require('events').EventEmitter
+ // Node.js 0.8, 0.10 and 0.12 support
+ Object.assign = process.versions.modules >= 46
+   ? Object.assign // eslint-disable-next-line
+-  : util._extend
++  : Object.assign
+ 
+ var spdy = require('../spdy')
+ 
