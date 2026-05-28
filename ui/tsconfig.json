@@ -27,5 +27,5 @@
     "importHelpers": true,
     "forceConsistentCasingInFileNames": false
   },
-  "exclude": ["node_modules", "build", "scripts", "acceptance-tests", "webpack", "jest", "src/**/*.stories.tsx"]
+  "exclude": ["node_modules", "build", "scripts", "acceptance-tests", "webpack", "src/**/*.stories.tsx"]
 }

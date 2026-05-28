@@ -37,7 +37,6 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",
-    "@types/jest": "^23.3.14",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^10.17.60",
     "@types/react": "^19.2.14",
@@ -53,16 +52,13 @@
     "eslint-webpack-plugin": "6.0.0",
     "fork-ts-checker-webpack-plugin": "9.1.0",
     "html-webpack-plugin": "5.6.7",
-    "jest": "30.0.0",
     "mini-css-extract-plugin": "2.9.4",
     "postcss-flexbugs-fixes": "5.0.2",
     "postcss-loader": "8.2.1",
-    "react-test-renderer": "19.2.6",
     "sass": "1.89.2",
     "sass-loader": "16.0.5",
     "source-map-loader": "5.0.0",
     "style-loader": "4.0.0",
-    "terser-webpack-plugin": "^5.3.16",
     "ts-loader": "9.5.7",
     "ts-node": "10.9.2",
     "tsconfig-paths-webpack-plugin": "3.2.0",
@@ -71,46 +67,6 @@
     "webpack-dev-server": "5.2.4",
     "webpack-manifest-plugin": "6.0.1",
     "workbox-webpack-plugin": "7.4.0"
-  },
-  "jest": {
-    "collectCoverageFrom": [
-      "src/**/*.{js,jsx,ts,tsx}",
-      "!**/*.d.ts"
-    ],
-    "setupFiles": [
-      "<rootDir>/config/polyfills.js",
-      "<rootDir>/src/jest.setup.js"
-    ],
-    "testMatch": [
-      "<rootDir>/src/**/__tests__/**/*.(j|t)s?(x)",
-      "<rootDir>/src/**/?(*.)(spec|test).(j|t)s?(x)"
-    ],
-    "testEnvironment": "node",
-    "testURL": "http://localhost",
-    "transform": {
-      "^.+\\.tsx?$": "<rootDir>/config/jest/typescriptTransform.js",
-      "^.+\\.css$": "<rootDir>/config/jest/cssTransform.js",
-      "^(?!.*\\.(js|jsx|mjs|css|json)$)": "<rootDir>/config/jest/fileTransform.js"
-    },
-    "transformIgnorePatterns": [
-      "[/\\\\]node_modules[/\\\\].+\\.(js|jsx|mjs|ts|tsx)$"
-    ],
-    "moduleNameMapper": {
-      "^react-native$": "react-native-web"
-    },
-    "moduleFileExtensions": [
-      "web.ts",
-      "ts",
-      "web.tsx",
-      "tsx",
-      "web.js",
-      "js",
-      "web.jsx",
-      "jsx",
-      "json",
-      "node",
-      "mjs"
-    ]
   },
   "browserslist": [
     ">0.5%",
