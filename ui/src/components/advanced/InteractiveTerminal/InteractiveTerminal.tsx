@@ -82,7 +82,7 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
       }
 
       // send dims to the server
-      if (this.props.remoteResize) {
+      if (this.props.remoteResize && this.socket && this.socket.readyState === WebSocket.OPEN) {
         authFetch(`/api/resize?resize_id=${this.resizeId}&width=${dims.cols}&height=${dims.rows}`).catch(err => {
           console.error(err);
         })
@@ -112,6 +112,9 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
 
     // Open the websocket
     this.socket = new WebSocket(this.props.url + (this.props.remoteResize ? "&resize_id="+this.resizeId : ""));
+    if (this.props.remoteResize) {
+      this.socket.addEventListener('open', this.fit);
+    }
     const attachAddon = new AttachAddon(this.socket, {
       bidirectional: this.props.interactive,
       onClose: () => {
