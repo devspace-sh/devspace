@@ -15,7 +15,6 @@
     "babel-jest": "^25.5.1",
     "babel-loader": "^8.4.1",
     "babel-preset-react-app": "^4.0.0",
-    "case-sensitive-paths-webpack-plugin": "2.2.0",
     "chalk": "2.0.0",
     "css-loader": "^3.6.0",
     "dotenv": "4.0.0",
@@ -60,6 +59,7 @@
     "tslint": "^5.20.1",
     "tslint-config-prettier": "^1.18.0",
     "tslint-react": "^3.6.0",
+    "url": "^0.11.4",
     "url-loader": "4.1.1",
     "webpack": "5.104.1",
     "webpack-dev-server": "4.15.2",
@@ -69,7 +69,7 @@
     "xterm": "4.1.0"
   },
   "scripts": {
-    "start": "NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider nodemon scripts/start.js",
+    "start": "NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider node scripts/start.js",
     "build": "NODE_OPTIONS=--openssl-legacy-provider node scripts/build.js"
   },
   "devDependencies": {
@@ -81,7 +81,6 @@
     "babel-preset-env": "^1.7.0",
     "cross-env": "^6.0.3",
     "ignore-loader": "^0.1.2",
-    "nodemon": "^1.19.4",
     "require-context.macro": "^1.2.2",
     "terser": "^4.8.1",
     "terser-webpack-plugin": "^5.3.16",
