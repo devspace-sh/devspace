@@ -77,6 +77,11 @@ module.exports = {
   resolve: {
     fallback: {
       url: require.resolve('url/'),
+      dgram: false,
+      fs: false,
+      net: false,
+      tls: false,
+      child_process: false,
     },
     // This allows you to set a fallback for where Webpack should look for modules.
     // We placed these paths second because we want `node_modules` to "win"
@@ -97,13 +102,6 @@ module.exports = {
       // Support React Native Web
       // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
       'react-native': 'react-native-web',
-    },
-    fallback: {
-      dgram: false,
-      fs: false,
-      net: false,
-      tls: false,
-      child_process: false,
     },
     plugins: [
       // Prevents users from importing files from outside of src/ (or node_modules/).
@@ -267,8 +265,6 @@ module.exports = {
     // Makes some environment variables available to the JS code, for example:
     // if (process.env.NODE_ENV === 'development') { ... }. See `./env.js`.
     new webpack.DefinePlugin(env.stringified),
-    // This is necessary to emit hot updates (currently CSS only):
-    new webpack.HotModuleReplacementPlugin(),
     // Moment.js is an extremely popular library that bundles large locale files
     // by default due to how Webpack interprets its code. This is a practical
     // solution that requires the user to opt into importing specific locales.

@@ -80,13 +80,12 @@ choosePort(HOST, DEFAULT_PORT)
       proxyConfig,
       urls.lanUrlForConfig
     );
+    serverConfig.host = HOST;
+    serverConfig.port = port;
 
-    const devServer = new WebpackDevServer(compiler, serverConfig);
+    const devServer = new WebpackDevServer(serverConfig, compiler);
     // Launch WebpackDevServer.
-    devServer.listen(port, HOST, err => {
-      if (err) {
-        return console.log(err);
-      }
+    devServer.startCallback(() => {
       if (isInteractive) {
         clearConsole();
       }
@@ -96,8 +95,9 @@ choosePort(HOST, DEFAULT_PORT)
 
     ['SIGINT', 'SIGTERM'].forEach(function(sig) {
       process.on(sig, function() {
-        devServer.close();
-        process.exit();
+        devServer.stopCallback(() => {
+          process.exit();
+        });
       });
     });
   })
