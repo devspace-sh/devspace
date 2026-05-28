@@ -1,6 +1,8 @@
 import React from 'react';
-import { Terminal } from 'xterm';
-import { AttachAddon } from 'lib/attach';
+import { Terminal } from '@xterm/xterm';
+import { AttachAddon } from '@xterm/addon-attach';
+import { FitAddon } from '@xterm/addon-fit';
+import '@xterm/xterm/css/xterm.css';
 import styles from './InteractiveTerminal.module.scss';
 import MaximizeButton from 'components/basic/IconButton/MaximizeButton/MaximizeButton';
 import IconButton from 'components/basic/IconButton/IconButton';
@@ -27,9 +29,6 @@ interface State {
   fullscreen: boolean;
 }
 
-const MINIMUM_COLS = 2;
-const MINIMUM_ROWS = 1;
-
 class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, State> {
   state: State = {
     fullscreen: false,
@@ -38,11 +37,10 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
   private resizeId: string = uuidv4();
   private socket: WebSocket;
   private term: Terminal;
+  private attachAddon: AttachAddon;
+  private fitAddon: FitAddon;
 
-  private ref: HTMLDivElement;
   private needUpdate: boolean;
-  private initialWidth: number;
-  private initialHeight: number;
   private closed: boolean = false;
 
   updateDimensions = () => {
@@ -51,39 +49,21 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
       return;
     }
 
-    if (this.ref.children && this.ref.children.length > 0) {
-      (this.ref.children[0] as any).style.display = 'none';
-    }
-
-    const computedStyle = window.getComputedStyle(this.ref);
-    this.initialHeight = parseInt(computedStyle.getPropertyValue('height'));
-    this.initialWidth = Math.max(0, parseInt(computedStyle.getPropertyValue('width')));
-
-    if (this.ref.children && this.ref.children.length > 0) {
-      (this.ref.children[0] as any).style.display = 'block';
-    }
-
     this.fit();
   };
 
   fit = () => {
-    if (this.term && this.props.show) {
-      // Force a full render
-      const core = (this.term as any)._core;
-      const availableHeight = this.initialHeight;
-      const availableWidth = this.initialWidth - core.viewport.scrollBarWidth;
-      const dims = {
-        cols: Math.max(MINIMUM_COLS, Math.floor(availableWidth / core._renderService.dimensions.actualCellWidth)),
-        rows: Math.max(MINIMUM_ROWS, Math.floor(availableHeight / core._renderService.dimensions.actualCellHeight)),
-      };
-      if (this.term.rows !== dims.rows || this.term.cols !== dims.cols) {
-        core._renderService.clear();
-        this.term.resize(Math.floor(dims.cols), Math.floor(dims.rows));
+    if (this.term && this.fitAddon && this.props.show) {
+      try {
+        this.fitAddon.fit();
+      } catch (err) {
+        console.error(err);
+        return;
       }
 
       // send dims to the server
       if (this.props.remoteResize && this.socket && this.socket.readyState === WebSocket.OPEN) {
-        authFetch(`/api/resize?resize_id=${this.resizeId}&width=${dims.cols}&height=${dims.rows}`).catch(err => {
+        authFetch(`/api/resize?resize_id=${this.resizeId}&width=${this.term.cols}&height=${this.term.rows}`).catch(err => {
           console.error(err);
         })
       }
@@ -97,9 +77,6 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
       return;
     }
 
-    this.ref = ref;
-    this.updateDimensions();
-
     this.term = new Terminal({
       // We need this setting to automatically convert \n -> \r\n
       convertEol: true,
@@ -109,40 +86,53 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
         foreground: '#AFC6D2',
       },
     });
+    this.fitAddon = new FitAddon();
 
     // Open the websocket
     this.socket = new WebSocket(this.props.url + (this.props.remoteResize ? "&resize_id="+this.resizeId : ""));
     if (this.props.remoteResize) {
       this.socket.addEventListener('open', this.fit);
     }
-    const attachAddon = new AttachAddon(this.socket, {
+    this.socket.addEventListener('close', this.handleSocketClose);
+    this.socket.addEventListener('error', this.handleSocketError);
+    this.attachAddon = new AttachAddon(this.socket, {
       bidirectional: this.props.interactive,
-      onClose: () => {
-        if (!this.closed) {
-          if (this.props.closeDelay && this.props.closeOnConnectionLost && this.props.onClose) {
-            this.term.writeln(`Connection closed, will close in ${this.props.closeDelay / 1000} seconds`);
-            setTimeout(this.props.onClose, this.props.closeDelay);
-            return;
-          }
-
-          this.term.writeln('Connection closed');
-          if (this.props.closeOnConnectionLost && this.props.onClose) {
-            this.props.onClose();
-          }
-        }
-      },
-      onError: (err) => {
-        this.term.writeln('\u001b[31m' + err.message);
-      },
     });
 
-    // Attach the socket to term
     this.term.open(ref);
-    this.term.loadAddon(attachAddon);
+    this.term.loadAddon(this.fitAddon);
+    this.term.loadAddon(this.attachAddon);
     this.fit();
 
     window.addEventListener('resize', this.updateDimensions, true);
   }
+
+  handleSocketClose = (event: CloseEvent) => {
+    if (this.closed) {
+      return;
+    }
+
+    if (event.code === 1011 && event.reason) {
+      this.term.writeln('\u001b[31m' + event.reason);
+    }
+
+    if (this.props.closeDelay && this.props.closeOnConnectionLost && this.props.onClose) {
+      this.term.writeln(`Connection closed, will close in ${this.props.closeDelay / 1000} seconds`);
+      setTimeout(this.props.onClose, this.props.closeDelay);
+      return;
+    }
+
+    this.term.writeln('Connection closed');
+    if (this.props.closeOnConnectionLost && this.props.onClose) {
+      this.props.onClose();
+    }
+  };
+
+  handleSocketError = () => {
+    if (!this.closed) {
+      this.term.writeln('\u001b[31mConnection error');
+    }
+  };
 
   componentDidUpdate() {
     if (this.props.show && this.needUpdate) {
@@ -154,7 +144,19 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
     this.closed = true;
     window.removeEventListener('resize', this.updateDimensions, true);
     if (this.socket) {
+      this.socket.removeEventListener('open', this.fit);
+      this.socket.removeEventListener('close', this.handleSocketClose);
+      this.socket.removeEventListener('error', this.handleSocketError);
       this.socket.close();
+    }
+    if (this.attachAddon) {
+      this.attachAddon.dispose();
+    }
+    if (this.fitAddon) {
+      this.fitAddon.dispose();
+    }
+    if (this.term) {
+      this.term.dispose();
     }
   }
 

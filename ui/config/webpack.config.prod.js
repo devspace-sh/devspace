@@ -131,14 +131,17 @@ module.exports = {
         // match the requirements. When no loader matches it will fall
         // back to the "file" loader at the end of the loader list.
         oneOf: [
-          // "url" loader works just like "file" loader but it also embeds
-          // assets smaller than specified size as data URLs to avoid requests.
+          // Inline small assets and emit larger ones via Webpack 5 asset modules.
           {
             test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/, /\.svg$/],
-            loader: require.resolve('url-loader'),
-            options: {
-              limit: 10000, // Convert images < 8kb to base64 strings
-              name: 'build/static/media/[name].[hash:8].[ext]',
+            type: 'asset',
+            parser: {
+              dataUrlCondition: {
+                maxSize: 10000,
+              },
+            },
+            generator: {
+              filename: 'static/media/[name].[hash:8][ext]',
             },
           },
           {
@@ -224,12 +227,6 @@ module.exports = {
                     plugins: [
                       require('postcss-flexbugs-fixes'),
                       autoprefixer({
-                        browsers: [
-                          '>1%',
-                          'last 4 versions',
-                          'Firefox ESR',
-                          'not ie < 9', // React doesn't support IE8 anyway
-                        ],
                         flexbox: 'no-2009',
                       }),
                     ],
