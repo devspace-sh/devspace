@@ -70,7 +70,12 @@ COMPONENT_CHART_VERSION=$(cat pkg/devspace/deploy/deployer/helm/client.go | grep
 
 # Move ui.tar.gz to releases
 echo "Moving ui"
-mv ui.tar.gz "${DEVSPACE_ROOT}/release/ui.tar.gz"
+if [[ -f "${DEVSPACE_ROOT}/ui.tar.gz" ]]; then
+  mv "${DEVSPACE_ROOT}/ui.tar.gz" "${DEVSPACE_ROOT}/release/ui.tar.gz"
+elif [[ ! -f "${DEVSPACE_ROOT}/release/ui.tar.gz" ]]; then
+  echo "ui tarball not found; run ./hack/build-ui.bash first" 1>&2
+  exit 1
+fi
 shasum -a 256 "${DEVSPACE_ROOT}/release/ui.tar.gz" > "${DEVSPACE_ROOT}/release/ui.tar.gz".sha256
 
 # build devspace helper
@@ -85,7 +90,15 @@ GOARCH=arm64 GOOS=linux go build -ldflags "-s -w -X github.com/loft-sh/devspace/
 shasum -a 256 "${DEVSPACE_ROOT}/release/devspacehelper-arm64" > "${DEVSPACE_ROOT}/release/devspacehelper-arm64".sha256
 
 # build bin data
-$GOPATH/bin/go-bindata -o assets/assets.go -pkg assets release/devspacehelper release/ui.tar.gz component-chart-$COMPONENT_CHART_VERSION.tgz
+GO_BINDATA="$(command -v go-bindata || true)"
+if [[ -z "${GO_BINDATA}" ]]; then
+  GO_BINDATA="$(go env GOPATH)/bin/go-bindata"
+fi
+if [[ ! -x "${GO_BINDATA}" ]]; then
+  echo "go-bindata not found; install it with: go install github.com/go-bindata/go-bindata/go-bindata@latest" 1>&2
+  exit 1
+fi
+"${GO_BINDATA}" -o assets/assets.go -pkg assets release/devspacehelper release/ui.tar.gz component-chart-$COMPONENT_CHART_VERSION.tgz
 
 for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
   for ARCH in ${DEVSPACE_BUILD_ARCHS[@]}; do
