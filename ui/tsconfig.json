@@ -3,10 +3,10 @@
   "compilerOptions": {
     "baseUrl": "src",
     "typeRoots": ["./node_modules/@types", "./@types"],
-    "lib": ["dom", "es2015", "es2016", "es2017", "es2019"], // es6, es7, es8
-    "target": "es5",
+    "lib": ["dom", "dom.iterable", "es2020"],
+    "target": "es2020",
     "module": "esnext",
-    "jsx": "react", // "preserve" would throw error
+    "jsx": "react-jsx",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "noUnusedLocals": true,
@@ -25,8 +25,7 @@
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "importHelpers": true,
-    "suppressImplicitAnyIndexErrors": true,
     "forceConsistentCasingInFileNames": false
   },
-  "exclude": ["node_modules", "build", "scripts", "acceptance-tests", "webpack", "jest", "src/**/*.stories.tsx"]
+  "exclude": ["node_modules", "build", "scripts", "acceptance-tests", "webpack", "src/**/*.stories.tsx"]
 }

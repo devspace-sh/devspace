@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import styles from './AlertPopupContent.module.scss';
 import { formatError } from 'lib/utils';
 import Popup, { PopupProps, PopupState } from 'components/basic/Popup/Popup';

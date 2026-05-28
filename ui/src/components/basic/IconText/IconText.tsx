@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import styles from './IconText.module.scss';
 import Tooltip from 'components/basic/Tooltip/Tooltip';
 

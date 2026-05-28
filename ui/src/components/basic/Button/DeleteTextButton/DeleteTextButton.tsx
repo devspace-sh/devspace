@@ -1,4 +1,3 @@
-import React from 'react';
 import IconTrashWhite from 'images/trash-white.svg';
 import './DeleteTextButton.scss';
 import Button, { ButtonProps } from 'components/basic/Button/Button';

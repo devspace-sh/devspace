@@ -1,4 +1,3 @@
-import React from 'react';
 import IconClose from 'images/icon-close.svg';
 import IconCloseWhite from 'images/close-white.svg';
 import styles from './CloseButton.module.scss';

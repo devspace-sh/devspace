@@ -1,7 +1,6 @@
 'use strict';
 
 // Do this as the first thing so that any code reading it knows the right env.
-process.env.BABEL_ENV = 'production';
 process.env.NODE_ENV = 'production';
 
 // Makes the script crash on unhandled rejections instead of silently
@@ -15,20 +14,18 @@ process.on('unhandledRejection', err => {
 require('../config/env');
 
 const path = require('path');
-const chalk = require('chalk');
-const fs = require('fs-extra');
+const fs = require('fs');
 const webpack = require('webpack');
 const config = require('../config/webpack.config.prod');
 const paths = require('../config/paths');
-const checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
-const formatWebpackMessages = require('react-dev-utils/formatWebpackMessages');
-const printHostingInstructions = require('react-dev-utils/printHostingInstructions');
-const FileSizeReporter = require('react-dev-utils/FileSizeReporter');
-const printBuildError = require('react-dev-utils/printBuildError');
-
-const measureFileSizesBeforeBuild = FileSizeReporter.measureFileSizesBeforeBuild;
-const printFileSizesAfterBuild = FileSizeReporter.printFileSizesAfterBuild;
-const useYarn = fs.existsSync(paths.yarnLockFile);
+const {
+  checkRequiredFiles,
+  formatWebpackMessages,
+  measureFileSizesBeforeBuild,
+  printBuildError,
+  printFileSizesAfterBuild,
+  printHostingInstructions,
+} = require('./utils');
 
 // These sizes are pretty large. We'll warn for bundles exceeding them.
 const WARN_AFTER_BUNDLE_GZIP_SIZE = 512 * 1024;
@@ -45,7 +42,8 @@ measureFileSizesBeforeBuild(paths.appBuild)
   .then(previousFileSizes => {
     // Remove all content but keep the directory so that
     // if you're in it, you don't end up in Trash
-    fs.emptyDirSync(paths.appBuild);
+    fs.rmSync(paths.appBuild, { recursive: true, force: true });
+    fs.mkdirSync(paths.appBuild, { recursive: true });
     // Merge with the public folder
     copyPublicFolder();
     // Start the webpack build
@@ -54,20 +52,10 @@ measureFileSizesBeforeBuild(paths.appBuild)
   .then(
     ({ stats, previousFileSizes, warnings }) => {
       if (warnings.length) {
-        console.log(chalk.yellow('Compiled with warnings.\n'));
+        console.log('Compiled with warnings.\n');
         console.log(warnings.join('\n\n'));
-        console.log(
-          '\nSearch for the ' +
-            chalk.underline(chalk.yellow('keywords')) +
-            ' to learn more about each warning.'
-        );
-        console.log(
-          'To ignore, add ' +
-            chalk.cyan('// eslint-disable-next-line') +
-            ' to the line before.\n'
-        );
       } else {
-        console.log(chalk.green('Compiled successfully.\n'));
+        console.log('Compiled successfully.\n');
       }
 
       console.log('File sizes after gzip:\n');
@@ -88,12 +76,11 @@ measureFileSizesBeforeBuild(paths.appBuild)
         appPackage,
         publicUrl,
         publicPath,
-        buildFolder,
-        useYarn
+        buildFolder
       );
     },
     err => {
-      console.log(chalk.red('Failed to compile.\n'));
+      console.log('Failed to compile.\n');
       printBuildError(err);
       process.exit(1);
     }
@@ -125,10 +112,8 @@ function build(previousFileSizes) {
         messages.warnings.length
       ) {
         console.log(
-          chalk.yellow(
-            '\nTreating warnings as errors because process.env.CI = true.\n' +
-              'Most CI servers set it automatically.\n'
-          )
+          '\nTreating warnings as errors because process.env.CI = true.\n' +
+            'Most CI servers set it automatically.\n'
         );
         return reject(new Error(messages.warnings.join('\n\n')));
       }
@@ -142,8 +127,9 @@ function build(previousFileSizes) {
 }
 
 function copyPublicFolder() {
-  fs.copySync(paths.appPublic, paths.appBuild, {
+  fs.cpSync(paths.appPublic, paths.appBuild, {
     dereference: true,
+    recursive: true,
     filter: file => file !== paths.appHtml,
   });
 }

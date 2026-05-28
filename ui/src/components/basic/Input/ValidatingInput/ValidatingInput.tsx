@@ -1,4 +1,3 @@
-import React from 'react';
 import Input, { InputProps } from '../Input';
 import styles from './ValidatingInput.module.scss';
 

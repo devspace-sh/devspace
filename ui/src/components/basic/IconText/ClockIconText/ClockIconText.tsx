@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import styles from './ClockIconText.module.scss';
 import ClockIcon from 'images/clock.svg';
 import IconText from 'components/basic/IconText/IconText';

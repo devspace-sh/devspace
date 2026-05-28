@@ -1,8 +1,6 @@
-import React from 'react';
 import IconCopy from 'images/icon-copy.svg';
 import styles from './CopyButton.module.scss';
 import { copyToClipboard } from 'lib/utils';
-import { Props } from 'react-responsive-select';
 import IconButton from 'components/basic/IconButton/IconButton';
 
 interface Props {

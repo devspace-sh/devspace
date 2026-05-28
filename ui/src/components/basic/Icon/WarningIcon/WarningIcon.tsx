@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import Warning from 'images/danger-symbol.svg';
 import Icon from 'components/basic/Icon/Icon';
 

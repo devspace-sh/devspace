@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import styles from './BaseLayout.module.scss';
 import ErrorBoundary from 'components/basic/ErrorBoundary/ErrorBoundary';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import EditIcon from 'images/IconButton/settings.svg';
 import IconButton, { IconButtonProps } from 'components/basic/IconButton/IconButton';
 

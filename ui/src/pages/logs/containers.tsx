@@ -11,6 +11,7 @@ import TerminalCache from 'components/views/Logs/TerminalCache/TerminalCache';
 import withWarning, { WarningContext } from 'contexts/withWarning/withWarning';
 import ChangeNamespace from 'components/views/Logs/ChangeNamespace/ChangeKubeContext';
 import authFetch from "../../lib/fetch";
+import { formatError } from 'lib/utils';
 
 interface Props extends DevSpaceConfigContext, PopupContext, WarningContext {}
 
@@ -96,7 +97,7 @@ class LogsContainers extends React.PureComponent<Props, State> {
         this.props.warning.close();
       }
     } catch (err) {
-      let message = err.message;
+      let message = formatError(err);
       if (message === 'Failed to fetch') {
         message = 'Containers: Failed to fetch pods. Is the UI server running?';
       } else {

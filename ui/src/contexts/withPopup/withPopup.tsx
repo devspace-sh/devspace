@@ -4,10 +4,10 @@ import PopupWrapper from 'contexts/withPopup/PopupWrapper';
 import AlertPopupContent from 'components/basic/Popup/AlertPopupContent/AlertPopupContent';
 import { OpenPopup } from 'components/basic/Popup/Popup';
 
-const reactPopupContext = React.createContext({
-  alertPopup: (_title: string, _message: string) => null,
-  openPopup: (_: JSX.Element) => null,
-  closePopup: () => null,
+const reactPopupContext = React.createContext<Popup>({
+  alertPopup: (_title: string, _message: string) => undefined,
+  openPopup: (_: React.ReactElement<any>) => undefined,
+  closePopup: () => undefined,
 });
 
 const PopupConsumer: React.ExoticComponent<React.ConsumerProps<Popup>> = reactPopupContext.Consumer;
@@ -15,7 +15,7 @@ const PopupConsumer: React.ExoticComponent<React.ConsumerProps<Popup>> = reactPo
 export interface Popup {
   // Popup function
   alertPopup: (title: string, message: string) => void;
-  openPopup: (popup: JSX.Element) => void;
+  openPopup: (popup: React.ReactElement<any>) => void;
   closePopup: (skipCallback?: boolean) => void;
 }
 
@@ -41,11 +41,11 @@ export const bindPopup = (app: PopupWrapper): Popup => {
   };
 };
 
-const alertPopup = (app: PopupWrapper, title: string, message: string) => {
+const alertPopup = (app: PopupWrapper, title: string, message: string): void => {
   openPopup(app, <AlertPopupContent title={title}>{message}</AlertPopupContent>);
 };
 
-const openPopup = (app: PopupWrapper, content: JSX.Element) => {
+const openPopup = (app: PopupWrapper, content: React.ReactElement<any>): void => {
   const newProps: OpenPopup = { content };
   newProps.close = () => nextPopup(app);
   newProps.uuid = Math.random() + '';
@@ -54,7 +54,7 @@ const openPopup = (app: PopupWrapper, content: JSX.Element) => {
   app.setState({ popupUUID: newProps.uuid });
 };
 
-const closePopup = (app: PopupWrapper, skipCallback?: boolean) => {
+const closePopup = (app: PopupWrapper, skipCallback?: boolean): void => {
   if (app.state.popupUUID) {
     if (
       app.popupQueue[app.popupQueue.length - 1].content &&
@@ -74,7 +74,7 @@ const closePopup = (app: PopupWrapper, skipCallback?: boolean) => {
   }
 };
 
-const nextPopup = (app: PopupWrapper) => {
+const nextPopup = (app: PopupWrapper): void => {
   let next: string = null;
 
   app.popupQueue.pop();

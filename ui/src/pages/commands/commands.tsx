@@ -100,7 +100,7 @@ class Commands extends React.PureComponent<Props, State> {
           <div className={styles['no-config']}>
             <div>
               No commands available. Take a look at&nbsp;
-              <a target="_blank" href="https://devspace.cloud/docs/cli/configuration/custom-commands">
+              <a target="_blank" rel="noreferrer" href="https://devspace.cloud/docs/cli/configuration/custom-commands">
                 commands
               </a>
               &nbsp;to add commands to your config

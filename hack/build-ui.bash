@@ -5,7 +5,7 @@ set -e
 DEVSPACE_ROOT=$(git rev-parse --show-toplevel)
 
 # Install dependencies
-cd ui && npm install && npm run build
+cd ui && npm ci && npm run build
 
 # Pack ui
 echo "Packing ui"

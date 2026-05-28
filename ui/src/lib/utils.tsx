@@ -51,7 +51,7 @@ export function formatURL(url: string) {
 }
 
 export function getHashParams() {
-  const hashParams = {};
+  const hashParams: Record<string, string> = {};
   const a = /\+/g; // Regex for replacing addition symbol with a space
   const r = /([^&;=]+)=?([^&;]*)/g;
   const d = (s: string) => decodeURIComponent(s.replace(a, ' '));
@@ -107,7 +107,7 @@ export const deepCopy: <T>(obj: T) => T = (obj: any) => {
   return JSON.parse(JSON.stringify(obj));
 };
 
-export const AddExtraProps = (Component: JSX.Element, extraProps: any) => {
+export const AddExtraProps = (Component: React.ReactElement<any>, extraProps: any) => {
   return <Component.type key={Component.key} {...Component.props} {...extraProps} />;
 };
 

@@ -45,16 +45,16 @@ export class PortletDetailedTabs extends React.PureComponent<Props, State> {
     // Build options map
     if (!this.props.children.content || !(this.props.children.content instanceof Array)) {
       if (
-        (this.props.children.content as JSX.Element).type &&
-        (this.props.children.content as JSX.Element).type.role === 'TabContent'
+        (this.props.children.content as React.ReactElement<any>).type &&
+        ((this.props.children.content as React.ReactElement<any>).type as any).role === 'TabContent'
       ) {
         return (
           <TabSelector
             options={[
               {
                 index: 0,
-                value: (this.props.children.content as JSX.Element).props.title,
-                disabled: (this.props.children.content as JSX.Element).props.disabled,
+                value: (this.props.children.content as React.ReactElement<any>).props.title,
+                disabled: (this.props.children.content as React.ReactElement<any>).props.disabled,
               },
             ]}
             selectedIndex={selectedIndex}
@@ -80,11 +80,11 @@ export class PortletDetailedTabs extends React.PureComponent<Props, State> {
 
     // Loop over tab contents
     const options: TabSelectorOption[] = this.props.children.content.map((child, idx) => {
-      if ((child as JSX.Element).type && (child as JSX.Element).type.role === 'TabContent') {
+      if ((child as React.ReactElement<any>).type && ((child as React.ReactElement<any>).type as any).role === 'TabContent') {
         return {
           index: idx,
-          value: (child as JSX.Element).props.title,
-          disabled: (child as JSX.Element).props.disabled,
+          value: (child as React.ReactElement<any>).props.title,
+          disabled: (child as React.ReactElement<any>).props.disabled,
         };
       }
 

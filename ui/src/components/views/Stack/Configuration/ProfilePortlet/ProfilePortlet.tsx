@@ -1,4 +1,3 @@
-import React from 'react';
 import { PortletSimple } from 'components/basic/Portlet/PortletSimple/PortletSimple';
 import styles from './ProfilePortlet.module.scss';
 import OwnerIcon from 'images/owner-icon.svg';

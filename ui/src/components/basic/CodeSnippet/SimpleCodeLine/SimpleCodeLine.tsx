@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import styles from './SimpleCodeLine.module.scss';
 
 const SimpleCodeLine = ({ children }: { children: ReactNode | string }) => {

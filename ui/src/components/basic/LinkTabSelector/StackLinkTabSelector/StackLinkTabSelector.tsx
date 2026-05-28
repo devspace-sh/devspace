@@ -1,4 +1,3 @@
-import React from 'react';
 import { useLocation } from 'react-router-dom';
 import styles from '../LinkTabSelector.module.scss';
 import LinkTabSelector from 'components/basic/LinkTabSelector/LinkTabSelector';

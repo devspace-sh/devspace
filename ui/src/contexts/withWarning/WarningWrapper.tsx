@@ -2,7 +2,9 @@ import React from 'react';
 import Warning, { WarningProps } from 'components/basic/Warning/Warning';
 import { bindWarning, WarningContextProvider } from './withWarning';
 
-interface Props {}
+interface Props {
+  children?: React.ReactNode;
+}
 
 interface State {
   warningUUID: string;

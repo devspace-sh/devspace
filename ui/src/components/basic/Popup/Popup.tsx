@@ -6,7 +6,7 @@ export interface OpenPopup {
   uuid?: string;
   display?: boolean;
 
-  content?: JSX.Element;
+  content?: React.ReactElement<any>;
 
   // We need this function so that the popup knows
   // how to close itself

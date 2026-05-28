@@ -1,4 +1,3 @@
-import React from 'react';
 import { V1Pod, V1IngressList } from '@kubernetes/client-node';
 import styles from './Pod.module.scss';
 import StatusIconText from 'components/basic/IconText/StatusIconText/StatusIconText';

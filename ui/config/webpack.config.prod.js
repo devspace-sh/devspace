@@ -7,13 +7,12 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
 const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
-const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
-const ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+const ESLintWebpackPlugin = require('eslint-webpack-plugin');
 const paths = require('./paths');
 const getClientEnvironment = require('./env');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
-const TerserPlugin = require('terser-webpack-plugin');
+const HtmlInterpolatePlugin = require('./HtmlInterpolatePlugin');
 
 // Webpack uses `publicPath` to determine where the app is being served from.
 // It requires a trailing slash, or the file assets will get an incorrect path.
@@ -104,12 +103,6 @@ module.exports = {
       child_process: false,
     },
     plugins: [
-      // Prevents users from importing files from outside of src/ (or node_modules/).
-      // This often causes confusion because we only process files within src/ with babel.
-      // To fix this, we prevent you from importing files out of src/ -- if you'd like to,
-      // please link the files into your node_modules/ and let module-resolution kick in.
-      // Make sure your source files are compiled, as they will not be processed in any way.
-      new ModuleScopePlugin(paths.appSrc, [paths.appPackageJson]),
       new TsconfigPathsPlugin({ configFile: paths.appTsProdConfig }),
     ],
   },
@@ -130,22 +123,17 @@ module.exports = {
         // match the requirements. When no loader matches it will fall
         // back to the "file" loader at the end of the loader list.
         oneOf: [
-          // "url" loader works just like "file" loader but it also embeds
-          // assets smaller than specified size as data URLs to avoid requests.
+          // Inline small assets and emit larger ones via Webpack 5 asset modules.
           {
             test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/, /\.svg$/],
-            loader: require.resolve('url-loader'),
-            options: {
-              limit: 10000, // Convert images < 8kb to base64 strings
-              name: 'build/static/media/[name].[hash:8].[ext]',
+            type: 'asset',
+            parser: {
+              dataUrlCondition: {
+                maxSize: 10000,
+              },
             },
-          },
-          {
-            test: /\.(js|jsx|mjs)$/,
-            include: paths.appSrc,
-            loader: require.resolve('babel-loader'),
-            options: {
-              compact: true,
+            generator: {
+              filename: 'static/media/[name].[hash:8][ext]',
             },
           },
           // Compile .tsx?
@@ -171,6 +159,7 @@ module.exports = {
                 loader: require.resolve('css-loader'),
                 options: {
                   importLoaders: 1,
+                  esModule: false,
                   modules: {
                     localIdentName: '[hash:base64]',
                   },
@@ -192,6 +181,7 @@ module.exports = {
               {
                 loader: require.resolve('css-loader'),
                 options: {
+                  esModule: false,
                   sourceMap: shouldUseSourceMap,
                 },
               },
@@ -211,6 +201,7 @@ module.exports = {
                 loader: require.resolve('css-loader'),
                 options: {
                   importLoaders: 1,
+                  esModule: false,
                   sourceMap: shouldUseSourceMap,
                 },
               },
@@ -223,12 +214,6 @@ module.exports = {
                     plugins: [
                       require('postcss-flexbugs-fixes'),
                       autoprefixer({
-                        browsers: [
-                          '>1%',
-                          'last 4 versions',
-                          'Firefox ESR',
-                          'not ie < 9', // React doesn't support IE8 anyway
-                        ],
                         flexbox: 'no-2009',
                       }),
                     ],
@@ -280,48 +265,12 @@ module.exports = {
     // <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
     // In production, it will be an empty string unless you specify "homepage"
     // in `package.json`, in which case it will be the pathname of that URL.
-    new InterpolateHtmlPlugin(HtmlWebpackPlugin, env.raw),
+    new HtmlInterpolatePlugin(env.raw),
     // Makes some environment variables available to the JS code, for example:
     // if (process.env.NODE_ENV === 'production') { ... }. See `./env.js`.
     // It is absolutely essential that NODE_ENV was set to production here.
     // Otherwise React will be compiled in the very slow development mode.
     new webpack.DefinePlugin(env.stringified),
-    // Minify the code.
-    new TerserPlugin({
-      terserOptions: {
-        parse: {
-          // we want uglify-js to parse ecma 8 code. However we want it to output
-          // ecma 5 compliant code, to avoid issues with older browsers, this is
-          // whey we put `ecma: 5` to the compress and output section
-          // https://github.com/facebook/create-react-app/pull/4234
-          ecma: 8,
-        },
-        compress: {
-          ecma: 5,
-          // Disabled because of an issue with Uglify breaking seemingly valid code:
-          // https://github.com/facebook/create-react-app/issues/2376
-          // Pending further investigation:
-          // https://github.com/mishoo/UglifyJS2/issues/2011
-          comparisons: false,
-          // Don't inline functions with arguments, to avoid name collisions:
-          // https://github.com/mishoo/UglifyJS2/issues/2842
-          inline: 1,
-        },
-        mangle: {
-          safari10: true,
-        },
-        output: {
-          ecma: 5,
-          comments: false,
-          // Turned on because emoji and regex is not minified properly using default
-          // https://github.com/facebook/create-react-app/issues/2488
-          ascii_only: true,
-        },
-      },
-      // Use multi-process parallel running to improve the build speed
-      // Default number of concurrent runs: os.cpus().length - 1
-      parallel: true,
-    }),
     new MiniCssExtractPlugin({
       filename: cssFilename,
       chunkFilename: 'static/css/[name].[contenthash:8].chunk.css',
@@ -336,20 +285,17 @@ module.exports = {
       navigateFallbackDenylist: [/^\/__/],
       exclude: [/\.map$/, /asset-manifest\.json$/],
     }),
-    // Moment.js is an extremely popular library that bundles large locale files
-    // by default due to how Webpack interprets its code. This is a practical
-    // solution that requires the user to opt into importing specific locales.
-    // https://github.com/jmblog/how-to-optimize-momentjs-with-webpack
-    // You can remove this if you don't use Moment.js:
-    new webpack.IgnorePlugin({
-      resourceRegExp: /^\.\/locale$/,
-      contextRegExp: /moment$/,
-    }),
     // Perform type checking and linting in a separate process to speed up compilation
     new ForkTsCheckerWebpackPlugin({
       async: false,
-      tsconfig: paths.appTsProdConfig,
-      tslint: paths.appTsLint,
+      typescript: {
+        configFile: paths.appTsProdConfig,
+      },
+    }),
+    new ESLintWebpackPlugin({
+      context: path.dirname(paths.appPackageJson),
+      extensions: ['js', 'jsx', 'ts', 'tsx'],
+      files: 'src/**/*.{js,jsx,ts,tsx}',
     }),
   ],
 };
