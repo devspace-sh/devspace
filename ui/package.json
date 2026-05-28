@@ -6,9 +6,6 @@
     "node": ">=24 <25"
   },
   "dependencies": {
-    "@babel/core": "7.29.7",
-    "@babel/preset-env": "7.29.7",
-    "@babel/preset-react": "7.29.7",
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-brands-svg-icons": "^5.15.4",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
@@ -17,47 +14,21 @@
     "@xterm/addon-attach": "0.12.0",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/xterm": "6.0.0",
-    "autoprefixer": "10.5.0",
-    "babel-jest": "30.4.1",
-    "babel-loader": "^8.4.1",
-    "chalk": "2.0.0",
-    "css-loader": "^3.6.0",
-    "dotenv": "4.0.0",
-    "dotenv-expand": "4.2.0",
-    "express": "^4.22.0",
-    "fs-extra": "11.3.4",
     "get-parameter": "^1.0.8",
     "history": "^4.10.1",
-    "html-webpack-plugin": "5.6.7",
     "isomorphic-unfetch": "^3.1.0",
-    "jest": "^30.0.0",
     "js-sha256": "^0.9.0",
     "js-yaml": "^4.1.1",
-    "mini-css-extract-plugin": "^2.9.4",
     "moment": "^2.30.1",
-    "postcss-flexbugs-fixes": "5.0.2",
-    "postcss-loader": "8.2.1",
     "react": "^19.2.6",
     "react-cookie": "^3.1.2",
-    "react-dev-utils": "12.0.1",
     "react-dom": "^19.2.6",
     "react-github-btn": "^1.4.0",
     "react-responsive-select": "^4.6.3",
     "react-router": "^6.30.2",
     "react-router-dom": "^6.30.2",
-    "react-test-renderer": "^19.2.6",
     "react-timeago": "^8.3.0",
-    "sass": "^1.89.2",
-    "sass-loader": "16.0.5",
-    "source-map-loader": "5.0.0",
-    "style-loader": "4.0.0",
-    "ts-node": "10.9.2",
-    "tsconfig-paths-webpack-plugin": "3.2.0",
-    "tslib": "2.8.1",
-    "webpack": "5.104.1",
-    "webpack-dev-server": "5.2.4",
-    "webpack-manifest-plugin": "6.0.1",
-    "workbox-webpack-plugin": "^7.4.1"
+    "tslib": "2.8.1"
   },
   "scripts": {
     "start": "NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider node scripts/start.js",
@@ -73,17 +44,33 @@
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "8.60.0",
     "@typescript-eslint/parser": "8.60.0",
-    "cross-env": "^6.0.3",
+    "autoprefixer": "10.5.0",
+    "css-loader": "3.6.0",
+    "dotenv": "4.0.0",
+    "dotenv-expand": "4.2.0",
     "eslint": "9.39.4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-webpack-plugin": "6.0.0",
     "fork-ts-checker-webpack-plugin": "9.1.0",
-    "ignore-loader": "^0.1.2",
-    "require-context.macro": "^1.2.2",
-    "terser": "^4.8.1",
+    "html-webpack-plugin": "5.6.7",
+    "jest": "30.0.0",
+    "mini-css-extract-plugin": "2.9.4",
+    "postcss-flexbugs-fixes": "5.0.2",
+    "postcss-loader": "8.2.1",
+    "react-test-renderer": "19.2.6",
+    "sass": "1.89.2",
+    "sass-loader": "16.0.5",
+    "source-map-loader": "5.0.0",
+    "style-loader": "4.0.0",
     "terser-webpack-plugin": "^5.3.16",
     "ts-loader": "9.5.7",
-    "typescript": "5.9.3"
+    "ts-node": "10.9.2",
+    "tsconfig-paths-webpack-plugin": "3.2.0",
+    "typescript": "5.9.3",
+    "webpack": "5.104.1",
+    "webpack-dev-server": "5.2.4",
+    "webpack-manifest-plugin": "6.0.1",
+    "workbox-webpack-plugin": "7.4.0"
   },
   "jest": {
     "collectCoverageFrom": [
@@ -101,7 +88,6 @@
     "testEnvironment": "node",
     "testURL": "http://localhost",
     "transform": {
-      "^.+\\.(js|jsx|mjs)$": "<rootDir>/node_modules/babel-jest",
       "^.+\\.tsx?$": "<rootDir>/config/jest/typescriptTransform.js",
       "^.+\\.css$": "<rootDir>/config/jest/cssTransform.js",
       "^(?!.*\\.(js|jsx|mjs|css|json)$)": "<rootDir>/config/jest/fileTransform.js"
@@ -124,17 +110,6 @@
       "json",
       "node",
       "mjs"
-    ]
-  },
-  "babel": {
-    "presets": [
-      [
-        "@babel/preset-env",
-        {
-          "modules": false
-        }
-      ],
-      "@babel/preset-react"
     ]
   },
   "browserslist": [
