@@ -6,7 +6,7 @@ import { OpenPopup } from 'components/basic/Popup/Popup';
 
 const reactPopupContext = React.createContext({
   alertPopup: (_title: string, _message: string) => null,
-  openPopup: (_: JSX.Element) => null,
+  openPopup: (_: React.ReactElement<any>) => null,
   closePopup: () => null,
 });
 
@@ -15,7 +15,7 @@ const PopupConsumer: React.ExoticComponent<React.ConsumerProps<Popup>> = reactPo
 export interface Popup {
   // Popup function
   alertPopup: (title: string, message: string) => void;
-  openPopup: (popup: JSX.Element) => void;
+  openPopup: (popup: React.ReactElement<any>) => void;
   closePopup: (skipCallback?: boolean) => void;
 }
 
@@ -45,7 +45,7 @@ const alertPopup = (app: PopupWrapper, title: string, message: string) => {
   openPopup(app, <AlertPopupContent title={title}>{message}</AlertPopupContent>);
 };
 
-const openPopup = (app: PopupWrapper, content: JSX.Element) => {
+const openPopup = (app: PopupWrapper, content: React.ReactElement<any>) => {
   const newProps: OpenPopup = { content };
   newProps.close = () => nextPopup(app);
   newProps.uuid = Math.random() + '';

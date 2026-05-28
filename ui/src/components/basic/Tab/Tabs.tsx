@@ -1,11 +1,11 @@
-import { ReactNode } from 'react';
+import { ReactElement, ReactNode } from 'react';
 
 interface Props {
   selectedIndex?: number;
   children?: ReactNode;
 }
 
-export const Tabs = (props: Props): JSX.Element => {
+export const Tabs = (props: Props): ReactElement => {
   let selectedIndex = 0;
   if (props.selectedIndex) {
     selectedIndex = props.selectedIndex;
@@ -18,11 +18,11 @@ export const Tabs = (props: Props): JSX.Element => {
     return null;
   }
   if (!(props.children instanceof Array)) {
-    return props.children as JSX.Element;
+    return props.children as ReactElement;
   }
   if (props.children.length <= selectedIndex) {
     return null;
   }
 
-  return props.children[selectedIndex] as JSX.Element;
+  return props.children[selectedIndex] as ReactElement;
 };

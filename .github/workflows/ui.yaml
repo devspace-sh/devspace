@@ -16,14 +16,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: ui/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/ui/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          node-version-file: ui/.nvmrc
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
       - name: Build UI
         env:
           CI: "false"

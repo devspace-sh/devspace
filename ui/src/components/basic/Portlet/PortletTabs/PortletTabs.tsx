@@ -47,11 +47,11 @@ export class PortletTabs extends React.Component<Props, State> {
 
     // Loop over tab contents
     const options: TabSelectorOption[] = this.props.children.map((child, idx) => {
-      if ((child as JSX.Element).type && (child as JSX.Element).type.role === 'TabContent') {
+      if ((child as React.ReactElement<any>).type && ((child as React.ReactElement<any>).type as any).role === 'TabContent') {
         return {
           index: idx,
-          value: (child as JSX.Element).props.title,
-          disabled: (child as JSX.Element).props.disabled,
+          value: (child as React.ReactElement<any>).props.title,
+          disabled: (child as React.ReactElement<any>).props.disabled,
         };
       }
 

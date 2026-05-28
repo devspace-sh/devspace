@@ -5,7 +5,9 @@ import Button from 'components/basic/Button/Button';
 import styles from './DevSpaceConfigWrapper.module.scss';
 import authFetch from "../../lib/fetch";
 
-interface Props {}
+interface Props {
+  children?: React.ReactNode;
+}
 
 interface State {
   error: Error;

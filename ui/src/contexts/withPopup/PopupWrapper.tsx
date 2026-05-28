@@ -3,7 +3,9 @@ import { AddExtraProps } from "lib/utils";
 import { OpenPopup } from "components/basic/Popup/Popup";
 import { bindPopup, PopupContextProvider } from "contexts/withPopup/withPopup";
 
-interface Props {}
+interface Props {
+  children?: React.ReactNode;
+}
 
 interface State {
   popupUUID?: string;

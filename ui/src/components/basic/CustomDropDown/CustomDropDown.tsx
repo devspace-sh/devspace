@@ -4,7 +4,7 @@ import styles from './CustomDropDown.module.scss';
 export interface DropDownSelectedOption {
   id: string | number;
   text: string;
-  markup?: string | Element | JSX.Element;
+  markup?: string | Element | React.ReactElement;
   disabled?: boolean;
   data?: any; // Leave any here
 }

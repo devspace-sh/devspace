@@ -39,7 +39,7 @@ export const bindWarning = (app: WarningWrapper): Warning => {
   };
 };
 
-const show = (app: WarningWrapper, content: JSX.Element) => {
+const show = (app: WarningWrapper, content: React.ReactElement) => {
   const newProps: WarningProps = {
     uuid: Math.random() + '',
     children: content,

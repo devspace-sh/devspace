@@ -26,20 +26,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: ui/.nvmrc
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
       - id: get_version
         run: |
           RELEASE_VERSION=$(echo $GITHUB_REF | sed -nE 's!refs/tags/!!p')
           echo "::set-output name=release_version::$RELEASE_VERSION"
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: ui/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/ui/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
       - name: Build UI
         env:
           VERSION: ${{ steps.get_version.outputs.release_version }}
