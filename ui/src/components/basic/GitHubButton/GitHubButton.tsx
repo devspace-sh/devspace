@@ -61,6 +61,19 @@ class GitHubButton extends React.PureComponent<Props> {
                                     </GitHubStarButton>
                                 </div>
                             </div>
+                            <div>
+                                <h3>DevSpace Cloud</h3>
+                                <div className="star-button">
+                                    <GitHubStarButton
+                                        href="https://github.com/devspace-cloud/devspace-cloud"
+                                        data-size="large"
+                                        data-show-count={true}
+                                        aria-label="Star devspace-cloud/devspace-cloud on GitHub"
+                                    >
+                                        Star
+                                    </GitHubStarButton>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
