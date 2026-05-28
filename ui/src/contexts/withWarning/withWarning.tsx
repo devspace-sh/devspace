@@ -3,17 +3,17 @@ import { bindParameter } from 'lib/utils';
 import WarningWrapper from './WarningWrapper';
 import { WarningProps } from 'components/basic/Warning/Warning';
 
-const reactWarningContext = React.createContext({
-  show: (_message: React.ReactNode) => null,
+const reactWarningContext = React.createContext<Warning>({
+  show: (_message: React.ReactNode) => undefined,
   getActive: () => null,
-  close: () => null,
+  close: () => undefined,
 });
 
 const WarningConsumer: React.ExoticComponent<React.ConsumerProps<Warning>> = reactWarningContext.Consumer;
 
 export interface Warning {
   show: (message: React.ReactNode) => void;
-  getActive: () => WarningProps;
+  getActive: () => WarningProps | null;
   close: () => void;
 }
 
@@ -39,7 +39,7 @@ export const bindWarning = (app: WarningWrapper): Warning => {
   };
 };
 
-const show = (app: WarningWrapper, content: React.ReactElement) => {
+const show = (app: WarningWrapper, content: React.ReactNode): void => {
   const newProps: WarningProps = {
     uuid: Math.random() + '',
     children: content,
@@ -50,7 +50,7 @@ const show = (app: WarningWrapper, content: React.ReactElement) => {
   app.setState({ warningUUID: newProps.uuid });
 };
 
-const getActive = (app: WarningWrapper) => {
+const getActive = (app: WarningWrapper): WarningProps | null => {
   if (!app.warningQueue.length) {
     return null;
   }
@@ -58,13 +58,13 @@ const getActive = (app: WarningWrapper) => {
   return app.warningQueue[app.warningQueue.length - 1];
 };
 
-const close = (app: WarningWrapper) => {
+const close = (app: WarningWrapper): void => {
   if (app.state.warningUUID) {
     app.warningQueue[app.warningQueue.length - 1].close();
   }
 };
 
-const nextPopup = (app: WarningWrapper) => {
+const nextPopup = (app: WarningWrapper): void => {
   let next: string = null;
 
   app.warningQueue.pop();

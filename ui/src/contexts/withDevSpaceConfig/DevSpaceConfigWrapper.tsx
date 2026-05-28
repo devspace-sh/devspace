@@ -10,8 +10,8 @@ interface Props {
 }
 
 interface State {
-  error: Error;
-  devSpaceConfig: DevSpaceConfig;
+  error: Error | null;
+  devSpaceConfig: DevSpaceConfig | null;
 }
 
 export interface NewContext {
@@ -46,12 +46,13 @@ export default class DevSpaceConfigWrapper extends React.PureComponent<Props, St
         devSpaceConfig,
       });
     } catch (err) {
-      if (err && err.message === 'Failed to fetch') {
-        err = new Error('Failed to fetch DevSpace config. Is the UI server running?');
+      let error = err instanceof Error ? err : new Error(String(err));
+      if (error.message === 'Failed to fetch') {
+        error = new Error('Failed to fetch DevSpace config. Is the UI server running?');
       }
 
       this.setState({
-        error: err,
+        error,
       });
     }
   }
@@ -79,7 +80,7 @@ export default class DevSpaceConfigWrapper extends React.PureComponent<Props, St
     if (this.state.error) {
       return (
         <div className={styles['error']}>
-          <ErrorMessage className={styles['message']}>{this.state.error}</ErrorMessage>
+          <ErrorMessage className={styles['message']}>{this.state.error.message}</ErrorMessage>
           <div>
             <Button onClick={() => this.componentDidMount()}>Retry</Button>
           </div>

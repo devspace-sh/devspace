@@ -13,7 +13,7 @@ interface Props {
 }
 
 // CriticalStatus container status
-const CriticalStatus = {
+const CriticalStatus: Record<string, boolean> = {
   Error: true,
   Unknown: true,
   ImagePullBackOff: true,
@@ -25,21 +25,21 @@ const CriticalStatus = {
 };
 
 // OkayStatus container status
-const OkayStatus = {
+const OkayStatus: Record<string, boolean> = {
   Running: true,
 };
 
 // CompletedStatus container status
-const CompletedStatus = {
+const CompletedStatus: Record<string, boolean> = {
   Completed: true,
 };
 
 const StatusIconText = (props: Props) => {
   let icon = OrangeCircle;
 
-  if (CriticalStatus[props.status]) icon = RedCircle;
-  if (OkayStatus[props.status]) icon = GreenCircle;
-  if (CompletedStatus[props.status]) icon = DarkGreenCircle
+  if (props.status && CriticalStatus[props.status]) icon = RedCircle;
+  if (props.status && OkayStatus[props.status]) icon = GreenCircle;
+  if (props.status && CompletedStatus[props.status]) icon = DarkGreenCircle;
   const classNames = [styles['status-icon-text']];
   if (props.status) {
     classNames.push(props.status);

@@ -51,7 +51,7 @@ export function formatURL(url: string) {
 }
 
 export function getHashParams() {
-  const hashParams = {};
+  const hashParams: Record<string, string> = {};
   const a = /\+/g; // Regex for replacing addition symbol with a space
   const r = /([^&;=]+)=?([^&;]*)/g;
   const d = (s: string) => decodeURIComponent(s.replace(a, ' '));

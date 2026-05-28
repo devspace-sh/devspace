@@ -4,7 +4,7 @@ import styles from './CustomDropDown.module.scss';
 export interface DropDownSelectedOption {
   id: string | number;
   text: string;
-  markup?: string | Element | React.ReactElement;
+  markup?: React.ReactNode;
   disabled?: boolean;
   data?: any; // Leave any here
 }
@@ -20,7 +20,7 @@ interface Props {
 
 interface State {
   isOpened: boolean;
-  prevSelected: string | number;
+  prevSelected: string | number | null;
 }
 
 export default class CustomDropDown extends React.PureComponent<Props, State> {
@@ -69,8 +69,8 @@ export default class CustomDropDown extends React.PureComponent<Props, State> {
 
     if (this.state.isOpened) {
       const elem = this.listItemsRef;
-      const bounding = elem.current.getBoundingClientRect();
-      const overlapRight = bounding.right > (window.innerWidth || document.documentElement.clientWidth);
+      const bounding = elem.current && elem.current.getBoundingClientRect();
+      const overlapRight = bounding && bounding.right > (window.innerWidth || document.documentElement.clientWidth);
 
       if (overlapRight) newProps.push('push-left');
     }

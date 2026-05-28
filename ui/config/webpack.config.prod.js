@@ -349,7 +349,9 @@ module.exports = {
     // Perform type checking and linting in a separate process to speed up compilation
     new ForkTsCheckerWebpackPlugin({
       async: false,
-      tsconfig: paths.appTsProdConfig,
+      typescript: {
+        configFile: paths.appTsProdConfig,
+      },
     }),
     new ESLintWebpackPlugin({
       context: path.dirname(paths.appPackageJson),

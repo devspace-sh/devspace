@@ -1,7 +1,7 @@
 import React from 'react';
 import { NewContext } from './DevSpaceConfigWrapper';
 
-const reactDevSpaceConfigContext = React.createContext({
+const reactDevSpaceConfigContext = React.createContext<DevSpaceConfig>({
   changeKubeContext: (_: NewContext) => null,
   config: null,
   generatedConfig: null,
