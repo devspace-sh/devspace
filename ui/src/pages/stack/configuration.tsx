@@ -37,7 +37,7 @@ class StackConfiguration extends React.PureComponent<Props, State> {
           <div className={styles['no-config']}>
             <div>
               There was no DevSpace configuration loaded.&nbsp;
-              <a href="https://devspace.cloud/docs/cli/getting-started/deployment" target="_blank">
+              <a href="https://devspace.cloud/docs/cli/getting-started/deployment" target="_blank" rel="noreferrer">
                 Click here
               </a>
               &nbsp;to create a new DevSpace configuration

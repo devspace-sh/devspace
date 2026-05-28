@@ -10,6 +10,7 @@ const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
 const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+const ESLintWebpackPlugin = require('eslint-webpack-plugin');
 const paths = require('./paths');
 const getClientEnvironment = require('./env');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
@@ -349,7 +350,11 @@ module.exports = {
     new ForkTsCheckerWebpackPlugin({
       async: false,
       tsconfig: paths.appTsProdConfig,
-      tslint: paths.appTsLint,
+    }),
+    new ESLintWebpackPlugin({
+      context: path.dirname(paths.appPackageJson),
+      extensions: ['js', 'jsx', 'ts', 'tsx'],
+      files: 'src/**/*.{js,jsx,ts,tsx}',
     }),
   ],
 };

@@ -7,6 +7,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+const ESLintWebpackPlugin = require('eslint-webpack-plugin');
 const getClientEnvironment = require('./env');
 const paths = require('./paths');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
@@ -282,7 +283,11 @@ module.exports = {
       async: false,
       watch: paths.appSrc,
       tsconfig: paths.appTsConfig,
-      tslint: paths.appTsLint,
+    }),
+    new ESLintWebpackPlugin({
+      context: path.dirname(paths.appPackageJson),
+      extensions: ['js', 'jsx', 'ts', 'tsx'],
+      files: 'src/**/*.{js,jsx,ts,tsx}',
     }),
   ],
   // Turn off performance hints during development because we don't do any

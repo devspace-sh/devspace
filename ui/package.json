@@ -56,9 +56,6 @@
     "ts-node": "^8.10.2",
     "tsconfig-paths-webpack-plugin": "3.2.0",
     "tslib": "^1.14.1",
-    "tslint": "^5.20.1",
-    "tslint-config-prettier": "^1.18.0",
-    "tslint-react": "^3.6.0",
     "url": "^0.11.4",
     "url-loader": "4.1.1",
     "webpack": "5.104.1",
@@ -70,7 +67,8 @@
   },
   "scripts": {
     "start": "NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider node scripts/start.js",
-    "build": "NODE_OPTIONS=--openssl-legacy-provider node scripts/build.js"
+    "build": "NODE_OPTIONS=--openssl-legacy-provider node scripts/build.js",
+    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\""
   },
   "devDependencies": {
     "@types/jest": "^23.3.14",
@@ -78,8 +76,13 @@
     "@types/node": "^10.17.60",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
     "babel-preset-env": "^1.7.0",
     "cross-env": "^6.0.3",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-webpack-plugin": "^4.2.0",
     "ignore-loader": "^0.1.2",
     "require-context.macro": "^1.2.2",
     "terser": "^4.8.1",

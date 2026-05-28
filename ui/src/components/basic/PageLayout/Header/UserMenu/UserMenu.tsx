@@ -20,7 +20,7 @@ class UserMenu extends React.PureComponent<Props, State> {
       <ErrorBoundary>
         <div className={this.state.menuOpen ? styles['user-menu'] + ' ' + styles['menu-open'] : styles['user-menu']}>
           <Tooltip className={styles.tooltipcontainer} text="Documentation" position="bottom">
-            <a href="https://devspace.sh/docs" target="_blank" className={styles.link + ' ' + styles.docs} />
+            <a href="https://devspace.sh/docs" target="_blank" rel="noreferrer" className={styles.link + ' ' + styles.docs} />
           </Tooltip>
         </div>
         <GitHubButton />
