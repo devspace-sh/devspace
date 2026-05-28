@@ -62,7 +62,7 @@
     "webpack-dev-server": "4.15.2",
     "webpack-manifest-plugin": "6.0.1",
     "whatwg-fetch": "2.0.3",
-    "workbox-webpack-plugin": "^7.3.0",
+    "workbox-webpack-plugin": "^7.4.1",
     "xterm": "4.1.0"
   },
   "scripts": {
