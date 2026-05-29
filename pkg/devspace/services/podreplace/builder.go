@@ -13,6 +13,7 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/hash"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -156,6 +157,7 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 	}
 
 	deployment.Spec.Template = *podTemplate
+	deployment.Spec.Replicas = desiredReplacementReplicas(target, devPod)
 	if deployment.Spec.Selector == nil {
 		deployment.Spec.Selector = &metav1.LabelSelector{}
 	}
@@ -175,6 +177,45 @@ func buildDeployment(ctx devspacecontext.Context, name string, target runtime.Ob
 	}
 
 	return deployment, nil
+}
+
+func desiredReplacementReplicas(target runtime.Object, devPod *latest.DevPod) *int32 {
+	// Preserve historical behavior unless syncReplicas is explicitly enabled.
+	if !hasSyncReplicas(devPod) {
+		return ptr.Int32(1)
+	}
+
+	switch t := target.(type) {
+	case *appsv1.ReplicaSet:
+		if t.Spec.Replicas != nil {
+			return ptr.Int32(*t.Spec.Replicas)
+		}
+	case *appsv1.Deployment:
+		if t.Spec.Replicas != nil {
+			return ptr.Int32(*t.Spec.Replicas)
+		}
+	case *appsv1.StatefulSet:
+		if t.Spec.Replicas != nil {
+			return ptr.Int32(*t.Spec.Replicas)
+		}
+	}
+
+	return ptr.Int32(1)
+}
+
+func hasSyncReplicas(devPod *latest.DevPod) bool {
+	hasSyncReplicas := false
+	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		for _, s := range devContainer.Sync {
+			if s.SyncReplicas {
+				hasSyncReplicas = true
+				return false
+			}
+		}
+		return true
+	})
+
+	return hasSyncReplicas
 }
 
 func modifyDevContainer(ctx devspacecontext.Context, devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {

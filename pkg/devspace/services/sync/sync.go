@@ -3,9 +3,12 @@ package sync
 import (
 	"context"
 	"fmt"
+	stdsync "sync"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/services/sync/synctarget"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/devspace/sync"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -16,26 +19,12 @@ import (
 // StartSyncFromCmd starts a new sync from command
 func StartSyncFromCmd(ctx devspacecontext.Context, selector targetselector.TargetSelector, name string, syncConfig *latest.SyncConfig, noWatch bool) error {
 	ctx, parent := ctx.WithNewTomb()
-	options := &Options{
-		Name:           name,
-		SyncConfig:     syncConfig,
-		Selector:       selector,
-		RestartOnError: true,
-		SyncLog:        ctx.Log(),
-
-		Verbose: ctx.Log().GetLevel() == logrus.DebugLevel,
-	}
-
-	// Start the tomb
 	<-parent.NotifyGo(func() error {
-		// this is needed as otherwise the context
-		// is cancelled alongside the tomb
 		parent.Go(func() error {
 			<-ctx.Context().Done()
 			return nil
 		})
-
-		return NewController().Start(ctx, options, parent)
+		return startSync(ctx, name, "", syncConfig, selector, nil, parent)
 	})
 
 	// Handle no watch
@@ -73,6 +62,9 @@ func StartSync(ctx devspacecontext.Context, devPod *latest.DevPod, selector targ
 
 		// make sure we add all the sync paths that need to wait for initial start
 		for _, syncConfig := range devContainer.Sync {
+			if syncConfig.SyncReplicas {
+				continue
+			}
 			if syncConfig.StartContainer || (syncConfig.OnUpload != nil && syncConfig.OnUpload.RestartContainer) {
 				starter.Inc()
 			}
@@ -116,24 +108,83 @@ func StartSync(ctx devspacecontext.Context, devPod *latest.DevPod, selector targ
 }
 
 func startSync(ctx devspacecontext.Context, name, arch string, syncConfig *latest.SyncConfig, selector targetselector.TargetSelector, starter sync.DelayedContainerStarter, parent *tomb.Tomb) error {
-	// set options
+	targets, err := synctarget.BuildTargets(ctx.Context(), ctx.Log(), ctx.KubeClient(), selector, syncConfig)
+	if err != nil {
+		return err
+	}
+
+	// One tomb per replica: the sync controller calls Kill on it and would stop sibling syncs.
+	if len(targets) == 1 {
+		return startSyncOneTarget(ctx, name, arch, syncConfig, starter, parent, targets, 0)
+	}
+
+	var wg stdsync.WaitGroup
+	errs := make([]error, len(targets))
+	for i := range targets {
+		wg.Add(1)
+		i := i
+		go func() {
+			defer wg.Done()
+			var subTomb tomb.Tomb
+			errs[i] = startSyncOneTarget(ctx, name, arch, syncConfig, starter, &subTomb, targets, i)
+		}()
+	}
+	wg.Wait()
+	for _, e := range errs {
+		if e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+func startSyncOneTarget(
+	ctx devspacecontext.Context,
+	name, arch string,
+	syncConfig *latest.SyncConfig,
+	starter sync.DelayedContainerStarter,
+	syncParent *tomb.Tomb,
+	targets []synctarget.Target,
+	i int,
+) error {
+	target := targets[i]
+	syncConfigForTarget := synctarget.ConfigForIndex(syncConfig, i)
+	if synctarget.ReplicasEnabled(syncConfig) && target.Pod != "" && target.Container != "" {
+		ctx.Log().Infof(
+			"Sync target %d/%d: %s/%s:%s (disableUpload=%t disableDownload=%t)",
+			i+1,
+			len(targets),
+			target.Namespace,
+			target.Pod,
+			target.Container,
+			syncConfigForTarget.DisableUpload,
+			syncConfigForTarget.DisableDownload,
+		)
+	}
+
+	effectiveStarter := starter
+	if synctarget.ReplicasEnabled(syncConfig) && (syncConfig.StartContainer || (syncConfig.OnUpload != nil && syncConfig.OnUpload.RestartContainer)) {
+		ts := sync.NewDelayedContainerStarter()
+		ts.Inc()
+		effectiveStarter = ts
+	}
+
 	options := &Options{
 		Name:       name,
-		Selector:   selector,
-		SyncConfig: syncConfig,
+		Selector:   target.Selector,
+		SyncConfig: syncConfigForTarget,
 		Arch:       arch,
-		Starter:    starter,
+		Starter:    effectiveStarter,
 
 		RestartOnError: true,
 		Verbose:        ctx.Log().GetLevel() == logrus.DebugLevel,
 	}
 
-	// should we print the logs?
-	if syncConfig.PrintLogs || ctx.Log().GetLevel() == logrus.DebugLevel {
+	if syncConfigForTarget.PrintLogs || ctx.Log().GetLevel() == logrus.DebugLevel {
 		options.SyncLog = ctx.Log()
 	} else {
 		options.SyncLog = logpkg.GetDevPodFileLogger(name)
 	}
 
-	return NewController().Start(ctx, options, parent)
+	return NewController().Start(ctx, options, syncParent)
 }

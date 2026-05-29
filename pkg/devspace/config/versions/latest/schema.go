@@ -1152,6 +1152,8 @@ type SyncConfig struct {
 	DisableDownload bool `yaml:"disableDownload,omitempty" json:"disableDownload,omitempty" jsonschema_extras:"group=one_direction,group_name=One-Directional Sync"`
 	// DisableUpload will disable uploading completely
 	DisableUpload bool `yaml:"disableUpload,omitempty" json:"disableUpload,omitempty" jsonschema_extras:"group=one_direction"`
+	// SyncReplicas enables sync for all replicas in the selected deployment.
+	SyncReplicas bool `yaml:"syncReplicas,omitempty" json:"syncReplicas,omitempty"`
 
 	// BandwidthLimits can be used to limit the amount of bytes that are transferred by DevSpace with this
 	// sync configuration
