@@ -33,8 +33,23 @@ func init() {
 	DependencyFolderPath = filepath.Join(homedir, filepath.FromSlash(DependencyFolder))
 }
 
-// downloadMutex makes sure we only download a single dependency at a time
-var downloadMutex = sync.Mutex{}
+var (
+	downloadLocksMutex sync.Mutex
+	downloadLocks      = map[string]*downloadLock{}
+
+	downloadCallsMutex sync.Mutex
+	downloadCalls      = map[string]*downloadCall{}
+)
+
+type downloadLock struct {
+	mutex sync.Mutex
+	refs  int
+}
+
+type downloadCall struct {
+	done chan struct{}
+	err  error
+}
 
 func GetDependencyPath(workingDirectory string, source *latest.SourceConfig) (configPath string, err error) {
 	ID, err := GetDependencyID(source)
@@ -79,9 +94,6 @@ func switchURLType(gitPath string) string {
 }
 
 func DownloadDependency(ctx context.Context, workingDirectory string, source *latest.SourceConfig, log log.Logger) (configPath string, err error) {
-	downloadMutex.Lock()
-	defer downloadMutex.Unlock()
-
 	ID, err := GetDependencyID(source)
 	if err != nil {
 		return "", err
@@ -96,109 +108,27 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 		_ = os.MkdirAll(DependencyFolderPath, 0755)
 		localPath = filepath.Join(DependencyFolderPath, ID)
 
-		// Check if dependency are cached locally
-		_, statErr := os.Stat(localPath)
-
-		// Verify git cli works
-		repo, err := git.NewGitCLIRepository(ctx, localPath)
+		err = runDownloadOnce(downloadCallKey("git", ID, source), func() error {
+			return withDownloadLock(ID, func() error {
+				return downloadGitDependency(ctx, localPath, gitPath, source, log)
+			})
+		})
 		if err != nil {
-			if statErr == nil {
-				log.Warnf("Error creating git cli: %v", err)
-				return getDependencyConfigPath(localPath, source)
-			}
 			return "", err
-		}
-
-		// Create git clone options
-		var gitCloneOptions = git.CloneOptions{
-			URL:            gitPath,
-			Tag:            source.Tag,
-			Branch:         source.Branch,
-			Commit:         source.Revision,
-			Args:           source.CloneArgs,
-			DisableShallow: source.DisableShallow,
-		}
-
-		// Git clone
-		if statErr != nil {
-			err = repo.Clone(ctx, gitCloneOptions)
-
-			if err != nil {
-				log.Warn("Error cloning repo: ", err)
-
-				gitCloneOptions.URL = switchURLType(gitPath)
-				log.Infof("Switching URL from %s to %s and will try cloning again", gitPath, gitCloneOptions.URL)
-				err = repo.Clone(ctx, gitCloneOptions)
-
-				if err != nil {
-					log.Warn("Failed to clone repo with both HTTPS and SSH URL. Please make sure if your git login or ssh setup is correct.")
-					if statErr == nil {
-						log.Warnf("Error cloning or pulling git repository %s: %v", gitPath, err)
-						return getDependencyConfigPath(localPath, source)
-					}
-
-					return "", errors.Wrap(err, "clone repository")
-				}
-			}
-
-			log.Debugf("Cloned %s", gitPath)
-		}
-
-		// Git pull
-		if !source.DisablePull && source.Revision == "" {
-			err = repo.Pull(ctx)
-			if err != nil {
-				log.Warn(err)
-			}
-
-			log.Debugf("Pulled %s", gitPath)
 		}
 
 		// Resolve local source
 	} else if source.Path != "" {
 		if isURL(source.Path) {
 			localPath = filepath.Join(DependencyFolderPath, ID)
-			_ = os.MkdirAll(localPath, 0755)
 
-			// Check if dependency exists
-			configPath := filepath.Join(localPath, constants.DefaultConfigPath)
-			_, statErr := os.Stat(configPath)
-
-			if !source.DisablePull || statErr != nil {
-				// Create the file
-				out, err := os.Create(configPath)
-				if err != nil {
-					if statErr == nil {
-						log.Warnf("Error creating file: %v", err)
-						return getDependencyConfigPath(localPath, source)
-					}
-
-					return "", err
-				}
-				defer out.Close()
-
-				// Get the data
-				resp, err := http.Get(source.Path)
-				if err != nil {
-					if statErr == nil {
-						log.Warnf("Error retrieving url %s: %v", source.Path, err)
-						return getDependencyConfigPath(localPath, source)
-					}
-
-					return "", errors.Wrapf(err, "request %s", source.Path)
-				}
-				defer resp.Body.Close()
-
-				// Write the body to file
-				_, err = io.Copy(out, resp.Body)
-				if err != nil {
-					if statErr == nil {
-						log.Warnf("Error retrieving url %s: %v", source.Path, err)
-						return getDependencyConfigPath(localPath, source)
-					}
-
-					return "", errors.Wrapf(err, "download %s", source.Path)
-				}
+			err = runDownloadOnce(downloadCallKey("url", ID, source), func() error {
+				return withDownloadLock(ID, func() error {
+					return downloadURLDependency(ctx, localPath, source, log)
+				})
+			})
+			if err != nil {
+				return "", err
 			}
 		} else {
 			if filepath.IsAbs(source.Path) {
@@ -213,6 +143,217 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 	}
 
 	return getDependencyConfigPath(localPath, source)
+}
+
+func downloadGitDependency(ctx context.Context, localPath, gitPath string, source *latest.SourceConfig, log log.Logger) error {
+	// Check if dependency are cached locally
+	_, statErr := os.Stat(localPath)
+
+	// Verify git cli works
+	repo, err := git.NewGitCLIRepository(ctx, localPath)
+	if err != nil {
+		if statErr == nil {
+			log.Warnf("Error creating git cli: %v", err)
+			return nil
+		}
+		return err
+	}
+
+	// Create git clone options
+	var gitCloneOptions = git.CloneOptions{
+		URL:            gitPath,
+		Tag:            source.Tag,
+		Branch:         source.Branch,
+		Commit:         source.Revision,
+		Args:           source.CloneArgs,
+		DisableShallow: source.DisableShallow,
+	}
+
+	// Git clone
+	if statErr != nil {
+		err = repo.Clone(ctx, gitCloneOptions)
+
+		if err != nil {
+			log.Warn("Error cloning repo: ", err)
+
+			gitCloneOptions.URL = switchURLType(gitPath)
+			log.Infof("Switching URL from %s to %s and will try cloning again", gitPath, gitCloneOptions.URL)
+			err = repo.Clone(ctx, gitCloneOptions)
+
+			if err != nil {
+				log.Warn("Failed to clone repo with both HTTPS and SSH URL. Please make sure if your git login or ssh setup is correct.")
+				if statErr == nil {
+					log.Warnf("Error cloning or pulling git repository %s: %v", gitPath, err)
+					return nil
+				}
+
+				return errors.Wrap(err, "clone repository")
+			}
+		}
+
+		log.Debugf("Cloned %s", gitPath)
+	}
+
+	// Git pull
+	if !source.DisablePull && source.Revision == "" {
+		err = repo.Pull(ctx)
+		if err != nil {
+			log.Warn(err)
+		}
+
+		log.Debugf("Pulled %s", gitPath)
+	}
+
+	return nil
+}
+
+func downloadURLDependency(ctx context.Context, localPath string, source *latest.SourceConfig, log log.Logger) error {
+	_ = os.MkdirAll(localPath, 0755)
+
+	// Check if dependency exists
+	configPath := filepath.Join(localPath, constants.DefaultConfigPath)
+	_, statErr := os.Stat(configPath)
+
+	if !source.DisablePull || statErr != nil {
+		// Create the file
+		out, err := os.Create(configPath)
+		if err != nil {
+			if statErr == nil {
+				log.Warnf("Error creating file: %v", err)
+				return nil
+			}
+
+			return err
+		}
+		defer func() {
+			if err := out.Close(); err != nil {
+				log.Warnf("Error closing file: %v", err)
+			}
+		}()
+
+		// Get the data
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, source.Path, nil)
+		if err != nil {
+			if statErr == nil {
+				log.Warnf("Error creating request for url %s: %v", source.Path, err)
+				return nil
+			}
+
+			return errors.Wrapf(err, "request %s", source.Path)
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			if statErr == nil {
+				log.Warnf("Error retrieving url %s: %v", source.Path, err)
+				return nil
+			}
+
+			return errors.Wrapf(err, "request %s", source.Path)
+		}
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				log.Warnf("Error closing body: %v", err)
+			}
+		}()
+
+		// Write the body to file
+		_, err = io.Copy(out, resp.Body)
+		if err != nil {
+			if statErr == nil {
+				log.Warnf("Error retrieving url %s: %v", source.Path, err)
+				return nil
+			}
+
+			return errors.Wrapf(err, "download %s", source.Path)
+		}
+	}
+
+	return nil
+}
+
+func withDownloadLock(id string, download func() error) error {
+	lock := acquireDownloadLock(id)
+	lock.mutex.Lock()
+	defer releaseDownloadLock(id, lock) // runs second: decrement ref after unlock
+	defer lock.mutex.Unlock()           // runs first: release mutex before decrementing ref
+
+	return download()
+}
+
+func acquireDownloadLock(id string) *downloadLock {
+	downloadLocksMutex.Lock()
+	defer downloadLocksMutex.Unlock()
+
+	lock := downloadLocks[id]
+	if lock == nil {
+		lock = &downloadLock{}
+		downloadLocks[id] = lock
+	}
+	lock.refs++
+	return lock
+}
+
+func releaseDownloadLock(id string, lock *downloadLock) {
+	downloadLocksMutex.Lock()
+	defer downloadLocksMutex.Unlock()
+
+	lock.refs--
+	if lock.refs == 0 {
+		delete(downloadLocks, id)
+	}
+}
+
+// runDownloadOnce deduplicates identical in-flight download operations. The
+// per-ID lock inside the callback still serializes different operation keys
+// that write to the same cache directory.
+func runDownloadOnce(key string, download func() error) error {
+	downloadCallsMutex.Lock()
+	call, ok := downloadCalls[key]
+	if ok {
+		downloadCallsMutex.Unlock()
+		<-call.done
+		return call.err
+	}
+
+	call = &downloadCall{done: make(chan struct{})}
+	downloadCalls[key] = call
+	downloadCallsMutex.Unlock()
+
+	cleanup := func() {
+		close(call.done)
+		downloadCallsMutex.Lock()
+		delete(downloadCalls, key)
+		downloadCallsMutex.Unlock()
+	}
+	defer func() {
+		panicValue := recover()
+		if panicValue != nil {
+			call.err = fmt.Errorf("download panicked: %v", panicValue)
+			cleanup()
+			panic(panicValue)
+		}
+
+		cleanup()
+	}()
+
+	call.err = download()
+	return call.err
+}
+
+func downloadCallKey(sourceType, id string, source *latest.SourceConfig) string {
+	// SubPath navigates within an already-cloned repo; all imports sharing the
+	// same git URL write to the same cache directory, so SubPath need not
+	// distinguish download calls. CloneArgs/DisableShallow/DisablePull affect
+	// download behavior but not the cache location, so they are listed
+	// explicitly.
+	return strings.Join([]string{
+		sourceType,
+		id,
+		strings.Join(source.CloneArgs, "\x00"),
+		fmt.Sprintf("%t", source.DisableShallow),
+		fmt.Sprintf("%t", source.DisablePull),
+	}, "\x00")
 }
 
 func getDependencyConfigPath(dependencyPath string, source *latest.SourceConfig) (string, error) {

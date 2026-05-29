@@ -139,6 +139,30 @@ var _ = DevSpaceDescribe("imports", func() {
 		framework.ExpectError(err)
 	})
 
+	ginkgo.It("should import multiple git subpaths from the same repository", func() {
+		tempDir, err := framework.CopyToTempDir("tests/imports/testdata/git-subpaths")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{},
+			Out:         configBuffer,
+			SkipInfo:    true,
+		}
+
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(latestConfig.Pipelines["pipeline-a"].Run, "echo \"pipeline-a\"")
+		framework.ExpectEqual(latestConfig.Pipelines["pipeline-b"].Run, "echo \"pipeline-b\"")
+		framework.ExpectEqual(latestConfig.Pipelines["pipeline-c"].Run, "echo \"pipeline-c\"")
+	})
+
 	ginkgo.It("should import correctly with localRegistry", func() {
 		tempDir, err := framework.CopyToTempDir("tests/imports/testdata/localregistry")
 		framework.ExpectNoError(err)

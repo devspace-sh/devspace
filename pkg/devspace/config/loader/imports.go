@@ -8,11 +8,13 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 var ImportSections = []string{
@@ -29,6 +31,14 @@ var ImportSections = []string{
 	"profiles",
 	"hooks",
 	"localRegistry",
+}
+
+const maxConcurrentImportDownloads = 8
+
+type resolvedImport struct {
+	ConfigPath string
+	Data       map[string]interface{}
+	Disabled   bool
 }
 
 func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath string, rawData map[string]interface{}, log log.Logger) (map[string]interface{}, error) {
@@ -59,6 +69,11 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		return nil, err
 	}
 
+	resolvedImports, err := loadImports(ctx, basePath, imports.Imports, version, log)
+	if err != nil {
+		return nil, err
+	}
+
 	mergedMap := map[string]interface{}{}
 	err = util.Convert(rawData, mergedMap)
 	if err != nil {
@@ -66,33 +81,12 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 	}
 
 	// load imports
-	for _, i := range imports.Imports {
-		if i.Enabled != nil && !*i.Enabled {
+	for _, resolvedImport := range resolvedImports {
+		if resolvedImport.Disabled {
 			continue
 		}
 
-		configPath, err := dependencyutil.DownloadDependency(ctx, basePath, &i.SourceConfig, log)
-		if err != nil {
-			return nil, errors.Wrap(err, "resolve import")
-		}
-
-		fileContent, err := os.ReadFile(configPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "read import config")
-		}
-
-		importData := map[string]interface{}{}
-		err = yamlutil.Unmarshal(fileContent, &importData)
-		if err != nil {
-			return nil, err
-		}
-
-		configVersion, ok := importData["version"].(string)
-		if !ok {
-			return nil, fmt.Errorf("version is missing in import config %s", configPath)
-		} else if version != configVersion {
-			return nil, fmt.Errorf("import mismatch %s != %s. Import %s has different version than currently used devspace.yaml, please make sure the versions match between an import and the devspace.yaml using it", version, configVersion, configPath)
-		}
+		importData := resolvedImport.Data
 
 		// merge sections
 		for _, section := range ImportSections {
@@ -130,16 +124,74 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 		// resolve the import imports
 		if importData["imports"] != nil {
 			mergedMap["imports"] = importData["imports"]
+
+			// The recursive call starts by reloading variables from mergedMap.
+			mergedMap, err = ResolveImports(ctx, resolver, filepath.Dir(resolvedImport.ConfigPath), mergedMap, log)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			delete(mergedMap, "imports")
-		}
 
-		// resolve imports
-		mergedMap, err = ResolveImports(ctx, resolver, filepath.Dir(configPath), mergedMap, log)
-		if err != nil {
-			return nil, err
+			// Leaf imports used to recurse too, so preserve the variable reload
+			// after each ordered import merge.
+			err = reloadVariables(resolver, mergedMap, log)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	return mergedMap, nil
+}
+
+func loadImports(ctx context.Context, basePath string, imports []latest.Import, version string, log log.Logger) ([]resolvedImport, error) {
+	resolvedImports := make([]resolvedImport, len(imports))
+
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(maxConcurrentImportDownloads)
+	for index := range imports {
+		// Keep an explicit per-iteration copy for the goroutine closure.
+		importConfig := imports[index]
+		if importConfig.Enabled != nil && !*importConfig.Enabled {
+			resolvedImports[index] = resolvedImport{Disabled: true}
+			continue
+		}
+
+		eg.Go(func() error {
+			configPath, err := dependencyutil.DownloadDependency(ctx, basePath, &importConfig.SourceConfig, log)
+			if err != nil {
+				return errors.Wrap(err, "resolve import")
+			}
+
+			fileContent, err := os.ReadFile(configPath)
+			if err != nil {
+				return errors.Wrap(err, "read import config")
+			}
+
+			importData := map[string]interface{}{}
+			err = yamlutil.Unmarshal(fileContent, &importData)
+			if err != nil {
+				return err
+			}
+
+			configVersion, ok := importData["version"].(string)
+			if !ok {
+				return fmt.Errorf("version is missing in import config %s", configPath)
+			} else if version != configVersion {
+				return fmt.Errorf("import mismatch %s != %s. Import %s has different version than currently used devspace.yaml, please make sure the versions match between an import and the devspace.yaml using it", version, configVersion, configPath)
+			}
+
+			resolvedImports[index] = resolvedImport{
+				ConfigPath: configPath,
+				Data:       importData,
+			}
+			return nil
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
+
+	return resolvedImports, nil
 }
