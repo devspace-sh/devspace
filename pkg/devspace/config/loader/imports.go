@@ -8,6 +8,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -119,11 +120,13 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 				mergedMap[section] = map[string]interface{}{}
 			}
 
-			for key, value := range sectionMap {
-				_, ok := mergedMap[section].(map[string]interface{})[key]
-				if !ok {
-					mergedMap[section].(map[string]interface{})[key] = value
-				}
+			switch i.MergeStrategy {
+			case latest.MergeStrategyDeep:
+				deepMerge(mergedMap[section].(map[string]interface{}), sectionMap)
+			case "", latest.MergeStrategyShallow:
+				shallowMerge(mergedMap[section].(map[string]interface{}), sectionMap)
+			default:
+				return nil, fmt.Errorf("invalid mergeStrategy %q in import %s", i.MergeStrategy, configPath)
 			}
 		}
 
@@ -142,4 +145,50 @@ func ResolveImports(ctx context.Context, resolver variable.Resolver, basePath st
 	}
 
 	return mergedMap, nil
+}
+
+// deepMerge recursively merges src into dst.
+// Maps are deep merged, other types (arrays, scalars) in dst take precedence.
+func deepMerge(dst, src map[string]interface{}) {
+	for key, srcVal := range src {
+		// Skip nil source values
+		if srcVal == nil {
+			continue
+		}
+
+		dstVal, exists := dst[key]
+
+		// Key doesn't exist in dst - add from src
+		if !exists {
+			dst[key] = srcVal
+			continue
+		}
+
+		// Dst value is nil - use src value
+		if dstVal == nil {
+			dst[key] = srcVal
+			continue
+		}
+
+		// Both exist and are non-nil - check if both are maps
+		srcMap, srcIsMap := srcVal.(map[string]interface{})
+		dstMap, dstIsMap := dstVal.(map[string]interface{})
+
+		if srcIsMap && dstIsMap {
+			// Both are maps - merge recursively
+			deepMerge(dstMap, srcMap)
+		}
+
+		// For other types (arrays, scalars), dst takes precedence (no action needed)
+	}
+}
+
+// shallowMerge merges src into dst only at the top level.
+// Existing keys in dst take precedence.
+func shallowMerge(dst, src map[string]interface{}) {
+	for key, value := range src {
+		if _, ok := dst[key]; !ok {
+			dst[key] = value
+		}
+	}
 }
