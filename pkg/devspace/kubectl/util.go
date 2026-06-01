@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -255,18 +256,26 @@ func IsMinikubeKubernetes(kubeClient Client) bool {
 	if rawConfig, err := kubeClient.ClientConfig().RawConfig(); err == nil {
 		clusters := rawConfig.Clusters[rawConfig.Contexts[rawConfig.CurrentContext].Cluster]
 		for _, extension := range clusters.Extensions {
-			ext, err := runtime.DefaultUnstructuredConverter.ToUnstructured(extension)
-			if err == nil {
-				if provider, ok := ext["provider"].(string); ok {
-					if provider == minikubeProvider {
-						return true
-					}
-				}
+			if isMinikubeExtension(extension) {
+				return true
 			}
 		}
 	}
 
 	return false
+}
+
+func isMinikubeExtension(extension runtime.Object) bool {
+	unknown, ok := extension.(*runtime.Unknown)
+	if !ok {
+		return false
+	}
+	var ext map[string]interface{}
+	if err := json.Unmarshal(unknown.Raw, &ext); err != nil {
+		return false
+	}
+	provider, ok := ext["provider"].(string)
+	return ok && provider == minikubeProvider
 }
 
 // GetKindContext returns the kind cluster name
