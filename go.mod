@@ -56,7 +56,7 @@ require (
 	golang.org/x/text v0.31.0
 	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.8
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools v2.2.0+incompatible
