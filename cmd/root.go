@@ -10,13 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"github.com/mgutz/ansi"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/env"
+	"github.com/loft-sh/devspace/pkg/devspace/kill"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/loft-sh/devspace/cmd/update"
 	"github.com/loft-sh/devspace/cmd/use"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/exit"
@@ -61,12 +61,7 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 			}
 
 			log := f.GetLog()
-			if globalFlags.Silent {
-				log.SetLevel(logrus.FatalLevel)
-			} else if globalFlags.Debug {
-				log.SetLevel(logrus.DebugLevel)
-			}
-
+			configureLogLevel(log, globalFlags.Silent, globalFlags.Debug)
 			ansi.DisableColors(globalFlags.NoColors)
 
 			if globalFlags.KubeConfig != "" {
@@ -94,11 +89,7 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 					log.Debugf("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 				}
 
-				if globalFlags.Silent {
-					log.SetLevel(logrus.FatalLevel)
-				} else if globalFlags.Debug {
-					log.SetLevel(logrus.DebugLevel)
-				}
+				configureLogLevel(log, globalFlags.Silent, globalFlags.Debug)
 
 				// call inactivity timeout
 				if globalFlags.InactivityTimeout > 0 {
@@ -123,6 +114,14 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 }
 
 var globalFlags *flags.GlobalFlags
+
+func configureLogLevel(logger log.Logger, silent, debug bool) {
+	if silent {
+		logger.SetLevel(logrus.FatalLevel)
+	} else if debug {
+		logger.SetLevel(logrus.DebugLevel)
+	}
+}
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -191,6 +190,20 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 		plugin.SetPlugins(plugins)
 	}
 
+	rootCmd := NewRootCmd(f)
+	rootCmd.SetHelpCommand(&cobra.Command{
+		Use:    "no-help",
+		Hidden: true,
+	})
+
+	persistentFlags := rootCmd.PersistentFlags()
+	globalFlags = flags.SetGlobalFlags(persistentFlags)
+
+	persistentFlags.ParseErrorsAllowlist.UnknownFlags = true
+	_ = persistentFlags.Parse(os.Args[1:])
+
+	configureLogLevel(f.GetLog(), globalFlags.Silent, globalFlags.Debug)
+
 	// try to parse the raw config
 	var rawConfig *RawConfig
 
@@ -206,14 +219,6 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 		}
 	}
 
-	// build the root cmd
-	rootCmd := NewRootCmd(f)
-	rootCmd.SetHelpCommand(&cobra.Command{
-		Use:    "no-help",
-		Hidden: true,
-	})
-	persistentFlags := rootCmd.PersistentFlags()
-	globalFlags = flags.SetGlobalFlags(persistentFlags)
 	kill.SetStopFunction(func(message string) {
 		if message == "" {
 			os.Exit(1)
@@ -333,7 +338,8 @@ func parseConfig(f factory.Factory) (*RawConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	configExists, err := configLoader.SetDevSpaceRoot(log.Discard)
+	logger := f.GetLog()
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return nil, err
 	} else if !configExists {
@@ -349,7 +355,7 @@ func parseConfig(f factory.Factory) (*RawConfig, error) {
 	}
 	_, err = configLoader.LoadWithParser(timeoutCtx, nil, nil, r, &loader.ConfigOptions{
 		Dry: true,
-	}, log.Discard)
+	}, logger)
 	if r.Resolver != nil {
 		return r, nil
 	}
