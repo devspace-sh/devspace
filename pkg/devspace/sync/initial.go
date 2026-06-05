@@ -236,7 +236,7 @@ func (i *initialSyncer) deltaState(remoteState map[string]*FileInformation, loca
 			delete(remoteState, relativePath)
 
 			// should this directory be added?
-			if !ignore && stat.Files == 0 {
+			if !ignore {
 				i.o.FileIndex.Lock()
 				action := i.decide(stat, strategy)
 				i.o.FileIndex.Unlock()
@@ -291,7 +291,7 @@ func (i *initialSyncer) CalculateLocalState(absPath string, localState map[strin
 	if !ignore {
 		// Retrieve the real stat instead of the symlink one
 		lstat, err := os.Lstat(absPath)
-		if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
+		if err == nil && fsutil.IsSymlink(lstat.Mode()) {
 			// Get real path
 			targetPath, err := filepath.EvalSymlinks(absPath)
 			if err != nil {
@@ -329,7 +329,7 @@ func (i *initialSyncer) CalculateLocalState(absPath string, localState map[strin
 			Size:           stat.Size(),
 			Mode:           stat.Mode(),
 			IsDirectory:    false,
-			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
+			IsSymbolicLink: fsutil.IsSymlink(stat.Mode()),
 			ResolvedLink:   isSymlink,
 		}
 	}
@@ -353,7 +353,7 @@ func (i *initialSyncer) calculateLocalDirState(absPath string, stat os.FileInfo,
 			Size:           stat.Size(),
 			Mode:           stat.Mode(),
 			IsDirectory:    true,
-			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
+			IsSymbolicLink: fsutil.IsSymlink(stat.Mode()),
 			ResolvedLink:   isSymlink,
 			Files:          len(files),
 		}

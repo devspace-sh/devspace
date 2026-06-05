@@ -505,7 +505,7 @@ func (u *upstream) evaluateChange(relativePath, fullPath string) ([]*FileInforma
 	// if File / Folder does not exist, we create a new remove change
 	// Check if symbolic link
 	lstat, err := os.Lstat(fullPath)
-	if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
+	if err == nil && fsutil.IsSymlink(lstat.Mode()) {
 		_, symlinkExists := u.sync.upstream.symlinks[fullPath]
 
 		// Add symlink to map
@@ -539,7 +539,7 @@ func (u *upstream) evaluateChange(relativePath, fullPath string) ([]*FileInforma
 		Size:           stat.Size(),
 		Mode:           stat.Mode(),
 		IsDirectory:    stat.IsDir(),
-		IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
+		IsSymbolicLink: fsutil.IsSymlink(stat.Mode()),
 	}
 
 	// should we upload the file?
