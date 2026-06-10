@@ -257,7 +257,11 @@ func IsMinikubeKubernetes(kubeClient Client) bool {
 		for _, extension := range clusters.Extensions {
 			ext, err := runtime.DefaultUnstructuredConverter.ToUnstructured(extension)
 			if err == nil {
-				if provider, ok := ext["provider"].(string); ok {
+				extMap, ok := ext.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if provider, ok := extMap["provider"].(string); ok {
 					if provider == minikubeProvider {
 						return true
 					}
