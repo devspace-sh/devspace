@@ -19,9 +19,17 @@ const BuildKitContainer = "buildkitd"
 
 func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) (*appsv1.Deployment, error) {
 	// Switching from a persistent registry, delete the statefulset.
-	_, err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.Namespace).Get(ctx.Context(), r.Name, metav1.GetOptions{})
+	_, err := ctx.KubeClient().
+		KubeClient().
+		AppsV1().
+		StatefulSets(r.Namespace).
+		Get(ctx.Context(), r.Name, metav1.GetOptions{})
 	if err == nil {
-		err := ctx.KubeClient().KubeClient().AppsV1().StatefulSets(r.Namespace).Delete(ctx.Context(), r.Name, metav1.DeleteOptions{})
+		err := ctx.KubeClient().
+			KubeClient().
+			AppsV1().
+			StatefulSets(r.Namespace).
+			Delete(ctx.Context(), r.Name, metav1.DeleteOptions{})
 		if err != nil && kerrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -31,29 +39,41 @@ func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) (*appsv1.D
 	var existing *appsv1.Deployment
 	desired := r.getDeployment()
 	kubeClient := ctx.KubeClient()
-	err = wait.PollUntilContextTimeout(ctx.Context(), time.Second, 30*time.Second, true, func(ctx context.Context) (bool, error) {
-		var err error
+	err = wait.PollUntilContextTimeout(
+		ctx.Context(),
+		time.Second,
+		30*time.Second,
+		true,
+		func(ctx context.Context) (bool, error) {
+			var err error
 
-		existing, err = kubeClient.KubeClient().AppsV1().Deployments(r.Namespace).Get(ctx, r.Name, metav1.GetOptions{})
-		if err == nil {
-			return true, nil
-		}
-
-		if kerrors.IsNotFound(err) {
-			existing, err = kubeClient.KubeClient().AppsV1().Deployments(r.Namespace).Create(ctx, desired, metav1.CreateOptions{})
+			existing, err = kubeClient.KubeClient().
+				AppsV1().
+				Deployments(r.Namespace).
+				Get(ctx, r.Name, metav1.GetOptions{})
 			if err == nil {
 				return true, nil
 			}
 
-			if kerrors.IsAlreadyExists(err) {
-				return false, nil
+			if kerrors.IsNotFound(err) {
+				existing, err = kubeClient.KubeClient().
+					AppsV1().
+					Deployments(r.Namespace).
+					Create(ctx, desired, metav1.CreateOptions{})
+				if err == nil {
+					return true, nil
+				}
+
+				if kerrors.IsAlreadyExists(err) {
+					return false, nil
+				}
+
+				return false, err
 			}
 
 			return false, err
-		}
-
-		return false, err
-	})
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +92,8 @@ func (r *LocalRegistry) ensureDeployment(ctx devspacecontext.Context) (*appsv1.D
 		},
 	)
 	if kerrors.IsUnsupportedMediaType(err) {
-		ctx.Log().Debugf("Server-side apply not available on the server for localRegistry deployment: (%v)", err)
+		ctx.Log().
+			Debugf("Server-side apply not available on the server for localRegistry deployment: (%v)", err)
 		// Unsupport server-side apply, we use existing or created deployment
 		return existing, nil
 	}
@@ -96,11 +117,18 @@ func (r *LocalRegistry) getDeployment() *appsv1.Deployment {
 					Labels: map[string]string{
 						"app": r.Name,
 					},
-					Annotations: getAnnotations(r.LocalBuild),
+					Annotations: getAnnotations(r.LocalBuild, r.Annotations),
 				},
 				Spec: corev1.PodSpec{
 					EnableServiceLinks: new(bool),
-					Containers:         getContainers(r.RegistryImage, r.BuildKitImage, "registry", int32(r.Port), r.LocalBuild),
+					Containers: getContainers(
+						r.RegistryImage,
+						r.BuildKitImage,
+						"registry",
+						int32(r.Port),
+						r.LocalBuild,
+						r.Resources,
+					),
 					Volumes: []corev1.Volume{
 						{
 							VolumeSource: corev1.VolumeSource{
@@ -121,22 +149,40 @@ func (r *LocalRegistry) getDeployment() *appsv1.Deployment {
 	}
 }
 
-func getAnnotations(localbuild bool) map[string]string {
-	if !localbuild {
-		return map[string]string{
+func getAnnotations(isLocalbuild bool, annotations map[string]string) map[string]string {
+	if !isLocalbuild {
+		combined := map[string]string{
 			"container.apparmor.security.beta.kubernetes.io/buildkitd": "unconfined",
 		}
+
+		for k, v := range annotations {
+			combined[k] = v
+		}
+
+		return combined
 	}
-	return map[string]string{}
+
+	return annotations
 }
 
 // this returns a different deployment, if we're using a local docker build or not.
-func getContainers(registryImage, buildKitImage, volume string, port int32, localbuild bool) []corev1.Container {
-	buildContainers := getRegistryContainers(registryImage, volume, port)
+func getContainers(
+	registryImage, buildKitImage, volume string,
+	port int32,
+	localbuild bool,
+	registryResources *corev1.ResourceRequirements,
+) []corev1.Container {
+	buildContainers := getRegistryContainers(registryImage, volume, port, registryResources)
 	if localbuild {
 		// in case we're using local builds just return the deployment with only the
 		// registry container inside
 		return buildContainers
+	}
+
+	resources := corev1.ResourceRequirements{}
+
+	if registryResources != nil {
+		resources = *registryResources
 	}
 
 	buildKitContainer := []corev1.Container{
@@ -185,6 +231,7 @@ func getContainers(registryImage, buildKitImage, volume string, port int32, loca
 					MountPath: "/home/user/.local/share/buildkit",
 				},
 			},
+			Resources: resources,
 		},
 	}
 
@@ -193,7 +240,18 @@ func getContainers(registryImage, buildKitImage, volume string, port int32, loca
 	return append(buildKitContainer, buildContainers...)
 }
 
-func getRegistryContainers(registryImage, volume string, port int32) []corev1.Container {
+func getRegistryContainers(
+	registryImage, volume string,
+	port int32,
+	registryResources *corev1.ResourceRequirements,
+) []corev1.Container {
+
+	resources := corev1.ResourceRequirements{}
+
+	if registryResources != nil {
+		resources = *registryResources
+	}
+
 	return []corev1.Container{
 		{
 			Name:  "registry",
@@ -240,6 +298,7 @@ func getRegistryContainers(registryImage, volume string, port int32) []corev1.Co
 					MountPath: "/var/lib/registry",
 				},
 			},
+			Resources: resources,
 		},
 	}
 }
