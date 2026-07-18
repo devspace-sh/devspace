@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -65,6 +67,12 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 				log.SetLevel(logrus.FatalLevel)
 			} else if globalFlags.Debug {
 				log.SetLevel(logrus.DebugLevel)
+			}
+
+			// print log messages deferred during config pre-loading, now that the
+			// log level from the flags is known; skip them for shell completions
+			if cobraCmd.Name() != cobra.ShellCompRequestCmd && cobraCmd.Name() != cobra.ShellCompNoDescRequestCmd && cobraCmd.Name() != "completion" {
+				flushPreloadLogs(log)
 			}
 
 			ansi.DisableColors(globalFlags.NoColors)
@@ -159,6 +167,10 @@ func Execute() {
 			os.Exit(retCode.ExitCode)
 		}
 
+		// print any log messages deferred during config pre-loading, so e.g. an
+		// "unknown flag" error caused by a pre-load timeout is explained
+		flushPreloadLogs(f.GetLog())
+
 		// error hooks
 		pluginErr := hook.ExecuteHooks(nil, map[string]interface{}{"error": err}, "root.errorExecution", "command:error")
 		if pluginErr != nil {
@@ -200,8 +212,16 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 	if os.Getenv(expression.DevSpaceSkipPreloadEnv) == "" {
 		rawConfig, err = parseConfig(f)
 		if err != nil {
-			f.GetLog().Debugf("error parsing raw config: %v", err)
-		} else {
+			// defer the messages until the log level from the flags is known
+			var timeoutErr *preloadTimeoutError
+			if errors.As(err, &timeoutErr) {
+				deferPreloadLog(logrus.WarnLevel, timeoutErr.Error())
+				deferPreloadLog(logrus.DebugLevel, fmt.Sprintf("error pre-loading config: %v", timeoutErr.Unwrap()))
+			} else {
+				deferPreloadLog(logrus.DebugLevel, fmt.Sprintf("error parsing raw config: %v", err))
+			}
+		}
+		if rawConfig != nil {
 			env.GlobalGetEnv = rawConfig.GetEnv
 		}
 	}
@@ -318,6 +338,84 @@ func disableKlog() {
 	klogv2.SetOutput(io.Discard)
 }
 
+// DevSpacePreloadTimeoutEnv can be used to change the maximum time DevSpace waits
+// for pre-loading the config (e.g. resolving variables from commands) before
+// executing a command. Accepts a duration such as 30s or 1m as well as plain
+// seconds; 0 disables the timeout. Must be set in the process environment, as it
+// is read before .env files and config variables are loaded.
+const DevSpacePreloadTimeoutEnv = "DEVSPACE_PRELOAD_TIMEOUT"
+
+// defaultPreloadTimeout is the default timeout for pre-loading the config
+const defaultPreloadTimeout = time.Second * 10
+
+// preloadLogs collects log messages produced while pre-loading the config in
+// BuildRoot, which runs before cobra has parsed the log-level flags; they are
+// flushed once the final log level is known (or before a fatal error)
+type preloadLog struct {
+	level   logrus.Level
+	message string
+}
+
+var preloadLogs []preloadLog
+
+func deferPreloadLog(level logrus.Level, message string) {
+	preloadLogs = append(preloadLogs, preloadLog{level: level, message: message})
+}
+
+func flushPreloadLogs(logger log.Logger) {
+	for _, l := range preloadLogs {
+		if l.level == logrus.WarnLevel {
+			logger.Warnf("%s", l.message)
+		} else {
+			logger.Debugf("%s", l.message)
+		}
+	}
+	preloadLogs = nil
+}
+
+// preloadTimeoutError is returned by parseConfig if pre-loading the config was
+// cancelled because it took longer than the configured timeout
+type preloadTimeoutError struct {
+	timeout time.Duration
+	err     error
+}
+
+func (e *preloadTimeoutError) Error() string {
+	return fmt.Sprintf("pre-loading the config took longer than %s and was cancelled, which usually means resolving a variable or expression took too long. Custom commands, pipeline flags and variables defined in the config might be unavailable for this run. You can increase this timeout via the %s environment variable (0 disables it), e.g. %s=30s", e.timeout, DevSpacePreloadTimeoutEnv, DevSpacePreloadTimeoutEnv)
+}
+
+func (e *preloadTimeoutError) Unwrap() error {
+	return e.err
+}
+
+// preloadTimeout returns the timeout for pre-loading the config, 0 meaning no timeout
+func preloadTimeout() time.Duration {
+	value := os.Getenv(DevSpacePreloadTimeoutEnv)
+	if value == "" {
+		return defaultPreloadTimeout
+	}
+
+	timeout, err := time.ParseDuration(value)
+	if err != nil {
+		// also allow specifying plain seconds, e.g. DEVSPACE_PRELOAD_TIMEOUT=30
+		seconds, convErr := strconv.Atoi(value)
+		if convErr != nil {
+			deferPreloadLog(logrus.WarnLevel, fmt.Sprintf("Invalid value %q for %s, falling back to %s: %v", value, DevSpacePreloadTimeoutEnv, defaultPreloadTimeout, err))
+			return defaultPreloadTimeout
+		}
+		if int64(seconds) > math.MaxInt64/int64(time.Second) {
+			// converting to a duration would overflow; treat as no timeout
+			return 0
+		}
+		timeout = time.Duration(seconds) * time.Second
+	}
+	if timeout < 0 {
+		deferPreloadLog(logrus.WarnLevel, fmt.Sprintf("Invalid value %q for %s, falling back to %s: timeout must not be negative", value, DevSpacePreloadTimeoutEnv, defaultPreloadTimeout))
+		return defaultPreloadTimeout
+	}
+	return timeout
+}
+
 func parseConfig(f factory.Factory) (*RawConfig, error) {
 	// get current working dir
 	cwd, err := os.Getwd()
@@ -341,8 +439,13 @@ func parseConfig(f factory.Factory) (*RawConfig, error) {
 	}
 
 	// Parse commands
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+	timeoutCtx := context.Background()
+	timeout := preloadTimeout()
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		timeoutCtx, cancel = context.WithTimeout(timeoutCtx, timeout)
+		defer cancel()
+	}
 
 	r := &RawConfig{
 		resolved: map[string]string{},
@@ -350,6 +453,12 @@ func parseConfig(f factory.Factory) (*RawConfig, error) {
 	_, err = configLoader.LoadWithParser(timeoutCtx, nil, nil, r, &loader.ConfigOptions{
 		Dry: true,
 	}, log.Discard)
+	if err != nil && timeoutCtx.Err() != nil {
+		// pre-loading was cancelled by the timeout, so custom commands and pipeline
+		// flags from the config might be missing; return a dedicated error to avoid
+		// confusing follow-up errors such as "unknown flag"
+		return r, &preloadTimeoutError{timeout: timeout, err: err}
+	}
 	if r.Resolver != nil {
 		return r, nil
 	}
@@ -394,8 +503,9 @@ func (r *RawConfig) GetEnv(name string) string {
 		return value
 	}
 
-	// try to find devspace variable
-	if r.Resolver != nil {
+	// try to find devspace variable; skip the resolver if its context is already
+	// cancelled (e.g. after a pre-load timeout), as resolving could never succeed
+	if r.Resolver != nil && r.Ctx != nil && r.Ctx.Err() == nil {
 		r.resolvedMutex.Lock()
 		defer r.resolvedMutex.Unlock()
 
