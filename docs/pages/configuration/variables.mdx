@@ -73,6 +73,10 @@ vars:
     args: ["rev-parse", "HEAD"]
 ```
 
+:::warning Pre-Loading Timeout
+Before executing a command, DevSpace pre-loads the config (including resolving variables from commands) to make custom commands and pipeline flags available. This pre-loading is limited to 10 seconds by default. If resolving all variables takes longer than that, DevSpace prints a warning and custom commands and pipeline flags defined in the config will be unavailable for this run. You can change this timeout via the `DEVSPACE_PRELOAD_TIMEOUT` environment variable, e.g. `DEVSPACE_PRELOAD_TIMEOUT=30s` (plain seconds such as `30` also work, and `0` disables the timeout entirely). Note that `DEVSPACE_PRELOAD_TIMEOUT` must be set in the process environment: it is read before `.env` files (loaded via `DEVSPACE_ENV_FILE`) and config variables are processed, so setting it there has no effect.
+:::
+
 
 ### From User Input (Question)
 DevSpace can also ask the user to provide a value for a variable and you can provide a custom question and configure other input attributes for the question:
