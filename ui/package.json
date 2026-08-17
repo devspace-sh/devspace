@@ -8,7 +8,7 @@
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/react-fontawesome": "^0.1.19",
     "@kubernetes/client-node": "^1.0.0",
-    "autoprefixer": "7.1.6",
+    "autoprefixer": "9.0.0",
     "babel-jest": "^25.5.1",
     "babel-loader": "^8.4.1",
     "babel-preset-react-app": "^4.0.0",
