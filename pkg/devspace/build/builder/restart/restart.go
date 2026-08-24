@@ -183,6 +183,7 @@ func loadRestartHelper(path, defaultScript string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		defer resp.Body.Close()
 
 		out, err := io.ReadAll(resp.Body)
 		if err != nil {

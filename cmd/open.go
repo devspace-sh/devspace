@@ -258,11 +258,15 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 	for time.Since(now) < maxWait {
 		// Check if domain is ready => ignore error as we will retry request
 		resp, _ := http.Get(url)
-		if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
-			time.Sleep(time.Second * 1)
-			_ = open.Start(url)
-			log.Donef("Successfully opened %s", url)
-			return nil
+		if resp != nil {
+			statusCode := resp.StatusCode
+			_ = resp.Body.Close()
+			if statusCode != http.StatusBadGateway && statusCode != http.StatusServiceUnavailable {
+				time.Sleep(time.Second * 1)
+				_ = open.Start(url)
+				log.Donef("Successfully opened %s", url)
+				return nil
+			}
 		}
 
 		if kubectlClient != nil && analyzeNamespace != "" {
