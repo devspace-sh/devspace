@@ -59,7 +59,7 @@
     "tslint-react": "^3.6.0",
     "url-loader": "4.1.1",
     "webpack": "5.104.1",
-    "webpack-dev-server": "4.15.2",
+    "webpack-dev-server": "5.2.3",
     "webpack-manifest-plugin": "6.0.1",
     "whatwg-fetch": "2.0.3",
     "workbox-webpack-plugin": "^7.4.1",
