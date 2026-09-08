@@ -70,16 +70,17 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	}
 
 	ctx, cancel := c.connection.ContextWithStop(ctx)
-	defer cancel()
-	ctx, tCancel := context.WithTimeout(ctx, 30*time.Second)
-	defer tCancel()
+	defer func() { cancel(errors.WithStack(context.Canceled)) }()
+	ctx, tCancel := context.WithCancelCause(ctx)
+	ctx, _ = context.WithTimeoutCause(ctx, 30*time.Second, errors.WithStack(context.DeadlineExceeded)) //nolint:govet
+	defer tCancel(errors.WithStack(context.Canceled))
 
 	ctx = c.connection.ContextWithMetadata(ctx)
 	err := func() error {
 		c.lock.Lock()
 		defer c.lock.Unlock()
 		if c.tracesClient == nil {
-			return errNoClient
+			return errors.New("no client")
 		}
 
 		_, err := c.tracesClient.Export(ctx, &coltracepb.ExportTraceServiceRequest{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -13,22 +14,22 @@ import (
 )
 
 var bufPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		buf := make([]byte, 32*1<<10)
 		return &buf
 	},
 }
 
 type Stream interface {
-	RecvMsg(interface{}) error
-	SendMsg(m interface{}) error
+	RecvMsg(any) error
+	SendMsg(m any) error
 	Context() context.Context
 }
 
 func Send(ctx context.Context, conn Stream, fs FS, progressCb func(int, bool)) error {
 	s := &sender{
 		conn:         &syncStream{Stream: conn},
-		fs:           fs,
+		fs:           WithHardlinkReset(fs),
 		files:        make(map[uint32]string),
 		progressCb:   progressCb,
 		sendpipeline: make(chan *sendHandle, 128),
@@ -42,13 +43,14 @@ type sendHandle struct {
 }
 
 type sender struct {
-	conn            Stream
-	fs              FS
-	files           map[uint32]string
-	mu              sync.RWMutex
-	progressCb      func(int, bool)
-	progressCurrent int
-	sendpipeline    chan *sendHandle
+	conn              Stream
+	fs                FS
+	files             map[uint32]string
+	mu                sync.RWMutex
+	progressCb        func(int, bool)
+	progressCurrent   int
+	progressCurrentMu sync.Mutex
+	sendpipeline      chan *sendHandle
 }
 
 func (s *sender) run(ctx context.Context) error {
@@ -64,7 +66,7 @@ func (s *sender) run(ctx context.Context) error {
 		return err
 	})
 
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		g.Go(func() error {
 			for h := range s.sendpipeline {
 				select {
@@ -111,6 +113,8 @@ func (s *sender) run(ctx context.Context) error {
 
 func (s *sender) updateProgress(size int, last bool) {
 	if s.progressCb != nil {
+		s.progressCurrentMu.Lock()
+		defer s.progressCurrentMu.Unlock()
 		s.progressCurrent += size
 		s.progressCb(s.progressCurrent, last)
 	}
@@ -144,7 +148,12 @@ func (s *sender) sendFile(h *sendHandle) error {
 
 func (s *sender) walk(ctx context.Context) error {
 	var i uint32 = 0
-	err := s.fs.Walk(ctx, func(path string, fi os.FileInfo, err error) error {
+	target := string(filepath.Separator)
+	err := s.fs.Walk(ctx, target, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		fi, err := entry.Info()
 		if err != nil {
 			return err
 		}
@@ -152,7 +161,8 @@ func (s *sender) walk(ctx context.Context) error {
 		if !ok {
 			return errors.WithStack(&os.PathError{Path: path, Err: syscall.EBADMSG, Op: "fileinfo without stat info"})
 		}
-
+		stat.Path = filepath.ToSlash(stat.Path)
+		stat.Linkname = filepath.ToSlash(stat.Linkname)
 		p := &types.Packet{
 			Type: types.PACKET_STAT,
 			Stat: stat,
@@ -200,7 +210,7 @@ type syncStream struct {
 	mu sync.Mutex
 }
 
-func (ss *syncStream) SendMsg(m interface{}) error {
+func (ss *syncStream) SendMsg(m any) error {
 	ss.mu.Lock()
 	err := ss.Stream.SendMsg(m)
 	ss.mu.Unlock()

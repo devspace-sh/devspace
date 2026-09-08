@@ -39,7 +39,11 @@ func NewPrinter(ctx context.Context, out io.Writer) (progresswriter.Writer, erro
 	}
 	go func() {
 		// not using shared context to not disrupt display but let is finish reporting errors
-		_, pw.err = progressui.DisplaySolveStatus(ctx, "", nil, out, statusCh)
+		var display progressui.Display
+		display, pw.err = progressui.NewDisplay(out, progressui.PlainMode)
+		if pw.err == nil {
+			_, pw.err = display.UpdateFrom(ctx, statusCh)
+		}
 		close(doneCh)
 	}()
 	return pw, nil

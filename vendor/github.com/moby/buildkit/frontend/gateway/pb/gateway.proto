@@ -2,22 +2,21 @@ syntax = "proto3";
 
 package moby.buildkit.v1.frontend;
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "github.com/gogo/googleapis/google/rpc/status.proto";
-import "github.com/moby/buildkit/solver/pb/ops.proto";
+option go_package = "github.com/moby/buildkit/frontend/gateway/pb;moby_buildkit_v1_frontend";
+
 import "github.com/moby/buildkit/api/types/worker.proto";
+import "github.com/moby/buildkit/solver/pb/ops.proto";
+import "github.com/moby/buildkit/sourcepolicy/pb/policy.proto";
 import "github.com/moby/buildkit/util/apicaps/pb/caps.proto";
 import "github.com/tonistiigi/fsutil/types/stat.proto";
-import "github.com/moby/buildkit/sourcepolicy/pb/policy.proto";
-
-
-option (gogoproto.sizer_all) = true;
-option (gogoproto.marshaler_all) = true;
-option (gogoproto.unmarshaler_all) = true;
+import "google/protobuf/timestamp.proto";
+import "google/rpc/status.proto";
 
 service LLBBridge {
 	// apicaps:CapResolveImage
 	rpc ResolveImageConfig(ResolveImageConfigRequest) returns (ResolveImageConfigResponse);
+	// apicaps:CapSourceMetaResolver
+	rpc ResolveSourceMeta(ResolveSourceMetaRequest) returns (ResolveSourceMetaResponse);
 	// apicaps:CapSolveBase
 	rpc Solve(SolveRequest) returns (SolveResponse);
 	// apicaps:CapReadFile
@@ -37,8 +36,13 @@ service LLBBridge {
 	rpc ReleaseContainer(ReleaseContainerRequest) returns (ReleaseContainerResponse);
 	rpc ExecProcess(stream ExecMessage) returns (stream ExecMessage);
 
+	// apicaps:CapGatewayExecFilesystem
+	rpc ReadFileContainer(ReadFileRequest) returns (ReadFileResponse);
+	rpc ReadDirContainer(ReadDirRequest) returns (ReadDirResponse);
+	rpc StatFileContainer(StatFileRequest) returns (StatFileResponse);
+
 	// apicaps:CapGatewayWarnings
-	rpc Warn(WarnRequest) returns (WarnResponse); 
+	rpc Warn(WarnRequest) returns (WarnResponse);
 }
 
 message Result {
@@ -69,7 +73,7 @@ message RefMap {
 }
 
 message Attestations {
-    repeated Attestation attestation = 1;
+	repeated Attestation attestation = 1;
 }
 
 message Attestation {
@@ -83,22 +87,20 @@ message Attestation {
 }
 
 enum AttestationKind {
-	option (gogoproto.goproto_enum_prefix) = false;
-	InToto = 0 [(gogoproto.enumvalue_customname) = "AttestationKindInToto"];
-	Bundle = 1 [(gogoproto.enumvalue_customname) = "AttestationKindBundle"];
+	InToto = 0;
+	Bundle = 1;
 }
 
 message InTotoSubject {
 	InTotoSubjectKind kind = 1;
 
-	repeated string digest = 2 [(gogoproto.customtype) = "github.com/opencontainers/go-digest.Digest", (gogoproto.nullable) = false];
+	repeated string digest = 2;
 	string name = 3;
 }
 
 enum InTotoSubjectKind {
-	option (gogoproto.goproto_enum_prefix) = false;
-	Self = 0 [(gogoproto.enumvalue_customname) = "InTotoSubjectKindSelf"];
-	Raw = 1 [(gogoproto.enumvalue_customname) = "InTotoSubjectKindRaw"];
+	Self = 0;
+	Raw = 1;
 }
 
 message ReturnRequest {
@@ -124,11 +126,90 @@ message ResolveImageConfigRequest {
 	int32 ResolverType = 5;
 	string SessionID = 6;
 	string StoreID = 7;
+	repeated moby.buildkit.v1.sourcepolicy.Policy SourcePolicies = 8;
 }
 
 message ResolveImageConfigResponse {
-	string Digest = 1 [(gogoproto.customtype) = "github.com/opencontainers/go-digest.Digest", (gogoproto.nullable) = false];
+	string Digest = 1;
 	bytes Config = 2;
+	string Ref = 3;
+}
+
+message ResolveSourceMetaRequest {
+	pb.SourceOp Source = 1;
+	pb.Platform Platform = 2;
+	string LogName = 3;
+	string ResolveMode = 4;
+	ResolveSourceGitRequest Git = 5;
+	ResolveSourceImageRequest Image = 6;
+	ResolveSourceHTTPRequest HTTP = 7;
+	repeated moby.buildkit.v1.sourcepolicy.Policy SourcePolicies = 8;
+}
+
+message ResolveSourceMetaResponse {
+	pb.SourceOp Source = 1;
+	ResolveSourceImageResponse Image = 2;
+	ResolveSourceGitResponse Git = 3;
+	ResolveSourceHTTPResponse HTTP = 4;
+}
+
+message ResolveSourceImageRequest {
+	bool NoConfig = 1;
+	bool AttestationChain = 2;
+	repeated string ResolveAttestations = 3;
+}
+
+message AttestationChain {
+	string Root = 1;
+	string ImageManifest = 2;
+	string AttestationManifest = 3;
+	repeated string SignatureManifests = 4;
+	map<string, Blob> Blobs = 5;
+}
+
+message ResolveSourceImageResponse {
+	string Digest = 1;
+	bytes Config = 2;
+	AttestationChain AttestationChain = 3;
+}
+
+message ResolveSourceGitRequest {
+	// Return full commit and tag object bytes.
+	bool ReturnObject = 1;
+}
+
+message ResolveSourceGitResponse {
+	string Checksum = 1;
+	string Ref = 2;
+	string CommitChecksum = 3;
+	bytes CommitObject = 4;
+	bytes TagObject = 5;
+}
+
+message ResolveSourceHTTPResponse {
+	string Checksum = 1;
+	string Filename = 2;
+	google.protobuf.Timestamp LastModified = 3;
+	ChecksumResponse ChecksumResponse = 4;
+}
+
+message ResolveSourceHTTPRequest {
+	ChecksumRequest ChecksumRequest = 1;
+}
+
+message ChecksumRequest {
+	enum ChecksumAlgo {
+		CHECKSUM_ALGO_SHA256 = 0;
+		CHECKSUM_ALGO_SHA384 = 1;
+		CHECKSUM_ALGO_SHA512 = 2;
+	}
+	ChecksumAlgo Algo = 1;
+	bytes Suffix = 2;
+}
+
+message ChecksumResponse {
+	string Digest = 1;
+	bytes Suffix = 2;
 }
 
 message SolveRequest {
@@ -138,7 +219,7 @@ message SolveRequest {
 	// 4 was removed in BuildKit v0.11.0.
 	bool allowResultReturn = 5;
 	bool allowResultArrayRef = 6;
-	
+
 	// apicaps.CapSolveInlineReturn deprecated
 	bool Final = 10;
 	bytes ExporterAttr = 11;
@@ -164,8 +245,8 @@ message SolveResponse {
 	// deprecated
 	string ref = 1; // can be used by readfile request
 	// deprecated
-/*	bytes ExporterAttr = 2;*/
-	
+	// bytes ExporterAttr = 2;
+
 	// these fields are returned when allowMapReturn was set
 	Result result = 3;
 }
@@ -174,6 +255,7 @@ message ReadFileRequest {
 	string Ref = 1;
 	string FilePath = 2;
 	FileRange Range = 3;
+	int32 MountIndex = 4;
 }
 
 message FileRange {
@@ -189,6 +271,7 @@ message ReadDirRequest {
 	string Ref = 1;
 	string DirPath = 2;
 	string IncludePattern = 3;
+	int32 MountIndex = 4;
 }
 
 message ReadDirResponse {
@@ -198,6 +281,7 @@ message ReadDirResponse {
 message StatFileRequest {
 	string Ref = 1;
 	string Path = 2;
+	int32 MountIndex = 3;
 }
 
 message StatFileResponse {
@@ -214,13 +298,13 @@ message EvaluateResponse {
 message PingRequest{
 }
 message PongResponse{
-	repeated moby.buildkit.v1.apicaps.APICap FrontendAPICaps = 1 [(gogoproto.nullable) = false];
-	repeated moby.buildkit.v1.apicaps.APICap LLBCaps = 2 [(gogoproto.nullable) = false];
+	repeated moby.buildkit.v1.apicaps.APICap FrontendAPICaps = 1;
+	repeated moby.buildkit.v1.apicaps.APICap LLBCaps = 2;
 	repeated moby.buildkit.v1.types.WorkerRecord Workers = 3;
 }
 
 message WarnRequest {
-	string digest = 1 [(gogoproto.customtype) = "github.com/opencontainers/go-digest.Digest", (gogoproto.nullable) = false];
+	string digest = 1;
 	int64 level = 2;
 	bytes short = 3;
 	repeated bytes detail = 4;
@@ -239,6 +323,7 @@ message NewContainerRequest {
 	pb.Platform platform = 4;
 	pb.WorkerConstraints constraints = 5;
 	repeated pb.HostIP extraHosts = 6;
+	string hostname = 7;
 }
 
 message NewContainerResponse{}
@@ -255,7 +340,7 @@ message ExecMessage {
 		// InitMessage sent from client to server will start a new process in a
 		// container
 		InitMessage Init = 2;
-		// FdMessage used from client to server for input (stdin) and 
+		// FdMessage used from client to server for input (stdin) and
 		// from server to client for output (stdout, stderr)
 		FdMessage File = 3;
 		// ResizeMessage used from client to server for terminal resize events
@@ -280,6 +365,7 @@ message InitMessage{
 	repeated uint32 Fds = 3;
 	bool Tty = 4;
 	pb.SecurityMode Security = 5;
+	repeated pb.SecretEnv secretenv = 6;
 }
 
 message ExitMessage {
@@ -306,4 +392,16 @@ message SignalMessage {
 	// we only send name (ie HUP, INT) because the int values
 	// are platform dependent.
 	string Name = 1;
+}
+
+message Blob {
+	Descriptor descriptor = 1;
+	bytes data = 2;
+}
+
+message Descriptor {
+	string media_type = 1;
+	string digest = 2;
+	int64 size = 3;
+	map<string, string> annotations = 5;
 }

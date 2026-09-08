@@ -561,7 +561,7 @@ func (cmd *InitCmd) initDockerCompose(f factory.Factory, composePath string) err
 	project.Name = projectName
 
 	// Prompt user for entrypoints for each container with sync folders.
-	for idx, service := range project.Services {
+	for name, service := range project.Services {
 		localPaths := compose.GetServiceSyncPaths(project, service)
 		noEntryPoint := len(service.Entrypoint) == 0
 		hasSyncEndpoints := len(localPaths) > 0
@@ -574,8 +574,8 @@ func (cmd *InitCmd) initDockerCompose(f factory.Factory, composePath string) err
 				return err
 			}
 
-			entrypoint := strings.Split(entrypointStr, " ")
-			project.Services[idx].Entrypoint = entrypoint
+			service.Entrypoint = strings.Split(entrypointStr, " ")
+			project.Services[name] = service
 		}
 	}
 

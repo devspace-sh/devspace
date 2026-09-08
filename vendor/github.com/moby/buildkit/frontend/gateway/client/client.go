@@ -3,9 +3,12 @@ package client
 import (
 	"context"
 	"io"
+	"maps"
+	"slices"
 	"syscall"
 
 	"github.com/moby/buildkit/client/llb"
+	"github.com/moby/buildkit/client/llb/sourceresolver"
 	"github.com/moby/buildkit/solver/pb"
 	"github.com/moby/buildkit/solver/result"
 	spb "github.com/moby/buildkit/sourcepolicy/pb"
@@ -26,8 +29,9 @@ func NewResult() *Result {
 }
 
 type Client interface {
+	sourceresolver.MetaResolver
 	Solve(ctx context.Context, req SolveRequest) (*Result, error)
-	ResolveImageConfig(ctx context.Context, ref string, opt llb.ResolveImageConfigOpt) (digest.Digest, []byte, error)
+	ResolveImageConfig(ctx context.Context, ref string, opt sourceresolver.Opt) (string, digest.Digest, []byte, error)
 	BuildOpts() BuildOpts
 	Inputs(ctx context.Context) (map[string]llb.State, error)
 	NewContainer(ctx context.Context, req NewContainerRequest) (Container, error)
@@ -38,6 +42,7 @@ type Client interface {
 // new container, without defining the initial process.
 type NewContainerRequest struct {
 	Mounts      []Mount
+	Hostname    string
 	NetMode     pb.NetMode
 	ExtraHosts  []*pb.HostIP
 	Platform    *pb.Platform
@@ -63,6 +68,9 @@ type Mount struct {
 type Container interface {
 	Start(context.Context, StartRequest) (ContainerProcess, error)
 	Release(context.Context) error
+	ReadFile(ctx context.Context, req ReadContainerRequest) ([]byte, error)
+	StatFile(ctx context.Context, req StatContainerRequest) (*fstypes.Stat, error)
+	ReadDir(ctx context.Context, req ReadDirContainerRequest) ([]*fstypes.Stat, error)
 }
 
 // StartRequest encapsulates the arguments to define a process within a
@@ -70,6 +78,7 @@ type Container interface {
 type StartRequest struct {
 	Args           []string
 	Env            []string
+	SecretEnv      []*pb.SecretEnv
 	User           string
 	Cwd            string
 	Tty            bool
@@ -107,6 +116,11 @@ type ReadRequest struct {
 	Range    *FileRange
 }
 
+type ReadContainerRequest struct {
+	ReadRequest
+	MountIndex int
+}
+
 type FileRange struct {
 	Offset int
 	Length int
@@ -117,8 +131,18 @@ type ReadDirRequest struct {
 	IncludePattern string
 }
 
+type ReadDirContainerRequest struct {
+	ReadDirRequest
+	MountIndex int
+}
+
 type StatRequest struct {
 	Path string
+}
+
+type StatContainerRequest struct {
+	StatRequest
+	MountIndex int
 }
 
 // SolveRequest is same as frontend.SolveRequest but avoiding dependency
@@ -130,6 +154,40 @@ type SolveRequest struct {
 	FrontendInputs map[string]*pb.Definition
 	CacheImports   []CacheOptionsEntry
 	SourcePolicies []*spb.Policy
+}
+
+// Clone returns a deep copy of the solve request.
+func (r SolveRequest) Clone() SolveRequest {
+	if r.Definition != nil {
+		r.Definition = r.Definition.CloneVT()
+	}
+	r.FrontendOpt = maps.Clone(r.FrontendOpt)
+	if len(r.FrontendInputs) > 0 {
+		inputs := r.FrontendInputs
+		r.FrontendInputs = make(map[string]*pb.Definition, len(inputs))
+		for k, v := range inputs {
+			if v != nil {
+				v = v.CloneVT()
+			}
+			r.FrontendInputs[k] = v
+		}
+	}
+	if len(r.CacheImports) > 0 {
+		r.CacheImports = slices.Clone(r.CacheImports)
+		for i, ci := range r.CacheImports {
+			ci.Attrs = maps.Clone(ci.Attrs)
+			r.CacheImports[i] = ci
+		}
+	}
+	if len(r.SourcePolicies) > 0 {
+		r.SourcePolicies = slices.Clone(r.SourcePolicies)
+		for i, p := range r.SourcePolicies {
+			if p != nil {
+				r.SourcePolicies[i] = p.CloneVT()
+			}
+		}
+	}
+	return r
 }
 
 type CacheOptionsEntry struct {

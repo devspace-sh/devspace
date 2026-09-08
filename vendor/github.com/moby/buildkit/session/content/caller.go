@@ -4,8 +4,8 @@ import (
 	"context"
 
 	api "github.com/containerd/containerd/api/services/content/v1"
-	"github.com/containerd/containerd/content"
-	"github.com/containerd/containerd/content/proxy"
+	"github.com/containerd/containerd/v2/core/content"
+	"github.com/containerd/containerd/v2/core/content/proxy"
 	"github.com/moby/buildkit/session"
 	digest "github.com/opencontainers/go-digest"
 	ocispecs "github.com/opencontainers/image-spec/specs-go/v1"
@@ -16,9 +16,11 @@ import (
 type callerContentStore struct {
 	store   content.Store
 	storeID string
+	caller  session.Caller
 }
 
 func (cs *callerContentStore) choose(ctx context.Context) context.Context {
+	ctx = cs.caller.Context(ctx)
 	nsheader := metadata.Pairs(GRPCHeaderID, cs.storeID)
 	md, ok := metadata.FromOutgoingContext(ctx) // merge with outgoing context.
 	if !ok {
@@ -87,5 +89,6 @@ func NewCallerStore(c session.Caller, storeID string) content.Store {
 	return &callerContentStore{
 		store:   proxy.NewContentStore(client),
 		storeID: storeID,
+		caller:  c,
 	}
 }

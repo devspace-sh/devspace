@@ -7,6 +7,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ErrNoActiveSessions is returned when a session group does not contain any
+// active session IDs.
+var ErrNoActiveSessions = errors.New("no active sessions")
+
 type Group interface {
 	SessionIterator() Iterator
 }
@@ -69,17 +73,18 @@ func (sm *Manager) Any(ctx context.Context, g Group, f func(context.Context, str
 			if lastErr != nil {
 				return lastErr
 			}
-			return errors.Errorf("no active sessions")
+			return errors.WithStack(ErrNoActiveSessions)
 		}
 
-		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
+		timeoutCtx, cancel := context.WithCancelCause(ctx)
+		timeoutCtx, _ = context.WithTimeoutCause(timeoutCtx, 5*time.Second, errors.WithStack(context.DeadlineExceeded)) //nolint:govet
+		defer func() { cancel(errors.WithStack(context.Canceled)) }()
 		c, err := sm.Get(timeoutCtx, id, false)
 		if err != nil {
 			lastErr = err
 			continue
 		}
-		if err := f(ctx, id, c); err != nil {
+		if err := f(c.Context(ctx), id, c); err != nil {
 			lastErr = err
 			continue
 		}

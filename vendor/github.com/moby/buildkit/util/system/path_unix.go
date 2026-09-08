@@ -1,10 +1,17 @@
 //go:build !windows
-// +build !windows
 
 package system
 
-// CheckSystemDriveAndRemoveDriveLetter verifies that a path, if it includes a drive letter,
-// is the system drive. This is a no-op on Linux.
-func CheckSystemDriveAndRemoveDriveLetter(path string) (string, error) {
-	return path, nil
+import "path/filepath"
+
+// IsAbsolutePath is just a wrapper that calls filepath.IsAbs.
+// Has been added here just for symmetry with Windows.
+func IsAbsolutePath(path string) bool {
+	return filepath.IsAbs(path)
+}
+
+// GetAbsolutePath does nothing on non-Windows, just returns
+// the same path.
+func GetAbsolutePath(path string) string {
+	return path
 }

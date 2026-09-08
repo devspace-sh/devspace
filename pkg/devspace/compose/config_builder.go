@@ -3,7 +3,7 @@ package compose
 import (
 	"regexp"
 
-	composetypes "github.com/compose-spec/compose-go/types"
+	composetypes "github.com/compose-spec/compose-go/v2/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 )

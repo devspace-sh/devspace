@@ -5,7 +5,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/util/log"
 
-	composetypes "github.com/compose-spec/compose-go/types"
+	composetypes "github.com/compose-spec/compose-go/v2/types"
 )
 
 func GetServiceSyncPaths(

@@ -36,7 +36,6 @@ func TestGetAllAuthConfigs(t *testing.T) {
 						"key": {
 							Username:      "ValUser",
 							Password:      "ValPass",
-							Email:         "ValEmail",
 							ServerAddress: "ValServerAddress",
 							IdentityToken: "ValIdentityToken",
 							RegistryToken: "ValRegistryToken",
@@ -48,7 +47,6 @@ func TestGetAllAuthConfigs(t *testing.T) {
 				"key": {
 					Username:      "ValUser",
 					Password:      "ValPass",
-					Email:         "ValEmail",
 					ServerAddress: "key",
 					IdentityToken: "ValIdentityToken",
 					RegistryToken: "ValRegistryToken",

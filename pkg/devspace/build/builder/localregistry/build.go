@@ -21,6 +21,7 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/session/upload/uploadprovider"
+	mobyclient "github.com/moby/moby/client"
 	"github.com/docker/docker/api/types/build"
 )
 
@@ -51,9 +52,9 @@ func RemoteBuild(ctx devspacecontext.Context, podName, namespace string, buildCo
 		FrontendAttrs: map[string]string{
 			"filename": buildOptions.Dockerfile,
 			"target":   buildOptions.Target,
-			"context":  up.Add(buildContext),
+			"context":  up.Add(io.NopCloser(buildContext)),
 		},
-		Session: []session.Attachable{up, authprovider.NewDockerAuthProvider(dockerConfig)},
+		Session: []session.Attachable{up, authprovider.NewDockerAuthProvider(authprovider.DockerAuthProviderConfig{AuthConfigProvider: authprovider.LoadAuthConfig(dockerConfig)})},
 		Exports: []buildkit.ExportEntry{
 			{
 				Type: buildkit.ExporterImage,
@@ -142,7 +143,12 @@ func CopyImageToRemote(ctx context.Context, client dockerclient.Client, imageNam
 		return err
 	}
 	// get image data from local registry
-	image, err := daemon.Image(localRef, daemon.WithContext(ctx), daemon.WithClient(client.DockerAPIClient()))
+	daemonClient, err := mobyclient.New(mobyclient.WithHost(client.DockerAPIClient().DaemonHost()), mobyclient.WithAPIVersionFromEnv())
+	if err != nil {
+		return err
+	}
+	defer daemonClient.Close()
+	image, err := daemon.Image(localRef, daemon.WithContext(ctx), daemon.WithClient(daemonClient))
 	if err != nil {
 		return err
 	}

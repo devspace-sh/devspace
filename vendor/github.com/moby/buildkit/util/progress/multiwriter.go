@@ -1,7 +1,7 @@
 package progress
 
 import (
-	"sort"
+	"slices"
 	"sync"
 	"time"
 )
@@ -15,13 +15,15 @@ type MultiWriter struct {
 	mu      sync.Mutex
 	items   []*Progress
 	writers map[rawProgressWriter]struct{}
-	meta    map[string]interface{}
+	meta    map[string]any
 }
+
+var _ rawProgressWriter = &MultiWriter{}
 
 func NewMultiWriter(opts ...WriterOption) *MultiWriter {
 	mw := &MultiWriter{
 		writers: map[rawProgressWriter]struct{}{},
-		meta:    map[string]interface{}{},
+		meta:    map[string]any{},
 	}
 	for _, o := range opts {
 		o(mw)
@@ -34,11 +36,20 @@ func (ps *MultiWriter) Add(pw Writer) {
 	if !ok {
 		return
 	}
+	if pws, ok := rw.(*MultiWriter); ok {
+		if pws.contains(ps) {
+			// this would cause a deadlock, so we should panic instead
+			// NOTE: this can be caused by a cycle in the scheduler states,
+			// which is created by a series of unfortunate edge merges
+			panic("multiwriter loop detected")
+		}
+	}
+
 	ps.mu.Lock()
 	plist := make([]*Progress, 0, len(ps.items))
 	plist = append(plist, ps.items...)
-	sort.Slice(plist, func(i, j int) bool {
-		return plist[i].Timestamp.Before(plist[j].Timestamp)
+	slices.SortFunc(plist, func(a, b *Progress) int {
+		return a.Timestamp.Compare(b.Timestamp)
 	})
 	for _, p := range plist {
 		rw.WriteRawProgress(p)
@@ -58,31 +69,18 @@ func (ps *MultiWriter) Delete(pw Writer) {
 	ps.mu.Unlock()
 }
 
-func (ps *MultiWriter) Write(id string, v interface{}) error {
+func (ps *MultiWriter) Write(id string, v any) error {
 	p := &Progress{
 		ID:        id,
 		Timestamp: time.Now(),
 		Sys:       v,
 		meta:      ps.meta,
 	}
-	return ps.WriteRawProgress(p)
+	return ps.writeRawProgress(p)
 }
 
 func (ps *MultiWriter) WriteRawProgress(p *Progress) error {
-	meta := p.meta
-	if len(ps.meta) > 0 {
-		meta = map[string]interface{}{}
-		for k, v := range p.meta {
-			meta[k] = v
-		}
-		for k, v := range ps.meta {
-			if _, ok := meta[k]; !ok {
-				meta[k] = v
-			}
-		}
-	}
-	p.meta = meta
-	return ps.writeRawProgress(p)
+	return ps.writeRawProgress(p.Decorate(ps.meta))
 }
 
 func (ps *MultiWriter) writeRawProgress(p *Progress) error {
@@ -99,4 +97,25 @@ func (ps *MultiWriter) writeRawProgress(p *Progress) error {
 
 func (ps *MultiWriter) Close() error {
 	return nil
+}
+
+func (ps *MultiWriter) contains(pw rawProgressWriter) bool {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+	_, ok := ps.writers[pw]
+	if ok {
+		return true
+	}
+
+	for w := range ps.writers {
+		w, ok := w.(*MultiWriter)
+		if !ok {
+			continue
+		}
+		if w.contains(pw) {
+			return true
+		}
+	}
+
+	return false
 }
