@@ -87,7 +87,7 @@ Instead of rebuilding images and redeploying containers, DevSpace allows you to 
 <br>
 
 Deploying and debugging services with Kubernetes requires a lot of knowledge and forces you to repeatedly run commands like `kubectl get pod` and copy pod ids back and forth. Stop wasting time and let DevSpace automate the tedious parts of working with Kubernetes:
-- DevSpace lets you build multiple images in parallel, tag them automatically and and deploy your entire application (including its dependencies) with just a single command
+- DevSpace lets you build multiple images in parallel, tag them automatically and deploy your entire application (including its dependencies) with just a single command
 - Let DevSpace automatically start port-fowarding and log streaming, so you don't have to constantly copy and paste pod ids or run 10 commands to get everything started.
 
 <br>

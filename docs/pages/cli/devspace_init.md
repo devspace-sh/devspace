@@ -26,7 +26,7 @@ folder. Creates a devspace.yaml as a starting point.
 ## Flags
 
 ```
-      --context string      Context path to use for intialization
+      --context string      Context path to use for initialization
       --dockerfile string   Dockerfile to use for initialization (default "./Dockerfile")
   -h, --help                help for init
       --provider string     The cloud provider to use

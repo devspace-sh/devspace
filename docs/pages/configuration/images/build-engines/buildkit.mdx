@@ -67,7 +67,7 @@ If in-cluster building is not explicitly enabled, DevSpace checks if a local Doc
 DevSpace preferably uses the Docker daemon running in the virtual machine that belongs to your local Kubernetes cluster instead of your regular Docker daemon. This has the advantage that images do not need to be pushed to a registry because Kubernetes can simply use the images available in the Docker daemon belonging to the kubelet of the local cluster. Using this method is only possible when your current kube-context points to a local Kubernetes cluster and is named `minikube`, `docker-desktop` or `docker-for-desktop`.
 
 
-### In-Cluster Deamon
+### In-Cluster Daemon
 If the `inCluster` field is defined for an image, DevSpace will build the image directly in the Kubernetes cluster instead of using the local Docker daemon. DevSpace will start or reuse a BuildKit deployment in the Kubernetes cluster that acts as target BuildKit daemon. For example:
 ```yaml
 images:

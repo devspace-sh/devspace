@@ -96,7 +96,7 @@ folder. Creates a devspace.yaml as a starting point.
 	}
 
 	initCmd.Flags().BoolVarP(&cmd.Reconfigure, "reconfigure", "r", false, "Change existing configuration")
-	initCmd.Flags().StringVar(&cmd.Context, "context", "", "Context path to use for intialization")
+	initCmd.Flags().StringVar(&cmd.Context, "context", "", "Context path to use for initialization")
 	initCmd.Flags().StringVar(&cmd.Dockerfile, "dockerfile", helper.DefaultDockerfilePath, "Dockerfile to use for initialization")
 	initCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
 
@@ -508,7 +508,7 @@ echo 'Anyone using this project can invoke it via "devspace run migrate-db"'`,
 	config.Pipelines["dev"] = &latest.Pipeline{
 		Run: `run_dependencies --all       # 1. Deploy any projects this project needs (see "dependencies")
 ensure_pull_secrets --all    # 2. Ensure pull secrets
-create_deployments --all     # 3. Deploy Helm charts and manifests specfied as "deployments"
+create_deployments --all     # 3. Deploy Helm charts and manifests specified as "deployments"
 start_dev ` + imageName + `                # 4. Start dev mode "` + imageName + `" (see "dev" section)`,
 	}
 
@@ -517,7 +517,7 @@ start_dev ` + imageName + `                # 4. Start dev mode "` + imageName + 
 		Run: `run_dependencies --all                            # 1. Deploy any projects this project needs (see "dependencies")
 ensure_pull_secrets --all                         # 2. Ensure pull secrets
 build_images --all -t $(git describe --always)    # 3. Build, tag (git commit hash) and push all images (see "images")
-create_deployments --all                          # 4. Deploy Helm charts and manifests specfied as "deployments"`,
+create_deployments --all                          # 4. Deploy Helm charts and manifests specified as "deployments"`,
 	}
 
 	// Save config

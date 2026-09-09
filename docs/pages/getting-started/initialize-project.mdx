@@ -98,7 +98,7 @@ You can now run:
 
 Run `devspace -h` or `devspace [command] -h` to see a list of available commands and flags
 ```
-Congratulations! You have succesfully initialized your first DevSpace project! 🎉
+Congratulations! You have successfully initialized your first DevSpace project! 🎉
 
 After running `devspace init`, you will see 3 changes in your project:
 1. New file `devspace.yaml` (tells DevSpace how this project should be build, deployed, and developed)
@@ -116,14 +116,14 @@ pipelines:
   dev:
     run: |-
       run_dependencies --all       # 1. Deploy any projects this project needs (see "dependencies")
-      create_deployments --all     # 2. Deploy Helm charts and manifests specfied as "deployments"
+      create_deployments --all     # 2. Deploy Helm charts and manifests specified as "deployments"
       start_dev app                # 3. Start dev mode "app" (see "dev" section)
   # You can run this pipeline via `devspace deploy` (or `devspace run-pipeline deploy`)
   deploy:
     run: |-
       run_dependencies --all                            # 1. Deploy any projects this project needs (see "dependencies")
       build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
-      create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"
+      create_deployments --all                          # 3. Deploy Helm charts and manifests specified as "deployments"
 
 # This is a list of `images` that DevSpace can build for this project
 # We recommend to skip image building during development (devspace dev) as much as possible

@@ -61,7 +61,7 @@ The local registry is used as a fallback by default. DevSpace will try to push i
 - Use `kind load docker-image` if using a local [KinD](https://kind.sigs.k8s.io/) cluster
 - Deploy and use local registry
 
-The local registry can be explicity enabled or disabled to change the default behavior. Changing `enabled` to `true` will force using the local registry instead of `kind load docker-image`
+The local registry can be explicitly enabled or disabled to change the default behavior. Changing `enabled` to `true` will force using the local registry instead of `kind load docker-image`
 ```yaml title=devspace.yaml
 version: v2beta1
 localRegistry:

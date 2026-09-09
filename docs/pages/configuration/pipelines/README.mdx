@@ -172,7 +172,7 @@ pipelines:
       type: string
     run: |-
         if ! is_empty $(get_flag dockerfile); then
-            echo "Building the image with the overriden dockerfile $(get_flag dockerfile)"
+            echo "Building the image with the overridden dockerfile $(get_flag dockerfile)"
             run_default_pipeline deploy --set "images.my-image.dockerfile=$(get_flag dockerfile)"
         else
             run_default_pipeline deploy
@@ -197,12 +197,12 @@ pipelines:
   # Override the default pipeline for 'devspace dev'
   dev: |-
     run_dependency_pipelines --all    # 1. Deploy any projects this project needs (see "dependencies")
-    create_deployments --all          # 2. Deploy Helm charts and manifests specfied as "deployments"
+    create_deployments --all          # 2. Deploy Helm charts and manifests specified as "deployments"
     start_dev app                     # 3. Start dev mode "app" (see "dev" section)
   deploy: |-
     run_dependency_pipelines --all                    # 1. Deploy any projects this project needs (see "dependencies")
     build_images --all -t $(git describe --always)    # 2. Build, tag (git commit hash) and push all images (see "images")
-    create_deployments --all                          # 3. Deploy Helm charts and manifests specfied as "deployments"
+    create_deployments --all                          # 3. Deploy Helm charts and manifests specified as "deployments"
   build:
     # Here we are using the long-form using `run:` instead of passing the script directly
     run: |-
@@ -224,12 +224,12 @@ devspace run-pipeline [name]
 ```
 
 :::info Cross-Platform Execution
-Write all pipeline scrips in `bash` fashion. DevSpace is using a library to make them cross-platform executable.
+Write all pipeline scripts in `bash` fashion. DevSpace is using a library to make them cross-platform executable.
 :::
 
 
 ## Default Pipelines
-Internally DevSpace uses pipelines for the following commands that can be overriden according to your preferences. DevSpace provides default pipeline scripts for the following top-level commands:
+Internally DevSpace uses pipelines for the following commands that can be overridden according to your preferences. DevSpace provides default pipeline scripts for the following top-level commands:
 - [`devspace dev`](#dev)
 - [`devspace deploy`](#deploy)
 - [`devspace build`](#build)
