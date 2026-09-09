@@ -55,7 +55,7 @@ If any hook returns a non-zero exit code, DevSpace will abort and print an error
 
 For `error:` events the actual error will be passed to the hook via the environment variable `DEVSPACE_HOOK_ERROR`. For example:
 ```yaml
-# This will print the error to the console that has occured during a deployment
+# This will print the error to the console that has occurred during a deployment
 hooks:
 - events: ["error:deploy:*"]
   command: "echo The following error has occurred during deploying $DEVSPACE_HOOK_DEPLOY_NAME: $DEVSPACE_HOOK_ERROR"
@@ -272,7 +272,7 @@ DevSpace passes certain environment variables to the hook execution:
 - **DEVSPACE_HOOK_KUBE_CONTEXT**: the name of the kube context that was used
 - **DEVSPACE_HOOK_KUBE_NAMESPACE**: the name of the kube namespace that was used
 - **DEVSPACE_HOOK_OS_ARGS**: json encoded os.Args that were used to call devspace
-- **DEVSPACE_HOOK_ERROR**: if an error has occured contains the error string (only for onError hooks)
+- **DEVSPACE_HOOK_ERROR**: if an error has occurred contains the error string (only for onError hooks)
 - **DEVSPACE_HOOK_EVENT**: the event that has triggered the hook
 
 Depending on the hook there will be other context variables set that are prefixed with `DEVSPACE_HOOK_`. 

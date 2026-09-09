@@ -196,7 +196,7 @@ DevSpace provides several config options to make in-memory changes to the build 
 By default, DevSpace tries to skip building images as much as possible. Once any of your images is built once, DevSpace will only rebuild it if one of the conditions is true:
 - The `dockerfile` has changed
 - Any file within the build `context` folder has changed (while respecting `.dockerignore` rules)
-- The image configuration within the `devspace.yaml` has changed (including values set in the pipeline scripe, e.g. via `--set`)
+- The image configuration within the `devspace.yaml` has changed (including values set in the pipeline script, e.g. via `--set`)
 - The image was **not** been built before or the `.devspace/` folder has been deleted/manipulated
 
 You can explicitly override this behavior using the `rebuildStrategy` field:

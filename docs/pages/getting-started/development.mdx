@@ -35,7 +35,7 @@ pipelines:
   dev:
     run: |-
       run_dependencies --all       # 1. Deploy any projects this project needs (see "dependencies")
-      create_deployments --all     # 2. Deploy Helm charts and manifests specfied as "deployments"
+      create_deployments --all     # 2. Deploy Helm charts and manifests specified as "deployments"
       start_dev app                # 3. Start dev mode "app" (see "dev" section)
 ```
 
