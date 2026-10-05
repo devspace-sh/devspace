@@ -122,7 +122,7 @@ func (c *controller) startWithWait(ctx devspacecontext.Context, options *Options
 	// should wait for initial sync?
 	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync {
 		ctx.Log().Info("Waiting for initial sync to complete")
-		defer ctx.Log().Info("Initial sync completed")
+		defer ctx.Log().Info(InitialSyncCompletedMessage(options.SyncConfig.Path))
 		var (
 			uploadDone   = false
 			downloadDone = false
@@ -320,6 +320,18 @@ func ParseSyncPath(path string) (localPath string, remotePath string, err error)
 	return splitted[0], splitted[1], nil
 }
 
+// InitialSyncCompletedMessage returns the message logged when initial sync completes
+func InitialSyncCompletedMessage(path string) string {
+	localPath, remotePath, err := ParseSyncPath(path)
+	if err == nil {
+		return fmt.Sprintf("Initial sync completed for %s <-> %s", localPath, remotePath)
+	}
+	if path != "" {
+		return fmt.Sprintf("Initial sync completed for %s", path)
+	}
+	return "Initial sync completed"
+}
+
 func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, container string, syncConfig *latest.SyncConfig, starter sync.DelayedContainerStarter, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
 	localPath, containerPath, err := ParseSyncPath(syncConfig.Path)
 	if err != nil {
@@ -345,6 +357,7 @@ func (c *controller) initClient(ctx devspacecontext.Context, pod *v1.Pod, arch, 
 		Log:                  customLog,
 		Polling:              syncConfig.Polling,
 		Starter:              starter,
+		RemotePath:           containerPath,
 		ResolveCommand: func(command string, args []string) (string, []string, error) {
 			return hook.ResolveCommand(ctx.Context(), command, args, ctx.WorkingDir(), ctx.Config(), ctx.Dependencies())
 		},

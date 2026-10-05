@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -45,6 +46,7 @@ type Options struct {
 	UpstreamLimit   int64
 	DownstreamLimit int64
 	Verbose         bool
+	RemotePath      string
 
 	UpstreamDisabled   bool
 	DownstreamDisabled bool
@@ -133,6 +135,29 @@ func NewSync(ctx context.Context, localPath string, options Options) (*Sync, err
 	}
 
 	return s, nil
+}
+
+// TargetPath returns the target path context for sync logging
+func (s *Sync) TargetPath() string {
+	if s.LocalPath != "" && s.Options.RemotePath != "" {
+		return fmt.Sprintf("%s <-> %s", s.LocalPath, s.Options.RemotePath)
+	}
+	if s.LocalPath != "" {
+		return s.LocalPath
+	}
+	if s.Options.RemotePath != "" {
+		return s.Options.RemotePath
+	}
+	return ""
+}
+
+// InitialSyncCompletedMessage returns the message logged when initial sync completes
+func (s *Sync) InitialSyncCompletedMessage(prefix string) string {
+	target := s.TargetPath()
+	if target != "" {
+		return fmt.Sprintf("%s - Initial sync completed for %s", prefix, target)
+	}
+	return fmt.Sprintf("%s - Initial sync completed", prefix)
 }
 
 // Error handles a sync error
@@ -316,7 +341,7 @@ func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone ch
 				if s.Options.InitialSync == latest.InitialSyncStrategyDisabled {
 					s.log.Info("Upstream - Initial sync disabled")
 				} else {
-					s.log.Info("Upstream - Initial sync completed")
+					s.log.Info(s.InitialSyncCompletedMessage("Upstream"))
 				}
 				close(onInitUploadDone)
 			}
@@ -326,7 +351,7 @@ func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone ch
 				if s.Options.InitialSync == latest.InitialSyncStrategyDisabled {
 					s.log.Info("Downstream - Initial sync disabled")
 				} else {
-					s.log.Info("Downstream - Initial sync completed")
+					s.log.Info(s.InitialSyncCompletedMessage("Downstream"))
 				}
 				close(onInitDownloadDone)
 			}
