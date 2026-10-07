@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	composetypes "github.com/compose-spec/compose-go/types"
+	composetypes "github.com/compose-spec/compose-go/v2/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 

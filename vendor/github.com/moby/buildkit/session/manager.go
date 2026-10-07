@@ -13,10 +13,9 @@ import (
 
 // Caller can invoke requests on the session
 type Caller interface {
-	Context() context.Context
+	Context(context.Context) context.Context
 	Supports(method string) bool
 	Conn() *grpc.ClientConn
-	Name() string
 	SharedKey() string
 }
 
@@ -99,17 +98,16 @@ func (sm *Manager) HandleConn(ctx context.Context, conn net.Conn, opts map[strin
 
 // caller needs to take lock, this function will release it
 func (sm *Manager) handleConn(ctx context.Context, conn net.Conn, opts map[string][]string) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer func() { cancel(errors.WithStack(context.Canceled)) }()
 
 	opts = canonicalHeaders(opts)
 
 	h := http.Header(opts)
 	id := h.Get(headerSessionID)
-	name := h.Get(headerSessionName)
 	sharedKey := h.Get(headerSessionSharedKey)
 
-	ctx, cc, err := grpcClientConn(ctx, conn)
+	ctx, cc, err := grpcClientConn(ctx, conn, opts)
 	if err != nil {
 		sm.mu.Unlock()
 		return err
@@ -118,7 +116,6 @@ func (sm *Manager) handleConn(ctx context.Context, conn net.Conn, opts map[strin
 	c := &client{
 		Session: Session{
 			id:        id,
-			name:      name,
 			sharedKey: sharedKey,
 			ctx:       ctx,
 			cancelCtx: cancel,
@@ -156,8 +153,8 @@ func (sm *Manager) Get(ctx context.Context, id string, noWait bool) (Caller, err
 		id = p[1]
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer func() { cancel(errors.WithStack(context.Canceled)) }()
 
 	go func() {
 		<-ctx.Done()
@@ -173,7 +170,7 @@ func (sm *Manager) Get(ctx context.Context, id string, noWait bool) (Caller, err
 		select {
 		case <-ctx.Done():
 			sm.mu.Unlock()
-			return nil, errors.Wrapf(ctx.Err(), "no active session for %s", id)
+			return nil, errors.Wrapf(context.Cause(ctx), "no active session for %s", id)
 		default:
 		}
 		var ok bool
@@ -193,12 +190,8 @@ func (sm *Manager) Get(ctx context.Context, id string, noWait bool) (Caller, err
 	return c, nil
 }
 
-func (c *client) Context() context.Context {
-	return c.context()
-}
-
-func (c *client) Name() string {
-	return c.name
+func (c *client) Context(ctx context.Context) context.Context {
+	return contextWithCaller(ctx, c.context())
 }
 
 func (c *client) SharedKey() string {

@@ -11,8 +11,8 @@ import (
 	"github.com/loft-sh/utils/pkg/command"
 	"mvdan.cc/sh/v3/expand"
 
+	git "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
-	"gopkg.in/src-d/go-git.v4"
 )
 
 var LatestTagRegEx = regexp.MustCompile(`\/tag\/(.*)$`)

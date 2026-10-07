@@ -1,4 +1,4 @@
-package moby_buildkit_v1_frontend //nolint:revive
+package moby_buildkit_v1_frontend //nolint:staticcheck
 
 import "github.com/moby/buildkit/util/apicaps"
 
@@ -44,9 +44,17 @@ const (
 	// /etc/hosts for containers created via gateway exec.
 	CapGatewayExecExtraHosts apicaps.CapID = "gateway.exec.extrahosts"
 
+	// CapGatewayExecExtraHosts is the capability to set secrets as env vars for
+	// containers created via gateway exec.
+	CapGatewayExecSecretEnv apicaps.CapID = "gateway.exec.secretenv"
+
 	// CapGatewayExecExtraHosts is the capability to send signals to a process
 	// created via gateway exec.
 	CapGatewayExecSignals apicaps.CapID = "gateway.exec.signals"
+
+	// CapGatewayExecFilesystem is the capability to interact with the filesystem for
+	// containers directly through the gateway.
+	CapGatewayExecFilesystem apicaps.CapID = "gateway.exec.filesystem"
 
 	// CapFrontendCaps can be used to check that frontends define support for certain capabilities
 	CapFrontendCaps apicaps.CapID = "frontend.caps"
@@ -64,6 +72,16 @@ const (
 	// CapAttestations is the capability to indicate that attestation
 	// references will be attached to results
 	CapAttestations apicaps.CapID = "reference.attestations"
+
+	// CapSourceMetaResolver is the capability to indicates support for ResolveSourceMetadata
+	// function in gateway API
+	CapSourceMetaResolver apicaps.CapID = "source.metaresolver"
+	// CapSourceMetaResolverImageAttestations is the capability to indicate support
+	// for attestation resolution fields in ResolveSourceMeta image requests.
+	CapSourceMetaResolverImageAttestations apicaps.CapID = "source.metaresolver.image.attestations"
+	// CapSourceMetaResolverHTTPChecksumRequest is the capability to indicate support
+	// for custom checksum request fields in ResolveSourceMeta http requests.
+	CapSourceMetaResolverHTTPChecksumRequest apicaps.CapID = "source.metaresolver.http.checksumrequest"
 )
 
 func init() {
@@ -180,8 +198,22 @@ func init() {
 	})
 
 	Caps.Init(apicaps.Cap{
+		ID:      CapGatewayExecSecretEnv,
+		Name:    "gateway exec secret env",
+		Enabled: true,
+		Status:  apicaps.CapStatusExperimental,
+	})
+
+	Caps.Init(apicaps.Cap{
 		ID:      CapGatewayExecSignals,
 		Name:    "gateway exec signals",
+		Enabled: true,
+		Status:  apicaps.CapStatusExperimental,
+	})
+
+	Caps.Init(apicaps.Cap{
+		ID:      CapGatewayExecFilesystem,
+		Name:    "gateway exec filesystem",
 		Enabled: true,
 		Status:  apicaps.CapStatusExperimental,
 	})
@@ -217,6 +249,27 @@ func init() {
 	Caps.Init(apicaps.Cap{
 		ID:      CapAttestations,
 		Name:    "reference attestations",
+		Enabled: true,
+		Status:  apicaps.CapStatusExperimental,
+	})
+
+	Caps.Init(apicaps.Cap{
+		ID:      CapSourceMetaResolver,
+		Name:    "source meta resolver",
+		Enabled: true,
+		Status:  apicaps.CapStatusExperimental,
+	})
+
+	Caps.Init(apicaps.Cap{
+		ID:      CapSourceMetaResolverImageAttestations,
+		Name:    "source meta resolver image attestations",
+		Enabled: true,
+		Status:  apicaps.CapStatusExperimental,
+	})
+
+	Caps.Init(apicaps.Cap{
+		ID:      CapSourceMetaResolverHTTPChecksumRequest,
+		Name:    "source meta resolver http checksum request",
 		Enabled: true,
 		Status:  apicaps.CapStatusExperimental,
 	})

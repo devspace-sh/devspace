@@ -1,14 +1,15 @@
 package compose
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	composeloader "github.com/compose-spec/compose-go/loader"
-	composetypes "github.com/compose-spec/compose-go/types"
+	composeloader "github.com/compose-spec/compose-go/v2/loader"
+	composetypes "github.com/compose-spec/compose-go/v2/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -38,20 +39,22 @@ func LoadDockerComposeProject(path string) (*composetypes.Project, error) {
 		return nil, err
 	}
 
-	project, err := composeloader.Load(composetypes.ConfigDetails{
+	project, err := composeloader.LoadWithContext(context.Background(), composetypes.ConfigDetails{
 		ConfigFiles: []composetypes.ConfigFile{
 			{
 				Content: composeFile,
 			},
 		},
 		Environment: map[string]string{},
+	}, func(o *composeloader.Options) {
+		o.SetProjectName("devspace", false)
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	// Expand service ports
-	for idx, service := range project.Services {
+	for name, service := range project.Services {
 		ports := []composetypes.ServicePortConfig{}
 		for _, port := range service.Ports {
 			expandedPorts, err := expandPublishedPortRange(port)
@@ -60,7 +63,8 @@ func LoadDockerComposeProject(path string) (*composetypes.Project, error) {
 			}
 			ports = append(ports, expandedPorts...)
 		}
-		project.Services[idx].Ports = ports
+		service.Ports = ports
+		project.Services[name] = service
 	}
 
 	return project, nil
@@ -91,7 +95,8 @@ func (cm *composeManager) Load(log log.Logger) error {
 	}
 
 	builders := map[string]ConfigBuilder{}
-	err = cm.project.WithServices(nil, func(service composetypes.ServiceConfig) error {
+	err = cm.project.ForEachService(nil, func(_ string, svc *composetypes.ServiceConfig) error {
+		service := *svc
 		configName := "docker-compose"
 		workingDir := cm.project.WorkingDir
 
@@ -142,7 +147,8 @@ func (cm *composeManager) Load(log log.Logger) error {
 		return err
 	}
 
-	err = cm.project.WithServices(nil, func(service composetypes.ServiceConfig) error {
+	err = cm.project.ForEachService(nil, func(_ string, svc *composetypes.ServiceConfig) error {
+		service := *svc
 		configName := "docker-compose"
 		path := constants.DefaultConfigPath
 
@@ -194,7 +200,7 @@ func (cm *composeManager) Save() error {
 
 func calculateDependentsMap(dockerCompose *composetypes.Project) (map[string][]string, error) {
 	tree := map[string][]string{}
-	err := dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
+	err := dockerCompose.ForEachService(nil, func(_ string, service *composetypes.ServiceConfig) error {
 		for _, name := range service.GetDependencies() {
 			tree[name] = append(tree[name], service.Name)
 		}

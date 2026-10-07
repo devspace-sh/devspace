@@ -111,7 +111,7 @@ func (b *Builder) ShouldRebuild(ctx devspacecontext.Context, forceRebuild bool) 
 func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfilePath string, entrypoint []string, cmd []string) error {
 	var err error
 	
-	contextPath, err = build.ResolveAndValidateContextPath(contextPath)
+	contextPath, err = resolveAndValidateContextPath(contextPath)
 	if err != nil {
 		return errors.Wrap(err, "resolve context path")
 	}
@@ -416,4 +416,29 @@ func (b *Builder) BuildImage(ctx devspacecontext.Context, contextPath, dockerfil
 	}
 	
 	return nil
+}
+
+// resolveAndValidateContextPath returns the absolute, symlink-resolved path of the given build context directory
+func resolveAndValidateContextPath(givenContextDir string) (string, error) {
+	absContextDir, err := filepath.Abs(givenContextDir)
+	if err != nil {
+		return "", errors.Errorf("unable to get absolute context directory of given context directory %q: %v", givenContextDir, err)
+	}
+
+	// EvalSymlinks does not work on Windows UNC paths, so those are not followed
+	if !strings.HasPrefix(absContextDir, `\\`) {
+		absContextDir, err = filepath.EvalSymlinks(absContextDir)
+		if err != nil {
+			return "", errors.Errorf("unable to evaluate symlinks in context path: %v", err)
+		}
+	}
+
+	stat, err := os.Lstat(absContextDir)
+	if err != nil {
+		return "", errors.Errorf("unable to stat context directory %q: %v", absContextDir, err)
+	}
+	if !stat.IsDir() {
+		return "", errors.Errorf("context must be a directory: %s", absContextDir)
+	}
+	return absContextDir, nil
 }

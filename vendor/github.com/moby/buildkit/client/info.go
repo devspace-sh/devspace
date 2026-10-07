@@ -13,9 +13,17 @@ type Info struct {
 }
 
 type BuildkitVersion struct {
-	Package  string `json:"package"`
-	Version  string `json:"version"`
-	Revision string `json:"revision"`
+	Package           string `json:"package"`
+	Version           string `json:"version"`
+	Revision          string `json:"revision"`
+	DockerfileVersion string `json:"dockerfileVersion,omitempty"`
+}
+
+type CDIDevice struct {
+	Name        string            `json:"name"`
+	AutoAllow   bool              `json:"autoAllow"`
+	Annotations map[string]string `json:"annotations"`
+	OnDemand    bool              `json:"onDemand"`
 }
 
 func (c *Client) Info(ctx context.Context) (*Info, error) {
@@ -33,8 +41,22 @@ func fromAPIBuildkitVersion(in *apitypes.BuildkitVersion) BuildkitVersion {
 		return BuildkitVersion{}
 	}
 	return BuildkitVersion{
-		Package:  in.Package,
-		Version:  in.Version,
-		Revision: in.Revision,
+		Package:           in.Package,
+		Version:           in.Version,
+		Revision:          in.Revision,
+		DockerfileVersion: in.DockerfileVersion,
 	}
+}
+
+func fromAPICDIDevices(in []*apitypes.CDIDevice) []CDIDevice {
+	var out []CDIDevice
+	for _, d := range in {
+		out = append(out, CDIDevice{
+			Name:        d.Name,
+			AutoAllow:   d.AutoAllow,
+			Annotations: d.Annotations,
+			OnDemand:    d.OnDemand,
+		})
+	}
+	return out
 }

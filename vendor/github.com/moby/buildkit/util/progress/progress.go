@@ -3,7 +3,8 @@ package progress
 import (
 	"context"
 	"io"
-	"sort"
+	"maps"
+	"slices"
 	"sync"
 	"time"
 
@@ -56,7 +57,7 @@ type WriterOption func(Writer)
 // NewContext returns a new context and a progress reader that captures all
 // progress items writtern to this context. Last returned parameter is a closer
 // function to signal that no new writes will happen to this context.
-func NewContext(ctx context.Context) (Reader, context.Context, func()) {
+func NewContext(ctx context.Context) (Reader, context.Context, func(error)) {
 	pr, pw, cancel := pipe()
 	ctx = WithProgress(ctx, pw)
 	return pr, ctx, cancel
@@ -66,7 +67,7 @@ func WithProgress(ctx context.Context, pw Writer) context.Context {
 	return context.WithValue(ctx, contextKey, pw)
 }
 
-func WithMetadata(key string, val interface{}) WriterOption {
+func WithMetadata(key string, val any) WriterOption {
 	return func(w Writer) {
 		if pw, ok := w.(*progressWriter); ok {
 			pw.meta[key] = val
@@ -83,7 +84,7 @@ type Controller interface {
 }
 
 type Writer interface {
-	Write(id string, value interface{}) error
+	Write(id string, value any) error
 	Close() error
 }
 
@@ -94,8 +95,8 @@ type Reader interface {
 type Progress struct {
 	ID        string
 	Timestamp time.Time
-	Sys       interface{}
-	meta      map[string]interface{}
+	Sys       any
+	meta      map[string]any
 }
 
 type Status struct {
@@ -141,7 +142,7 @@ func (pr *progressReader) Read(ctx context.Context) ([]*Progress, error) {
 		select {
 		case <-ctx.Done():
 			pr.mu.Unlock()
-			return nil, ctx.Err()
+			return nil, context.Cause(ctx)
 		default:
 		}
 		dmap := pr.dirty
@@ -164,9 +165,8 @@ func (pr *progressReader) Read(ctx context.Context) ([]*Progress, error) {
 		for _, p := range dmap {
 			out = append(out, p)
 		}
-
-		sort.Slice(out, func(i, j int) bool {
-			return out[i].Timestamp.Before(out[j].Timestamp)
+		slices.SortFunc(out, func(a, b *Progress) int {
+			return a.Timestamp.Compare(b.Timestamp)
 		})
 
 		return out, nil
@@ -185,8 +185,8 @@ func (pr *progressReader) append(pw *progressWriter) {
 	}
 }
 
-func pipe() (*progressReader, *progressWriter, func()) {
-	ctx, cancel := context.WithCancel(context.Background())
+func pipe() (*progressReader, *progressWriter, func(error)) {
+	ctx, cancel := context.WithCancelCause(context.Background())
 	pr := &progressReader{
 		ctx:     ctx,
 		writers: make(map[*progressWriter]struct{}),
@@ -206,10 +206,8 @@ func pipe() (*progressReader, *progressWriter, func()) {
 }
 
 func newWriter(pw *progressWriter) *progressWriter {
-	meta := make(map[string]interface{})
-	for k, v := range pw.meta {
-		meta[k] = v
-	}
+	meta := make(map[string]any)
+	maps.Copy(meta, pw.meta)
 	pw = &progressWriter{
 		reader: pw.reader,
 		meta:   meta,
@@ -221,10 +219,10 @@ func newWriter(pw *progressWriter) *progressWriter {
 type progressWriter struct {
 	done   bool
 	reader *progressReader
-	meta   map[string]interface{}
+	meta   map[string]any
 }
 
-func (pw *progressWriter) Write(id string, v interface{}) error {
+func (pw *progressWriter) Write(id string, v any) error {
 	if pw.done {
 		return errors.Errorf("writing %s to closed progress writer", id)
 	}
@@ -237,20 +235,7 @@ func (pw *progressWriter) Write(id string, v interface{}) error {
 }
 
 func (pw *progressWriter) WriteRawProgress(p *Progress) error {
-	meta := p.meta
-	if len(pw.meta) > 0 {
-		meta = map[string]interface{}{}
-		for k, v := range p.meta {
-			meta[k] = v
-		}
-		for k, v := range pw.meta {
-			if _, ok := meta[k]; !ok {
-				meta[k] = v
-			}
-		}
-	}
-	p.meta = meta
-	return pw.writeRawProgress(p)
+	return pw.writeRawProgress(p.Decorate(pw.meta))
 }
 
 func (pw *progressWriter) writeRawProgress(p *Progress) error {
@@ -270,14 +255,29 @@ func (pw *progressWriter) Close() error {
 	return nil
 }
 
-func (p *Progress) Meta(key string) (interface{}, bool) {
+func (p *Progress) Meta(key string) (any, bool) {
 	v, ok := p.meta[key]
 	return v, ok
 }
 
+// Decorate merges in missing metadata without overwriting existing keys.
+func (p *Progress) Decorate(meta map[string]any) *Progress {
+	if len(meta) == 0 {
+		return p
+	}
+
+	merged := make(map[string]any, len(p.meta)+len(meta))
+	maps.Copy(merged, meta)
+	maps.Copy(merged, p.meta)
+
+	newP := *p
+	newP.meta = merged
+	return &newP
+}
+
 type noOpWriter struct{}
 
-func (pw *noOpWriter) Write(_ string, _ interface{}) error {
+func (pw *noOpWriter) Write(_ string, _ any) error {
 	return nil
 }
 

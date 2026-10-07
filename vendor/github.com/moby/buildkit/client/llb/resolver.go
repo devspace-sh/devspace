@@ -1,10 +1,8 @@
 package llb
 
 import (
-	"context"
-
+	"github.com/moby/buildkit/client/llb/sourceresolver"
 	digest "github.com/opencontainers/go-digest"
-	ocispecs "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // WithMetaResolver adds a metadata resolver to an image
@@ -29,29 +27,11 @@ func WithLayerLimit(l int) ImageOption {
 	})
 }
 
+func WithImageChecksum(dgst digest.Digest) ImageOption {
+	return imageOptionFunc(func(ii *ImageInfo) {
+		ii.checksum = dgst
+	})
+}
+
 // ImageMetaResolver can resolve image config metadata from a reference
-type ImageMetaResolver interface {
-	ResolveImageConfig(ctx context.Context, ref string, opt ResolveImageConfigOpt) (digest.Digest, []byte, error)
-}
-
-type ResolverType int
-
-const (
-	ResolverTypeRegistry ResolverType = iota
-	ResolverTypeOCILayout
-)
-
-type ResolveImageConfigOpt struct {
-	ResolverType
-
-	Platform    *ocispecs.Platform
-	ResolveMode string
-	LogName     string
-
-	Store ResolveImageConfigOptStore
-}
-
-type ResolveImageConfigOptStore struct {
-	SessionID string
-	StoreID   string
-}
+type ImageMetaResolver = sourceresolver.ImageMetaResolver

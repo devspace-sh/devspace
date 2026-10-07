@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
-	composetypes "github.com/compose-spec/compose-go/types"
+	composetypes "github.com/compose-spec/compose-go/v2/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	v1 "k8s.io/api/core/v1"
 )
@@ -84,11 +83,10 @@ func (cb *configBuilder) AddDeployment(dockerCompose *composetypes.Project, serv
 
 	if len(service.ExtraHosts) > 0 {
 		hostsMap := map[string][]interface{}{}
-		for _, host := range service.ExtraHosts {
-			hostTokens := strings.Split(host, ":")
-			hostName := hostTokens[0]
-			hostIP := hostTokens[1]
-			hostsMap[hostIP] = append(hostsMap[hostIP], hostName)
+		for hostName, hostIPs := range service.ExtraHosts {
+			for _, hostIP := range hostIPs {
+				hostsMap[hostIP] = append(hostsMap[hostIP], hostName)
+			}
 		}
 
 		hostAliases := []interface{}{}

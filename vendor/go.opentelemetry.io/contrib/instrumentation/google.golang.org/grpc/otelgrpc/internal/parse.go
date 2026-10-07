@@ -1,43 +1,53 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
-package internal
+// Package internal provides internal functionality for the otelgrpc package.
+package internal // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 
 import (
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	oldsemconv "go.opentelemetry.io/otel/semconv/v1.37.0" //nolint:depguard // Use of v1.37.0 is required for backward compatibility stability opt-in.
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
 // ParseFullMethod returns a span name following the OpenTelemetry semantic
 // conventions as well as all applicable span attribute.KeyValue attributes based
 // on a gRPC's FullMethod.
+//
+// Parsing is consistent with grpc-go implementation:
+// https://github.com/grpc/grpc-go/blob/v1.57.0/internal/grpcutil/method.go#L26-L39
 func ParseFullMethod(fullMethod string) (string, []attribute.KeyValue) {
-	name := strings.TrimLeft(fullMethod, "/")
-	parts := strings.SplitN(name, "/", 2)
-	if len(parts) != 2 {
+	if !strings.HasPrefix(fullMethod, "/") {
 		// Invalid format, does not follow `/package.service/method`.
-		return name, []attribute.KeyValue(nil)
+		return fullMethod, nil
 	}
+	name := fullMethod[1:]
+	return name, []attribute.KeyValue{semconv.RPCMethod(name)}
+}
 
-	var attrs []attribute.KeyValue
-	if service := parts[0]; service != "" {
-		attrs = append(attrs, semconv.RPCServiceKey.String(service))
+// ParseFullMethodOld returns a span name following the old OpenTelemetry semantic
+// conventions as well as all applicable span attribute.KeyValue attributes based
+// on a gRPC's FullMethod.
+// Based on the implementation in:
+// https://github.com/open-telemetry/opentelemetry-go-contrib/blob/072dcf8ad7e5e48b506e05720b29d8b078759606/instrumentation/google.golang.org/grpc/otelgrpc/internal/parse.go#L20
+func ParseFullMethodOld(fullMethod string) (string, []attribute.KeyValue) {
+	if !strings.HasPrefix(fullMethod, "/") {
+		return fullMethod, nil
 	}
-	if method := parts[1]; method != "" {
-		attrs = append(attrs, semconv.RPCMethodKey.String(method))
+	name := fullMethod[1:]
+	parts := strings.Split(name, "/")
+	if len(parts) < 2 {
+		return name, []attribute.KeyValue{
+			attribute.String("rpc.system", "grpc"),
+		}
 	}
-	return name, attrs
+	service := parts[0]
+	method := parts[1]
+	return name, []attribute.KeyValue{
+		oldsemconv.RPCSystemKey.String("grpc"),
+		oldsemconv.RPCServiceKey.String(service),
+		oldsemconv.RPCMethodKey.String(method),
+	}
 }

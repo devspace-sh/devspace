@@ -35,6 +35,9 @@ type Option func(*Server) error
 // Handler is a callback for handling established SSH sessions.
 type Handler func(Session)
 
+// BannerHandler is a callback for displaying the server banner.
+type BannerHandler func(ctx Context) string
+
 // PublicKeyHandler is a callback for performing public key authentication.
 type PublicKeyHandler func(ctx Context, key PublicKey) bool
 
@@ -115,8 +118,7 @@ func Handle(handler Handler) {
 
 // KeysEqual is constant time compare of the keys to avoid timing attacks.
 func KeysEqual(ak, bk PublicKey) bool {
-
-	//avoid panic if one of the keys is nil, return false instead
+	// avoid panic if one of the keys is nil, return false instead
 	if ak == nil || bk == nil {
 		return false
 	}

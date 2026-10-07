@@ -94,11 +94,14 @@ type Context interface {
 type sshContext struct {
 	context.Context
 	*sync.Mutex
+
+	values   map[interface{}]interface{}
+	valuesMu sync.Mutex
 }
 
 func newContext(srv *Server) (*sshContext, context.CancelFunc) {
 	innerCtx, cancel := context.WithCancel(context.Background())
-	ctx := &sshContext{innerCtx, &sync.Mutex{}}
+	ctx := &sshContext{Context: innerCtx, Mutex: &sync.Mutex{}, values: make(map[interface{}]interface{})}
 	ctx.SetValue(ContextKeyServer, srv)
 	perms := &Permissions{&gossh.Permissions{}}
 	ctx.SetValue(ContextKeyPermissions, perms)
@@ -119,8 +122,19 @@ func applyConnMetadata(ctx Context, conn gossh.ConnMetadata) {
 	ctx.SetValue(ContextKeyRemoteAddr, conn.RemoteAddr())
 }
 
+func (ctx *sshContext) Value(key interface{}) interface{} {
+	ctx.valuesMu.Lock()
+	defer ctx.valuesMu.Unlock()
+	if v, ok := ctx.values[key]; ok {
+		return v
+	}
+	return ctx.Context.Value(key)
+}
+
 func (ctx *sshContext) SetValue(key, value interface{}) {
-	ctx.Context = context.WithValue(ctx.Context, key, value)
+	ctx.valuesMu.Lock()
+	defer ctx.valuesMu.Unlock()
+	ctx.values[key] = value
 }
 
 func (ctx *sshContext) User() string {
