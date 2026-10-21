@@ -88,6 +88,7 @@ func (w *watcher) Watch(ctx context.Context, action func(ctx context.Context) er
 
 	// get folders from patterns
 	pathsToWatch := map[string]bool{}
+	watchPatterns := make([]watchPattern, 0, len(patterns))
 	for i, p := range patterns {
 		patternsSplitted := strings.Split(filepath.ToSlash(p), "/")
 		lastIndex := len(patternsSplitted) - 1
@@ -116,12 +117,13 @@ func (w *watcher) Watch(ctx context.Context, action func(ctx context.Context) er
 		}
 
 		pathsToWatch[absolutePath] = true
+		watchPatterns = append(watchPatterns, watchPattern{base: absolutePath, pattern: patterns[i]})
 	}
 
 	watchTree := notify.NewTree()
 	defer watchTree.Close()
 
-	globalChannel := make(chan string, 100)
+	globalChannel := make(chan watchEvent, 100)
 	for targetPath := range pathsToWatch {
 		stat, err := os.Stat(targetPath)
 		if err != nil {
@@ -160,7 +162,7 @@ func (w *watcher) Watch(ctx context.Context, action func(ctx context.Context) er
 					if err != nil {
 						log.Debugf("error converting path %s: %v", e.Path(), err)
 					} else {
-						globalChannel <- filepath.ToSlash(relPath)
+						globalChannel <- watchEvent{base: base, path: filepath.ToSlash(relPath)}
 					}
 				}
 			}
@@ -168,10 +170,37 @@ func (w *watcher) Watch(ctx context.Context, action func(ctx context.Context) er
 	}
 
 	// start command
-	return w.handleCommand(ctx, patterns, excludes, action, globalChannel)
+	return w.handleCommand(ctx, watchPatterns, excludes, action, globalChannel)
 }
 
-func (w *watcher) handleCommand(ctx context.Context, patterns []string, excludes []string, action func(ctx context.Context) error, events chan string) error {
+// watchPattern is a glob pattern that is relative to the directory (base) it is watched in.
+type watchPattern struct {
+	base    string
+	pattern string
+}
+
+// watchEvent is a file system event with a path relative to the watched base directory.
+type watchEvent struct {
+	base string
+	path string
+}
+
+// matchesPatterns reports whether the event matches a pattern that belongs to the
+// same base directory as the event. Patterns are relative to their own base, so they
+// must not be matched against events coming from another watched directory.
+func matchesPatterns(patterns []watchPattern, e watchEvent) bool {
+	for _, p := range patterns {
+		if p.base != e.base {
+			continue
+		}
+		if matched, _ := doublestar.Match(p.pattern, e.path); matched {
+			return true
+		}
+	}
+	return false
+}
+
+func (w *watcher) handleCommand(ctx context.Context, patterns []watchPattern, excludes []string, action func(ctx context.Context) error, events chan watchEvent) error {
 	hc := interp.HandlerCtx(ctx)
 	var t *tomb.Tomb
 	if !w.options.SkipInitial {
@@ -190,18 +219,10 @@ func (w *watcher) handleCommand(ctx context.Context, patterns []string, excludes
 			return nil
 		case e := <-events:
 			// check if match
-			hasMatched := false
-			for _, p := range patterns {
-				hasMatched, _ = doublestar.Match(p, e)
-				if hasMatched {
-					break
-				}
-			}
-
-			if hasMatched {
+			if matchesPatterns(patterns, e) {
 				excluded := false
 				for _, excludePath := range excludes {
-					excluded, _ = doublestar.Match(excludePath, e)
+					excluded, _ = doublestar.Match(excludePath, e.path)
 					if excluded {
 						break
 					}
@@ -209,7 +230,7 @@ func (w *watcher) handleCommand(ctx context.Context, patterns []string, excludes
 
 				if !excluded {
 					numEvents++
-					lastChange = e
+					lastChange = e.path
 				}
 			}
 		case <-time.After(time.Millisecond * 1200):
