@@ -294,6 +294,12 @@ The `initialSync` option expects a string with an initial sync strategy. The fol
 
 `disabled` disabled the initial sync completely
 
+:::caution Remote-preferred conflicts
+When resolving an initial-sync conflict, `mirrorRemote` and `preferRemote` replace the local file even if its last-modified timestamp is newer than the container file's timestamp. Save any local changes you want to keep before starting the sync. Use `preferNewest` to resolve conflicts by modification time instead.
+
+This remote preference applies only to initial sync. Subsequent downloads retain the normal protection against overwriting newer local edits.
+:::
+
 ```yaml
 deployments:
   app-backend:
