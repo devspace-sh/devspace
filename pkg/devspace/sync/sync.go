@@ -275,6 +275,12 @@ func (s *Sync) startDownstream() {
 }
 
 func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}) error {
+	// Remote preference overrides mtimes only during initial sync, not while watching.
+	s.downstream.unarchiver.forceOverride = s.Options.InitialSync == latest.InitialSyncStrategyMirrorRemote || s.Options.InitialSync == latest.InitialSyncStrategyPreferRemote
+	defer func() {
+		s.downstream.unarchiver.forceOverride = false
+	}()
+
 	initialSync := newInitialSyncer(&initialSyncOptions{
 		LocalPath: s.LocalPath,
 		Strategy:  s.Options.InitialSync,
