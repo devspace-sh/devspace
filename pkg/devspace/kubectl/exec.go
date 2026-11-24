@@ -7,8 +7,10 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/util/terminal"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/tools/remotecommand"
 	kubectlExec "k8s.io/client-go/util/exec"
+	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/scheme"
 	"k8s.io/kubectl/pkg/util/term"
 )
@@ -124,6 +126,18 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 	exec, err := remotecommand.NewSPDYExecutorForTransports(wrapper, upgradeRoundTripper, "POST", execRequest.URL())
 	if err != nil {
 		return err
+	}
+	if !cmdutil.RemoteCommandWebsockets.IsDisabled() {
+		websocketExecutor, err := remotecommand.NewWebSocketExecutor(client.RestConfig(), "GET", execRequest.URL().String())
+		if err != nil {
+			return err
+		}
+		exec, err = remotecommand.NewFallbackExecutor(websocketExecutor, exec, func(err error) bool {
+			return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	errChan := make(chan error)
