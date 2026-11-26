@@ -43,7 +43,7 @@ profiles:
 - name: production
   activation:
   - env:
-      ENV: "prod-\d+"
+      ENV: 'prod-\d+'
   patches:
   - op: replace
     path: images.backend.image
