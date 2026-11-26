@@ -258,9 +258,9 @@ dev:
         - command: "touch abc.txt"      # string   | Command that should be executed after DevSpace made changes
           args: []                      # string[] | Optional args that will force DevSpace to not execute the command in a shell
           failOnError: false            # bool     | If true, DevSpace will restart the sync if the command fails (default: false)
-	      local: false                  # bool     | If true, DevSpace will run the command locally instead of in the container (default: false)
-	      onChange: ["package.json"]    # string[] | Optional array of file patterns that will trigger this command
-	      name: my-command              # string   | DevSpace will print this name instead of the command when executing
+          local: false                  # bool     | If true, DevSpace will run the command locally instead of in the container (default: false)
+          onChange: ["package.json"]    # string[] | Optional array of file patterns that will trigger this command
+          name: my-command              # string   | DevSpace will print this name instead of the command when executing
 ```
 
 
